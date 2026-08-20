@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "repository": "syrustkira/N0TE2",
+  "construction_phase": "0 DEFINE",
+  "active_node": "BOOT-02",
+  "product_code_authorized": false,
+  "legacy_admission_authorized": false,
+  "completed_nodes": ["BOOT-00", "BOOT-01", "AUDIT-01", "AUDIT-HISTORY", "AUDIT-DESIGN", "AUDIT-GRAPH"],
+  "next_after_boot_02": "LEGACY-01",
+  "truth": [
+    "N0TE2 is the clean-room destination.",
+    "No legacy/product feature implementation may be admitted before BOOT-02 is exact-head green.",
+    "All six core DAWs plus DAW-07 and macOS+Windows+Linux platform acceptance gate customer-mode handoff.",
+    "Missing future licenses/devices/accounts/certificates never stop unrelated dependency-ready construction."
+  ]
+}
