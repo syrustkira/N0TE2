@@ -25,7 +25,7 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-03" or increment != "CORE-03D":
+if active != "CORE-03" or increment != "CORE-03E":
     print(
         f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}",
         file=sys.stderr,
@@ -34,18 +34,20 @@ if active != "CORE-03" or increment != "CORE-03D":
 
 from n0te2 import (  # noqa: E402
     CapabilityCandidate,
-    RecipeDefinition,
-    RecipePlanner,
-    RecipeStep,
-    ResolutionConstraints,
+    N0TEableJob,
+    SemanticToolProfile,
     StudioCapabilityProfile,
+    ToolCapabilityBinding,
+    ToolEndpoint,
+    ToolParameterBinding,
+    ToolStateBinding,
 )
 
 
-def candidate(candidate_id: str, route_kind: str, capability: str, **overrides):
+def owned_candidate(candidate_id: str, capability: str, **overrides):
     values = dict(
         candidate_id=candidate_id,
-        route_kind=route_kind,
+        route_kind="OWNED_TOOL",
         capability=capability,
         display_name=candidate_id,
         brand=None,
@@ -53,13 +55,13 @@ def candidate(candidate_id: str, route_kind: str, capability: str, **overrides):
         compatible=True,
         evidence_ref=f"smoke:{candidate_id}",
         evidence_age_seconds=10,
-        task_fit=0.80,
-        editability=0.80,
-        locality=0.80,
-        privacy=0.80,
-        latency=0.80,
+        task_fit=0.90,
+        editability=0.90,
+        locality=1.0,
+        privacy=1.0,
+        latency=0.90,
         reversibility=1.0,
-        cost_efficiency=0.80,
+        cost_efficiency=1.0,
         portability=0.80,
         user_preference=0.50,
         paid=False,
@@ -68,177 +70,166 @@ def candidate(candidate_id: str, route_kind: str, capability: str, **overrides):
     return CapabilityCandidate(**values)
 
 
-recipe = RecipeDefinition(
-    recipe_id="recipe:vocal:tighten-chorus",
-    name="Tighten Chorus Vocals",
-    intent="Inspect, prepare and compare a vocal-tightening candidate without granting execution authority",
-    steps=(
-        RecipeStep(
-            step_id="inspect",
-            capability="vocal.timing.inspect",
-            description="Inspect chorus vocal timing relationships",
-            authority_class="READ_ONLY",
-            postconditions=("timing relationships are inspectable",),
-            recovery_policy="NONE",
+vst3 = ToolEndpoint(
+    endpoint_id="endpoint:vst3",
+    format_kind="VST3",
+    native_identity="vendor.example.compressor.vst3",
+    evidence_ref="smoke:endpoint:vst3",
+)
+au = ToolEndpoint(
+    endpoint_id="endpoint:au",
+    format_kind="AU",
+    native_identity="aufx:Vndr:Comp",
+    evidence_ref="smoke:endpoint:au",
+)
+
+tool = SemanticToolProfile(
+    tool_id="tool:example-compressor",
+    display_name="Example Compressor",
+    endpoints=(vst3, au),
+    capabilities=(
+        ToolCapabilityBinding(
+            endpoint_id=vst3.endpoint_id,
+            candidate=owned_candidate(
+                "candidate:compress:vst3",
+                "dynamics.compress",
+                display_name="Example Compressor VST3",
+                brand="Example Vendor",
+                task_fit=0.94,
+            ),
         ),
-        RecipeStep(
-            step_id="tighten",
-            capability="vocal.tighten",
-            description="Prepare a reversible timing correction candidate",
-            authority_class="REVERSIBLE_MUTATION",
-            postconditions=("candidate timing is inspectable", "original remains recoverable"),
-            recovery_policy="ROLLBACK_REQUIRED",
-            depends_on=("inspect",),
+        ToolCapabilityBinding(
+            endpoint_id=au.endpoint_id,
+            candidate=owned_candidate(
+                "candidate:compress:au",
+                "dynamics.compress",
+                display_name="Example Compressor AU",
+                brand="Example Vendor",
+                task_fit=0.90,
+            ),
         ),
-        RecipeStep(
-            step_id="compare",
-            capability="audio.compare",
-            description="Compare original and tightened candidates",
-            authority_class="READ_ONLY",
-            postconditions=("comparison result is inspectable",),
-            recovery_policy="RETRY_SAFE",
-            depends_on=("tighten",),
+    ),
+    parameters=(
+        ToolParameterBinding(
+            endpoint_id=vst3.endpoint_id,
+            semantic_key="mix.wet_dry",
+            native_parameter_ref="param:12",
+            readable=True,
+            writable=True,
+            evidence_ref="smoke:param:vst3:mix",
+        ),
+        ToolParameterBinding(
+            endpoint_id=au.endpoint_id,
+            semantic_key="mix.wet_dry",
+            native_parameter_ref="kAudioUnitParameter_WetDryMix",
+            readable=True,
+            writable=False,
+            evidence_ref="smoke:param:au:mix",
+        ),
+    ),
+    state_bindings=(
+        ToolStateBinding(
+            endpoint_id=vst3.endpoint_id,
+            readable=True,
+            writable=True,
+            evidence_ref="smoke:state:vst3",
+        ),
+        ToolStateBinding(
+            endpoint_id=au.endpoint_id,
+            readable=True,
+            writable=False,
+            evidence_ref="smoke:state:au",
         ),
     ),
 )
-planner = RecipePlanner()
 
-# Recipe structure carries semantic orchestration only, never host/provider/candidate/approval state.
-assert set(RecipeDefinition.__dataclass_fields__) == {"recipe_id", "name", "intent", "steps"}
-assert set(RecipeStep.__dataclass_fields__) == {
-    "step_id",
-    "capability",
-    "description",
-    "authority_class",
-    "postconditions",
-    "recovery_policy",
-    "depends_on",
+# One semantic identity spans multiple format/native endpoints.
+assert tool.tool_id == "tool:example-compressor"
+assert tuple(item.endpoint_id for item in tool.endpoints) == (
+    "endpoint:au", "endpoint:vst3"
+)
+assert {item.format_kind for item in tool.endpoints} == {"AU", "VST3"}
+assert tool.endpoint("endpoint:au").native_identity != tool.endpoint("endpoint:vst3").native_identity
+
+# Semantic parameter/state facts remain endpoint-specific and explicit.
+mix_bindings = tool.parameter_bindings_for("mix.wet_dry")
+assert len(mix_bindings) == 2
+assert {item.endpoint_id: item.native_parameter_ref for item in mix_bindings} == {
+    "endpoint:au": "kAudioUnitParameter_WetDryMix",
+    "endpoint:vst3": "param:12",
 }
+assert tool.state_for_endpoint("endpoint:vst3").writable is True
+assert tool.state_for_endpoint("endpoint:au").writable is False
 
-# Studio A can resolve the entire Recipe with a host-native mutation route.
-studio_a_facts = [
-    candidate("a-inspect", "HOST_NATIVE", "vocal.timing.inspect", task_fit=0.95),
-    candidate("a-tighten", "HOST_NATIVE", "vocal.tighten", task_fit=0.97),
-    candidate("a-compare", "GUIDED", "audio.compare", locality=1.0, privacy=1.0),
-]
-studio_a = StudioCapabilityProfile.build(
-    environment_id="studio:a",
-    host_label="Ableton Live",
-    candidates=studio_a_facts,
+# Only explicit existing OWNED_TOOL candidates feed the existing resolver.
+studio = StudioCapabilityProfile.build(
+    environment_id="studio:owned-tools",
+    candidates=tool.candidates(),
 )
-ready_a = planner.plan(recipe, studio_a)
-assert ready_a.status == "READY"
-assert ready_a.unavailable_step_ids == ()
-assert tuple(item.step.step_id for item in ready_a.step_plans) == (
-    "inspect", "tighten", "compare"
+job = N0TEableJob(
+    id="job:compress",
+    capability="dynamics.compress",
+    description="Compress a source using a legitimate owned-tool route",
 )
-tighten_a = next(item for item in ready_a.step_plans if item.step.step_id == "tighten")
-assert tighten_a.resolution.recommended.candidate.route_kind == "HOST_NATIVE"
+resolved = studio.resolve(job)
+assert resolved.status == "RESOLVED"
+assert resolved.recommended.candidate.route_kind == "OWNED_TOOL"
+assert resolved.recommended.candidate.candidate_id == "candidate:compress:vst3"
 
-# The same Recipe in Studio B uses different legitimate routes but keeps the same semantic identity.
-studio_b = StudioCapabilityProfile.build(
-    environment_id="studio:b",
-    host_label="Logic Pro",
-    candidates=[
-        candidate("b-inspect", "N0TE_NATIVE", "vocal.timing.inspect", task_fit=0.94),
-        candidate("b-tighten", "OWNED_TOOL", "vocal.tighten", task_fit=0.93),
-        candidate("b-compare", "N0TE_NATIVE", "audio.compare"),
-    ],
-)
-ready_b = planner.plan(recipe, studio_b)
-assert ready_b.status == "READY"
-assert ready_b.recipe_id == ready_a.recipe_id == recipe.recipe_id
-tighten_b = next(item for item in ready_b.step_plans if item.step.step_id == "tighten")
-assert tighten_b.resolution.recommended.candidate.route_kind == "OWNED_TOOL"
-
-# A famous installed but unverified tool remains unavailable and makes the Recipe unavailable.
-studio_c = StudioCapabilityProfile.build(
-    environment_id="studio:c",
-    host_label="Pro Tools",
-    candidates=[
-        candidate("c-inspect", "GUIDED", "vocal.timing.inspect"),
-        candidate(
-            "c-famous-installed",
-            "OWNED_TOOL",
-            "vocal.tighten",
-            display_name="Famous Vocal Tool",
-            brand="Famous Vendor",
-            verified=False,
-            evidence_ref=None,
-            task_fit=1.0,
-            user_preference=1.0,
-        ),
-        candidate("c-compare", "GUIDED", "audio.compare"),
-    ],
-)
-unavailable = planner.plan(recipe, studio_c)
-assert unavailable.status == "UNAVAILABLE"
-assert unavailable.unavailable_step_ids == ("tighten",)
-tighten_c = next(item for item in unavailable.step_plans if item.step.step_id == "tighten")
-assert "UNVERIFIED" in tighten_c.resolution.reason_codes
-
-# Host label changes alone cannot alter the plan.
-studio_a_other_label = StudioCapabilityProfile.build(
-    environment_id="studio:a",
-    host_label="Generic Other",
-    candidates=studio_a_facts,
-)
-assert planner.plan(recipe, studio_a_other_label) == ready_a
-
-# Consequential authority is a future requirement declaration only, even if resolution is READY.
-consequential = RecipeDefinition(
-    recipe_id="recipe:content:publish-preview",
-    name="Preview Publish Route",
-    intent="Plan an outbound content route without authorizing or executing publication",
-    steps=(
-        RecipeStep(
-            step_id="publish",
-            capability="content.publish.prepare",
-            description="Prepare the exact outbound publishing route for later approval",
-            authority_class="CONSEQUENTIAL_ACTION",
-            postconditions=("destination and payload would be inspectable before execution",),
-            recovery_policy="MANUAL_RECOVERY",
+# Endpoint/install/display-name presence alone produces zero semantic capability.
+famous_endpoint_only = SemanticToolProfile(
+    tool_id="tool:famous-installed",
+    display_name="Famous Magic Compressor",
+    endpoints=(
+        ToolEndpoint(
+            endpoint_id="endpoint:famous",
+            format_kind="VST3",
+            native_identity="FamousVendor.MagicCompressor",
+            evidence_ref="smoke:endpoint:famous",
         ),
     ),
 )
-consequential_studio = StudioCapabilityProfile.build(
-    environment_id="studio:consequential",
-    candidates=[candidate("guided-publish", "GUIDED", "content.publish.prepare")],
+assert famous_endpoint_only.candidates() == ()
+famous_studio = StudioCapabilityProfile.build(
+    environment_id="studio:famous",
+    candidates=famous_endpoint_only.candidates(),
 )
-consequential_plan = planner.plan(consequential, consequential_studio)
-assert consequential_plan.status == "READY"
-assert consequential_plan.declared_authority_classes == ("CONSEQUENTIAL_ACTION",)
-for forbidden in ("approved", "authorization", "executed", "receipt"):
-    assert not hasattr(consequential_plan, forbidden)
+unavailable = famous_studio.resolve(job)
+assert unavailable.status == "UNAVAILABLE"
+assert "NO_CANDIDATES" in unavailable.reason_codes
 
-# Resolver constraints still govern a consequential route before any future authority layer.
-cloud_studio = StudioCapabilityProfile.build(
-    environment_id="studio:cloud",
-    candidates=[
-        candidate(
-            "cloud-publish",
-            "PROVIDER",
-            "content.publish.prepare",
-            locality=0.1,
-            privacy=0.2,
-            paid=True,
-        )
-    ],
+# An explicit but unverified candidate remains represented and rejected by CORE-03A.
+unverified_tool = SemanticToolProfile(
+    tool_id="tool:unverified",
+    display_name="Unverified Installed Compressor",
+    endpoints=(vst3,),
+    capabilities=(
+        ToolCapabilityBinding(
+            endpoint_id=vst3.endpoint_id,
+            candidate=owned_candidate(
+                "candidate:unverified",
+                "dynamics.compress",
+                verified=False,
+                evidence_ref=None,
+                task_fit=1.0,
+                user_preference=1.0,
+            ),
+        ),
+    ),
 )
-constrained = planner.plan(
-    consequential,
-    cloud_studio,
-    ResolutionConstraints(min_locality=0.9, min_privacy=0.9, allow_paid=False),
+unverified_studio = StudioCapabilityProfile.build(
+    environment_id="studio:unverified",
+    candidates=unverified_tool.candidates(),
 )
-assert constrained.status == "UNAVAILABLE"
-reasons = set(constrained.step_plans[0].resolution.reason_codes)
-assert {"LOCALITY_BELOW_MINIMUM", "PRIVACY_BELOW_MINIMUM", "PAID_ROUTE_NOT_ALLOWED"} <= reasons
+unverified_result = unverified_studio.resolve(job)
+assert unverified_result.status == "UNAVAILABLE"
+assert "UNVERIFIED" in unverified_result.reason_codes
 
-# Planning is pure and deterministic; nothing executed or mutated.
-assert planner.plan(recipe, studio_a) == ready_a
-assert planner.plan(recipe, studio_b) == ready_b
-assert planner.plan(recipe, studio_c) == unavailable
+# Reads are pure and deterministic. No scan, load, parameter write or state I/O occurs here.
+assert tool.candidates() == tool.candidates()
+assert tool.parameter_bindings_for("mix.wet_dry") == mix_bindings
+assert tool.state_for_endpoint("endpoint:vst3").writable is True
 
 print(
-    "CORE-03D CONSUMER SMOKE: GREEN: one ordered host-neutral Recipe preserved capability, postcondition, recovery and future-authority declarations across studios; routes changed truthfully, unverified tools stayed unusable, and planning granted no approval or execution authority"
+    "CORE-03E CONSUMER SMOKE: GREEN: one semantic Tool identity spanned VST3/AU endpoints with explicit capability/parameter/state evidence; installed names created no capability, unverified facts stayed unusable, and no discovery or hosting occurred"
 )
