@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import sys
-from dataclasses import replace
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
@@ -26,108 +25,145 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-04" or increment != "CORE-04B":
+if active != "CORE-04" or increment != "CORE-04C":
     print(
         f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}",
         file=sys.stderr,
     )
     raise SystemExit(1)
 
-from n0te2 import OutboundEnvelope, OutboundInspector, OutboundMaterial  # noqa: E402
-
-master = OutboundMaterial(
-    item_id="material:master-v7",
-    category="UNRELEASED_AUDIO",
-    source_ref="song:song-1/version:v7/asset:master",
-    revision_fingerprint="sha256:master-v7",
-    private=True,
-    rights_ref="rights:artist-owned",
-    consent_ref="consent:artist:analysis-provider",
-)
-notes = OutboundMaterial(
-    item_id="material:private-notes",
-    category="PRIVATE_ARTIST_CONTEXT",
-    source_ref="song:song-1/context:mix-notes",
-    revision_fingerprint="sha256:mix-notes-v3",
-    private=True,
-    rights_ref="rights:artist-private-context",
-    consent_ref="consent:artist:analysis-provider",
+from n0te2 import (  # noqa: E402
+    NetworkPolicy,
+    NetworkRoute,
+    OfflineAccumulatedChange,
+    PendingExternalChange,
 )
 
-envelope = OutboundEnvelope(
-    request_id="request:mix-analysis:001",
-    job_id="job:analyze-master",
-    description="Analyze the exact unreleased master and selected private mix notes",
-    destination="provider:model:selected-analysis",
-    purpose="Return bounded mix feedback for this exact Song version",
-    materials=(notes, master),
-    retention_statement="Provider retention policy reviewed for this bounded request",
-    cost_statement="Estimated maximum cost: $0.25",
+# OFFLINE preserves local work while denying Internet transport.
+offline = NetworkPolicy("OFFLINE")
+localhost = offline.evaluate(
+    NetworkRoute("route:localhost", "LOCALHOST", "Local N0TE/DAW bridge")
 )
+internet = offline.evaluate(
+    NetworkRoute("route:provider", "INTERNET", "Remote provider")
+)
+assert localhost.status == "ALLOW"
+assert internet.status == "DENY"
+assert "OFFLINE_BLOCKS_INTERNET" in internet.reason_codes
+assert localhost.action_authority_granted is False
+assert internet.action_authority_granted is False
 
-inspector = OutboundInspector()
-preview = inspector.preview(envelope)
-assert tuple(item.item_id for item in preview.materials) == (
-    "material:master-v7",
-    "material:private-notes",
+# LAN remains explicit-approval-only, independent of OFFLINE/CONNECTED state.
+lan_denied = offline.evaluate(
+    NetworkRoute("route:lan", "LAN", "Approved studio collaborator")
 )
-assert preview.private_material_ids == (
-    "material:master-v7",
-    "material:private-notes",
+lan_allowed = offline.evaluate(
+    NetworkRoute(
+        "route:lan",
+        "LAN",
+        "Approved studio collaborator",
+        lan_approval_ref="artist:lan-approval:session-1",
+    )
 )
-assert preview.data_categories == (
-    "PRIVATE_ARTIST_CONTEXT",
-    "UNRELEASED_AUDIO",
-)
-assert preview.destination == envelope.destination
-assert preview.purpose == envelope.purpose
-assert preview.retention_statement == envelope.retention_statement
-assert preview.cost_statement == envelope.cost_statement
+assert lan_denied.status == "DENY"
+assert lan_allowed.status == "ALLOW"
+assert lan_allowed.action_authority_granted is False
 
-confirmation = inspector.bind_confirmation(
-    envelope,
-    source_ref="artist-confirmation:egress-screen:17",
+# Before going OFFLINE, pending remote work cannot silently disappear.
+connected = NetworkPolicy("CONNECTED")
+pending = (
+    PendingExternalChange(
+        "change:upload",
+        "UPLOAD",
+        "Master upload is still unsent",
+        "UNSENT",
+    ),
+    PendingExternalChange(
+        "change:receipt",
+        "PROVIDER_RECEIPT",
+        "Publication receipt has not been reconciled",
+        "UNRECONCILED",
+    ),
 )
-assert inspector.validate_confirmation(envelope, confirmation).status == "VALID"
+offline_plan = connected.plan_offline_transition(reversed(pending))
+assert offline_plan.status == "CHOICE_REQUIRED"
+assert offline_plan.change_ids == ("change:receipt", "change:upload")
 
-# Changing one represented consent fact invalidates the entire bounded confirmation.
-changed_consent = replace(
-    envelope,
-    materials=(replace(master, consent_ref="consent:artist:different-scope"), notes),
+finish_first = connected.resolve_offline_transition(offline_plan, "FINISH_FIRST")
+assert finish_first.next_mode == "CONNECTED"
+assert finish_first.requires_external_work is True
+assert finish_first.preserved_change_ids == offline_plan.change_ids
+assert finish_first.performed_external_action is False
+
+preserve = connected.resolve_offline_transition(
+    offline_plan,
+    "PRESERVE_AND_GO_OFFLINE",
 )
-assert inspector.validate_confirmation(changed_consent, confirmation).status == "STALE"
+assert preserve.next_mode == "OFFLINE"
+assert preserve.preserved_change_ids == offline_plan.change_ids
+assert preserve.performed_external_action is False
 
-# Changing the exact source revision also invalidates it.
-changed_revision = replace(
-    envelope,
-    materials=(replace(master, revision_fingerprint="sha256:master-v8"), notes),
+# Reconnect never auto-syncs. SYNC_NOW is a directive for a later executor only.
+offline_changes = (
+    OfflineAccumulatedChange(
+        "change:local-song",
+        "SONG_EDIT",
+        "Song changed while offline",
+    ),
+    OfflineAccumulatedChange(
+        "change:local-draft",
+        "DRAFT",
+        "Provider draft changed locally while offline",
+    ),
 )
-assert inspector.validate_confirmation(changed_revision, confirmation).status == "STALE"
+connected_plan = offline.plan_connected_transition(reversed(offline_changes))
+assert connected_plan.status == "CHOICE_REQUIRED"
+assert connected_plan.change_ids == ("change:local-draft", "change:local-song")
 
-# Input order is non-material and canonicalizes.
-reordered = replace(envelope, materials=tuple(reversed(envelope.materials)))
-assert reordered == envelope
-assert inspector.validate_confirmation(reordered, confirmation).status == "VALID"
+sync_directive = offline.resolve_connected_transition(connected_plan, "SYNC_NOW")
+assert sync_directive.next_mode == "CONNECTED"
+assert sync_directive.reconciliation_directive == "SYNC_NOW"
+assert sync_directive.requires_external_work is True
+assert sync_directive.performed_external_action is False
+assert sync_directive.action_authority_granted is False
 
-# Inspect/confirm is still not transport.
+postpone = offline.resolve_connected_transition(connected_plan, "POSTPONE")
+assert postpone.next_mode == "CONNECTED"
+assert postpone.reconciliation_directive == "POSTPONE"
+assert postpone.requires_external_work is False
+assert postpone.preserved_change_ids == connected_plan.change_ids
+
+nothing = offline.plan_connected_transition()
+assert nothing.status == "READY"
+assert "NOTHING_TO_RECONCILE" in nothing.reason_codes
+assert offline.resolve_connected_transition(nothing).performed_external_action is False
+
+# The policy has no networking or synchronization executor.
 public_methods = {
     name
-    for name in dir(OutboundInspector)
-    if not name.startswith("_") and callable(getattr(OutboundInspector, name))
+    for name in dir(NetworkPolicy)
+    if not name.startswith("_") and callable(getattr(NetworkPolicy, name))
 }
-assert public_methods == {"preview", "bind_confirmation", "validate_confirmation"}
+assert public_methods == {
+    "evaluate",
+    "plan_offline_transition",
+    "resolve_offline_transition",
+    "plan_connected_transition",
+    "resolve_connected_transition",
+}
 for forbidden in (
+    "connect",
+    "disconnect",
     "send",
     "upload",
-    "transmit",
-    "request",
-    "call_model",
-    "execute",
+    "sync",
     "publish",
-    "post",
+    "execute",
+    "request",
+    "call_provider",
 ):
-    assert not hasattr(inspector, forbidden)
+    assert forbidden not in public_methods
 
 print(
-    "CORE-04B CONSUMER SMOKE: GREEN: exact private outbound material, destination, purpose, retention and cost were inspectable; confirmation bound to the exact package, consent/revision changes became STALE, input order canonicalized, and no transport API existed"
+    "CORE-04C CONSUMER SMOKE: GREEN: OFFLINE blocked Internet but preserved localhost, LAN required explicit approval, pending remote work survived the offline choice, reconnect required a reconciliation directive, SYNC_NOW performed nothing, and connectivity granted no action authority"
 )
