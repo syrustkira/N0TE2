@@ -1,0 +1,149 @@
+{
+  "schema_version": 1,
+  "node_id": "LEGACY-01",
+  "source_quarry": {
+    "repository": "syrustkira/N0TE",
+    "head_sha": "25e2f2f5fd8ea4adc0c7e61650531430025e59db",
+    "tree_sha": "fb7eb7a9d3a6f2e1620dfbbfca7f21b51975b7c4"
+  },
+  "observed_execution": {
+    "workflow": "N0TE canonical validation",
+    "workflow_run_id": 32326588695,
+    "job_name": "validate",
+    "job_id": 96298988588,
+    "workflow_conclusion": "failure",
+    "executed_checkout_sha": "074e53aedd1d856543d51c38bcc3825df3cb08aa",
+    "checkout_kind": "HEAD_DERIVED_PR_MERGE",
+    "head_in_merge": "25e2f2f5fd8ea4adc0c7e61650531430025e59db",
+    "base_in_merge": "8245ad978fc1532ed5c4e9562135dfa40cdae7b8",
+    "exact_raw_head_execution": false,
+    "historical_evidence_only": true,
+    "suite_summary": {
+      "tests_run": 793,
+      "failures": 11,
+      "errors": 5
+    }
+  },
+  "selected_spec_summary": {
+    "behavior_groups": 11,
+    "selected_test_files": 19,
+    "groups_with_all_selected_legacy_tests_green": 10,
+    "groups_with_selected_legacy_test_failure": 1,
+    "all_selected_legacy_behavior_green": false,
+    "legacy_execution_can_close_product_nodes": false,
+    "every_reuse_or_adapt_requires_fresh_n0te2_boundary_proof": true
+  },
+  "groups": [
+    {
+      "id": "TESTMAP-001",
+      "behavior": "SONG_IDENTITY",
+      "selected_files": ["tests/test_project_store_song_authority.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": [],
+      "admission_effect": "Behavior may seed CORE-01 specifications, but ProjectStore topology has no admission authority."
+    },
+    {
+      "id": "TESTMAP-002",
+      "behavior": "CONTEXT_ISOLATION",
+      "selected_files": ["tests/test_context_separation.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": [],
+      "admission_effect": "Behavior may seed canonical context isolation tests; legacy context-pack authority is rejected."
+    },
+    {
+      "id": "TESTMAP-003",
+      "behavior": "PEER_DAWS",
+      "selected_files": ["tests/test_c07_multi_daw.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": [],
+      "admission_effect": "Peer-DEEP target and host-scoped evidence are useful specs; old service topology is not admitted."
+    },
+    {
+      "id": "TESTMAP-004",
+      "behavior": "TRY_HEAR_COMPARE_DECIDE",
+      "selected_files": ["tests/test_real_song_candidates.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": [],
+      "admission_effect": "Candidate/control/decision invariants may seed fresh SONG-04/05 tests."
+    },
+    {
+      "id": "TESTMAP-005",
+      "behavior": "AUTHORITY_RECOVERY",
+      "selected_files": ["tests/test_real_song_authority.py", "tests/test_recovery_guardian.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": [],
+      "admission_effect": "One-shot authority, stale-focus rejection, receipts and recovery semantics may seed fresh CORE-04 tests."
+    },
+    {
+      "id": "TESTMAP-006",
+      "behavior": "OFFLINE_FOUNDATION",
+      "selected_files": ["tests/test_offline_foundation.py", "tests/test_network_defaults.py"],
+      "legacy_selected_execution": "RED",
+      "observed_failures": [
+        "tests/test_offline_foundation.py::OfflineFoundationTests.test_lan_requires_literal_private_or_loopback_address: policy allowed https://printer.local/service when the selected legacy test required denial"
+      ],
+      "n0te2_additional_gaps": [
+        "CONNECTED_TO_OFFLINE_PENDING_STATE_CHOICE",
+        "OFFLINE_TO_CONNECTED_EXPLICIT_RECONCILIATION_CHOICE"
+      ],
+      "admission_effect": "Do not claim the legacy LAN/address policy as proven. Re-derive the current network contract and test it fresh in N0TE2, including both transition directions and no auto-sync."
+    },
+    {
+      "id": "TESTMAP-007",
+      "behavior": "PROVIDER_TRUST_SAFE_DEFAULTS",
+      "selected_files": ["tests/test_provider_switchboard.py", "tests/test_gemini_native.py", "tests/test_config_defaults.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": ["PRIVATE_DATA_EGRESS_EXACT_DATA_DESTINATION_PURPOSE"],
+      "admission_effect": "Fail-closed provider behavior may seed tests; secret persistence must be replaced with an OS security boundary and bounded egress authority."
+    },
+    {
+      "id": "TESTMAP-008",
+      "behavior": "APP_LIFECYCLE_UPDATES_PLATFORM",
+      "selected_files": ["tests/test_lifecycle.py", "tests/test_isolated_macos_launcher.py", "tests/test_platform_packaging.py", "tests/test_platform_parity.py", "tests/test_updates.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": ["FULL_CONSUMER_APPLICATION_LIFECYCLE"],
+      "admission_effect": "Lifecycle/update/platform primitives may seed APP-01/PLATFORM-00 tests; complete install-to-uninstall consumer proof remains new work."
+    },
+    {
+      "id": "TESTMAP-009",
+      "behavior": "LIVE_AUDIO_EVIDENCE",
+      "selected_files": ["tests/test_live_audio_capture.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": [],
+      "admission_effect": "Capture truth/authority invariants may seed AUDIO/DAW-01 tests; real listening and latency acceptance remain separate."
+    },
+    {
+      "id": "TESTMAP-010",
+      "behavior": "VST3_ISOLATION",
+      "selected_files": ["tests/test_vst3_runtime.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": [],
+      "admission_effect": "Isolation and identity invariants may seed AUDIO-02 tests; real commercial-plugin acceptance remains separate."
+    },
+    {
+      "id": "TESTMAP-011",
+      "behavior": "PRIVATE_NOTES_EVENT_ATTRIBUTION",
+      "selected_files": ["tests/test_events_notebook.py"],
+      "legacy_selected_execution": "GREEN",
+      "observed_failures": [],
+      "n0te2_additional_gaps": ["CORRUPTION_VISIBILITY_AND_RECOVERY"],
+      "admission_effect": "Privacy and attribution behavior may seed CORE-02/04 tests; unreadable-history corruption must be newly regression-tested."
+    }
+  ],
+  "reconciliation": {
+    "legacy_suite_failure_is_preserved": true,
+    "selected_failure_is_not_downgraded_to_unknown": true,
+    "pr_merge_execution_is_not_mislabeled_exact_head": true,
+    "legacy_tests_are_spec_evidence_not_n0te2_acceptance": true,
+    "direct_legacy_source_or_test_copy_remains_license_gated": true
+  }
+}
