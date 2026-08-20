@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-04B",
+  "receipt_id": "N0TE2-CORE-04C",
   "node_id": "CORE-04",
-  "increment_id": "CORE-04B",
-  "baseline_sha": "27d6433813bfdb00c006e64e5700b7e33e23b806",
-  "purpose": "Implement a pure inspect-before-egress envelope that makes proposed outbound material, provenance, privacy classification, destination, purpose, retention and cost statements explicit and binds artist confirmation to that exact package through CORE-04A, with no transmission capability.",
+  "increment_id": "CORE-04C",
+  "baseline_sha": "34122497b951446f4720b5a140ef2e55deb98fc3",
+  "purpose": "Implement the artist-controlled connectivity law as a pure transport-eligibility and offline/reconnect transition-planning layer: OFFLINE blocks Internet while preserving localhost/local work, LAN requires explicit approval, pending changes are surfaced before disconnect, and reconnect never auto-syncs or grants authority.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,40 +14,42 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "Before private or public material crosses a trust boundary, the artist can inspect exactly what would leave, where, why and under which explicit provenance/privacy/rights/consent/retention/cost facts, and confirmation binds only to that exact package.",
-    "journeys": ["J-TRUST", "J-WORKSPACE", "J-IMPROVE"],
-    "capability": "Outbound provenance inspection and exact private-data confirmation envelope",
-    "increment": "CORE-04B"
+    "outcome": "The artist can choose OFFLINE without losing local work, see pending remote changes before disconnecting, and reconnect without N0TE silently syncing, uploading, publishing, spending or treating connectivity as action authority.",
+    "journeys": ["J-TRUST", "J-WORKSPACE"],
+    "capability": "Artist-controlled connectivity policy and explicit offline/reconnect transition planning",
+    "increment": "CORE-04C"
   },
   "reuse": {
-    "mode": "PURE_EGRESS_ENVELOPE_OVER_CORE04A_AUTHORITY",
-    "n0te2_dependencies": ["ActionIntent", "ApprovalBinding", "ApprovalValidation", "AuthorityService", "CORE-01 stable source/revision identities"],
-    "legacy_candidates": ["outbound context inspector and consent semantics as behavioral evidence only"],
-    "legacy_rejections": ["silent outbound data", "destination-only confirmation", "provider-brand trust inference", "parallel approval mechanism", "network/provider call inside inspector", "credentials in outbound provenance"],
+    "mode": "PURE_NETWORK_POLICY_SEPARATE_FROM_ACTION_AUTHORITY",
+    "n0te2_dependencies": ["CORE-04A exact authority semantics", "CORE-04B outbound package semantics"],
+    "legacy_candidates": ["NetworkPolicy/AI-OFF semantics as behavioral evidence only"],
+    "legacy_rejections": ["connectivity grants authority", "offline cripples localhost/local work", "silent LAN access", "silent reconnect sync", "silent paid/remote fallback", "socket/provider execution inside policy"],
     "direct_copy": false
   },
   "completion_proof": [
-    "preview exposes every exact material item, category, source, revision, privacy flag, represented rights/consent reference, destination, purpose, retention statement and cost statement",
-    "private material IDs and data categories derive only from explicit material facts",
-    "confirmation delegates to CORE-04A exact ActionIntent fingerprint binding and unchanged package validates as VALID",
-    "changing material identity/category/source/revision/privacy/rights/consent, adding or removing material, or changing request/job/description/destination/purpose/retention/cost makes prior confirmation STALE",
-    "material input order canonicalizes without changing the outbound or authority fingerprint",
-    "duplicate material IDs, malformed privacy flags and blank outbound explanation fields are rejected",
-    "blank confirmation source is rejected",
-    "OutboundInspector public API contains preview, bind_confirmation and validate_confirmation only with no send/upload/transmit/request/model/provider/network/execute path",
-    "preview and confirmation validation are deterministic and pure",
-    "no external action, credential access, provider call or network transport occurs"
+    "OFFLINE denies INTERNET and permits LOCALHOST by connectivity policy",
+    "CONNECTED permits INTERNET transport class but action_authority_granted remains false",
+    "LAN is denied without an explicit approval reference and allowed with one in either mode without granting action authority",
+    "pending/unsent/unreconciled external changes produce CHOICE_REQUIRED before CONNECTED to OFFLINE",
+    "FINISH_FIRST remains CONNECTED and marks external work still required; preserve/proceed choices enter OFFLINE while retaining every pending change ID",
+    "no pending changes produce READY offline transition without a fake choice",
+    "offline-accumulated changes produce CHOICE_REQUIRED before OFFLINE to CONNECTED with SYNC_NOW/SYNC_SELECTIVELY/POSTPONE/REMAIN_UNSYNCED choices",
+    "selected reconciliation choice is returned only as a directive; no sync is performed and action authority remains false",
+    "reconnect with no offline changes reports NOTHING_TO_RECONCILE",
+    "duplicate change IDs and mode/direction mismatches are rejected",
+    "NetworkPolicy exposes no connect/disconnect/send/upload/sync/publish/execute/provider verb and performs no external action",
+    "decisions and transition resolution are pure/deterministic and do not mutate the policy instance"
   ],
   "non_scope": [
+    "socket/network transport",
     "provider execution or receipt",
-    "network/offline switching",
+    "actual sync/reconciliation",
+    "cost/spend authorization",
     "credential storage",
-    "cost charging or budget authorization",
     "DAW or Recipe execution",
-    "team/collaborator permissions",
     "CORE-02 Success Memory",
-    "UI confirmation dialog",
+    "UI shell",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-04B evidence, reconcile and globally compare transactional execution/recovery, universal provider receipts/reconciliation and network/offline trust against preserved CORE-02 Success Memory. Do not add transport merely because the outbound package is now approvable."
+  "next_selection_rule": "After CORE-04C evidence, reconcile and globally compare transactional execution/recovery, universal provider execute-once receipts/reconciliation and credentials/trust contracts against preserved CORE-02 Success Memory. Do not add network transport merely because policy now permits a route."
 }
