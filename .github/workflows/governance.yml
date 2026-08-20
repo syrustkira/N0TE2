@@ -1,0 +1,30 @@
+name: N0TE2 Governance
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    name: governance-${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate construction governance
+        run: python governance/check_governance.py --repo .
+      - name: Governance regression tests
+        run: python -m unittest discover -s tests -p 'test_*.py'
+      - name: BOOT-02 consumer-smoke boundary
+        run: python governance/smoke/consumer_smoke.py
