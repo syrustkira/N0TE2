@@ -18,7 +18,8 @@
     "governance/active_receipt.json",
     "governance/platform_support.json",
     "governance/held_scope.json",
-    "governance/legacy_admission.json"
+    "governance/legacy_admission.json",
+    "governance/legacy_execution_evidence.json"
   ],
   "historical_evidence_only": [
     "N0TE repository history",
@@ -37,6 +38,7 @@
     "native_first_does_not_mean_n0te_absent": true,
     "missing_acceptance_resource_stops_unrelated_construction": false,
     "legacy_classification_is_not_copy_authority": true,
-    "legacy_test_green_is_not_product_completion": true
+    "legacy_test_green_is_not_product_completion": true,
+    "legacy_test_failure_must_remain_visible": true
   }
 }
