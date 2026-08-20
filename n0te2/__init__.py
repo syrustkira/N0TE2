@@ -28,6 +28,7 @@ from .evidence import (
     EvidenceResolution,
     TWIN_DOMAINS,
 )
+from .friction import FrictionMemory, FrictionObservation, FrictionPattern
 from .graph import GraphEdge, GraphNode, SongKnowledgeMap, SongKnowledgeMapService
 from .learning import (
     DECISION_KINDS,
@@ -116,6 +117,9 @@ __all__ = [
     "EvidenceClaim",
     "EvidenceMemory",
     "EvidenceResolution",
+    "FrictionMemory",
+    "FrictionObservation",
+    "FrictionPattern",
     "GraphEdge",
     "GraphNode",
     "HeadquartersMemory",
