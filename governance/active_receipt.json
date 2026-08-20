@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01I",
+  "receipt_id": "N0TE2-CORE-01J",
   "node_id": "CORE-01",
-  "increment_id": "CORE-01I",
-  "baseline_sha": "3894b58dc09ebb8997693623b09d7b047d1ecacc",
-  "purpose": "Implement fresh-consumer context isolation so generic N0TE product doctrine stays separate from private profile/Song evidence and imported or synced context remains append-only EVIDENCE_ONLY material without product or action authority.",
+  "increment_id": "CORE-01J",
+  "baseline_sha": "ceb90b57a2d13022505a90224d87fdd2ded78ecd",
+  "purpose": "Close the remaining CORE-01 crash-consistency gap by making canonical profile initialization all-or-nothing and fault-injecting existing SQLite persistence for process interruption, disk-full rollback and interrupted evidence migration without inventing another persistence model.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,39 +14,36 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A fresh profile receives generic N0TE doctrine plus only its own Artist/Song context; imported context can inform review but cannot replace doctrine, identity or authority.",
+    "outcome": "The artist's last committed canonical Artist/Song state survives ordinary interruption, and damaged state fails visibly/recoverably instead of becoming trusted partial state.",
     "journeys": ["J-TRUST", "J-CORE-LIFECYCLE", "J-IDEA-SONG"],
-    "capability": "Fresh-consumer Product / Artist / Song / imported-context isolation",
-    "increment": "CORE-01I"
+    "capability": "Crash-consistent canonical local persistence",
+    "increment": "CORE-01J"
   },
   "reuse": {
-    "mode": "N0TE2_PROFILE_ISOLATION_PLUS_SCOPED_EVIDENCE",
-    "n0te2_dependencies": ["LineageStore", "EvidenceMemory", "HeadquartersMemory"],
-    "legacy_candidates": ["Product Context isolation semantics as evidence only"],
-    "legacy_rejections": ["shared Artist context", "import-as-authority", "persisted per-profile product doctrine", "second context/evidence database"],
+    "mode": "N0TE2_EXISTING_SQLITE_TRANSACTION_AND_RECOVERY_MODEL",
+    "n0te2_dependencies": ["LineageStore", "EvidenceMemory", "RecoveryManager"],
+    "legacy_candidates": ["crash/recovery semantics as evidence only"],
+    "legacy_rejections": ["second database", "silent auto-restore", "new backup subsystem", "best-effort partial commits"],
     "direct_copy": false
   },
   "completion_proof": [
-    "two profiles receive an identical immutable generic ProductContext fingerprint while private Artist/Song/evidence IDs remain physically and semantically isolated",
-    "creating and importing into profile B does not modify the closed canonical database bytes of original profile A",
-    "imported/synced context is append-only and hard-coded EVIDENCE_ONLY with ARTIST or owned SONG scope",
-    "payload fields that claim another artist identity, product doctrine or mutation authority cannot change ProductContext, Artist identity or EvidenceMemory rows/resolution",
-    "Song-scoped imported context is absent from another Song and cross-profile Song scope is rejected",
-    "restart preserves imported context separately from canonical Artist/Song evidence",
-    "tampered authority, source or scope fails visibly",
-    "ContextEnvelope reads after initialization perform zero canonical writes"
+    "a denied mid-initialization schema operation rolls back every canonical schema object rather than leaving a trusted partial profile",
+    "a subprocess terminated after an uncommitted Song mutation reopens to the exact prior committed Song state with quick_check ok",
+    "SQLITE_FULL during a large transactional Song write rolls back the mutation and preserves prior active Song, row count and integrity",
+    "an interrupted evidence v1-to-v2 migration rolls back both ALTER TABLE and metadata change, remains retryable as v1, then migrates to v2 without claim loss",
+    "existing CORE-01F corrupt-live tests continue to require explicit exact-hash snapshot restore and preserve the corrupt database rather than silently replacing it",
+    "same-class scan confirms Activity, context imports, provenance and normal evidence mutations use the canonical transaction boundary; evidence schema creation begins its transaction inside executescript",
+    "after fault proof, the full CORE-01 parent is re-audited rather than extending persistence work by adjacency"
   ],
   "non_scope": [
-    "onboarding UI",
-    "Artist World taste maturation",
-    "cloud account/profile sync",
     "universal search",
     "broad Artist Graph population",
-    "provider execution",
-    "DAW/audio integration",
-    "promotion of imported payload into evidence or authority",
-    "second context database",
+    "cross-domain provider or entity population",
+    "cloud backup or sync",
+    "APP-01 install/update/rollback lifecycle",
+    "DAW/audio/plugin work",
+    "new persistence layer",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-01I evidence, reconcile the full CORE-01 foundation contract and decide whether the parent is construction-complete or whether one concrete minimum remains. Do not continue context/import work by adjacency."
+  "next_selection_rule": "After CORE-01J fault evidence, re-audit CORE-01. If no concrete parent foundation gap remains, close the construction dependency and globally reselect from newly dependency-ready nodes rather than continuing persistence by adjacency."
 }
