@@ -2,8 +2,8 @@
   "schema_version": 3,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
-  "active_node": "CORE-02",
-  "active_increment": "CORE-02A",
+  "active_node": "CORE-03",
+  "active_increment": "CORE-03A",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -21,13 +21,14 @@
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01 is closed as a construction dependency at crash-hardened head 782118d88b0d44a0a343c5e50a8464cef23b0bbc; hosted exact-head proof remains UNOBSERVED and is not converted to green.",
-    "CORE-01A-J provide canonical Artist/Song/version/asset identity, scoped evidence/conflicts, Activity, Resume, provenance, explicit recovery, Song graph, Technical/Creative Twin semantics, context isolation and fault-hardened local persistence.",
-    "CORE-02 and CORE-03 became dependency-ready after CORE-01 closure. Portfolio/journey reselection chose CORE-02A because a normal artist must be able to conduct and resume meaningful Song work before capability routing adds host/provider execution choices.",
-    "CORE-02A is the only active product increment. Session scratch is durable chronology but not EvidenceMemory; only explicit promotion creates durable doctrine/evidence.",
-    "Sessions bind to one owned Song and optional version, start with an objective, close once with a debrief and next action, and preserve rejected/unresolved exploration without auto-promotion.",
-    "CORE-03 remains PRESERVED and dependency-ready; no host or DAW receives semantic priority because CORE-02 was selected first.",
-    "No skill model, universal experiment causality model, friction/success pattern engine, universal search UI, DAW/audio/provider execution or hosted-CI proof scaffolding is selected in CORE-02A.",
+    "CORE-01 remains closed as the canonical durable memory substrate.",
+    "CORE-02A Song Session intent/scratch/debrief is implemented at head 12247dcf5c090ac48b08205edbbb6136e8751d14 on draft PR #14; CORE-02 remains incomplete and preserved for later learning/experiment/friction/success outcomes.",
+    "Global portfolio/journey reselection chose CORE-03A because truthful host-neutral job routing now unlocks later capability authority and peer-DAW work, while remaining CORE-02 learning models need broader real outcomes to avoid premature doctrine.",
+    "CORE-03A is the only active product increment and is a pure resolver. It executes no host mutation, provider call, paid action, approval or external side effect.",
+    "The same N0TEable job identity can resolve to HOST_NATIVE, N0TE_NATIVE, OWNED_TOOL, PROVIDER or GUIDED depending only on explicit verified candidate evidence, constraints and scored attributes.",
+    "Route kind, brand and display name have no scoring bonus. Installed/unverified tool identity cannot imply capability. Preference cannot resurrect an incompatible or forbidden candidate.",
+    "All core DAWs remain peer future implementations; CORE-03A selects no DAW adapter and creates no host hierarchy.",
+    "Hosted exact-head proof for prior stacked product heads remains UNOBSERVED and does not block dependency-ready construction.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
