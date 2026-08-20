@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01E",
+  "receipt_id": "N0TE2-CORE-01F",
   "node_id": "CORE-01",
-  "increment_id": "CORE-01E",
-  "baseline_sha": "bee7e724853848585c8c19505ad65efc021d30b6",
-  "purpose": "Add immutable canonical derivation provenance so N0TE can explain where a version or asset came from, with explicit evidence/tool/provider/model/recipe/rights/consent/cost references and no invented certainty.",
+  "increment_id": "CORE-01F",
+  "baseline_sha": "650180dcecd8ddef39cf13dd1694093cc1a8e65d",
+  "purpose": "Add explicit local recovery snapshots for the canonical profile database so a corrupt live DB can be inspected and restored by exact hash without silent fallback or loss of the pre-restore evidence.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,39 +14,40 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can inspect a version and truthfully see represented source/derivation provenance without N0TE inventing rights, approval or causality.",
-    "journeys": ["J-COMPARE-DECIDE", "J-IDEA-SONG", "J-FINISH"],
-    "capability": "Version/asset derivation provenance + Explain Version",
-    "increment": "CORE-01E"
+    "outcome": "The artist can explicitly restore a verified local canonical-memory snapshot after corruption and resume the same Song state represented by that restore point.",
+    "journeys": ["J-TRUST", "J-CORE-LIFECYCLE", "J-IDEA-SONG"],
+    "capability": "Explicit local snapshot / inspect / restore",
+    "increment": "CORE-01F"
   },
   "reuse": {
-    "mode": "N0TE2_FOUNDATION_PLUS_SEMANTICS_ONLY",
-    "n0te2_dependencies": ["LineageStore", "ActivityLog", "HeadquartersMemory"],
-    "legacy_candidates": ["ProjectGraph provenance concepts", "ProductStore provenance concepts"],
-    "legacy_rejections": ["parallel graph/store ownership", "coarse portability scoring as provenance", "rights certainty by metadata presence"],
+    "mode": "STANDARD_SQLITE_AND_N0TE2_IDENTITY_ONLY",
+    "n0te2_dependencies": ["LineageStore profile identity", "HeadquartersMemory canonical DB"],
+    "legacy_candidates": ["atomic-write findings", "backup/restore/recovery safety semantics"],
+    "legacy_rejections": ["silent fallback to stale state", "parallel canonical recovery store", "automatic creative undo"],
     "direct_copy": false
   },
   "completion_proof": [
-    "VERSION and ASSET outputs accept immutable provenance records bound to their canonical Song",
-    "canonical VERSION/ASSET inputs must exist and belong to the same Song as the output",
-    "external inputs remain explicit references and are never promoted to canonical objects by inference",
-    "operation and evidence source are required while tool/provider/model/recipe/rights/consent/cost references remain optional",
-    "provenance writes append a PROVENANCE_RECORDED Activity event in the same successful transaction",
-    "Explain Version returns parent version, attached assets and represented derivation records after restart",
-    "missing provenance fields remain absent rather than guessed and provenance does not imply approval or rights certainty",
-    "provenance update/delete is rejected and tampered canonical references fail visibly",
-    "Explain Version is a pure read and inserts/updates/deletes zero rows"
+    "snapshot uses SQLite backup into a temporary same-profile recovery file and is integrity/profile checked before atomic replacement",
+    "snapshot has an exact SHA-256 that is required for restore",
+    "normal HeadquartersMemory.open continues to fail visibly on a corrupt live DB even while a valid snapshot exists",
+    "inspect_snapshot works without opening or mutating the live canonical database",
+    "wrong restore hash refuses before replacing live state",
+    "explicit exact-hash restore preserves the current/corrupt database before installing the verified snapshot",
+    "restored profile reopens with the exact Artist/Song/version/evidence state present at snapshot and not post-snapshot mutations",
+    "a snapshot copied under another profile is rejected by embedded profile identity",
+    "failure while replacing a newly-created snapshot cannot destroy the previous valid snapshot",
+    "unreadable snapshot returns a bounded validation failure rather than an internal/uninitialized error"
   ],
   "non_scope": [
-    "full cross-domain Artist/Song Graph",
-    "universal search",
-    "Technical Twin / Creative Twin UX",
-    "DAW adapters",
-    "provider execution",
-    "rights adjudication or legal certainty",
-    "billing/accounting or spend authority",
-    "second graph/provenance database",
+    "cloud backup or multi-device sync",
+    "automatic rollback or auto-restore",
+    "crash reporting/upload",
+    "telemetry",
+    "full application lifecycle/update/uninstall",
+    "generic backup engine",
+    "Technical Twin / Creative Twin",
+    "DAW/provider work",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-01E proof, reconcile evidence and globally reselect from remaining CORE-01/customer work. Do not grow a generic graph by adjacency."
+  "next_selection_rule": "After CORE-01F proof, reconcile evidence and globally reselect. Do not continue reliability/backup work by adjacency."
 }

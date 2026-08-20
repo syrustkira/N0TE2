@@ -18,6 +18,15 @@ from .provenance import (
     ProvenanceRecord,
     VersionExplanation,
 )
+from .recovery import (
+    RecoveryError,
+    RecoveryManager,
+    RestoreResult,
+    SnapshotHashMismatchError,
+    SnapshotInfo,
+    SnapshotNotFoundError,
+    SnapshotValidationError,
+)
 from .resume import (
     ResumeChange,
     ResumeConflict,
@@ -43,10 +52,17 @@ __all__ = [
     "ProvenanceAsset",
     "ProvenanceLedger",
     "ProvenanceRecord",
+    "RecoveryError",
+    "RecoveryManager",
+    "RestoreResult",
     "ResumeChange",
     "ResumeConflict",
     "ResumeEvidence",
     "ResumeVersion",
+    "SnapshotHashMismatchError",
+    "SnapshotInfo",
+    "SnapshotNotFoundError",
+    "SnapshotValidationError",
     "Song",
     "SongResumeBrief",
     "SongResumeService",

@@ -6,6 +6,7 @@ from .activity import ActivityLog
 from .evidence import EvidenceMemory
 from .lineage import LineageStore
 from .provenance import ProvenanceLedger
+from .recovery import RecoveryManager
 
 
 class HeadquartersMemory:
@@ -16,6 +17,7 @@ class HeadquartersMemory:
         self.evidence = EvidenceMemory(store)
         self.activity = ActivityLog(store)
         self.provenance = ProvenanceLedger(store)
+        self.recovery = RecoveryManager(store)
 
     @classmethod
     def create(cls, root: str | Path, artist_name: str) -> "HeadquartersMemory":

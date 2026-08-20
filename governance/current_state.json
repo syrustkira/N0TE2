@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-01",
-  "active_increment": "CORE-01E",
+  "active_increment": "CORE-01F",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -20,12 +20,12 @@
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01A/B/C/D establish canonical Song/version identity, scoped evidence, Activity and a pure-read Song Resume Brief.",
-    "CORE-01D hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
-    "CORE-01E is the only active product increment and adds immutable version/asset derivation provenance plus Explain Version inside the same canonical profile database.",
-    "Provenance records evidence references only; they do not adjudicate rights, consent, causality, cost validity or approval.",
-    "Canonical provenance inputs cannot cross Songs; explicitly external references remain external rather than being fabricated as canonical objects.",
-    "No full Artist Graph, DAW integration, provider execution, rights adjudication or second persistence store is selected in this increment.",
+    "CORE-01A-E now create valuable canonical Song/version/evidence/Activity/resume/provenance state worth protecting.",
+    "CORE-01E hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
+    "CORE-01F is the only active product increment and adds explicit local snapshot/inspect/restore recovery for the canonical profile database.",
+    "Normal HeadquartersMemory.open never auto-restores a snapshot; corrupt live state remains a visible failure until an exact-hash restore is explicitly invoked.",
+    "Restore preserves the current/corrupt database before replacement and verifies embedded profile identity, SQLite integrity and snapshot SHA-256.",
+    "No cloud sync, automatic rollback, crash upload, telemetry, full app lifecycle or second state authority is selected in this increment.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
