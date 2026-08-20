@@ -51,11 +51,34 @@ class SessionPromotion:
 class SessionMemory:
     """Song-bound work intent, scratch exploration, debrief and explicit learning.
 
-    Session scratch is durable history but is not durable product/Artist doctrine.
-    Only an explicit promotion writes to EvidenceMemory. Promotion uses an
-    immutable request plus a database trigger so the EvidenceClaim and its
-    Session link commit atomically in the normal EvidenceMemory transaction.
+    Session scratch is durable history but is not durable Artist/product doctrine.
+    Only explicit promotion writes a canonical EvidenceClaim. Promotion requests
+    are immutable and may safely remain pending after interruption; the claim and
+    Session link are committed atomically by a database trigger inside the normal
+    EvidenceMemory transaction.
     """
+
+    _TRIGGER_NAMES = {
+        "session_version_same_song",
+        "session_binding_immutable",
+        "session_closed_immutable",
+        "session_delete_immutable",
+        "session_close_requires_debrief",
+        "session_open_has_no_debrief",
+        "session_items_open_only",
+        "session_items_immutable_update",
+        "session_items_immutable_delete",
+        "session_promotion_requests_immutable_update",
+        "session_promotion_requests_immutable_delete",
+        "session_promotion_scope_matches_session",
+        "session_promotions_immutable_update",
+        "session_promotions_immutable_delete",
+        "session_promotion_claim_link",
+        "session_started_activity",
+        "session_item_added_activity",
+        "session_closed_activity",
+        "session_promoted_activity",
+    }
 
     def __init__(self, store: LineageStore, evidence: EvidenceMemory):
         if not isinstance(store, LineageStore):
@@ -80,15 +103,13 @@ class SessionMemory:
         return None if row is None else str(row["value"])
 
     def _ensure_schema(self) -> None:
-        tables = {
-            name: self._table_exists(name)
-            for name in (
-                "sessions",
-                "session_items",
-                "session_promotion_requests",
-                "session_promotions",
-            )
-        }
+        table_names = (
+            "sessions",
+            "session_items",
+            "session_promotion_requests",
+            "session_promotions",
+        )
+        tables = {name: self._table_exists(name) for name in table_names}
         version = self._metadata_value("session_schema_version")
         if any(tables.values()) or version is not None:
             if not all(tables.values()) or version != str(SESSION_SCHEMA_VERSION):
@@ -108,8 +129,7 @@ class SessionMemory:
                         song_id TEXT NOT NULL REFERENCES songs(id),
                         version_id TEXT NULL REFERENCES versions(id),
                         objective TEXT NOT NULL CHECK(length(trim(objective)) > 0),
-                        state TEXT NOT NULL DEFAULT 'OPEN'
-                            CHECK(state IN ('OPEN','CLOSED')),
+                        state TEXT NOT NULL DEFAULT 'OPEN' CHECK(state IN ('OPEN','CLOSED')),
                         debrief_summary TEXT NULL,
                         next_action TEXT NULL
                     )"""
@@ -163,164 +183,7 @@ class SessionMemory:
                     "WHERE source_ref LIKE 'session-promotion:%'"
                 )
 
-                trigger_sql = (
-                    """CREATE TRIGGER session_version_same_song
-                    BEFORE INSERT ON sessions
-                    WHEN NEW.version_id IS NOT NULL AND NOT EXISTS (
-                        SELECT 1 FROM versions v
-                        WHERE v.id=NEW.version_id AND v.song_id=NEW.song_id
-                    ) BEGIN
-                        SELECT RAISE(ABORT, 'Session version belongs to a different Song');
-                    END""",
-                    """CREATE TRIGGER session_binding_immutable
-                    BEFORE UPDATE ON sessions
-                    WHEN NEW.id<>OLD.id OR NEW.artist_id<>OLD.artist_id
-                      OR NEW.song_id<>OLD.song_id OR NEW.version_id IS NOT OLD.version_id
-                      OR NEW.objective<>OLD.objective
-                    BEGIN
-                        SELECT RAISE(ABORT, 'Session identity and intent are immutable');
-                    END""",
-                    """CREATE TRIGGER session_closed_immutable
-                    BEFORE UPDATE ON sessions
-                    WHEN OLD.state='CLOSED'
-                    BEGIN
-                        SELECT RAISE(ABORT, 'closed Session is immutable');
-                    END""",
-                    """CREATE TRIGGER session_close_requires_debrief
-                    BEFORE UPDATE ON sessions
-                    WHEN NEW.state='CLOSED' AND (
-                        NEW.debrief_summary IS NULL OR length(trim(NEW.debrief_summary))=0
-                        OR NEW.next_action IS NULL OR length(trim(NEW.next_action))=0
-                    ) BEGIN
-                        SELECT RAISE(ABORT, 'closing Session requires debrief and next action');
-                    END""",
-                    """CREATE TRIGGER session_open_has_no_debrief
-                    BEFORE UPDATE ON sessions
-                    WHEN NEW.state='OPEN' AND (
-                        NEW.debrief_summary IS NOT NULL OR NEW.next_action IS NOT NULL
-                    ) BEGIN
-                        SELECT RAISE(ABORT, 'open Session cannot contain final debrief');
-                    END""",
-                    """CREATE TRIGGER session_items_open_only
-                    BEFORE INSERT ON session_items
-                    WHEN NOT EXISTS (
-                        SELECT 1 FROM sessions s
-                        WHERE s.id=NEW.session_id AND s.state='OPEN'
-                    ) BEGIN
-                        SELECT RAISE(ABORT, 'scratch can be appended only to an open Session');
-                    END""",
-                    """CREATE TRIGGER session_items_immutable_update
-                    BEFORE UPDATE ON session_items BEGIN
-                        SELECT RAISE(ABORT, 'Session scratch is append-only');
-                    END""",
-                    """CREATE TRIGGER session_items_immutable_delete
-                    BEFORE DELETE ON session_items BEGIN
-                        SELECT RAISE(ABORT, 'Session scratch is append-only');
-                    END""",
-                    """CREATE TRIGGER session_promotion_requests_immutable_update
-                    BEFORE UPDATE ON session_promotion_requests BEGIN
-                        SELECT RAISE(ABORT, 'Session promotion request is immutable');
-                    END""",
-                    """CREATE TRIGGER session_promotion_requests_immutable_delete
-                    BEFORE DELETE ON session_promotion_requests BEGIN
-                        SELECT RAISE(ABORT, 'Session promotion request is immutable');
-                    END""",
-                    """CREATE TRIGGER session_promotion_scope_matches_session
-                    BEFORE INSERT ON session_promotion_requests
-                    WHEN NOT EXISTS (
-                        SELECT 1
-                        FROM session_items i JOIN sessions s ON s.id=i.session_id
-                        WHERE i.id=NEW.item_id AND (
-                            (NEW.scope_kind='SONG' AND NEW.scope_id=s.song_id)
-                            OR (
-                                NEW.scope_kind='VERSION'
-                                AND s.version_id IS NOT NULL
-                                AND NEW.scope_id=s.version_id
-                            )
-                        )
-                    ) BEGIN
-                        SELECT RAISE(ABORT, 'Session promotion scope crosses Session binding');
-                    END""",
-                    """CREATE TRIGGER session_promotions_immutable_update
-                    BEFORE UPDATE ON session_promotions BEGIN
-                        SELECT RAISE(ABORT, 'Session promotion link is immutable');
-                    END""",
-                    """CREATE TRIGGER session_promotions_immutable_delete
-                    BEFORE DELETE ON session_promotions BEGIN
-                        SELECT RAISE(ABORT, 'Session promotion link is immutable');
-                    END""",
-                    """CREATE TRIGGER session_promotion_claim_link
-                    AFTER INSERT ON evidence_claims
-                    WHEN NEW.source_ref IS NOT NULL
-                    BEGIN
-                        INSERT INTO session_promotions(item_id,claim_id)
-                        SELECT r.item_id, NEW.id
-                        FROM session_promotion_requests r
-                        WHERE r.source_ref=NEW.source_ref
-                          AND r.scope_kind=NEW.scope_kind
-                          AND r.scope_id=NEW.scope_id
-                          AND r.key=NEW.key
-                          AND r.value_json=NEW.value_json
-                          AND r.source_kind=NEW.source_kind
-                          AND r.twin_domain=NEW.twin_domain
-                          AND r.confidence=NEW.confidence;
-                    END""",
-                    """CREATE TRIGGER session_started_activity
-                    AFTER INSERT ON sessions
-                    BEGIN
-                        INSERT INTO activity_events(
-                            id,event_type,artist_id,song_id,version_id,
-                            object_type,object_id,payload_json
-                        ) VALUES(
-                            'act_'||lower(hex(randomblob(16))),
-                            'SESSION_STARTED',NEW.artist_id,NEW.song_id,NEW.version_id,
-                            'SESSION',NEW.id,'{}'
-                        );
-                    END""",
-                    """CREATE TRIGGER session_item_added_activity
-                    AFTER INSERT ON session_items
-                    BEGIN
-                        INSERT INTO activity_events(
-                            id,event_type,artist_id,song_id,version_id,
-                            object_type,object_id,payload_json
-                        )
-                        SELECT
-                            'act_'||lower(hex(randomblob(16))),
-                            'SESSION_SCRATCH_ADDED',s.artist_id,s.song_id,s.version_id,
-                            'SESSION_ITEM',NEW.id,
-                            '{"kind":"'||NEW.kind||'"}'
-                        FROM sessions s WHERE s.id=NEW.session_id;
-                    END""",
-                    """CREATE TRIGGER session_closed_activity
-                    AFTER UPDATE OF state ON sessions
-                    WHEN OLD.state='OPEN' AND NEW.state='CLOSED'
-                    BEGIN
-                        INSERT INTO activity_events(
-                            id,event_type,artist_id,song_id,version_id,
-                            object_type,object_id,payload_json
-                        ) VALUES(
-                            'act_'||lower(hex(randomblob(16))),
-                            'SESSION_CLOSED',NEW.artist_id,NEW.song_id,NEW.version_id,
-                            'SESSION',NEW.id,'{}'
-                        );
-                    END""",
-                    """CREATE TRIGGER session_promoted_activity
-                    AFTER INSERT ON session_promotions
-                    BEGIN
-                        INSERT INTO activity_events(
-                            id,event_type,artist_id,song_id,version_id,
-                            object_type,object_id,payload_json
-                        )
-                        SELECT
-                            'act_'||lower(hex(randomblob(16))),
-                            'SESSION_ITEM_PROMOTED',s.artist_id,s.song_id,s.version_id,
-                            'EVIDENCE_CLAIM',NEW.claim_id,'{}'
-                        FROM session_items i
-                        JOIN sessions s ON s.id=i.session_id
-                        WHERE i.id=NEW.item_id;
-                    END""",
-                )
-                for statement in trigger_sql:
+                for statement in self._trigger_statements():
                     self._conn.execute(statement)
                 self._conn.execute(
                     "INSERT INTO metadata(key,value) VALUES('session_schema_version',?)",
@@ -328,6 +191,167 @@ class SessionMemory:
                 )
         except sqlite3.DatabaseError as exc:
             raise LineageCorruptionError("cannot initialize Session memory") from exc
+
+    @staticmethod
+    def _trigger_statements() -> tuple[str, ...]:
+        return (
+            """CREATE TRIGGER session_version_same_song
+            BEFORE INSERT ON sessions
+            WHEN NEW.version_id IS NOT NULL AND NOT EXISTS (
+                SELECT 1 FROM versions v
+                WHERE v.id=NEW.version_id AND v.song_id=NEW.song_id
+            ) BEGIN
+                SELECT RAISE(ABORT, 'Session version belongs to a different Song');
+            END""",
+            """CREATE TRIGGER session_binding_immutable
+            BEFORE UPDATE ON sessions
+            WHEN NEW.id<>OLD.id OR NEW.artist_id<>OLD.artist_id
+              OR NEW.song_id<>OLD.song_id OR NEW.version_id IS NOT OLD.version_id
+              OR NEW.objective<>OLD.objective
+            BEGIN
+                SELECT RAISE(ABORT, 'Session identity and intent are immutable');
+            END""",
+            """CREATE TRIGGER session_closed_immutable
+            BEFORE UPDATE ON sessions
+            WHEN OLD.state='CLOSED'
+            BEGIN
+                SELECT RAISE(ABORT, 'closed Session is immutable');
+            END""",
+            """CREATE TRIGGER session_delete_immutable
+            BEFORE DELETE ON sessions
+            BEGIN
+                SELECT RAISE(ABORT, 'Session history is immutable');
+            END""",
+            """CREATE TRIGGER session_close_requires_debrief
+            BEFORE UPDATE ON sessions
+            WHEN NEW.state='CLOSED' AND (
+                NEW.debrief_summary IS NULL OR length(trim(NEW.debrief_summary))=0
+                OR NEW.next_action IS NULL OR length(trim(NEW.next_action))=0
+            ) BEGIN
+                SELECT RAISE(ABORT, 'closing Session requires debrief and next action');
+            END""",
+            """CREATE TRIGGER session_open_has_no_debrief
+            BEFORE UPDATE ON sessions
+            WHEN NEW.state='OPEN' AND (
+                NEW.debrief_summary IS NOT NULL OR NEW.next_action IS NOT NULL
+            ) BEGIN
+                SELECT RAISE(ABORT, 'open Session cannot contain final debrief');
+            END""",
+            """CREATE TRIGGER session_items_open_only
+            BEFORE INSERT ON session_items
+            WHEN NOT EXISTS (
+                SELECT 1 FROM sessions s
+                WHERE s.id=NEW.session_id AND s.state='OPEN'
+            ) BEGIN
+                SELECT RAISE(ABORT, 'scratch can be appended only to an open Session');
+            END""",
+            """CREATE TRIGGER session_items_immutable_update
+            BEFORE UPDATE ON session_items BEGIN
+                SELECT RAISE(ABORT, 'Session scratch is append-only');
+            END""",
+            """CREATE TRIGGER session_items_immutable_delete
+            BEFORE DELETE ON session_items BEGIN
+                SELECT RAISE(ABORT, 'Session scratch is append-only');
+            END""",
+            """CREATE TRIGGER session_promotion_requests_immutable_update
+            BEFORE UPDATE ON session_promotion_requests BEGIN
+                SELECT RAISE(ABORT, 'Session promotion request is immutable');
+            END""",
+            """CREATE TRIGGER session_promotion_requests_immutable_delete
+            BEFORE DELETE ON session_promotion_requests BEGIN
+                SELECT RAISE(ABORT, 'Session promotion request is immutable');
+            END""",
+            """CREATE TRIGGER session_promotion_scope_matches_session
+            BEFORE INSERT ON session_promotion_requests
+            WHEN NOT EXISTS (
+                SELECT 1
+                FROM session_items i JOIN sessions s ON s.id=i.session_id
+                WHERE i.id=NEW.item_id AND (
+                    (NEW.scope_kind='SONG' AND NEW.scope_id=s.song_id)
+                    OR (
+                        NEW.scope_kind='VERSION'
+                        AND s.version_id IS NOT NULL
+                        AND NEW.scope_id=s.version_id
+                    )
+                )
+            ) BEGIN
+                SELECT RAISE(ABORT, 'Session promotion scope crosses Session binding');
+            END""",
+            """CREATE TRIGGER session_promotions_immutable_update
+            BEFORE UPDATE ON session_promotions BEGIN
+                SELECT RAISE(ABORT, 'Session promotion link is immutable');
+            END""",
+            """CREATE TRIGGER session_promotions_immutable_delete
+            BEFORE DELETE ON session_promotions BEGIN
+                SELECT RAISE(ABORT, 'Session promotion link is immutable');
+            END""",
+            """CREATE TRIGGER session_promotion_claim_link
+            AFTER INSERT ON evidence_claims
+            WHEN NEW.source_ref IS NOT NULL
+            BEGIN
+                INSERT INTO session_promotions(item_id,claim_id)
+                SELECT r.item_id,NEW.id
+                FROM session_promotion_requests r
+                WHERE r.source_ref=NEW.source_ref
+                  AND r.scope_kind=NEW.scope_kind
+                  AND r.scope_id=NEW.scope_id
+                  AND r.key=NEW.key
+                  AND r.value_json=NEW.value_json
+                  AND r.source_kind=NEW.source_kind
+                  AND r.twin_domain=NEW.twin_domain
+                  AND r.confidence=NEW.confidence;
+            END""",
+            """CREATE TRIGGER session_started_activity
+            AFTER INSERT ON sessions
+            BEGIN
+                INSERT INTO activity_events(
+                    id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json
+                ) VALUES(
+                    'act_'||lower(hex(randomblob(16))),
+                    'SESSION_STARTED',NEW.artist_id,NEW.song_id,NEW.version_id,
+                    'SESSION',NEW.id,'{}'
+                );
+            END""",
+            """CREATE TRIGGER session_item_added_activity
+            AFTER INSERT ON session_items
+            BEGIN
+                INSERT INTO activity_events(
+                    id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json
+                )
+                SELECT
+                    'act_'||lower(hex(randomblob(16))),
+                    'SESSION_SCRATCH_ADDED',s.artist_id,s.song_id,s.version_id,
+                    'SESSION_ITEM',NEW.id,
+                    '{"kind":"'||NEW.kind||'"}'
+                FROM sessions s WHERE s.id=NEW.session_id;
+            END""",
+            """CREATE TRIGGER session_closed_activity
+            AFTER UPDATE OF state ON sessions
+            WHEN OLD.state='OPEN' AND NEW.state='CLOSED'
+            BEGIN
+                INSERT INTO activity_events(
+                    id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json
+                ) VALUES(
+                    'act_'||lower(hex(randomblob(16))),
+                    'SESSION_CLOSED',NEW.artist_id,NEW.song_id,NEW.version_id,
+                    'SESSION',NEW.id,'{}'
+                );
+            END""",
+            """CREATE TRIGGER session_promoted_activity
+            AFTER INSERT ON session_promotions
+            BEGIN
+                INSERT INTO activity_events(
+                    id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json
+                )
+                SELECT
+                    'act_'||lower(hex(randomblob(16))),
+                    'SESSION_ITEM_PROMOTED',s.artist_id,s.song_id,s.version_id,
+                    'EVIDENCE_CLAIM',NEW.claim_id,'{}'
+                FROM session_items i
+                JOIN sessions s ON s.id=i.session_id
+                WHERE i.id=NEW.item_id;
+            END""",
+        )
 
     @staticmethod
     def _clean_text(value: str, field: str) -> str:
@@ -346,9 +370,7 @@ class SessionMemory:
             version_id=None if row["version_id"] is None else str(row["version_id"]),
             objective=str(row["objective"]),
             state=str(row["state"]),
-            debrief_summary=(
-                None if row["debrief_summary"] is None else str(row["debrief_summary"])
-            ),
+            debrief_summary=None if row["debrief_summary"] is None else str(row["debrief_summary"]),
             next_action=None if row["next_action"] is None else str(row["next_action"]),
         )
 
@@ -366,6 +388,15 @@ class SessionMemory:
         try:
             if self._metadata_value("session_schema_version") != str(SESSION_SCHEMA_VERSION):
                 raise LineageCorruptionError("unsupported Session schema version")
+            trigger_names = {
+                str(row["name"])
+                for row in self._conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'session_%'"
+                )
+            }
+            missing = self._TRIGGER_NAMES - trigger_names
+            if missing:
+                raise LineageCorruptionError(f"Session integrity hooks are incomplete: {sorted(missing)}")
             for row in self._conn.execute(
                 "SELECT seq,id,artist_id,song_id,version_id,objective,state,"
                 "debrief_summary,next_action FROM sessions ORDER BY seq"
@@ -405,6 +436,8 @@ class SessionMemory:
                 "JOIN session_items i ON i.id=r.item_id "
                 "JOIN sessions s ON s.id=i.session_id ORDER BY r.seq"
             ):
+                if not str(row["source_ref"]).startswith("session-promotion:"):
+                    raise LineageCorruptionError("Session promotion source reference is invalid")
                 if str(row["scope_kind"]) not in PROMOTION_SCOPES:
                     raise LineageCorruptionError("Session promotion contains invalid scope")
                 if str(row["source_kind"]) not in SOURCE_KINDS:
@@ -502,7 +535,7 @@ class SessionMemory:
             with self.store._tx():
                 self._conn.execute(
                     "INSERT INTO session_items(id,session_id,kind,body) VALUES(?,?,?,?)",
-                    (item_id, session.id, kind, body),
+                    (item_id,session.id,kind,body),
                 )
         except sqlite3.IntegrityError as exc:
             raise ValidationError(f"cannot append Session scratch: {exc}") from exc
@@ -552,7 +585,7 @@ class SessionMemory:
                 self._conn.execute(
                     "UPDATE sessions SET state='CLOSED',debrief_summary=?,next_action=? "
                     "WHERE id=? AND state='OPEN'",
-                    (debrief_summary, next_action, session.id),
+                    (debrief_summary,next_action,session.id),
                 )
         except sqlite3.IntegrityError as exc:
             raise ValidationError(f"cannot close Session: {exc}") from exc
@@ -568,34 +601,33 @@ class SessionMemory:
         ).fetchone()
         if row is None:
             raise NotFoundError(f"Session item not found in profile {self.store.profile_id}: {item_id}")
-        item = SessionItem(
-            sequence=int(row["item_seq"]),
-            id=str(row["item_id"]),
-            session_id=str(row["session_id"]),
-            kind=str(row["kind"]),
-            body=str(row["body"]),
-        )
-        session = SongSession(
-            sequence=int(row["session_seq"]),
-            id=item.session_id,
-            artist_id=str(row["artist_id"]),
-            song_id=str(row["song_id"]),
-            version_id=None if row["version_id"] is None else str(row["version_id"]),
-            objective=str(row["objective"]),
-            state=str(row["state"]),
-            debrief_summary=(
-                None if row["debrief_summary"] is None else str(row["debrief_summary"])
+        return (
+            SessionItem(
+                sequence=int(row["item_seq"]),
+                id=str(row["item_id"]),
+                session_id=str(row["session_id"]),
+                kind=str(row["kind"]),
+                body=str(row["body"]),
             ),
-            next_action=None if row["next_action"] is None else str(row["next_action"]),
+            SongSession(
+                sequence=int(row["session_seq"]),
+                id=str(row["session_id"]),
+                artist_id=str(row["artist_id"]),
+                song_id=str(row["song_id"]),
+                version_id=None if row["version_id"] is None else str(row["version_id"]),
+                objective=str(row["objective"]),
+                state=str(row["state"]),
+                debrief_summary=None if row["debrief_summary"] is None else str(row["debrief_summary"]),
+                next_action=None if row["next_action"] is None else str(row["next_action"]),
+            ),
         )
-        return item, session
 
     def promotion_for_item(self, item_id: str) -> SessionPromotion | None:
         row = self._conn.execute(
             "SELECT item_id,claim_id FROM session_promotions WHERE item_id=?",
             (str(item_id),),
         ).fetchone()
-        return None if row is None else SessionPromotion(str(row["item_id"]), str(row["claim_id"]))
+        return None if row is None else SessionPromotion(str(row["item_id"]),str(row["claim_id"]))
 
     def promote_item(
         self,
@@ -607,9 +639,9 @@ class SessionMemory:
         twin_domain: str = "UNSPECIFIED",
         confidence: float = 1.0,
     ) -> EvidenceClaim:
-        item, session = self._item_with_session(item_id)
+        item,session = self._item_with_session(item_id)
         scope_kind = str(scope_kind).strip().upper()
-        key = self._clean_text(key, "key")
+        key = self._clean_text(key,"key")
         source_kind = str(source_kind).strip().upper()
         twin_domain = str(twin_domain).strip().upper()
         if scope_kind not in PROMOTION_SCOPES:
@@ -620,7 +652,7 @@ class SessionMemory:
             raise ValidationError(f"unsupported Twin domain: {twin_domain}")
         try:
             confidence = float(confidence)
-        except (TypeError, ValueError) as exc:
+        except (TypeError,ValueError) as exc:
             raise ValidationError("confidence must be between 0 and 1") from exc
         if not 0.0 <= confidence <= 1.0:
             raise ValidationError("confidence must be between 0 and 1")
@@ -630,12 +662,7 @@ class SessionMemory:
             if session.version_id is None:
                 raise ValidationError("Session has no bound Version to promote into")
             scope_id = session.version_id
-        value_json = json.dumps(
-            item.body,
-            sort_keys=True,
-            separators=(",", ":"),
-            allow_nan=False,
-        )
+        value_json = json.dumps(item.body,sort_keys=True,separators=(",",":"),allow_nan=False)
 
         request = self._conn.execute(
             "SELECT id,item_id,source_ref,scope_kind,scope_id,key,value_json,"
@@ -651,19 +678,10 @@ class SessionMemory:
                     self._conn.execute(
                         "INSERT INTO session_promotion_requests("
                         "id,item_id,source_ref,scope_kind,scope_id,key,value_json,"
-                        "source_kind,twin_domain,confidence"
-                        ") VALUES(?,?,?,?,?,?,?,?,?,?)",
+                        "source_kind,twin_domain,confidence) VALUES(?,?,?,?,?,?,?,?,?,?)",
                         (
-                            request_id,
-                            item.id,
-                            source_ref,
-                            scope_kind,
-                            scope_id,
-                            key,
-                            value_json,
-                            source_kind,
-                            twin_domain,
-                            confidence,
+                            request_id,item.id,source_ref,scope_kind,scope_id,key,
+                            value_json,source_kind,twin_domain,confidence,
                         ),
                     )
             except sqlite3.IntegrityError as exc:
@@ -677,22 +695,12 @@ class SessionMemory:
             assert request is not None
         else:
             expected = (
-                scope_kind,
-                scope_id,
-                key,
-                value_json,
-                source_kind,
-                twin_domain,
-                confidence,
+                scope_kind,scope_id,key,value_json,source_kind,twin_domain,confidence,
             )
             actual = (
-                str(request["scope_kind"]),
-                str(request["scope_id"]),
-                str(request["key"]),
-                str(request["value_json"]),
-                str(request["source_kind"]),
-                str(request["twin_domain"]),
-                float(request["confidence"]),
+                str(request["scope_kind"]),str(request["scope_id"]),str(request["key"]),
+                str(request["value_json"]),str(request["source_kind"]),
+                str(request["twin_domain"]),float(request["confidence"]),
             )
             if actual != expected:
                 raise ValidationError(
