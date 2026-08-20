@@ -12,11 +12,8 @@ state = json.loads((repo / "governance/current_state.json").read_text())
 if state.get("active_node") != "CORE-04" or state.get("active_increment") != "CORE-04E":
     raise SystemExit(f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}")
 
-from n0te2 import (
-    ActionIntent, AuthorityService, ExecutionEligibilityEvidence,
-    ExecutionEligibilityGate, ExecutionEligibilityRequest, HeadquartersMemory,
-    NetworkPolicy, NetworkRoute, OperationError,
-)
+from n0te2 import ActionIntent, AuthorityService, HeadquartersMemory, NetworkPolicy, NetworkRoute, OperationError
+from n0te2.eligibility import ExecutionEligibilityEvidence, ExecutionEligibilityGate, ExecutionEligibilityRequest
 
 with tempfile.TemporaryDirectory() as temp:
     hq = HeadquartersMemory.create(Path(temp), "Artist")
