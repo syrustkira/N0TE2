@@ -1,4 +1,14 @@
 from .activity import ActivityEvent, ActivityLog
+from .context import (
+    CONTEXT_IMPORT_AUTHORITY,
+    CONTEXT_IMPORT_SCOPES,
+    CONTEXT_IMPORT_SOURCES,
+    ContextEnvelope,
+    ContextImport,
+    ContextIsolationService,
+    PRODUCT_CONTEXT,
+    ProductContext,
+)
 from .evidence import (
     EvidenceClaim,
     EvidenceMemory,
@@ -53,6 +63,12 @@ __all__ = [
     "ActivityLog",
     "Asset",
     "Artist",
+    "CONTEXT_IMPORT_AUTHORITY",
+    "CONTEXT_IMPORT_SCOPES",
+    "CONTEXT_IMPORT_SOURCES",
+    "ContextEnvelope",
+    "ContextImport",
+    "ContextIsolationService",
     "EvidenceClaim",
     "EvidenceMemory",
     "EvidenceResolution",
@@ -63,6 +79,8 @@ __all__ = [
     "LineageError",
     "LineageStore",
     "NotFoundError",
+    "PRODUCT_CONTEXT",
+    "ProductContext",
     "ProvenanceAsset",
     "ProvenanceLedger",
     "ProvenanceRecord",

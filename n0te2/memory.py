@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .activity import ActivityLog
+from .context import ContextIsolationService
 from .evidence import EvidenceMemory
 from .graph import SongKnowledgeMapService
 from .lineage import LineageStore
@@ -21,6 +22,7 @@ class HeadquartersMemory:
         self.activity = ActivityLog(store)
         self.provenance = ProvenanceLedger(store)
         self.recovery = RecoveryManager(store)
+        self.context = ContextIsolationService(store, self.evidence)
         self.knowledge = TwinAwareSongKnowledgeMapService(
             SongKnowledgeMapService(store), self.evidence
         )

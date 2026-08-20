@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-01",
-  "active_increment": "CORE-01H",
+  "active_increment": "CORE-01I",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -20,12 +20,13 @@
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01A-G establish canonical Song/version identity, scoped evidence, Activity, Resume, provenance, recovery and a pure-read Song Knowledge Map.",
-    "CORE-01G hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
-    "CORE-01H is the only active product increment and evolves canonical evidence with explicit TECHNICAL / CREATIVE / UNSPECIFIED Twin domain plus a pure-read Twin conflict view.",
-    "Twin domain and source kind are orthogonal. Existing evidence migrates to UNSPECIFIED rather than being guessed from USER_DECLARED, MEASURED, INFERRED or any other source label.",
-    "Technical and Creative Twin evidence may disagree. The Twin view preserves both and never selects a winner or authorizes a creative fix.",
-    "No Audio Intelligence, DAW adapter, Artist World taste maturation, universal search, broad graph expansion or separate Twin database is selected in this increment.",
+    "CORE-01A-H establish canonical Song/version identity, scoped evidence, Activity, Resume, provenance, recovery, Song graph and explicit Technical/Creative Twin semantics.",
+    "CORE-01H hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
+    "CORE-01I is the only active product increment and implements the minimum fresh-consumer context isolation contract for REQ-SCOPE-143.",
+    "Generic ProductContext is code-owned and user-data-free; it is not persisted per profile and imported material cannot replace it.",
+    "Private Artist/Song evidence remains in the existing physically isolated profile database. Imported/synced context is a separate append-only EVIDENCE_ONLY ledger scoped only to the active Artist or one owned Song.",
+    "Imported payload is not inserted into EvidenceMemory and does not grant mutation/execution authority even if the payload text claims otherwise.",
+    "No onboarding UI, Artist World maturation, cloud sync, universal search, broad Artist Graph expansion, DAW/audio work or second context database is selected in this increment.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
