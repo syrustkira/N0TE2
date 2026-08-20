@@ -29,6 +29,13 @@ from .evidence import (
     TWIN_DOMAINS,
 )
 from .graph import GraphEdge, GraphNode, SongKnowledgeMap, SongKnowledgeMapService
+from .learning import (
+    DECISION_KINDS,
+    ConsequenceObservation,
+    LearningDecision,
+    LearningEpisode,
+    LearningMemory,
+)
 from .lineage import (
     Asset,
     Artist,
@@ -101,15 +108,20 @@ __all__ = [
     "CapabilityResolution",
     "CapabilityResolutionError",
     "CapabilityResolver",
+    "ConsequenceObservation",
     "ContextEnvelope",
     "ContextImport",
     "ContextIsolationService",
+    "DECISION_KINDS",
     "EvidenceClaim",
     "EvidenceMemory",
     "EvidenceResolution",
     "GraphEdge",
     "GraphNode",
     "HeadquartersMemory",
+    "LearningDecision",
+    "LearningEpisode",
+    "LearningMemory",
     "LineageCorruptionError",
     "LineageError",
     "LineageStore",
