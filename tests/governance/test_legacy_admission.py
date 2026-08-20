@@ -27,6 +27,9 @@ class LegacyAdmissionTests(unittest.TestCase):
             gov.run(repo, verify_git=False)
         self.assertIn(needle, str(cm.exception))
 
+    def execution_evidence(self):
+        return json.loads((ROOT / "governance/legacy_execution_evidence.json").read_text())
+
     def test_current_legacy_contract_is_green_without_git(self):
         gov.run(ROOT, verify_git=False)
 
@@ -85,6 +88,48 @@ class LegacyAdmissionTests(unittest.TestCase):
         d["selected_spec_evidence"]["legacy_green_does_not_close_product_nodes"] = False
         self.write_json(p, d)
         self.assert_red(repo, "legacy green")
+
+    def test_execution_evidence_reconciles_all_selected_groups_and_files(self):
+        evidence = self.execution_evidence()
+        groups = evidence["groups"]
+        self.assertEqual([row["id"] for row in groups], [f"TESTMAP-{n:03d}" for n in range(1, 12)])
+        selected_files = {path for row in groups for path in row["selected_files"]}
+        self.assertEqual(len(selected_files), 19)
+        statuses = [row["legacy_selected_execution"] for row in groups]
+        self.assertEqual(statuses.count("GREEN"), 10)
+        self.assertEqual(statuses.count("RED"), 1)
+        summary = evidence["selected_spec_summary"]
+        self.assertEqual(summary["behavior_groups"], 11)
+        self.assertEqual(summary["selected_test_files"], 19)
+        self.assertEqual(summary["groups_with_all_selected_legacy_tests_green"], 10)
+        self.assertEqual(summary["groups_with_selected_legacy_test_failure"], 1)
+        self.assertFalse(summary["all_selected_legacy_behavior_green"])
+        self.assertFalse(summary["legacy_execution_can_close_product_nodes"])
+        self.assertTrue(summary["every_reuse_or_adapt_requires_fresh_n0te2_boundary_proof"])
+
+    def test_offline_selected_failure_remains_explicit(self):
+        evidence = self.execution_evidence()
+        offline = next(row for row in evidence["groups"] if row["id"] == "TESTMAP-006")
+        self.assertEqual(offline["legacy_selected_execution"], "RED")
+        self.assertEqual(len(offline["observed_failures"]), 1)
+        self.assertIn("printer.local", offline["observed_failures"][0])
+        self.assertIn("CONNECTED_TO_OFFLINE_PENDING_STATE_CHOICE", offline["n0te2_additional_gaps"])
+        self.assertIn("OFFLINE_TO_CONNECTED_EXPLICIT_RECONCILIATION_CHOICE", offline["n0te2_additional_gaps"])
+
+    def test_pr_merge_execution_is_not_mislabeled_exact_raw_head(self):
+        evidence = self.execution_evidence()
+        run = evidence["observed_execution"]
+        self.assertEqual(run["workflow_run_id"], 32326588695)
+        self.assertEqual(run["executed_checkout_sha"], "074e53aedd1d856543d51c38bcc3825df3cb08aa")
+        self.assertEqual(run["checkout_kind"], "HEAD_DERIVED_PR_MERGE")
+        self.assertEqual(run["head_in_merge"], "25e2f2f5fd8ea4adc0c7e61650531430025e59db")
+        self.assertFalse(run["exact_raw_head_execution"])
+        self.assertTrue(run["historical_evidence_only"])
+
+    def test_current_authority_surface_names_execution_evidence(self):
+        authority = json.loads((ROOT / "governance/authority.json").read_text())
+        self.assertIn("governance/legacy_execution_evidence.json", authority["current_authority_files"])
+        self.assertTrue(authority["laws"]["legacy_test_failure_must_remain_visible"])
 
 
 if __name__ == "__main__":
