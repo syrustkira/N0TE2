@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "node_id": "LEGACY-01",
   "source": {
     "repository": "syrustkira/N0TE",
@@ -49,13 +49,22 @@
   "selected_spec_evidence": {
     "behavior_groups": 11,
     "selected_legacy_test_files": 19,
+    "execution_evidence_file": "governance/legacy_execution_evidence.json",
+    "observed_execution_kind": "HEAD_DERIVED_PR_MERGE",
+    "observed_execution_exact_raw_head": false,
+    "groups_with_all_selected_legacy_tests_green": 10,
+    "groups_with_selected_legacy_test_failure": 1,
+    "all_selected_legacy_behavior_green": false,
+    "selected_failure_group": "TESTMAP-006",
     "n0te2_replacement_regression_gaps": [
       "CONNECTED_TO_OFFLINE_PENDING_STATE_CHOICE",
       "OFFLINE_TO_CONNECTED_EXPLICIT_RECONCILIATION_CHOICE",
       "PRIVATE_DATA_EGRESS_EXACT_DATA_DESTINATION_PURPOSE",
       "CORRUPTION_VISIBILITY_AND_RECOVERY"
     ],
-    "legacy_green_does_not_close_product_nodes": true
+    "legacy_green_does_not_close_product_nodes": true,
+    "legacy_red_does_not_expand_or_shrink_product_scope": true,
+    "every_reuse_or_adapt_requires_fresh_n0te2_boundary_proof": true
   },
   "contamination_classes": [
     "ABLETON_SEMANTIC_PRIORITY",
@@ -73,6 +82,7 @@
   "admission_law": {
     "classification_is_not_copy_authority": true,
     "test_green_is_not_admission": true,
+    "test_failure_is_preserved_not_normalized_away": true,
     "admission_requires_fresh_dependency_ready_receipt": true,
     "no_file_enters_because_it_exists": true,
     "no_product_code_during_legacy_01": true
