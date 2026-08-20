@@ -8,15 +8,17 @@ from n0te2 import (
     ActionIntent,
     AuthorityService,
     DuplicateExecutionError,
-    ExecutionEligibilityEvidence,
-    ExecutionEligibilityGate,
-    ExecutionEligibilityRequest,
     HeadquartersMemory,
     LineageCorruptionError,
     NetworkPolicy,
     NetworkRoute,
     OperationError,
     ValidationError,
+)
+from n0te2.eligibility import (
+    ExecutionEligibilityEvidence,
+    ExecutionEligibilityGate,
+    ExecutionEligibilityRequest,
 )
 
 
