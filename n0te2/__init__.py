@@ -32,6 +32,13 @@ from .context import (
     PRODUCT_CONTEXT,
     ProductContext,
 )
+from .egress import (
+    OutboundEnvelope,
+    OutboundInspector,
+    OutboundMaterial,
+    OutboundPreview,
+    OutboundValidationError,
+)
 from .evidence import (
     EvidenceClaim,
     EvidenceMemory,
@@ -184,6 +191,11 @@ __all__ = [
     "LineageStore",
     "N0TEableJob",
     "NotFoundError",
+    "OutboundEnvelope",
+    "OutboundInspector",
+    "OutboundMaterial",
+    "OutboundPreview",
+    "OutboundValidationError",
     "PRODUCT_CONTEXT",
     "PROMOTION_SCOPES",
     "ProductContext",
