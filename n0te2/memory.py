@@ -6,6 +6,7 @@ from .activity import ActivityLog
 from .context import ContextIsolationService
 from .evidence import EvidenceMemory
 from .graph import SongKnowledgeMapService
+from .learning import LearningMemory
 from .lineage import LineageStore
 from .provenance import ProvenanceLedger
 from .recovery import RecoveryManager
@@ -24,6 +25,7 @@ class HeadquartersMemory:
         self.activity = ActivityLog(store)
         self.sessions = SessionMemory(store, self.evidence)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
+        self.learning = LearningMemory(store, self.sessions)
         self.provenance = ProvenanceLedger(store)
         self.recovery = RecoveryManager(store)
         self.context = ContextIsolationService(store, self.evidence)
