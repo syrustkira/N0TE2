@@ -178,8 +178,11 @@ def check_authority(repo: Path):
     joined = "\n".join(a["current_authority_files"])
     for marker in a["forbidden_current_authority_markers"]:
         require(marker not in joined, f"stale authority reintroduced: {marker}")
+    require("governance/legacy_admission.json" in a["current_authority_files"], "LEGACY-01 admission manifest missing from repo authority surface")
     require(a["laws"]["implementation_maturity_must_not_mutate_scope"] is True, "anti-flattening law missing")
     require(a["laws"]["missing_acceptance_resource_stops_unrelated_construction"] is False, "resource-wait loop reintroduced")
+    require(a["laws"]["legacy_classification_is_not_copy_authority"] is True, "classification became copy authority")
+    require(a["laws"]["legacy_test_green_is_not_product_completion"] is True, "legacy tests became product-completion authority")
 
 
 def check_legacy_admission(repo: Path):
@@ -282,15 +285,15 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
 def check_stage(repo: Path, graph: dict):
     current = load_json(repo / "governance/current_state.json")
     active = current["active_node"]
+    held = load_json(repo / "governance/held_scope.json")
+    held_ids = {i["id"] for i in held["items"]}
+    require(active not in held_ids, "held item became active")
+    require(held_ids == {f"HOLD-{n:03d}" for n in range(1, 8)}, "held scope changed without explicit promotion")
     require(active in graph, "current active node is not in completion graph")
     require(graph[active]["state"] == "ACTIVE", "current active node must be ACTIVE in graph")
     for done in current.get("completed_nodes", []):
         require(done in graph and graph[done]["state"] == "DONE", f"completed node not DONE in graph: {done}")
     require(current["product_code_authorized"] is False, "pre-product stages cannot authorize product code")
-    held = load_json(repo / "governance/held_scope.json")
-    held_ids = {i["id"] for i in held["items"]}
-    require(active not in held_ids, "held item became active")
-    require(held_ids == {f"HOLD-{n:03d}" for n in range(1, 8)}, "held scope changed without explicit promotion")
     if active == "BOOT-02":
         require(graph["BOOT-02"]["state"] == "ACTIVE", "BOOT-02 must be active during BOOT-02")
         require(current["legacy_admission_authorized"] is False, "BOOT-02 cannot authorize legacy admission")
