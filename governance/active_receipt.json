@@ -20,8 +20,10 @@
     "331/331 legacy leaf assets remain mechanically classified with zero invisible assets",
     "canonical disposition and contamination rules are machine enforced",
     "direct legacy source/test-text copying remains blocked by LICENSE-GATE-001",
-    "selected legacy behavior evidence is separated from N0TE2 replacement regression gaps",
-    "governance/admission regressions green",
+    "selected legacy execution is reconciled without laundering failure: 10 behavior groups have all selected tests green and TESTMAP-006 remains explicitly red",
+    "head-derived PR-merge execution is labeled historical evidence rather than exact raw-head proof",
+    "N0TE2-only replacement regression gaps remain explicit and non-optional",
+    "governance/admission regressions green on the exact N0TE2 branch head",
     "no product or direct legacy implementation paths changed since baseline"
   ],
   "next_node_after_close": "CORE-01"
