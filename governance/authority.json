@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "product": "N0TE2",
+  "authority_order": [
+    "CANONICAL_BLUEPRINT",
+    "PRODUCT_DB_SCOPE_LEDGER",
+    "N0TE2_COMPLETION_GRAPH",
+    "GOVERNANCE_CURRENT_STATE",
+    "ACTIVE_RECEIPT",
+    "LIVE_N0TE2_SOURCE_TESTS_CI_RUNTIME",
+    "SPECIALIZED_REFERENCES",
+    "HISTORICAL_N0TE_EVIDENCE"
+  ],
+  "current_authority_files": [
+    "governance/requirements.json",
+    "governance/completion_graph.json",
+    "governance/current_state.json",
+    "governance/active_receipt.json",
+    "governance/platform_support.json",
+    "governance/held_scope.json"
+  ],
+  "historical_evidence_only": [
+    "N0TE repository history",
+    "old PR descriptions",
+    "old CLOSURE / Gate next-actions",
+    "old prompts and roadmaps",
+    "historical implementation order"
+  ],
+  "forbidden_current_authority_markers": [
+    "PRODUCT_NORTH_STAR.md"
+  ],
+  "laws": {
+    "implementation_maturity_must_not_mutate_scope": true,
+    "historical_order_has_semantic_authority": false,
+    "fallback_is_not_product_identity": true,
+    "native_first_does_not_mean_n0te_absent": true,
+    "missing_acceptance_resource_stops_unrelated_construction": false
+  }
+}
