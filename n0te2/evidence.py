@@ -8,7 +8,7 @@ from typing import Any, Iterable
 
 from .lineage import LineageCorruptionError, LineageStore, NotFoundError, ValidationError
 
-EVIDENCE_SCHEMA_VERSION = 1
+EVIDENCE_SCHEMA_VERSION = 2
 SCOPE_KINDS = {"PROFILE", "ARTIST", "SONG", "VERSION"}
 SOURCE_KINDS = {
     "USER_DECLARED",
@@ -18,6 +18,7 @@ SOURCE_KINDS = {
     "REMEMBERED",
     "INFERRED",
 }
+TWIN_DOMAINS = {"TECHNICAL", "CREATIVE", "UNSPECIFIED"}
 RESOLUTION_STATUSES = {"UNKNOWN", "RESOLVED", "CONFLICT"}
 
 
@@ -32,6 +33,7 @@ class EvidenceClaim:
     source_kind: str
     source_ref: str | None
     confidence: float
+    twin_domain: str = "UNSPECIFIED"
 
 
 @dataclass(frozen=True)
@@ -52,8 +54,9 @@ class EvidenceMemory:
     """Append-only scoped evidence inside the canonical LineageStore database.
 
     Scope specificity decides *where* to look, never which contradictory belief
-    is true. If multiple active values exist at the same applicable scope the
-    result is CONFLICT until an explicit new claim supersedes them.
+    is true. Twin domain is orthogonal to source kind: TECHNICAL records what
+    physically/technically exists, CREATIVE records intent/meaning/taste, and
+    UNSPECIFIED preserves older or not-yet-classified evidence without guessing.
     """
 
     def __init__(self, store: LineageStore):
@@ -64,11 +67,28 @@ class EvidenceMemory:
         self._ensure_schema()
         self._validate_existing()
 
-    def _ensure_schema(self) -> None:
+    def _table_exists(self, name: str) -> bool:
+        return self._conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
+        ).fetchone() is not None
+
+    def _metadata_value(self, key: str) -> str | None:
+        row = self._conn.execute(
+            "SELECT value FROM metadata WHERE key=?", (key,)
+        ).fetchone()
+        return None if row is None else str(row["value"])
+
+    def _column_names(self, table: str) -> set[str]:
+        return {
+            str(row["name"])
+            for row in self._conn.execute(f"PRAGMA table_info({table})")
+        }
+
+    def _create_schema_v2(self) -> None:
         script = f"""
         BEGIN IMMEDIATE;
 
-        CREATE TABLE IF NOT EXISTS evidence_claims (
+        CREATE TABLE evidence_claims (
             seq INTEGER PRIMARY KEY AUTOINCREMENT,
             id TEXT NOT NULL UNIQUE,
             scope_kind TEXT NOT NULL CHECK(scope_kind IN ('PROFILE','ARTIST','SONG','VERSION')),
@@ -77,43 +97,45 @@ class EvidenceMemory:
             value_json TEXT NOT NULL,
             source_kind TEXT NOT NULL CHECK(source_kind IN ('USER_DECLARED','OBSERVED','MEASURED','PROVIDER_VERIFIED','REMEMBERED','INFERRED')),
             source_ref TEXT NULL,
-            confidence REAL NOT NULL CHECK(confidence >= 0.0 AND confidence <= 1.0)
+            confidence REAL NOT NULL CHECK(confidence >= 0.0 AND confidence <= 1.0),
+            twin_domain TEXT NOT NULL DEFAULT 'UNSPECIFIED'
+                CHECK(twin_domain IN ('TECHNICAL','CREATIVE','UNSPECIFIED'))
         );
 
-        CREATE TABLE IF NOT EXISTS evidence_supersessions (
+        CREATE TABLE evidence_supersessions (
             new_claim_id TEXT NOT NULL REFERENCES evidence_claims(id),
             old_claim_id TEXT NOT NULL REFERENCES evidence_claims(id),
             PRIMARY KEY(new_claim_id, old_claim_id),
             CHECK(new_claim_id <> old_claim_id)
         );
 
-        CREATE INDEX IF NOT EXISTS evidence_claim_lookup
+        CREATE INDEX evidence_claim_lookup
         ON evidence_claims(scope_kind, scope_id, key, seq);
 
-        CREATE INDEX IF NOT EXISTS evidence_superseded_lookup
+        CREATE INDEX evidence_superseded_lookup
         ON evidence_supersessions(old_claim_id);
 
-        CREATE TRIGGER IF NOT EXISTS evidence_claims_immutable_update
+        CREATE TRIGGER evidence_claims_immutable_update
         BEFORE UPDATE ON evidence_claims BEGIN
             SELECT RAISE(ABORT, 'evidence claims are immutable');
         END;
 
-        CREATE TRIGGER IF NOT EXISTS evidence_claims_immutable_delete
+        CREATE TRIGGER evidence_claims_immutable_delete
         BEFORE DELETE ON evidence_claims BEGIN
             SELECT RAISE(ABORT, 'evidence claims are immutable');
         END;
 
-        CREATE TRIGGER IF NOT EXISTS evidence_supersessions_immutable_update
+        CREATE TRIGGER evidence_supersessions_immutable_update
         BEFORE UPDATE ON evidence_supersessions BEGIN
             SELECT RAISE(ABORT, 'evidence supersession is immutable');
         END;
 
-        CREATE TRIGGER IF NOT EXISTS evidence_supersessions_immutable_delete
+        CREATE TRIGGER evidence_supersessions_immutable_delete
         BEFORE DELETE ON evidence_supersessions BEGIN
             SELECT RAISE(ABORT, 'evidence supersession is immutable');
         END;
 
-        CREATE TRIGGER IF NOT EXISTS evidence_supersession_same_target
+        CREATE TRIGGER evidence_supersession_same_target
         BEFORE INSERT ON evidence_supersessions
         WHEN NOT EXISTS (
             SELECT 1
@@ -129,7 +151,7 @@ class EvidenceMemory:
             SELECT RAISE(ABORT, 'supersession must target an older claim with identical scope and key');
         END;
 
-        INSERT OR IGNORE INTO metadata(key, value)
+        INSERT INTO metadata(key, value)
         VALUES('evidence_schema_version', '{EVIDENCE_SCHEMA_VERSION}');
 
         COMMIT;
@@ -143,6 +165,52 @@ class EvidenceMemory:
                 pass
             raise LineageCorruptionError("cannot initialize scoped evidence schema") from exc
 
+    def _migrate_v1_to_v2(self) -> None:
+        try:
+            with self.store._tx():
+                columns = self._column_names("evidence_claims")
+                if "twin_domain" not in columns:
+                    self._conn.execute(
+                        "ALTER TABLE evidence_claims "
+                        "ADD COLUMN twin_domain TEXT NOT NULL DEFAULT 'UNSPECIFIED' "
+                        "CHECK(twin_domain IN ('TECHNICAL','CREATIVE','UNSPECIFIED'))"
+                    )
+                self._conn.execute(
+                    "UPDATE metadata SET value=? WHERE key='evidence_schema_version'",
+                    (str(EVIDENCE_SCHEMA_VERSION),),
+                )
+        except sqlite3.DatabaseError as exc:
+            raise LineageCorruptionError(
+                "cannot migrate scoped evidence schema v1 to v2"
+            ) from exc
+
+    def _ensure_schema(self) -> None:
+        claims = self._table_exists("evidence_claims")
+        supersessions = self._table_exists("evidence_supersessions")
+        version = self._metadata_value("evidence_schema_version")
+
+        if not claims and not supersessions and version is None:
+            self._create_schema_v2()
+            return
+        if claims != supersessions or not claims or version is None:
+            raise LineageCorruptionError(
+                "scoped evidence schema metadata/table mismatch"
+            )
+
+        columns = self._column_names("evidence_claims")
+        if version == "1":
+            self._migrate_v1_to_v2()
+            columns = self._column_names("evidence_claims")
+            version = self._metadata_value("evidence_schema_version")
+        if version != str(EVIDENCE_SCHEMA_VERSION):
+            raise LineageCorruptionError(
+                f"unsupported scoped evidence schema version: {version}"
+            )
+        if "twin_domain" not in columns:
+            raise LineageCorruptionError(
+                "scoped evidence schema v2 is missing twin_domain"
+            )
+
     def _validate_existing(self) -> None:
         try:
             version = self._conn.execute(
@@ -152,20 +220,33 @@ class EvidenceMemory:
                 raise LineageCorruptionError("unsupported scoped evidence schema version")
 
             rows = self._conn.execute(
-                "SELECT seq, id, scope_kind, scope_id, key, value_json, source_kind, source_ref, confidence "
+                "SELECT seq, id, scope_kind, scope_id, key, value_json, source_kind, "
+                "source_ref, confidence, twin_domain "
                 "FROM evidence_claims ORDER BY seq"
             ).fetchall()
             for row in rows:
-                self._validate_scope(str(row["scope_kind"]), str(row["scope_id"]), corruption=True)
+                self._validate_scope(
+                    str(row["scope_kind"]), str(row["scope_id"]), corruption=True
+                )
                 if str(row["source_kind"]) not in SOURCE_KINDS:
-                    raise LineageCorruptionError("scoped evidence contains invalid source kind")
+                    raise LineageCorruptionError(
+                        "scoped evidence contains invalid source kind"
+                    )
+                if str(row["twin_domain"]) not in TWIN_DOMAINS:
+                    raise LineageCorruptionError(
+                        "scoped evidence contains invalid Twin domain"
+                    )
                 confidence = float(row["confidence"])
                 if not 0.0 <= confidence <= 1.0:
-                    raise LineageCorruptionError("scoped evidence contains invalid confidence")
+                    raise LineageCorruptionError(
+                        "scoped evidence contains invalid confidence"
+                    )
                 try:
                     json.loads(str(row["value_json"]))
                 except Exception as exc:
-                    raise LineageCorruptionError("scoped evidence contains invalid JSON value") from exc
+                    raise LineageCorruptionError(
+                        "scoped evidence contains invalid JSON value"
+                    ) from exc
 
             invalid_edges = self._conn.execute(
                 "SELECT s.new_claim_id, s.old_claim_id "
@@ -177,11 +258,17 @@ class EvidenceMemory:
                 "OR n.key <> o.key OR n.seq <= o.seq"
             ).fetchall()
             if invalid_edges:
-                raise LineageCorruptionError("scoped evidence supersession graph is invalid")
+                raise LineageCorruptionError(
+                    "scoped evidence supersession graph is invalid"
+                )
         except sqlite3.DatabaseError as exc:
-            raise LineageCorruptionError("scoped evidence database is unreadable") from exc
+            raise LineageCorruptionError(
+                "scoped evidence database is unreadable"
+            ) from exc
 
-    def _validate_scope(self, scope_kind: str, scope_id: str, *, corruption: bool = False) -> None:
+    def _validate_scope(
+        self, scope_kind: str, scope_id: str, *, corruption: bool = False
+    ) -> None:
         kind = str(scope_kind).strip().upper()
         scope_id = str(scope_id).strip()
         error = LineageCorruptionError if corruption else ValidationError
@@ -206,17 +293,29 @@ class EvidenceMemory:
     @staticmethod
     def _canonical_value(value: Any) -> str:
         try:
-            return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
+            return json.dumps(
+                value, sort_keys=True, separators=(",", ":"), allow_nan=False
+            )
         except (TypeError, ValueError) as exc:
-            raise ValidationError("evidence value must be valid JSON data") from exc
+            raise ValidationError(
+                "evidence value must be valid JSON data"
+            ) from exc
 
     @staticmethod
     def _new_claim_id() -> str:
         return f"claim_{uuid.uuid4().hex}"
 
+    @staticmethod
+    def _normalize_twin_domain(value: str) -> str:
+        domain = str(value).strip().upper()
+        if domain not in TWIN_DOMAINS:
+            raise ValidationError(f"unsupported Twin domain: {domain}")
+        return domain
+
     def get_claim(self, claim_id: str) -> EvidenceClaim | None:
         row = self._conn.execute(
-            "SELECT seq, id, scope_kind, scope_id, key, value_json, source_kind, source_ref, confidence "
+            "SELECT seq, id, scope_kind, scope_id, key, value_json, source_kind, "
+            "source_ref, confidence, twin_domain "
             "FROM evidence_claims WHERE id = ?",
             (claim_id,),
         ).fetchone()
@@ -232,25 +331,40 @@ class EvidenceMemory:
             key=str(row["key"]),
             value=json.loads(str(row["value_json"])),
             source_kind=str(row["source_kind"]),
-            source_ref=None if row["source_ref"] is None else str(row["source_ref"]),
+            source_ref=(
+                None if row["source_ref"] is None else str(row["source_ref"])
+            ),
             confidence=float(row["confidence"]),
+            twin_domain=str(row["twin_domain"]),
         )
 
-    def active_claims(self, scope_kind: str, scope_id: str, key: str) -> tuple[EvidenceClaim, ...]:
+    def active_claims_for_scope(
+        self, scope_kind: str, scope_id: str
+    ) -> tuple[EvidenceClaim, ...]:
         kind = str(scope_kind).strip().upper()
+        self._validate_scope(kind, scope_id)
+        rows = self._conn.execute(
+            "SELECT c.seq, c.id, c.scope_kind, c.scope_id, c.key, c.value_json, "
+            "c.source_kind, c.source_ref, c.confidence, c.twin_domain "
+            "FROM evidence_claims c "
+            "LEFT JOIN evidence_supersessions s ON s.old_claim_id = c.id "
+            "WHERE c.scope_kind = ? AND c.scope_id = ? "
+            "AND s.old_claim_id IS NULL ORDER BY c.seq",
+            (kind, scope_id),
+        ).fetchall()
+        return tuple(self._claim_from_row(row) for row in rows)
+
+    def active_claims(
+        self, scope_kind: str, scope_id: str, key: str
+    ) -> tuple[EvidenceClaim, ...]:
         key = str(key).strip()
         if not key:
             raise ValidationError("evidence key must not be empty")
-        self._validate_scope(kind, scope_id)
-        rows = self._conn.execute(
-            "SELECT c.seq, c.id, c.scope_kind, c.scope_id, c.key, c.value_json, c.source_kind, c.source_ref, c.confidence "
-            "FROM evidence_claims c "
-            "LEFT JOIN evidence_supersessions s ON s.old_claim_id = c.id "
-            "WHERE c.scope_kind = ? AND c.scope_id = ? AND c.key = ? "
-            "AND s.old_claim_id IS NULL ORDER BY c.seq",
-            (kind, scope_id, key),
-        ).fetchall()
-        return tuple(self._claim_from_row(row) for row in rows)
+        return tuple(
+            claim
+            for claim in self.active_claims_for_scope(scope_kind, scope_id)
+            if claim.key == key
+        )
 
     def record_claim(
         self,
@@ -262,10 +376,12 @@ class EvidenceMemory:
         source_kind: str,
         source_ref: str | None = None,
         confidence: float = 1.0,
+        twin_domain: str = "UNSPECIFIED",
         supersedes: Iterable[str] = (),
     ) -> EvidenceClaim:
         kind = str(scope_kind).strip().upper()
         source = str(source_kind).strip().upper()
+        domain = self._normalize_twin_domain(twin_domain)
         key = str(key).strip()
         if not key:
             raise ValidationError("evidence key must not be empty")
@@ -280,31 +396,53 @@ class EvidenceMemory:
             raise ValidationError("confidence must be between 0 and 1")
         value_json = self._canonical_value(value)
         old_ids = tuple(dict.fromkeys(str(item) for item in supersedes))
-        active_by_id = {claim.id: claim for claim in self.active_claims(kind, scope_id, key)}
+        active_by_id = {
+            claim.id: claim for claim in self.active_claims(kind, scope_id, key)
+        }
         for old_id in old_ids:
             old = self.get_claim(old_id)
             if old is None:
                 raise NotFoundError(f"evidence claim not found: {old_id}")
             if old.scope_kind != kind or old.scope_id != scope_id or old.key != key:
-                raise ValidationError("supersession cannot cross evidence scope or key")
+                raise ValidationError(
+                    "supersession cannot cross evidence scope or key"
+                )
             if old_id not in active_by_id:
-                raise ValidationError("supersession may target only currently active claims")
+                raise ValidationError(
+                    "supersession may target only currently active claims"
+                )
 
         claim_id = self._new_claim_id()
         try:
             with self.store._tx():
                 self._conn.execute(
-                    "INSERT INTO evidence_claims(id, scope_kind, scope_id, key, value_json, source_kind, source_ref, confidence) "
-                    "VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
-                    (claim_id, kind, scope_id, key, value_json, source, source_ref, confidence),
+                    "INSERT INTO evidence_claims("
+                    "id, scope_kind, scope_id, key, value_json, source_kind, "
+                    "source_ref, confidence, twin_domain"
+                    ") VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        claim_id,
+                        kind,
+                        scope_id,
+                        key,
+                        value_json,
+                        source,
+                        source_ref,
+                        confidence,
+                        domain,
+                    ),
                 )
                 for old_id in old_ids:
                     self._conn.execute(
-                        "INSERT INTO evidence_supersessions(new_claim_id, old_claim_id) VALUES(?, ?)",
+                        "INSERT INTO evidence_supersessions("
+                        "new_claim_id, old_claim_id"
+                        ") VALUES(?, ?)",
                         (claim_id, old_id),
                     )
         except sqlite3.IntegrityError as exc:
-            raise ValidationError(f"invalid scoped evidence mutation: {exc}") from exc
+            raise ValidationError(
+                f"invalid scoped evidence mutation: {exc}"
+            ) from exc
         claim = self.get_claim(claim_id)
         assert claim is not None
         return claim
@@ -318,7 +456,9 @@ class EvidenceMemory:
     ) -> EvidenceResolution:
         song = self.store.get_song(song_id)
         if song is None:
-            raise NotFoundError(f"Song not found in profile {self.store.profile_id}: {song_id}")
+            raise NotFoundError(
+                f"Song not found in profile {self.store.profile_id}: {song_id}"
+            )
         scopes: list[tuple[str, str]] = []
         if version_id is not None:
             version = self.store.get_version(version_id)
@@ -378,15 +518,23 @@ class EvidenceMemory:
         source_kind: str,
         source_ref: str | None = None,
         confidence: float = 1.0,
+        twin_domain: str = "UNSPECIFIED",
         version_id: str | None = None,
     ) -> EvidenceClaim:
-        resolution = self.resolve_for_song(song_id=song_id, key=key, version_id=version_id)
+        resolution = self.resolve_for_song(
+            song_id=song_id, key=key, version_id=version_id
+        )
         if resolution.status == "UNKNOWN":
             raise ValidationError("there is no active evidence to reconcile")
         expected_kind = "VERSION" if version_id is not None else "SONG"
         expected_id = version_id if version_id is not None else song_id
-        if resolution.scope_kind != expected_kind or resolution.scope_id != expected_id:
-            raise ValidationError("reconciliation must target the currently applicable explicit scope")
+        if (
+            resolution.scope_kind != expected_kind
+            or resolution.scope_id != expected_id
+        ):
+            raise ValidationError(
+                "reconciliation must target the currently applicable explicit scope"
+            )
         return self.record_claim(
             scope_kind=expected_kind,
             scope_id=expected_id,
@@ -395,5 +543,6 @@ class EvidenceMemory:
             source_kind=source_kind,
             source_ref=source_ref,
             confidence=confidence,
+            twin_domain=twin_domain,
             supersedes=resolution.claim_ids,
         )

@@ -23,7 +23,7 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-01" or increment != "CORE-01G":
+if active != "CORE-01" or increment != "CORE-01H":
     print(f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}", file=sys.stderr)
     raise SystemExit(1)
 
@@ -32,79 +32,48 @@ from n0te2 import HeadquartersMemory  # noqa: E402
 with tempfile.TemporaryDirectory() as td:
     hq = HeadquartersMemory.create(td, "Smoke Artist")
     profile = hq.store.profile_id
-
     song_a = hq.store.create_song("Smoke Song A")
-    asset_a = hq.store.attach_asset(
-        song_a.id, name="take.wav", sha256="a" * 64, source_uri="file:///songs/a/take.wav"
-    )
-    v1 = hq.store.create_version(song_a.id, label="v1", asset_ids=[asset_a.id])
+    asset = hq.store.attach_asset(song_a.id, name="take.wav", sha256="a" * 64)
+    v1 = hq.store.create_version(song_a.id, label="v1", asset_ids=[asset.id])
     hq.store.approve_version(song_a.id, v1.id)
     v2 = hq.store.create_version(
-        song_a.id, label="v2", parent_version_id=v1.id, asset_ids=[asset_a.id]
+        song_a.id, label="v2", parent_version_id=v1.id, asset_ids=[asset.id]
     )
 
-    old = hq.evidence.record_claim(
+    technical = hq.evidence.record_claim(
+        scope_kind="VERSION",
+        scope_id=v2.id,
+        key="timing.feel",
+        value="off-grid",
+        source_kind="MEASURED",
+        source_ref="analysis:timing",
+        twin_domain="TECHNICAL",
+    )
+    creative = hq.evidence.record_claim(
         scope_kind="SONG",
         scope_id=song_a.id,
-        key="chorus.energy",
-        value="needs lift",
-        source_kind="OBSERVED",
-        source_ref="listen:1",
-        confidence=0.7,
-    )
-    conflicting = hq.evidence.record_claim(
-        scope_kind="SONG",
-        scope_id=song_a.id,
-        key="chorus.energy",
-        value="already right",
-        source_kind="INFERRED",
-        source_ref="analysis:1",
-        confidence=0.55,
-    )
-    reconciled = hq.evidence.reconcile_for_song(
-        song_id=song_a.id,
-        key="chorus.energy",
-        value="needs lift",
+        key="timing.feel",
+        value="intentional push",
         source_kind="USER_DECLARED",
-        source_ref="artist-confirmation",
+        source_ref="artist:intent",
+        twin_domain="CREATIVE",
     )
-
-    external = hq.provenance.record(
-        output_kind="ASSET",
-        output_id=asset_a.id,
-        input_kind="EXTERNAL",
-        input_ref="file:///imports/original-take.wav",
-        operation="IMPORTED",
-        evidence_source_kind="OBSERVED",
-        evidence_ref="import:1",
-    )
-    derived = hq.provenance.record(
-        output_kind="VERSION",
-        output_id=v2.id,
-        input_kind="VERSION",
-        input_ref=v1.id,
-        operation="TRANSFORMED",
-        evidence_source_kind="USER_DECLARED",
-        evidence_ref="session:42",
+    unspecified = hq.evidence.record_claim(
+        scope_kind="SONG",
+        scope_id=song_a.id,
+        key="legacy.note",
+        value="classify later",
+        source_kind="REMEMBERED",
     )
 
     song_b = hq.store.create_song("Smoke Song B")
-    asset_b = hq.store.attach_asset(song_b.id, name="b.wav", sha256="b" * 64)
-    vb = hq.store.create_version(song_b.id, label="b1", asset_ids=[asset_b.id])
     claim_b = hq.evidence.record_claim(
         scope_kind="SONG",
         scope_id=song_b.id,
         key="private.to.b",
         value=True,
         source_kind="USER_DECLARED",
-    )
-    prov_b = hq.provenance.record(
-        output_kind="VERSION",
-        output_id=vb.id,
-        input_kind="EXTERNAL",
-        input_ref="file:///imports/b.wav",
-        operation="IMPORTED",
-        evidence_source_kind="OBSERVED",
+        twin_domain="CREATIVE",
     )
     hq.close()
 
@@ -121,43 +90,40 @@ with tempfile.TemporaryDirectory() as td:
         "activity_events",
         "provenance_records",
     )
-    before = {table: int(conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]) for table in tables}
+    before = {
+        table: int(conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"])
+        for table in tables
+    }
     before_changes = conn.total_changes
-    map_a = hq.knowledge.for_song(song_a.id)
-    repeated = hq.knowledge.for_song(song_a.id)
-    after = {table: int(conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]) for table in tables}
 
-    assert map_a == repeated
+    view = hq.twins.for_song(song_id=song_a.id, version_id=v2.id)
+    repeated = hq.twins.for_song(song_id=song_a.id, version_id=v2.id)
+    graph = hq.knowledge.for_song(song_a.id)
+
+    after = {
+        table: int(conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"])
+        for table in tables
+    }
+
+    assert view == repeated
     assert before == after and before_changes == conn.total_changes
-    assert [edge.target_id for edge in map_a.edges_of_kind("CURRENT_VERSION")] == [v2.id]
-    assert [edge.target_id for edge in map_a.edges_of_kind("APPROVED_VERSION")] == [v1.id]
-    assert any(
-        edge.kind == "VERSION_PARENT" and edge.source_id == v2.id and edge.target_id == v1.id
-        for edge in map_a.edges
-    )
-    assert map_a.node("ASSET", asset_a.id) is not None
-    assert map_a.node("EVIDENCE_CLAIM", old.id) is not None
-    assert map_a.node("EVIDENCE_CLAIM", conflicting.id) is not None
-    assert map_a.node("EVIDENCE_CLAIM", reconciled.id) is not None
-    assert {
-        (edge.source_id, edge.target_id)
-        for edge in map_a.edges_of_kind("EVIDENCE_SUPERSEDES")
-        if edge.source_id == reconciled.id
-    } == {(reconciled.id, old.id), (reconciled.id, conflicting.id)}
-    assert any(
-        node.kind == "EXTERNAL_REF" and node.data["ref"] == "file:///imports/original-take.wav"
-        for node in map_a.nodes
-    )
-    assert any(
-        edge.kind == "DERIVED_FROM" and edge.source_id == derived.id and edge.target_id == v1.id
-        for edge in map_a.edges
-    )
-    assert any(
-        edge.kind == "PROVENANCE_DESCRIBES" and edge.source_id == external.id and edge.target_id == asset_a.id
-        for edge in map_a.edges
-    )
-    forbidden_ids = {song_b.id, asset_b.id, vb.id, claim_b.id, prov_b.id}
-    assert not any(node.id in forbidden_ids for node in map_a.nodes)
+    assert technical in view.technical_claims
+    assert creative in view.creative_claims
+    assert unspecified in view.unspecified_claims
+    assert len(view.conflicts) == 1
+    conflict = view.conflicts[0]
+    assert conflict.key == "timing.feel"
+    assert set(conflict.claim_ids) == {technical.id, creative.id}
+    assert not hasattr(conflict, "winner")
+    assert hq.evidence.get_claim(technical.id).source_kind == "MEASURED"
+    assert hq.evidence.get_claim(creative.id).source_kind == "USER_DECLARED"
+    assert graph.node("EVIDENCE_CLAIM", technical.id).data["twin_domain"] == "TECHNICAL"
+    assert graph.node("EVIDENCE_CLAIM", creative.id).data["twin_domain"] == "CREATIVE"
+    assert graph.node("EVIDENCE_CLAIM", unspecified.id).data["twin_domain"] == "UNSPECIFIED"
+    assert graph.node("EVIDENCE_CLAIM", claim_b.id) is None
+    restored = hq.store.get_song(song_a.id)
+    assert restored.current_version_id == v2.id
+    assert restored.approved_version_id == v1.id
     hq.close()
 
-print("CORE-01G CONSUMER SMOKE: GREEN: one deterministic pure-read Song map preserves current/approved, history, provenance and cross-Song isolation")
+print("CORE-01H CONSUMER SMOKE: GREEN: Technical and Creative Twin evidence survive restart, stay separate, surface conflict, and write no state during review")

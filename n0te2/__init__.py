@@ -1,5 +1,10 @@
 from .activity import ActivityEvent, ActivityLog
-from .evidence import EvidenceClaim, EvidenceMemory, EvidenceResolution
+from .evidence import (
+    EvidenceClaim,
+    EvidenceMemory,
+    EvidenceResolution,
+    TWIN_DOMAINS,
+)
 from .graph import GraphEdge, GraphNode, SongKnowledgeMap, SongKnowledgeMapService
 from .lineage import (
     Asset,
@@ -36,6 +41,12 @@ from .resume import (
     SongResumeBrief,
     SongResumeService,
 )
+from .twins import (
+    SongTwinView,
+    TwinAwareSongKnowledgeMapService,
+    TwinConflict,
+    TwinEvidenceService,
+)
 
 __all__ = [
     "ActivityEvent",
@@ -71,6 +82,11 @@ __all__ = [
     "SongKnowledgeMapService",
     "SongResumeBrief",
     "SongResumeService",
+    "SongTwinView",
+    "TWIN_DOMAINS",
+    "TwinAwareSongKnowledgeMapService",
+    "TwinConflict",
+    "TwinEvidenceService",
     "ValidationError",
     "Version",
     "VersionExplanation",

@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-01",
-  "active_increment": "CORE-01G",
+  "active_increment": "CORE-01H",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -20,12 +20,12 @@
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01A-F establish canonical Song/version identity, scoped evidence, Activity, Song Resume, provenance and explicit local recovery.",
-    "CORE-01F hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
-    "CORE-01G is the only active product increment and adds a pure-read Song Knowledge Map over existing canonical relational owners.",
-    "The map owns no persistence: typed nodes and edges are projections of Song/version/asset/evidence/Activity/provenance truth already stored canonically.",
-    "CURRENT and APPROVED remain distinct; superseded evidence remains history; external provenance remains EXTERNAL_REF rather than fabricated canonical identity.",
-    "No universal search, graph editor, Twins UX, DAW/provider work, broader Artist/business graph or second graph database is selected in this increment.",
+    "CORE-01A-G establish canonical Song/version identity, scoped evidence, Activity, Resume, provenance, recovery and a pure-read Song Knowledge Map.",
+    "CORE-01G hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
+    "CORE-01H is the only active product increment and evolves canonical evidence with explicit TECHNICAL / CREATIVE / UNSPECIFIED Twin domain plus a pure-read Twin conflict view.",
+    "Twin domain and source kind are orthogonal. Existing evidence migrates to UNSPECIFIED rather than being guessed from USER_DECLARED, MEASURED, INFERRED or any other source label.",
+    "Technical and Creative Twin evidence may disagree. The Twin view preserves both and never selects a winner or authorizes a creative fix.",
+    "No Audio Intelligence, DAW adapter, Artist World taste maturation, universal search, broad graph expansion or separate Twin database is selected in this increment.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }

@@ -8,6 +8,7 @@ from .graph import SongKnowledgeMapService
 from .lineage import LineageStore
 from .provenance import ProvenanceLedger
 from .recovery import RecoveryManager
+from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
 
 
 class HeadquartersMemory:
@@ -16,10 +17,13 @@ class HeadquartersMemory:
     def __init__(self, store: LineageStore):
         self.store = store
         self.evidence = EvidenceMemory(store)
+        self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
         self.provenance = ProvenanceLedger(store)
         self.recovery = RecoveryManager(store)
-        self.knowledge = SongKnowledgeMapService(store)
+        self.knowledge = TwinAwareSongKnowledgeMapService(
+            SongKnowledgeMapService(store), self.evidence
+        )
 
     @classmethod
     def create(cls, root: str | Path, artist_name: str) -> "HeadquartersMemory":

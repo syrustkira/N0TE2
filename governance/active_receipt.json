@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01G",
+  "receipt_id": "N0TE2-CORE-01H",
   "node_id": "CORE-01",
-  "increment_id": "CORE-01G",
-  "baseline_sha": "91a2f86240377f649cb80ca04bb0439eba05006c",
-  "purpose": "Add one pure-read Song Knowledge Map that projects canonical Song/version/asset/evidence/Activity/provenance relationships without creating a second graph store or leaking another Song.",
+  "increment_id": "CORE-01H",
+  "baseline_sha": "b6c7c571a37a51ec23f820aa8115f7e744619c2b",
+  "purpose": "Make Technical Twin and Creative Twin evidence explicit so N0TE can distinguish technical state from creative intent, preserve both when they disagree, and never infer taste from measurement/source labels.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,37 +14,39 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can inspect one coherent Song map and understand which versions, assets, evidence, Activity and provenance records belong together without state duplication or cross-Song leakage.",
-    "journeys": ["J-IDEA-SONG", "J-COMPARE-DECIDE", "J-WHAT-NEXT"],
-    "capability": "Canonical read-only Song Knowledge Graph projection",
-    "increment": "CORE-01G"
+    "outcome": "The artist can see what N0TE technically observes versus what the artist creatively intends, and disagreement is surfaced without silently choosing or fixing the art.",
+    "journeys": ["J-IMPROVE", "J-TRUST", "J-IDEA-SONG"],
+    "capability": "Explicit Technical Twin / Creative Twin evidence lenses",
+    "increment": "CORE-01H"
   },
   "reuse": {
-    "mode": "N0TE2_CANONICAL_RELATIONAL_OWNERS_ONLY",
-    "n0te2_dependencies": ["LineageStore", "EvidenceMemory", "ActivityLog", "ProvenanceLedger", "HeadquartersMemory"],
-    "legacy_candidates": ["ProjectGraph node-kind ideas as evidence only"],
-    "legacy_rejections": ["second graph database", "duplicate object ownership", "portability scoring as relationship truth"],
+    "mode": "N0TE2_CANONICAL_EVIDENCE_EVOLUTION",
+    "n0te2_dependencies": ["EvidenceMemory", "HeadquartersMemory", "SongKnowledgeMapService", "LineageStore"],
+    "legacy_candidates": ["Technical Twin / Creative Twin semantics as behavioral evidence only"],
+    "legacy_rejections": ["separate Twin databases", "source-kind-to-taste inference", "technical evidence automatically overriding creative intent"],
     "direct_copy": false
   },
   "completion_proof": [
-    "Song map emits unique immutable typed nodes and deterministic typed edges from existing canonical owners only",
-    "CURRENT and APPROVED remain separate edges to their exact versions",
-    "version parentage, Song assets and version-asset membership are projected without cross-Song links",
-    "Song/version evidence claims include superseded history and explicit supersession edges",
-    "Song-scoped Activity is represented chronologically by sequence and linked to its canonical target",
-    "provenance records describe canonical outputs and DERIVED_FROM links point to same-Song canonical input or explicit EXTERNAL_REF",
-    "unrelated Song/version/asset/evidence/Activity/provenance IDs are absent",
-    "repeated map reads after restart insert/update/delete zero canonical rows and return an equal deterministic map",
-    "missing or inconsistent canonical targets fail visibly rather than being omitted or fabricated"
+    "evidence schema v1 migrates transactionally to v2 and every existing claim preserves id/value/source/ref/confidence/supersession while becoming UNSPECIFIED rather than guessed",
+    "new claims explicitly accept only TECHNICAL, CREATIVE or UNSPECIFIED Twin domain independent of source kind",
+    "version-specific TECHNICAL evidence and broader Song CREATIVE intent for the same key can coexist and surface a conflict with no selected winner",
+    "scope specificity is resolved independently per Twin so one lens cannot erase the other",
+    "same-valued technical and creative evidence does not manufacture a conflict",
+    "Song A Twin evidence never resolves for Song B",
+    "restart preserves Twin domain and the normal Headquarters Song Knowledge Map exposes twin_domain on evidence nodes",
+    "invalid or tampered Twin domains fail visibly",
+    "after schema initialization repeated Twin reads insert/update/delete zero canonical rows"
   ],
   "non_scope": [
-    "stored graph database or graph mutation API",
+    "Audio Intelligence or automatic technical diagnosis",
+    "DAW adapters or host observation",
+    "Artist World taste maturation",
     "universal search",
-    "graph editor or visualization UI",
-    "Technical Twin / Creative Twin consumer UX",
-    "DAW/provider implementation",
-    "broader Artist/business graph",
-    "CI-proof scaffolding"
+    "broad Artist Graph population",
+    "Twin visualization UI",
+    "provider execution",
+    "separate Technical/Creative persistence stores",
+    "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-01G proof, reconcile evidence and globally reselect. Do not expand the graph by adjacency."
+  "next_selection_rule": "After CORE-01H evidence, reconcile and globally reselect. Do not expand Twins, audio diagnosis or Artist World by adjacency."
 }
