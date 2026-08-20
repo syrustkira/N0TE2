@@ -4,7 +4,6 @@ from dataclasses import dataclass
 
 from .capabilities import (
     CapabilityResolution,
-    CapabilityResolutionError,
     N0TEableJob,
     ResolutionConstraints,
 )
@@ -41,6 +40,8 @@ def _text(value: str, field: str) -> str:
 def _tags(values: tuple[str, ...] | list[str] | None) -> tuple[str, ...]:
     if values is None:
         return ()
+    if not isinstance(values, (tuple, list)):
+        raise TypeError("role.tags must be a tuple or list of strings")
     result: list[str] = []
     for value in values:
         text = _text(value, "role.tags")
@@ -72,7 +73,8 @@ class TemplateRole:
         object.__setattr__(
             self, "description", _text(self.description, "role.description")
         )
-        object.__setattr__(self, "required", bool(self.required))
+        if not isinstance(self.required, bool):
+            raise TypeError("role.required must be bool")
         object.__setattr__(self, "tags", _tags(self.tags))
 
 
@@ -176,14 +178,17 @@ class TemplatePlanner:
         if not isinstance(constraints, ResolutionConstraints):
             raise TypeError("constraints must be ResolutionConstraints")
 
-        role_plans = tuple(
-            TemplateRolePlan(
-                role=role,
-                job=self._job(template, role),
-                resolution=studio.resolve(self._job(template, role), constraints),
+        plans: list[TemplateRolePlan] = []
+        for role in template.roles:
+            job = self._job(template, role)
+            plans.append(
+                TemplateRolePlan(
+                    role=role,
+                    job=job,
+                    resolution=studio.resolve(job, constraints),
+                )
             )
-            for role in template.roles
-        )
+        role_plans = tuple(plans)
 
         required_missing = any(
             item.role.required and not item.available for item in role_plans
@@ -197,8 +202,6 @@ class TemplatePlanner:
             status = "PARTIAL"
         else:
             status = "FULL"
-        if status not in TEMPLATE_PLAN_STATUSES:
-            raise CapabilityResolutionError(f"invalid template plan status: {status}")
 
         return TemplatePlan(
             template_id=template.template_id,
