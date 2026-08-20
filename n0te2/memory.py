@@ -14,6 +14,7 @@ from .provenance import ProvenanceLedger
 from .recovery import RecoveryManager
 from .session import SessionMemory
 from .skills import SkillMemory
+from .transactions import TransactionCoordinator
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
 
 
@@ -26,6 +27,7 @@ class HeadquartersMemory:
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
         self.operations = OperationJournal(store, self.activity)
+        self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.learning = LearningMemory(store, self.sessions)
