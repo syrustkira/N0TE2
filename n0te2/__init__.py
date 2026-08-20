@@ -1,3 +1,4 @@
+from .evidence import EvidenceClaim, EvidenceMemory, EvidenceResolution
 from .lineage import (
     Asset,
     Artist,
@@ -13,6 +14,9 @@ from .lineage import (
 __all__ = [
     "Asset",
     "Artist",
+    "EvidenceClaim",
+    "EvidenceMemory",
+    "EvidenceResolution",
     "LineageCorruptionError",
     "LineageError",
     "LineageStore",

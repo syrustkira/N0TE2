@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01A",
+  "receipt_id": "N0TE2-CORE-01B",
   "node_id": "CORE-01",
-  "increment_id": "CORE-01A",
-  "baseline_sha": "55fac36fee653a875c27f65a8feb59d6a1eb983b",
-  "purpose": "Build the first clean-room product slice: durable Artist/Song identity and exact version/artifact lineage that survives restart without current/approved aliasing or profile leakage.",
+  "increment_id": "CORE-01B",
+  "baseline_sha": "00ef21c29458d432537ea3a71a7ec6375988f91f",
+  "purpose": "Add trustworthy scope-bound evidence memory so N0TE remembers the right fact at the right Artist/Song/version scope, preserves provenance, surfaces conflict, and reconciles only by explicit supersession.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,33 +14,35 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A real Song can be created, left, reopened and resumed without identity or approval drift.",
-    "journeys": ["J-IDEA-SONG", "J-CORE-LIFECYCLE"],
-    "capability": "Durable Song identity + exact version/artifact lineage",
-    "increment": "CORE-01A"
+    "outcome": "N0TE remembers evidence at the correct scope and never invents a winner when active evidence conflicts.",
+    "journeys": ["J-IDEA-SONG", "J-IMPROVE", "J-WHAT-NEXT", "J-TRUST", "J-CORE-LIFECYCLE"],
+    "capability": "Scoped evidence memory + provenance + truthful conflict/reconciliation",
+    "increment": "CORE-01B"
   },
   "reuse": {
     "mode": "SEMANTICS_AND_EVIDENCE_ONLY",
-    "legacy_candidates": ["SongStore", "AssetReferenceStore", "Context Engine", "VersionStore", "atomic-write findings"],
+    "legacy_candidates": ["Context Engine", "HeadquartersRetrieval"],
     "direct_copy": false,
     "fresh_reimplementation_default": true
   },
   "completion_proof": [
-    "clean profile creates one Artist and one Song with stable opaque identities",
-    "a source asset can be attached with exact content identity",
-    "v1 and v2 preserve immutable ancestry and artifact linkage",
-    "CURRENT may be v2 while APPROVED remains v1 until explicit approval",
-    "close and reopen preserve identical Artist/Song/asset/version IDs and active Song",
-    "another profile cannot read or link the first profile's Song/assets",
-    "copied or corrupt durable state fails visibly rather than silently resetting",
-    "tests and stage smoke pass without DAW/provider dependencies"
+    "Song-scoped evidence never resolves for another Song",
+    "version evidence applies only to its own version and more-specific scope wins only by scope",
+    "source kind/reference and confidence survive restart",
+    "contradictory active values at the same applicable scope return CONFLICT with no selected value",
+    "multiple sources agreeing on the same value resolve while preserving all evidence",
+    "explicit reconciliation appends a new claim and supersedes prior active same-key/same-scope claims without deleting history",
+    "cross-scope or cross-key supersession is rejected",
+    "tampered scope references fail visibly on evidence open",
+    "all behavior remains inside the canonical profile lineage database with no context sidecar store"
   ],
   "non_scope": [
+    "universal search or Activity timeline",
+    "Technical Twin / Creative Twin consumer experience",
+    "full cross-domain Artist/Song Knowledge Graph",
     "DAW adapters or host hierarchy",
-    "full Artist Graph or universal search/activity",
-    "UI polish or product shell",
-    "release/content/business/provider execution",
-    "wholesale legacy code or test import"
+    "application shell or provider execution",
+    "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-01A proof, reconcile evidence and reselect from the whole N0TE hierarchy. Do not continue by storage-code adjacency."
+  "next_selection_rule": "After CORE-01B proof, reconcile evidence and reselect from the whole remaining CORE-01/customer hierarchy. Do not continue evidence tables by adjacency."
 }
