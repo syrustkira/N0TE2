@@ -2,8 +2,8 @@
   "schema_version": 3,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
-  "active_node": "CORE-01",
-  "active_increment": "CORE-01J",
+  "active_node": "CORE-02",
+  "active_increment": "CORE-02A",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -16,17 +16,18 @@
     "AUDIT-HISTORY",
     "AUDIT-DESIGN",
     "AUDIT-GRAPH",
-    "LEGACY-01"
+    "LEGACY-01",
+    "CORE-01"
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01A-I establish canonical Artist/Song/version/asset identity, scoped evidence, Activity, Resume, provenance, explicit recovery, Song graph, Technical/Creative Twin semantics and fresh-consumer context isolation.",
-    "CORE-01I is implemented at exact head ceb90b57a2d13022505a90224d87fdd2ded78ecd; hosted exact-head proof remains UNOBSERVED and is not converted to green.",
-    "The CORE-01 parent closure audit identified REQ-SCOPE-152 crash consistency as the only remaining concrete foundation blocker.",
-    "The audit exposed a real initializer defect: LineageStore._initialize opened a transaction before sqlite3.executescript, which can implicitly commit and leave partial schema after a mid-script failure.",
-    "CORE-01J is the only active increment. It repairs that transaction boundary and fault-injects kill-before-commit, SQLITE_FULL rollback and interrupted EvidenceMemory migration while preserving existing explicit recovery semantics.",
-    "Journey-wide requirements such as universal search, broad Artist Activity and future people/content/release/business graph population remain preserved downstream work and do not redefine CORE-01 closure.",
-    "No new persistence layer, cloud backup, APP-01 lifecycle, DAW/audio work or hosted-CI proof scaffolding is selected in this increment.",
+    "CORE-01 is closed as a construction dependency at crash-hardened head 782118d88b0d44a0a343c5e50a8464cef23b0bbc; hosted exact-head proof remains UNOBSERVED and is not converted to green.",
+    "CORE-01A-J provide canonical Artist/Song/version/asset identity, scoped evidence/conflicts, Activity, Resume, provenance, explicit recovery, Song graph, Technical/Creative Twin semantics, context isolation and fault-hardened local persistence.",
+    "CORE-02 and CORE-03 became dependency-ready after CORE-01 closure. Portfolio/journey reselection chose CORE-02A because a normal artist must be able to conduct and resume meaningful Song work before capability routing adds host/provider execution choices.",
+    "CORE-02A is the only active product increment. Session scratch is durable chronology but not EvidenceMemory; only explicit promotion creates durable doctrine/evidence.",
+    "Sessions bind to one owned Song and optional version, start with an objective, close once with a debrief and next action, and preserve rejected/unresolved exploration without auto-promotion.",
+    "CORE-03 remains PRESERVED and dependency-ready; no host or DAW receives semantic priority because CORE-02 was selected first.",
+    "No skill model, universal experiment causality model, friction/success pattern engine, universal search UI, DAW/audio/provider execution or hosted-CI proof scaffolding is selected in CORE-02A.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
