@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "selection_policy": "DO_NOT_WORK_ON_YET_UNLESS_EXPLICITLY_PROMOTED_BY_NEW_RECEIPT",
+  "items": [
+    {"id":"HOLD-001","name":"Accounts / identity / authentication","state":"HELD"},
+    {"id":"HOLD-002","name":"Cloud backup / sync","state":"HELD"},
+    {"id":"HOLD-003","name":"Subscriptions / billing","state":"HELD"},
+    {"id":"HOLD-004","name":"Product analytics / telemetry","state":"HELD"},
+    {"id":"HOLD-005","name":"Crash reporting / crash upload","state":"HELD"},
+    {"id":"HOLD-006","name":"DRM / activation / license enforcement","state":"HELD"},
+    {"id":"HOLD-007","name":"Mobile companion apps: iPhone/iPad, Android, PWA/web","state":"HELD"}
+  ],
+  "promotion_requires": [
+    "explicit product decision",
+    "new baseline-bound receipt",
+    "privacy/authority/economic contract where applicable",
+    "completion-graph reconciliation"
+  ]
+}
