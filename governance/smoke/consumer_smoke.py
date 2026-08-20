@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
@@ -25,183 +26,142 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-03" or increment != "CORE-03A":
+if active != "CORE-02" or increment != "CORE-02B":
     print(
         f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}",
         file=sys.stderr,
     )
     raise SystemExit(1)
 
-from n0te2 import (  # noqa: E402
-    CapabilityCandidate,
-    CapabilityResolver,
-    N0TEableJob,
-    ResolutionConstraints,
-)
-
-job = N0TEableJob(
-    id="job:vocal.tighten",
-    capability="vocal.tighten",
-    description="Tighten chorus vocals while preserving performance intent",
-)
-resolver = CapabilityResolver()
+from n0te2 import HeadquartersMemory, ValidationError  # noqa: E402
 
 
-def candidate(candidate_id: str, route_kind: str, **overrides):
-    values = dict(
-        candidate_id=candidate_id,
-        route_kind=route_kind,
-        capability=job.capability,
-        display_name=candidate_id,
-        brand=None,
-        verified=True,
-        compatible=True,
-        evidence_ref=f"smoke:{candidate_id}",
-        evidence_age_seconds=10,
-        task_fit=0.80,
-        editability=0.80,
-        locality=0.80,
-        privacy=0.80,
-        latency=0.80,
-        reversibility=1.0,
-        cost_efficiency=0.80,
-        portability=0.80,
-        user_preference=0.50,
-        paid=False,
+with tempfile.TemporaryDirectory() as td:
+    root = Path(td)
+    hq = HeadquartersMemory.create(root, "Skill Smoke Artist")
+    profile = hq.store.profile_id
+    song = hq.store.create_song("Skill Smoke Song")
+    version = hq.store.create_version(song.id, label="v1")
+    skill_id = "production.compression.intentional_dynamics"
+
+    # Rough Session thinking must not teach N0TE a skill level by itself.
+    assert hq.skills.state(skill_id).level == "UNKNOWN"
+    first = hq.sessions.start_session(
+        song_id=song.id,
+        version_id=version.id,
+        objective="Practice compression while preserving transient intent",
     )
-    values.update(overrides)
-    return CapabilityCandidate(**values)
+    hq.sessions.append_scratch(
+        first.id,
+        kind="OBSERVATION",
+        body="I think slower attack keeps the snare alive",
+    )
+    hq.sessions.append_scratch(
+        first.id,
+        kind="UNRESOLVED",
+        body="Still unsure when release should follow groove versus envelope",
+    )
+    assert hq.skills.state(skill_id).level == "UNKNOWN"
+    hq.sessions.close_session(
+        first.id,
+        debrief_summary="Applied compression deliberately but still needed guidance",
+        next_action="Repeat on a different source with less assistance",
+    )
 
+    practiced = hq.skills.record_assessment(
+        skill_id=skill_id,
+        level="PRACTICED",
+        source_kind="N0TE_ASSESSED",
+        source_ref="smoke:assessment:practice",
+        confidence=0.80,
+        assistance_level=0.50,
+        session_id=first.id,
+        note="Completed a real Song task with substantial guidance",
+    )
+    assert practiced.level == "PRACTICED"
+    assert hq.skills.state(skill_id).level == "PRACTICED"
 
-studio_a = resolver.resolve(
-    job,
-    [
-        candidate(
-            "studio-a-native",
-            "HOST_NATIVE",
-            task_fit=0.99,
-            editability=0.95,
-            locality=1.0,
-            privacy=1.0,
-            latency=0.98,
-        ),
-        candidate(
-            "studio-a-owned",
-            "OWNED_TOOL",
-            task_fit=0.88,
-            locality=1.0,
-            privacy=1.0,
-        ),
-    ],
-)
-assert studio_a.status == "RESOLVED"
-assert studio_a.job_id == job.id
-assert studio_a.recommended.candidate.route_kind == "HOST_NATIVE"
+    second = hq.sessions.start_session(
+        song_id=song.id,
+        version_id=version.id,
+        objective="Apply compression independently on the same Song",
+    )
+    hq.sessions.append_scratch(
+        second.id,
+        kind="DECISION",
+        body="Set attack from transient intent, then tune release by groove",
+    )
+    hq.sessions.close_session(
+        second.id,
+        debrief_summary="Completed the compression decision without assistance",
+        next_action="Check whether the skill transfers to unfamiliar material",
+    )
 
-studio_b = resolver.resolve(
-    job,
-    [
-        candidate(
-            "studio-b-native",
-            "HOST_NATIVE",
-            compatible=False,
-            task_fit=1.0,
-        ),
-        candidate(
-            "studio-b-n0te",
-            "N0TE_NATIVE",
-            task_fit=0.94,
-            editability=0.92,
-            locality=1.0,
-            privacy=1.0,
-        ),
-        candidate(
-            "studio-b-installed-unverified",
-            "OWNED_TOOL",
-            verified=False,
-            evidence_ref=None,
-            task_fit=1.0,
-            user_preference=1.0,
-        ),
-        candidate(
-            "studio-b-guided",
-            "GUIDED",
-            task_fit=0.70,
-            locality=1.0,
-            privacy=1.0,
-        ),
-    ],
-)
-assert studio_b.status == "RESOLVED"
-assert studio_b.job_id == studio_a.job_id == job.id
-assert studio_b.capability == studio_a.capability == job.capability
-assert studio_b.recommended.candidate.route_kind == "N0TE_NATIVE"
-rejected_b = {item.candidate_id: item.reason_codes for item in studio_b.rejected}
-assert "INCOMPATIBLE" in rejected_b["studio-b-native"]
-assert "UNVERIFIED" in rejected_b["studio-b-installed-unverified"]
-
-private_only = resolver.resolve(
-    job,
-    [
-        candidate(
-            "cloud-provider",
-            "PROVIDER",
-            locality=0.10,
-            privacy=0.20,
-            paid=True,
-            user_preference=1.0,
-        ),
-        candidate(
-            "local-guided",
-            "GUIDED",
-            locality=1.0,
-            privacy=1.0,
-            task_fit=0.55,
-            user_preference=0.0,
-        ),
-    ],
-    ResolutionConstraints(
-        min_locality=0.90,
-        min_privacy=0.90,
-        allow_paid=False,
-        require_reversible=True,
-        max_evidence_age_seconds=30,
-    ),
-)
-assert private_only.status == "RESOLVED"
-assert private_only.job_id == job.id
-assert private_only.recommended.candidate.route_kind == "GUIDED"
-assert "PAID_ROUTE_NOT_ALLOWED" in private_only.rejected[0].reason_codes
-assert "PRIVACY_BELOW_MINIMUM" in private_only.rejected[0].reason_codes
-
-unavailable = resolver.resolve(
-    job,
-    [
-        candidate(
-            "unknown-tool",
-            "OWNED_TOOL",
-            verified=False,
-            evidence_ref=None,
-            user_preference=1.0,
+    try:
+        hq.skills.record_assessment(
+            skill_id=skill_id,
+            level="INDEPENDENT",
+            source_kind="OBSERVED",
+            source_ref="smoke:bad-independent",
+            confidence=0.90,
+            assistance_level=0.10,
+            session_id=second.id,
         )
-    ],
-)
-assert unavailable.status == "UNAVAILABLE"
-assert unavailable.recommended is None
-assert "UNVERIFIED" in unavailable.reason_codes
+    except ValidationError:
+        pass
+    else:
+        raise AssertionError("INDEPENDENT must require zero assistance")
 
-identical_native = candidate("tie-b", "HOST_NATIVE", brand="Native Brand")
-identical_provider = candidate("tie-a", "PROVIDER", brand="Provider Brand")
-tie = resolver.resolve(job, [identical_native, identical_provider])
-assert tie.candidate_ids == ("tie-a", "tie-b")
-assert tie.recommended.score == tie.fallbacks[0].score
-assert "SCORE_TIE_BROKEN_BY_CANDIDATE_ID" in tie.reason_codes
-assert all(
-    part.attribute not in {"route_kind", "brand", "display_name"}
-    for part in tie.recommended.score_breakdown
-)
-assert resolver.resolve(job, [identical_native, identical_provider]) == tie
+    independent = hq.skills.record_assessment(
+        skill_id=skill_id,
+        level="INDEPENDENT",
+        source_kind="OBSERVED",
+        source_ref="smoke:assessment:independent",
+        confidence=0.90,
+        assistance_level=0.0,
+        session_id=second.id,
+        note="Completed the represented Song task with no assistance",
+    )
+    assert independent.level == "INDEPENDENT"
+
+    corrected = hq.skills.correct_skill(
+        skill_id=skill_id,
+        level="PRACTICED",
+        source_ref="smoke:artist-correction",
+        reason="I can do this here, but I still need help transferring it to unfamiliar material",
+        confidence=1.0,
+        assistance_level=0.35,
+        session_id=second.id,
+    )
+    assert corrected.source_kind == "ARTIST_CORRECTION"
+    assert hq.skills.state(skill_id).level == "PRACTICED"
+
+    history_ids = tuple(item.id for item in hq.skills.history(skill_id))
+    assert len(history_ids) == 3
+    hq.close()
+
+    hq = HeadquartersMemory.open(root, profile)
+    state_after_restart = hq.skills.state(skill_id)
+    assert state_after_restart.level == "PRACTICED"
+    history = hq.skills.history(skill_id)
+    assert tuple(item.id for item in history) == history_ids
+    assert tuple(item.level for item in history) == (
+        "PRACTICED",
+        "INDEPENDENT",
+        "PRACTICED",
+    )
+    assert history[-1].source_kind == "ARTIST_CORRECTION"
+    assert history[-1].note.startswith("I can do this here")
+
+    event_types = [event.event_type for event in hq.activity.for_song(song.id)]
+    assert event_types.count("SKILL_ASSESSED") == 3
+
+    before_changes = hq.store._conn.total_changes
+    assert hq.skills.state(skill_id).level == "PRACTICED"
+    assert hq.skills.history(skill_id) == history
+    assert hq.store._conn.total_changes == before_changes
+    hq.close()
 
 print(
-    "CORE-03A CONSUMER SMOKE: GREEN: one N0TEable job kept its identity across native, N0TE, guided and unavailable studio outcomes; unverified/incompatible routes were rejected and no host/brand bonus existed"
+    "CORE-02B CONSUMER SMOKE: GREEN: Session scratch did not infer competence; explicit closed-session assessments matured skill evidence, zero-assistance independence was enforced, and artist correction remained durable/reviewable after restart"
 )
