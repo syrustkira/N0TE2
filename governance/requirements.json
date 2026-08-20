@@ -1,0 +1,24 @@
+{
+  "schema_version": 2,
+  "sequence": {
+    "start": 2,
+    "end": 153
+  },
+  "held_or_boundary": [
+    "REQ-SCOPE-044",
+    "REQ-SCOPE-045",
+    "REQ-SCOPE-047",
+    "REQ-SCOPE-062",
+    "REQ-SCOPE-063",
+    "REQ-SCOPE-064",
+    "REQ-SCOPE-065",
+    "REQ-SCOPE-066",
+    "REQ-SCOPE-108"
+  ],
+  "superseded": [
+    "REQ-SCOPE-046"
+  ],
+  "default_classification": "ACTIVE",
+  "active_blocks_candidate": true,
+  "non_active_blocks_candidate": false
+}
