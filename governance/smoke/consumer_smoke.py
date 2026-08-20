@@ -12,6 +12,6 @@ repo = Path(__file__).resolve().parents[2]
 for forbidden in ("app", "src", "n0te2", "legacy"):
     path = repo / forbidden
     if path.exists() and any(path.rglob("*")):
-        print(f"PRE-PRODUCT SMOKE: RED: product/direct-legacy implementation appeared early: {forbidden}/", file=sys.stderr)
+        print(f"PRE-PRODUCT SMOKE: RED: product implementation appeared early (including direct legacy): {forbidden}/", file=sys.stderr)
         raise SystemExit(1)
 print("PRE-PRODUCT SMOKE: GREEN: governance/migration-evidence-only repository surface")
