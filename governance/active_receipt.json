@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "receipt_id": "N0TE2-BOOT-02",
+  "node_id": "BOOT-02",
+  "baseline_sha": "b2ed1fea402822b1c187cc9ed4f29cac049ca462",
+  "purpose": "Install executable autonomous construction governance before any legacy/product implementation admission.",
+  "product_code_allowed": false,
+  "legacy_admission_allowed": false,
+  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore"],
+  "allowed_prefixes": ["governance/", "tests/governance/", ".github/workflows/"],
+  "forbidden_prefixes": ["app/", "src/", "n0te2/", "legacy/", "vendor/"],
+  "close_proof": [
+    "governance validator green on exact head",
+    "adversarial governance regressions green",
+    "three-OS CI workflow defined",
+    "BOOT-02 smoke proves no product implementation admitted",
+    "changed paths remain inside receipt"
+  ],
+  "next_node_after_close": "LEGACY-01"
+}
