@@ -51,6 +51,15 @@ from .resume import (
     SongResumeBrief,
     SongResumeService,
 )
+from .session import (
+    PROMOTION_SCOPES,
+    SESSION_ITEM_KINDS,
+    SESSION_STATES,
+    SessionItem,
+    SessionMemory,
+    SessionPromotion,
+    SongSession,
+)
 from .twins import (
     SongTwinView,
     TwinAwareSongKnowledgeMapService,
@@ -80,6 +89,7 @@ __all__ = [
     "LineageStore",
     "NotFoundError",
     "PRODUCT_CONTEXT",
+    "PROMOTION_SCOPES",
     "ProductContext",
     "ProvenanceAsset",
     "ProvenanceLedger",
@@ -91,6 +101,11 @@ __all__ = [
     "ResumeConflict",
     "ResumeEvidence",
     "ResumeVersion",
+    "SESSION_ITEM_KINDS",
+    "SESSION_STATES",
+    "SessionItem",
+    "SessionMemory",
+    "SessionPromotion",
     "SnapshotHashMismatchError",
     "SnapshotInfo",
     "SnapshotNotFoundError",
@@ -100,6 +115,7 @@ __all__ = [
     "SongKnowledgeMapService",
     "SongResumeBrief",
     "SongResumeService",
+    "SongSession",
     "SongTwinView",
     "TWIN_DOMAINS",
     "TwinAwareSongKnowledgeMapService",
