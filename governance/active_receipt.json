@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-03C",
+  "receipt_id": "N0TE2-CORE-03D",
   "node_id": "CORE-03",
-  "increment_id": "CORE-03C",
-  "baseline_sha": "aafab7865bbc2470259e07cfde183488e15b3dbb",
-  "purpose": "Implement provider-neutral Template definitions and a pure per-studio Template plan so reusable creative/operational starts preserve semantic identity above DAWs/providers while StudioCapabilityProfile truthfully reports FULL, PARTIAL or UNAVAILABLE support without executing anything.",
+  "increment_id": "CORE-03D",
+  "baseline_sha": "b756fe844b2c6e705c4938e48674419a344d406a",
+  "purpose": "Implement a provider-neutral ordered Recipe planning chassis so bounded multi-step producer jobs preserve capability, declared future authority, explicit postconditions and recovery expectations across studios without becoming blind macros or executing anything.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,41 +14,41 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "One reusable Template keeps the same semantic roles/intent across studios while each Studio profile truthfully reports which required/optional roles are resolvable and through which legitimate routes.",
-    "journeys": ["J-IDEA-SONG", "J-WORKSPACE", "J-TRUST"],
-    "capability": "Provider-neutral Template definition plus truthful per-studio support plan",
-    "increment": "CORE-03C"
+    "outcome": "The artist can inspect and plan one bounded ordered producer job across studios while every step preserves capability truth, declared authority class, postconditions and recovery expectations and no authority is granted or host action executed.",
+    "journeys": ["J-IMPROVE", "J-WORKSPACE", "J-TRUST"],
+    "capability": "Composable host-neutral N0TE Recipe definition plus truthful per-studio plan",
+    "increment": "CORE-03D"
   },
   "reuse": {
-    "mode": "PURE_TEMPLATE_OVER_CORE03A_B",
+    "mode": "PURE_RECIPE_OVER_CORE03A_B",
     "n0te2_dependencies": ["N0TEableJob", "CapabilityResolution", "ResolutionConstraints", "StudioCapabilityProfile"],
-    "legacy_candidates": ["template/blank-state semantics as behavioral evidence only"],
-    "legacy_rejections": ["DAW template macro", "track-index recipe", "host IDs in Template meaning", "candidate IDs in Template meaning", "second scoring model", "execution inside planning"],
+    "legacy_candidates": ["multi-step producer-job/recipe semantics as behavioral evidence only"],
+    "legacy_rejections": ["blind host macro", "DAW click sequence", "host IDs in Recipe meaning", "candidate IDs in Recipe meaning", "authority declaration as approval", "execution inside planning"],
     "direct_copy": false
   },
   "completion_proof": [
-    "TemplateDefinition supports the retained Song/Arrangement/Production/Mix/Vocal/Drum/Sound Design/Release/Content/Campaign/Social/Live families without host-specific structural fields",
-    "Template roles contain only stable role ID, capability, description, required flag and semantic tags; duplicate role IDs and malformed required flags are rejected",
-    "role input order is normalized and stable derived N0TEable job IDs preserve Template/role identity",
-    "all required and optional roles resolved returns FULL",
-    "only optional unavailable roles returns PARTIAL",
-    "any required unavailable role returns UNAVAILABLE",
-    "the same Template plans differently across different Studio profiles without mutating Template identity",
-    "host labels, brands and unverified installed names do not change Template meaning or resolver legitimacy",
-    "Template planning delegates constraints/rejection reasons to StudioCapabilityProfile / CORE-03A instead of scoring independently",
-    "planning is deterministic and pure with no persistence, adapter invocation, provider call, host mutation or approval side effect"
+    "RecipeDefinition preserves declared semantic step order and rejects duplicate step IDs",
+    "each step declares a supported authority class, at least one explicit postcondition and a supported recovery policy",
+    "dependencies may reference only earlier step IDs, rejecting forward, unknown and cyclic dependency shapes before planning",
+    "Recipe structural fields contain no host, provider, candidate, track, plug-in, approval or authorization identity",
+    "stable N0TEable job IDs derive from Recipe/step identity and the same Recipe may resolve through different legitimate routes in different Studio profiles",
+    "all steps resolved returns READY; any unavailable step returns UNAVAILABLE with exact per-step resolver reason codes",
+    "unverified installed-tool identity cannot satisfy a Recipe step and user constraints are delegated to the existing resolver",
+    "authority_class remains declaration-only metadata and RecipePlan exposes no approval, authorization, executed or receipt state",
+    "host label and brand changes cannot alter plan results when explicit candidate facts are unchanged",
+    "planning is deterministic and pure with no persistence, host mutation, provider call, transaction, postcondition assertion or recovery action"
   ],
   "non_scope": [
-    "template persistence/catalog UI",
-    "template suggestion or randomization",
-    "DAW/provider instantiation",
-    "track creation or host macros",
-    "Recipes",
+    "Recipe execution",
+    "host macros or DAW click automation",
+    "CORE-04 approval/transactions",
+    "rollback implementation",
     "tool discovery/scanning",
-    "CORE-04 authority/approval",
+    "semantic tool identity normalization",
     "CORE-02 Success Memory",
+    "Template persistence/catalog UI",
     "UX shell",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-03C evidence, reconcile and globally compare remaining CORE-03 Recipe/tool-identity closure gaps against preserved CORE-02 Success Memory. Do not implement a DAW-specific Template adapter by adjacency."
+  "next_selection_rule": "After CORE-03D evidence, reconcile and audit REQ-SCOPE-111 semantic owned-tool identity as the likely final CORE-03 foundation gap. Do not execute Recipes or select a DAW adapter by adjacency."
 }
