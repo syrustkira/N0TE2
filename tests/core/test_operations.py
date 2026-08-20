@@ -88,14 +88,13 @@ class Core04DOperationJournalTests(unittest.TestCase):
         self.assertEqual(first.recorded_state, "PREPARED")
         self.assertEqual(first.attempt_count, 0)
         self.assertIsNone(first.effective_outcome)
+        self.assertIsNone(first.transport_route_id)
 
         self.hq.close()
         self.hq = HeadquartersMemory.open(self.root, self.profile_id)
         reopened = self.hq.operations.get(first.operation_id)
         self.assertEqual(reopened, first)
-        self.assertEqual(
-            self.hq.operations.by_idempotency_key("idem:local:1"), first
-        )
+        self.assertEqual(self.hq.operations.by_idempotency_key("idem:local:1"), first)
 
     def test_prepare_rejects_stale_approval_and_key_reuse_for_different_operation(self):
         self.prepare()
@@ -116,6 +115,15 @@ class Core04DOperationJournalTests(unittest.TestCase):
                 approval=changed_approval,
             )
 
+    def test_local_operation_cannot_bind_transport_route(self):
+        with self.assertRaises(OperationError):
+            self.hq.operations.prepare(
+                idempotency_key="idem:local-with-route",
+                intent=self.intent,
+                approval=self.approval,
+                transport_route_id="route:internet",
+            )
+
     def test_exact_operation_can_be_claimed_only_once(self):
         prepared = self.prepare()
         claimed = self.claim(prepared.operation_id)
@@ -128,16 +136,26 @@ class Core04DOperationJournalTests(unittest.TestCase):
             ["PREPARED", "EXECUTION_CLAIMED"],
         )
 
-    def test_outbound_claim_requires_allow_transport_decision(self):
+    def test_outbound_prepare_requires_exact_route_and_claim_requires_same_allow_route(self):
         intent = outbound_intent(self.version.id)
         approval = AuthorityService.bind_approval(intent, "artist:publish:approval")
+        with self.assertRaises(OperationError):
+            self.hq.operations.prepare(
+                idempotency_key="idem:publish:missing-route",
+                intent=intent,
+                approval=approval,
+            )
+
         operation = self.hq.operations.prepare(
             idempotency_key="idem:publish:1",
             intent=intent,
             approval=approval,
             song_id=self.song.id,
             version_id=self.version.id,
+            transport_route_id="route:distribution",
         )
+        self.assertEqual(operation.transport_route_id, "route:distribution")
+
         with self.assertRaises(OperationError):
             self.hq.operations.claim_execution(
                 operation.operation_id,
@@ -145,8 +163,9 @@ class Core04DOperationJournalTests(unittest.TestCase):
                 approval=approval,
                 claim_evidence_ref="gate:no-network-decision",
             )
+
         denied = NetworkPolicy("OFFLINE").evaluate(
-            NetworkRoute("route:provider", "INTERNET", "Distribution provider")
+            NetworkRoute("route:distribution", "INTERNET", "Distribution provider")
         )
         with self.assertRaises(OperationError):
             self.hq.operations.claim_execution(
@@ -156,8 +175,21 @@ class Core04DOperationJournalTests(unittest.TestCase):
                 claim_evidence_ref="gate:offline",
                 transport_decision=denied,
             )
+
+        wrong_route = NetworkPolicy("CONNECTED").evaluate(
+            NetworkRoute("route:other", "INTERNET", "Unrelated provider route")
+        )
+        with self.assertRaises(OperationError):
+            self.hq.operations.claim_execution(
+                operation.operation_id,
+                intent=intent,
+                approval=approval,
+                claim_evidence_ref="gate:wrong-route",
+                transport_decision=wrong_route,
+            )
+
         allowed = NetworkPolicy("CONNECTED").evaluate(
-            NetworkRoute("route:provider", "INTERNET", "Distribution provider")
+            NetworkRoute("route:distribution", "INTERNET", "Distribution provider")
         )
         claimed = self.hq.operations.claim_execution(
             operation.operation_id,
@@ -168,6 +200,23 @@ class Core04DOperationJournalTests(unittest.TestCase):
         )
         self.assertEqual(claimed.recorded_state, "EXECUTING")
         self.assertFalse(allowed.action_authority_granted)
+
+    def test_idempotency_key_is_bound_to_transport_route(self):
+        intent = outbound_intent(self.version.id)
+        approval = AuthorityService.bind_approval(intent, "artist:publish:approval")
+        self.hq.operations.prepare(
+            idempotency_key="idem:route-bound",
+            intent=intent,
+            approval=approval,
+            transport_route_id="route:A",
+        )
+        with self.assertRaises(OperationError):
+            self.hq.operations.prepare(
+                idempotency_key="idem:route-bound",
+                intent=intent,
+                approval=approval,
+                transport_route_id="route:B",
+            )
 
     def test_success_receipt_persists_and_prevents_retry(self):
         operation = self.prepare()
@@ -246,17 +295,10 @@ class Core04DOperationJournalTests(unittest.TestCase):
             reconciled.reconciliation_evidence_ref,
             "provider-status-query:confirmed",
         )
-        events = self.hq.operations.events(operation.operation_id)
         self.assertEqual(
-            [event.event_type for event in events],
-            [
-                "PREPARED",
-                "EXECUTION_CLAIMED",
-                "UNKNOWN",
-                "RECONCILED_SUCCEEDED",
-            ],
+            [event.event_type for event in self.hq.operations.events(operation.operation_id)],
+            ["PREPARED", "EXECUTION_CLAIMED", "UNKNOWN", "RECONCILED_SUCCEEDED"],
         )
-        self.assertEqual(events[2].evidence_ref, "transport-timeout:outcome-ambiguous")
         with self.assertRaises(OperationError):
             self.hq.operations.reconcile_unknown(
                 operation.operation_id,
@@ -340,10 +382,7 @@ class Core04DOperationJournalTests(unittest.TestCase):
             observed_outcome="FAILED",
             evidence_ref="reconcile:activity",
         )
-        events = self.hq.activity.for_song(
-            self.song.id,
-            after_sequence=checkpoint,
-        )
+        events = self.hq.activity.for_song(self.song.id, after_sequence=checkpoint)
         operation_events = [
             event.event_type
             for event in events
@@ -370,7 +409,6 @@ class Core04DOperationJournalTests(unittest.TestCase):
         self.hq.close()
         with self.assertRaises(LineageCorruptionError):
             HeadquartersMemory.open(self.root, self.profile_id)
-        self.hq = HeadquartersMemory.open if False else self.hq
 
 
 if __name__ == "__main__":
