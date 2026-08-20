@@ -73,6 +73,7 @@ class OperationRecord:
     approval_source_ref: str
     song_id: str | None
     version_id: str | None
+    transport_route_id: str | None
     recorded_state: str
     effective_outcome: str | None
     attempt_count: int
@@ -88,7 +89,8 @@ class OperationJournal:
 
     The journal owns no provider, DAW or network implementation. `claim_execution`
     atomically grants one execution claim for an exact approved intent. Outbound
-    intents additionally require an explicit CORE-04C transport ALLOW decision.
+    intents additionally bind one explicit CORE-04C transport route at prepare
+    time and require an ALLOW decision for that exact route at claim time.
     The caller may then execute through a separately authorized adapter and must
     record a truthful outcome. UNKNOWN is terminal for retry purposes and can be
     resolved only by explicit evidence-backed reconciliation.
@@ -204,7 +206,10 @@ class OperationJournal:
                         approval_id TEXT NOT NULL CHECK(length(trim(approval_id)) > 0),
                         approval_source_ref TEXT NOT NULL CHECK(length(trim(approval_source_ref)) > 0),
                         song_id TEXT NULL REFERENCES songs(id),
-                        version_id TEXT NULL REFERENCES versions(id)
+                        version_id TEXT NULL REFERENCES versions(id),
+                        transport_route_id TEXT NULL CHECK(
+                            transport_route_id IS NULL OR length(trim(transport_route_id)) > 0
+                        )
                     )"""
                 )
                 self._conn.execute(
@@ -349,11 +354,12 @@ class OperationJournal:
                 "LEFT JOIN versions v ON v.id=o.version_id "
                 "WHERE (o.song_id IS NOT NULL AND s.id IS NULL) "
                 "OR (o.version_id IS NOT NULL AND (v.id IS NULL OR o.song_id IS NULL OR v.song_id<>o.song_id)) "
+                "OR (o.transport_route_id IS NOT NULL AND length(trim(o.transport_route_id))=0) "
                 "LIMIT 1"
             ).fetchone()
             if invalid is not None:
                 raise LineageCorruptionError(
-                    "operation history contains invalid Song/version references"
+                    "operation history contains invalid identity references"
                 )
             for row in self._conn.execute("SELECT id FROM operations ORDER BY id"):
                 events = self._events(str(row["id"]))
@@ -366,8 +372,8 @@ class OperationJournal:
 
     def _identity_row(self, operation_id: str) -> sqlite3.Row:
         row = self._conn.execute(
-            "SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,song_id,version_id "
-            "FROM operations WHERE id=?",
+            "SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,"
+            "song_id,version_id,transport_route_id FROM operations WHERE id=?",
             (operation_id,),
         ).fetchone()
         if row is None:
@@ -388,6 +394,9 @@ class OperationJournal:
             approval_source_ref=str(row["approval_source_ref"]),
             song_id=None if row["song_id"] is None else str(row["song_id"]),
             version_id=None if row["version_id"] is None else str(row["version_id"]),
+            transport_route_id=(
+                None if row["transport_route_id"] is None else str(row["transport_route_id"])
+            ),
             recorded_state=state,
             effective_outcome=effective,
             attempt_count=attempts,
@@ -406,8 +415,8 @@ class OperationJournal:
     def by_idempotency_key(self, idempotency_key: str) -> OperationRecord | None:
         key = _text(idempotency_key, "idempotency_key")
         row = self._conn.execute(
-            "SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,song_id,version_id "
-            "FROM operations WHERE idempotency_key=?",
+            "SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,"
+            "song_id,version_id,transport_route_id FROM operations WHERE idempotency_key=?",
             (key,),
         ).fetchone()
         return None if row is None else self._record(row)
@@ -444,20 +453,55 @@ class OperationJournal:
             raise OperationError("approval is stale for the current action intent")
 
     @staticmethod
+    def _transport_route_for_intent(
+        intent: ActionIntent,
+        transport_route_id: str | None,
+    ) -> str | None:
+        route_id = _optional_text(transport_route_id, "transport_route_id")
+        if intent.destination is None:
+            if route_id is not None:
+                raise OperationError(
+                    "local operation cannot bind an outbound transport route"
+                )
+            return None
+        if route_id is None:
+            raise OperationError(
+                "outbound operation requires an explicit transport_route_id"
+            )
+        return route_id
+
+    @staticmethod
     def _require_transport_gate(
+        operation: OperationRecord,
         intent: ActionIntent,
         transport_decision: TransportDecision | None,
     ) -> None:
-        if intent.destination is None:
-            if transport_decision is not None and transport_decision.status != "ALLOW":
-                raise OperationError("supplied transport decision denies execution")
+        if operation.transport_route_id is None:
+            if intent.destination is not None:
+                raise OperationError(
+                    "outbound intent is missing its prepared transport route"
+                )
+            if transport_decision is not None:
+                raise OperationError(
+                    "local operation has no bound transport route"
+                )
             return
+        if intent.destination is None:
+            raise OperationError(
+                "transport-bound operation cannot claim a local intent"
+            )
         if transport_decision is None:
-            raise OperationError("outbound operation requires an explicit transport decision")
+            raise OperationError(
+                "outbound operation requires an explicit transport decision"
+            )
         if not isinstance(transport_decision, TransportDecision):
             raise TypeError("transport_decision must be TransportDecision")
         if transport_decision.status != "ALLOW":
             raise OperationError("transport policy denies outbound execution")
+        if transport_decision.route_id != operation.transport_route_id:
+            raise OperationError(
+                "transport decision applies to a different route"
+            )
         if transport_decision.action_authority_granted is not False:
             raise OperationError("transport decision must not grant action authority")
 
@@ -493,6 +537,7 @@ class OperationJournal:
         approval: ApprovalBinding,
         song_id: str | None = None,
         version_id: str | None = None,
+        transport_route_id: str | None = None,
     ) -> OperationRecord:
         if not isinstance(intent, ActionIntent):
             raise TypeError("intent must be ActionIntent")
@@ -501,6 +546,7 @@ class OperationJournal:
         key = _text(idempotency_key, "idempotency_key")
         self._require_valid_approval(intent, approval)
         song_id, version_id = self._validate_song_version(song_id, version_id)
+        route_id = self._transport_route_for_intent(intent, transport_route_id)
 
         existing = self.by_idempotency_key(key)
         if existing is not None:
@@ -510,6 +556,7 @@ class OperationJournal:
                 and existing.approval_source_ref == approval.source_ref
                 and existing.song_id == song_id
                 and existing.version_id == version_id
+                and existing.transport_route_id == route_id
             ):
                 return existing
             raise OperationError("idempotency key is already bound to a different operation")
@@ -518,8 +565,9 @@ class OperationJournal:
         try:
             with self.store._tx():
                 self._conn.execute(
-                    "INSERT INTO operations(id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,song_id,version_id) "
-                    "VALUES(?,?,?,?,?,?,?)",
+                    "INSERT INTO operations("
+                    "id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,"
+                    "song_id,version_id,transport_route_id) VALUES(?,?,?,?,?,?,?,?)",
                     (
                         operation_id,
                         key,
@@ -528,6 +576,7 @@ class OperationJournal:
                         approval.source_ref,
                         song_id,
                         version_id,
+                        route_id,
                     ),
                 )
                 self._append_event(
@@ -543,6 +592,7 @@ class OperationJournal:
                 and existing.approval_source_ref == approval.source_ref
                 and existing.song_id == song_id
                 and existing.version_id == version_id
+                and existing.transport_route_id == route_id
             ):
                 return existing
             raise OperationError("cannot prepare operation with this idempotency key") from exc
@@ -575,7 +625,7 @@ class OperationJournal:
         with self.store._tx():
             operation = self.get(operation_id)
             self._require_exact_identity(operation, intent, approval)
-            self._require_transport_gate(intent, transport_decision)
+            self._require_transport_gate(operation, intent, transport_decision)
             if operation.recorded_state != "PREPARED":
                 raise DuplicateExecutionError(
                     f"operation cannot be claimed from state {operation.recorded_state}"
