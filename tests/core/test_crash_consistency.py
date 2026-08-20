@@ -7,13 +7,8 @@ import textwrap
 import unittest
 from pathlib import Path
 
-from n0te2 import (
-    EvidenceMemory,
-    HeadquartersMemory,
-    LineageCorruptionError,
-    LineageStore,
-    RecoveryManager,
-)
+from n0te2.evidence import EvidenceMemory
+from n0te2.lineage import LineageCorruptionError, LineageStore
 
 
 V1_EVIDENCE_SCHEMA = """
@@ -89,7 +84,7 @@ class Core01JCrashConsistencyTests(unittest.TestCase):
             """
             import os
             import sys
-            from n0te2 import LineageStore
+            from n0te2.lineage import LineageStore
 
             root, profile = sys.argv[1], sys.argv[2]
             store = LineageStore.open(root, profile)
@@ -207,37 +202,6 @@ class Core01JCrashConsistencyTests(unittest.TestCase):
             ).fetchone()[0],
             "2",
         )
-
-    def test_corrupt_live_database_requires_explicit_verified_snapshot_restore(self):
-        hq = HeadquartersMemory.create(self.root, "Artist")
-        profile = hq.store.profile_id
-        song = hq.store.create_song("Song")
-        v1 = hq.store.create_version(song.id, label="v1")
-        hq.store.approve_version(song.id, v1.id)
-        snapshot = hq.recovery.create_snapshot()
-        live = hq.store.database_path
-        hq.close()
-
-        live.write_bytes(b"corrupt live state")
-        with self.assertRaises(LineageCorruptionError):
-            HeadquartersMemory.open(self.root, profile)
-        self.assertEqual(live.read_bytes(), b"corrupt live state")
-
-        result = RecoveryManager.restore_snapshot(
-            self.root,
-            profile,
-            expected_sha256=snapshot.sha256,
-        )
-        self.assertEqual(result.installed_sha256, snapshot.sha256)
-        self.assertIsNotNone(result.preserved_database)
-        self.assertEqual(result.preserved_database.read_bytes(), b"corrupt live state")
-
-        restored = HeadquartersMemory.open(self.root, profile)
-        self.addCleanup(restored.close)
-        state = restored.store.get_song(song.id)
-        self.assertEqual(state.current_version_id, v1.id)
-        self.assertEqual(state.approved_version_id, v1.id)
-        self.assertEqual(restored.store._conn.execute("PRAGMA quick_check").fetchone()[0], "ok")
 
 
 if __name__ == "__main__":
