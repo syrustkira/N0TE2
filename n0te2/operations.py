@@ -6,23 +6,14 @@ from dataclasses import dataclass
 
 from .activity import ActivityLog
 from .authority import ActionIntent, ApprovalBinding, AuthorityService
-from .lineage import (
-    LineageCorruptionError,
-    LineageStore,
-    NotFoundError,
-    ValidationError,
-)
+from .eligibility import ExecutionEligibilityDecision
+from .lineage import LineageCorruptionError, LineageStore, NotFoundError, ValidationError
 from .network import TransportDecision
 
-OPERATION_SCHEMA_VERSION = 1
+OPERATION_SCHEMA_VERSION = 2
 OPERATION_EVENTS = {
-    "PREPARED",
-    "EXECUTION_CLAIMED",
-    "SUCCEEDED",
-    "FAILED",
-    "UNKNOWN",
-    "RECONCILED_SUCCEEDED",
-    "RECONCILED_FAILED",
+    "PREPARED", "EXECUTION_CLAIMED", "SUCCEEDED", "FAILED", "UNKNOWN",
+    "RECONCILED_SUCCEEDED", "RECONCILED_FAILED",
 }
 RECORDED_STATES = {"PREPARED", "EXECUTING", "SUCCEEDED", "FAILED", "UNKNOWN"}
 EFFECTIVE_OUTCOMES = {"SUCCEEDED", "FAILED", "UNKNOWN"}
@@ -37,19 +28,17 @@ class DuplicateExecutionError(OperationError):
 
 
 def _text(value: str, field: str) -> str:
-    text = str(value).strip()
-    if not text:
+    value = str(value).strip()
+    if not value:
         raise ValidationError(f"{field} must not be empty")
-    return text
+    return value
 
 
-def _optional_text(value: str | None, field: str) -> str | None:
-    if value is None:
-        return None
-    return _text(value, field)
+def _optional(value: str | None, field: str) -> str | None:
+    return None if value is None else _text(value, field)
 
 
-def _new_id(prefix: str) -> str:
+def _id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex}"
 
 
@@ -74,6 +63,8 @@ class OperationRecord:
     song_id: str | None
     version_id: str | None
     transport_route_id: str | None
+    eligibility_subject_id: str | None
+    eligibility_capability: str | None
     recorded_state: str
     effective_outcome: str | None
     attempt_count: int
@@ -85,23 +76,12 @@ class OperationRecord:
 
 
 class OperationJournal:
-    """Durable execute-once identity and truthful outcome history.
+    """Durable execute-once identity, receipt, UNKNOWN and reconciliation journal."""
 
-    The journal owns no provider, DAW or network implementation. `claim_execution`
-    atomically grants one execution claim for an exact approved intent. Outbound
-    intents additionally bind one explicit CORE-04C transport route at prepare
-    time and require an ALLOW decision for that exact route at claim time.
-    The caller may then execute through a separately authorized adapter and must
-    record a truthful outcome. UNKNOWN is terminal for retry purposes and can be
-    resolved only by explicit evidence-backed reconciliation.
-    """
-
-    _TRIGGER_NAMES = {
+    _TRIGGERS = {
         "operation_version_matches_song",
-        "operations_immutable_update",
-        "operations_immutable_delete",
-        "operation_events_immutable_update",
-        "operation_events_immutable_delete",
+        "operations_immutable_update", "operations_immutable_delete",
+        "operation_events_immutable_update", "operation_events_immutable_delete",
         "activity_operation_event",
     }
 
@@ -110,333 +90,185 @@ class OperationJournal:
             raise TypeError("OperationJournal requires the canonical LineageStore")
         if not isinstance(activity, ActivityLog) or activity.store is not store:
             raise TypeError("OperationJournal requires ActivityLog for the same store")
-        self.store = store
-        self.activity = activity
-        self._conn = store._conn
+        self.store, self.activity, self._conn = store, activity, store._conn
         self._ensure_schema()
         self._validate_existing()
 
-    def _table_exists(self, name: str) -> bool:
+    def _table(self, name: str) -> bool:
         return self._conn.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)
         ).fetchone() is not None
 
-    def _metadata_value(self, key: str) -> str | None:
-        row = self._conn.execute(
-            "SELECT value FROM metadata WHERE key=?", (key,)
-        ).fetchone()
+    def _meta(self, key: str) -> str | None:
+        row = self._conn.execute("SELECT value FROM metadata WHERE key=?", (key,)).fetchone()
         return None if row is None else str(row["value"])
 
     @staticmethod
-    def _trigger_statements() -> tuple[str, ...]:
+    def _trigger_sql() -> tuple[str, ...]:
         return (
-            """CREATE TRIGGER operation_version_matches_song
-            BEFORE INSERT ON operations
-            WHEN NEW.version_id IS NOT NULL AND (
-                NEW.song_id IS NULL OR NOT EXISTS (
-                    SELECT 1 FROM versions v
-                    WHERE v.id=NEW.version_id AND v.song_id=NEW.song_id
-                )
-            )
-            BEGIN
-                SELECT RAISE(ABORT, 'operation version belongs to a different Song');
-            END""",
-            """CREATE TRIGGER operations_immutable_update
-            BEFORE UPDATE ON operations
-            BEGIN
-                SELECT RAISE(ABORT, 'operation identity is immutable');
-            END""",
-            """CREATE TRIGGER operations_immutable_delete
-            BEFORE DELETE ON operations
-            BEGIN
-                SELECT RAISE(ABORT, 'operation identity is immutable');
-            END""",
-            """CREATE TRIGGER operation_events_immutable_update
-            BEFORE UPDATE ON operation_events
-            BEGIN
-                SELECT RAISE(ABORT, 'operation history is append-only');
-            END""",
-            """CREATE TRIGGER operation_events_immutable_delete
-            BEFORE DELETE ON operation_events
-            BEGIN
-                SELECT RAISE(ABORT, 'operation history is append-only');
-            END""",
-            """CREATE TRIGGER activity_operation_event
-            AFTER INSERT ON operation_events
-            BEGIN
-                INSERT INTO activity_events(
-                    id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json
-                )
-                SELECT
-                    'act_'||lower(hex(randomblob(16))),
-                    'OPERATION_'||NEW.event_type,
+            """CREATE TRIGGER operation_version_matches_song BEFORE INSERT ON operations
+            WHEN NEW.version_id IS NOT NULL AND (NEW.song_id IS NULL OR NOT EXISTS(
+                SELECT 1 FROM versions v WHERE v.id=NEW.version_id AND v.song_id=NEW.song_id))
+            BEGIN SELECT RAISE(ABORT,'operation version belongs to a different Song'); END""",
+            """CREATE TRIGGER operations_immutable_update BEFORE UPDATE ON operations
+            BEGIN SELECT RAISE(ABORT,'operation identity is immutable'); END""",
+            """CREATE TRIGGER operations_immutable_delete BEFORE DELETE ON operations
+            BEGIN SELECT RAISE(ABORT,'operation identity is immutable'); END""",
+            """CREATE TRIGGER operation_events_immutable_update BEFORE UPDATE ON operation_events
+            BEGIN SELECT RAISE(ABORT,'operation history is append-only'); END""",
+            """CREATE TRIGGER operation_events_immutable_delete BEFORE DELETE ON operation_events
+            BEGIN SELECT RAISE(ABORT,'operation history is append-only'); END""",
+            """CREATE TRIGGER activity_operation_event AFTER INSERT ON operation_events BEGIN
+                INSERT INTO activity_events(id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json)
+                SELECT 'act_'||lower(hex(randomblob(16))), 'OPERATION_'||NEW.event_type,
                     (SELECT value FROM metadata WHERE key='primary_artist_id'),
-                    o.song_id,
-                    o.version_id,
-                    'OPERATION',
-                    o.id,
-                    '{}'
+                    o.song_id,o.version_id,'OPERATION',o.id,'{}'
                 FROM operations o WHERE o.id=NEW.operation_id;
             END""",
         )
 
     def _ensure_schema(self) -> None:
-        operations_exists = self._table_exists("operations")
-        events_exists = self._table_exists("operation_events")
-        version = self._metadata_value("operation_schema_version")
-        if operations_exists != events_exists or operations_exists != (version is not None):
+        ops, events, version = self._table("operations"), self._table("operation_events"), self._meta("operation_schema_version")
+        if ops != events or ops != (version is not None):
             raise LineageCorruptionError("operation schema metadata/table mismatch")
-        if operations_exists:
+        if ops:
+            if version == "1":
+                try:
+                    with self.store._tx():
+                        self._conn.execute("ALTER TABLE operations ADD COLUMN eligibility_subject_id TEXT NULL")
+                        self._conn.execute("ALTER TABLE operations ADD COLUMN eligibility_capability TEXT NULL")
+                        self._conn.execute("UPDATE metadata SET value=? WHERE key='operation_schema_version'", (str(OPERATION_SCHEMA_VERSION),))
+                except sqlite3.DatabaseError as exc:
+                    raise LineageCorruptionError("cannot migrate Operation Journal eligibility identity") from exc
+                return
             if version != str(OPERATION_SCHEMA_VERSION):
-                raise LineageCorruptionError(
-                    f"unsupported operation schema version: {version}"
-                )
+                raise LineageCorruptionError(f"unsupported operation schema version: {version}")
             return
-        if not self._table_exists("activity_events"):
-            raise LineageCorruptionError(
-                "OperationJournal requires ActivityLog to initialize first"
-            )
+        if not self._table("activity_events"):
+            raise LineageCorruptionError("OperationJournal requires ActivityLog to initialize first")
         try:
             with self.store._tx():
-                self._conn.execute(
-                    """CREATE TABLE operations (
-                        id TEXT PRIMARY KEY,
-                        idempotency_key TEXT NOT NULL UNIQUE CHECK(length(trim(idempotency_key)) > 0),
-                        intent_fingerprint TEXT NOT NULL CHECK(length(trim(intent_fingerprint)) > 0),
-                        approval_id TEXT NOT NULL CHECK(length(trim(approval_id)) > 0),
-                        approval_source_ref TEXT NOT NULL CHECK(length(trim(approval_source_ref)) > 0),
-                        song_id TEXT NULL REFERENCES songs(id),
-                        version_id TEXT NULL REFERENCES versions(id),
-                        transport_route_id TEXT NULL CHECK(
-                            transport_route_id IS NULL OR length(trim(transport_route_id)) > 0
-                        )
-                    )"""
-                )
-                self._conn.execute(
-                    """CREATE TABLE operation_events (
-                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
-                        id TEXT NOT NULL UNIQUE,
-                        operation_id TEXT NOT NULL REFERENCES operations(id),
-                        event_type TEXT NOT NULL CHECK(event_type IN (
-                            'PREPARED','EXECUTION_CLAIMED','SUCCEEDED','FAILED','UNKNOWN',
-                            'RECONCILED_SUCCEEDED','RECONCILED_FAILED'
-                        )),
-                        evidence_ref TEXT NULL,
-                        receipt_ref TEXT NULL,
-                        result_fingerprint TEXT NULL
-                    )"""
-                )
-                self._conn.execute(
-                    "CREATE INDEX operation_events_by_operation ON operation_events(operation_id,seq)"
-                )
-                for statement in self._trigger_statements():
-                    self._conn.execute(statement)
-                self._conn.execute(
-                    "INSERT INTO metadata(key,value) VALUES('operation_schema_version',?)",
-                    (str(OPERATION_SCHEMA_VERSION),),
-                )
+                self._conn.execute("""CREATE TABLE operations(
+                    id TEXT PRIMARY KEY,
+                    idempotency_key TEXT NOT NULL UNIQUE CHECK(length(trim(idempotency_key))>0),
+                    intent_fingerprint TEXT NOT NULL CHECK(length(trim(intent_fingerprint))>0),
+                    approval_id TEXT NOT NULL CHECK(length(trim(approval_id))>0),
+                    approval_source_ref TEXT NOT NULL CHECK(length(trim(approval_source_ref))>0),
+                    song_id TEXT NULL REFERENCES songs(id),
+                    version_id TEXT NULL REFERENCES versions(id),
+                    transport_route_id TEXT NULL CHECK(transport_route_id IS NULL OR length(trim(transport_route_id))>0),
+                    eligibility_subject_id TEXT NULL CHECK(eligibility_subject_id IS NULL OR length(trim(eligibility_subject_id))>0),
+                    eligibility_capability TEXT NULL CHECK(eligibility_capability IS NULL OR length(trim(eligibility_capability))>0)
+                )""")
+                self._conn.execute("""CREATE TABLE operation_events(
+                    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                    id TEXT NOT NULL UNIQUE,
+                    operation_id TEXT NOT NULL REFERENCES operations(id),
+                    event_type TEXT NOT NULL CHECK(event_type IN('PREPARED','EXECUTION_CLAIMED','SUCCEEDED','FAILED','UNKNOWN','RECONCILED_SUCCEEDED','RECONCILED_FAILED')),
+                    evidence_ref TEXT NULL, receipt_ref TEXT NULL, result_fingerprint TEXT NULL
+                )""")
+                self._conn.execute("CREATE INDEX operation_events_by_operation ON operation_events(operation_id,seq)")
+                for sql in self._trigger_sql():
+                    self._conn.execute(sql)
+                self._conn.execute("INSERT INTO metadata(key,value) VALUES('operation_schema_version',?)", (str(OPERATION_SCHEMA_VERSION),))
         except sqlite3.DatabaseError as exc:
             raise LineageCorruptionError("cannot initialize Operation Journal") from exc
 
     @staticmethod
     def _event(row: sqlite3.Row) -> OperationEvent:
-        return OperationEvent(
-            sequence=int(row["seq"]),
-            id=str(row["id"]),
-            operation_id=str(row["operation_id"]),
-            event_type=str(row["event_type"]),
-            evidence_ref=None if row["evidence_ref"] is None else str(row["evidence_ref"]),
-            receipt_ref=None if row["receipt_ref"] is None else str(row["receipt_ref"]),
-            result_fingerprint=(
-                None if row["result_fingerprint"] is None else str(row["result_fingerprint"])
-            ),
-        )
+        return OperationEvent(int(row["seq"]), str(row["id"]), str(row["operation_id"]), str(row["event_type"]),
+            None if row["evidence_ref"] is None else str(row["evidence_ref"]),
+            None if row["receipt_ref"] is None else str(row["receipt_ref"]),
+            None if row["result_fingerprint"] is None else str(row["result_fingerprint"]))
 
     def _events(self, operation_id: str) -> tuple[OperationEvent, ...]:
-        return tuple(
-            self._event(row)
-            for row in self._conn.execute(
-                "SELECT seq,id,operation_id,event_type,evidence_ref,receipt_ref,result_fingerprint "
-                "FROM operation_events WHERE operation_id=? ORDER BY seq",
-                (operation_id,),
-            )
-        )
+        return tuple(self._event(r) for r in self._conn.execute(
+            "SELECT seq,id,operation_id,event_type,evidence_ref,receipt_ref,result_fingerprint FROM operation_events WHERE operation_id=? ORDER BY seq",
+            (operation_id,)))
 
     @staticmethod
     def _derive(events: tuple[OperationEvent, ...]) -> tuple[str, str | None, int, bool]:
         if not events or events[0].event_type != "PREPARED":
             raise LineageCorruptionError("operation history must begin with PREPARED")
-        state = "PREPARED"
-        effective: str | None = None
-        attempts = 0
-        reconciled = False
-        for index, event in enumerate(events[1:], start=1):
+        state, effective, attempts, reconciled = "PREPARED", None, 0, False
+        for i, event in enumerate(events[1:], 1):
             kind = event.event_type
-            if kind == "EXECUTION_CLAIMED":
-                if state != "PREPARED" or attempts != 0:
-                    raise LineageCorruptionError("operation execution claim sequence is invalid")
-                state = "EXECUTING"
-                attempts = 1
-            elif kind == "SUCCEEDED":
-                if state != "EXECUTING" or effective is not None:
-                    raise LineageCorruptionError("operation success sequence is invalid")
-                state = "SUCCEEDED"
-                effective = "SUCCEEDED"
-            elif kind == "FAILED":
-                if state != "EXECUTING" or effective is not None:
-                    raise LineageCorruptionError("operation failure sequence is invalid")
-                state = "FAILED"
-                effective = "FAILED"
-            elif kind == "UNKNOWN":
-                if state != "EXECUTING" or effective is not None:
-                    raise LineageCorruptionError("operation unknown sequence is invalid")
-                state = "UNKNOWN"
-                effective = "UNKNOWN"
-            elif kind in {"RECONCILED_SUCCEEDED", "RECONCILED_FAILED"}:
-                if state != "UNKNOWN" or effective != "UNKNOWN" or reconciled:
-                    raise LineageCorruptionError("operation reconciliation sequence is invalid")
-                effective = "SUCCEEDED" if kind == "RECONCILED_SUCCEEDED" else "FAILED"
-                reconciled = True
+            if kind == "EXECUTION_CLAIMED" and state == "PREPARED" and attempts == 0:
+                state, attempts = "EXECUTING", 1
+            elif kind in {"SUCCEEDED", "FAILED", "UNKNOWN"} and state == "EXECUTING" and effective is None:
+                state, effective = kind, kind
+            elif kind in {"RECONCILED_SUCCEEDED", "RECONCILED_FAILED"} and state == "UNKNOWN" and effective == "UNKNOWN" and not reconciled:
+                effective, reconciled = kind.removeprefix("RECONCILED_"), True
             else:
-                raise LineageCorruptionError(f"unknown operation event: {kind}")
-            if reconciled and index != len(events) - 1:
-                raise LineageCorruptionError("operation history continues after reconciliation")
-            if state in {"SUCCEEDED", "FAILED"} and index != len(events) - 1:
-                raise LineageCorruptionError("operation history continues after known terminal outcome")
+                raise LineageCorruptionError("operation lifecycle sequence is invalid")
+            if (reconciled or state in {"SUCCEEDED", "FAILED"}) and i != len(events)-1:
+                raise LineageCorruptionError("operation history continues after terminal outcome")
         return state, effective, attempts, reconciled
 
     @staticmethod
-    def _validate_event_evidence(events: tuple[OperationEvent, ...]) -> None:
+    def _validate_evidence(events: tuple[OperationEvent, ...]) -> None:
         for event in events:
-            if event.event_type in {"PREPARED", "EXECUTION_CLAIMED"}:
-                if not event.evidence_ref:
-                    raise LineageCorruptionError(
-                        f"{event.event_type} operation event requires evidence"
-                    )
-            elif event.event_type == "SUCCEEDED":
-                if not event.receipt_ref or not event.evidence_ref or not event.result_fingerprint:
-                    raise LineageCorruptionError(
-                        "successful operation requires receipt, evidence and result fingerprint"
-                    )
-            elif event.event_type in {"FAILED", "UNKNOWN"}:
-                if not event.evidence_ref:
-                    raise LineageCorruptionError(
-                        f"{event.event_type} operation requires evidence"
-                    )
-            elif event.event_type == "RECONCILED_SUCCEEDED":
-                if not event.receipt_ref or not event.evidence_ref or not event.result_fingerprint:
-                    raise LineageCorruptionError(
-                        "reconciled success requires receipt, evidence and result fingerprint"
-                    )
-            elif event.event_type == "RECONCILED_FAILED":
-                if not event.evidence_ref:
-                    raise LineageCorruptionError(
-                        "reconciled failure requires evidence"
-                    )
+            if event.event_type in {"PREPARED", "EXECUTION_CLAIMED", "FAILED", "UNKNOWN", "RECONCILED_FAILED"} and not event.evidence_ref:
+                raise LineageCorruptionError(f"{event.event_type} operation event requires evidence")
+            if event.event_type in {"SUCCEEDED", "RECONCILED_SUCCEEDED"} and not (event.receipt_ref and event.evidence_ref and event.result_fingerprint):
+                raise LineageCorruptionError(f"{event.event_type} requires receipt, evidence and result fingerprint")
 
     def _validate_existing(self) -> None:
         try:
-            trigger_names = {
-                str(row["name"])
-                for row in self._conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='trigger' AND "
-                    "(name LIKE 'operation_%' OR name='activity_operation_event')"
-                )
-            }
-            missing = self._TRIGGER_NAMES - trigger_names
+            triggers = {str(r["name"]) for r in self._conn.execute("SELECT name FROM sqlite_master WHERE type='trigger' AND (name LIKE 'operation_%' OR name='activity_operation_event')")}
+            missing = self._TRIGGERS - triggers
             if missing:
-                raise LineageCorruptionError(
-                    f"operation hooks are incomplete: {sorted(missing)}"
-                )
-            invalid = self._conn.execute(
-                "SELECT o.id FROM operations o "
-                "LEFT JOIN songs s ON s.id=o.song_id "
-                "LEFT JOIN versions v ON v.id=o.version_id "
-                "WHERE (o.song_id IS NOT NULL AND s.id IS NULL) "
-                "OR (o.version_id IS NOT NULL AND (v.id IS NULL OR o.song_id IS NULL OR v.song_id<>o.song_id)) "
-                "OR (o.transport_route_id IS NOT NULL AND length(trim(o.transport_route_id))=0) "
-                "LIMIT 1"
-            ).fetchone()
+                raise LineageCorruptionError(f"operation hooks are incomplete: {sorted(missing)}")
+            invalid = self._conn.execute("""SELECT o.id FROM operations o
+                LEFT JOIN songs s ON s.id=o.song_id LEFT JOIN versions v ON v.id=o.version_id
+                WHERE (o.song_id IS NOT NULL AND s.id IS NULL)
+                   OR (o.version_id IS NOT NULL AND (v.id IS NULL OR o.song_id IS NULL OR v.song_id<>o.song_id))
+                   OR (o.transport_route_id IS NOT NULL AND length(trim(o.transport_route_id))=0)
+                   OR (o.eligibility_subject_id IS NOT NULL AND length(trim(o.eligibility_subject_id))=0)
+                   OR (o.eligibility_capability IS NOT NULL AND length(trim(o.eligibility_capability))=0)
+                LIMIT 1""").fetchone()
             if invalid is not None:
-                raise LineageCorruptionError(
-                    "operation history contains invalid identity references"
-                )
+                raise LineageCorruptionError("operation history contains invalid identity references")
             for row in self._conn.execute("SELECT id FROM operations ORDER BY id"):
-                events = self._events(str(row["id"]))
-                self._derive(events)
-                self._validate_event_evidence(events)
+                events = self._events(str(row["id"])); self._derive(events); self._validate_evidence(events)
         except LineageCorruptionError:
             raise
         except Exception as exc:
             raise LineageCorruptionError("operation history is unreadable or corrupt") from exc
 
-    def _identity_row(self, operation_id: str) -> sqlite3.Row:
-        row = self._conn.execute(
-            "SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,"
-            "song_id,version_id,transport_route_id FROM operations WHERE id=?",
-            (operation_id,),
-        ).fetchone()
+    def _identity(self, operation_id: str) -> sqlite3.Row:
+        row = self._conn.execute("SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,song_id,version_id,transport_route_id,eligibility_subject_id,eligibility_capability FROM operations WHERE id=?", (operation_id,)).fetchone()
         if row is None:
             raise NotFoundError(f"operation not found: {operation_id}")
         return row
 
     def _record(self, row: sqlite3.Row) -> OperationRecord:
-        operation_id = str(row["id"])
-        events = self._events(operation_id)
-        state, effective, attempts, reconciled = self._derive(events)
-        terminal = events[-1]
-        reconciliation = terminal if terminal.event_type.startswith("RECONCILED_") else None
-        return OperationRecord(
-            operation_id=operation_id,
-            idempotency_key=str(row["idempotency_key"]),
-            intent_fingerprint=str(row["intent_fingerprint"]),
-            approval_id=str(row["approval_id"]),
-            approval_source_ref=str(row["approval_source_ref"]),
-            song_id=None if row["song_id"] is None else str(row["song_id"]),
-            version_id=None if row["version_id"] is None else str(row["version_id"]),
-            transport_route_id=(
-                None if row["transport_route_id"] is None else str(row["transport_route_id"])
-            ),
-            recorded_state=state,
-            effective_outcome=effective,
-            attempt_count=attempts,
-            receipt_ref=terminal.receipt_ref,
-            evidence_ref=terminal.evidence_ref,
-            result_fingerprint=terminal.result_fingerprint,
-            reconciled=reconciled,
-            reconciliation_evidence_ref=(
-                None if reconciliation is None else reconciliation.evidence_ref
-            ),
-        )
+        events = self._events(str(row["id"])); state, effective, attempts, reconciled = self._derive(events); terminal = events[-1]
+        return OperationRecord(str(row["id"]), str(row["idempotency_key"]), str(row["intent_fingerprint"]), str(row["approval_id"]), str(row["approval_source_ref"]),
+            None if row["song_id"] is None else str(row["song_id"]), None if row["version_id"] is None else str(row["version_id"]),
+            None if row["transport_route_id"] is None else str(row["transport_route_id"]), None if row["eligibility_subject_id"] is None else str(row["eligibility_subject_id"]),
+            None if row["eligibility_capability"] is None else str(row["eligibility_capability"]), state, effective, attempts,
+            terminal.receipt_ref, terminal.evidence_ref, terminal.result_fingerprint, reconciled,
+            terminal.evidence_ref if terminal.event_type.startswith("RECONCILED_") else None)
 
     def get(self, operation_id: str) -> OperationRecord:
-        return self._record(self._identity_row(operation_id))
+        return self._record(self._identity(operation_id))
 
-    def by_idempotency_key(self, idempotency_key: str) -> OperationRecord | None:
-        key = _text(idempotency_key, "idempotency_key")
-        row = self._conn.execute(
-            "SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,"
-            "song_id,version_id,transport_route_id FROM operations WHERE idempotency_key=?",
-            (key,),
-        ).fetchone()
+    def by_idempotency_key(self, key: str) -> OperationRecord | None:
+        row = self._conn.execute("SELECT id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,song_id,version_id,transport_route_id,eligibility_subject_id,eligibility_capability FROM operations WHERE idempotency_key=?", (_text(key,"idempotency_key"),)).fetchone()
         return None if row is None else self._record(row)
 
     def events(self, operation_id: str) -> tuple[OperationEvent, ...]:
-        self._identity_row(operation_id)
-        return self._events(operation_id)
+        self._identity(operation_id); return self._events(operation_id)
 
-    def _validate_song_version(
-        self, song_id: str | None, version_id: str | None
-    ) -> tuple[str | None, str | None]:
+    def _song_version(self, song_id: str | None, version_id: str | None) -> tuple[str | None, str | None]:
         if song_id is None and version_id is not None:
             raise ValidationError("version_id requires song_id")
         if song_id is None:
             return None, None
         song = self.store.get_song(song_id)
         if song is None:
-            raise NotFoundError(
-                f"Song not found in profile {self.store.profile_id}: {song_id}"
-            )
+            raise NotFoundError(f"Song not found in profile {self.store.profile_id}: {song_id}")
         if version_id is None:
             return song.id, None
         version = self.store.get_version(version_id)
@@ -447,301 +279,113 @@ class OperationJournal:
         return song.id, version.id
 
     @staticmethod
-    def _require_valid_approval(intent: ActionIntent, approval: ApprovalBinding) -> None:
-        validation = AuthorityService.validate(intent, approval)
-        if validation.status != "VALID":
+    def _approval(intent: ActionIntent, approval: ApprovalBinding) -> None:
+        if AuthorityService.validate(intent, approval).status != "VALID":
             raise OperationError("approval is stale for the current action intent")
 
     @staticmethod
-    def _transport_route_for_intent(
-        intent: ActionIntent,
-        transport_route_id: str | None,
-    ) -> str | None:
-        route_id = _optional_text(transport_route_id, "transport_route_id")
+    def _execution_identity(intent: ActionIntent, route: str | None, subject: str | None, capability: str | None) -> tuple[str | None, str | None, str | None]:
+        route, subject, capability = _optional(route,"transport_route_id"), _optional(subject,"eligibility_subject_id"), _optional(capability,"eligibility_capability")
         if intent.destination is None:
-            if route_id is not None:
-                raise OperationError(
-                    "local operation cannot bind an outbound transport route"
-                )
-            return None
-        if route_id is None:
-            raise OperationError(
-                "outbound operation requires an explicit transport_route_id"
-            )
-        return route_id
+            if any(x is not None for x in (route, subject, capability)):
+                raise OperationError("local operation cannot bind outbound execution eligibility identity")
+            return None, None, None
+        if any(x is None for x in (route, subject, capability)):
+            raise OperationError("outbound operation requires transport_route_id, eligibility_subject_id and eligibility_capability")
+        return route, subject, capability
 
     @staticmethod
-    def _require_transport_gate(
-        operation: OperationRecord,
-        intent: ActionIntent,
-        transport_decision: TransportDecision | None,
-    ) -> None:
+    def _gates(operation: OperationRecord, intent: ActionIntent, transport: TransportDecision | None, eligibility: ExecutionEligibilityDecision | None) -> None:
         if operation.transport_route_id is None:
             if intent.destination is not None:
-                raise OperationError(
-                    "outbound intent is missing its prepared transport route"
-                )
-            if transport_decision is not None:
-                raise OperationError(
-                    "local operation has no bound transport route"
-                )
+                raise OperationError("outbound intent is missing its prepared transport route")
+            if transport is not None or eligibility is not None:
+                raise OperationError("local operation has no bound outbound execution gates")
             return
         if intent.destination is None:
-            raise OperationError(
-                "transport-bound operation cannot claim a local intent"
-            )
-        if transport_decision is None:
-            raise OperationError(
-                "outbound operation requires an explicit transport decision"
-            )
-        if not isinstance(transport_decision, TransportDecision):
-            raise TypeError("transport_decision must be TransportDecision")
-        if transport_decision.status != "ALLOW":
-            raise OperationError("transport policy denies outbound execution")
-        if transport_decision.route_id != operation.transport_route_id:
-            raise OperationError(
-                "transport decision applies to a different route"
-            )
-        if transport_decision.action_authority_granted is not False:
-            raise OperationError("transport decision must not grant action authority")
+            raise OperationError("transport-bound operation cannot claim a local intent")
+        if operation.eligibility_subject_id is None or operation.eligibility_capability is None:
+            raise OperationError("legacy outbound operation lacks eligibility identity and must be prepared again")
+        if not isinstance(transport, TransportDecision):
+            raise OperationError("outbound operation requires an explicit transport decision")
+        if transport.status != "ALLOW" or transport.route_id != operation.transport_route_id or transport.action_authority_granted is not False:
+            raise OperationError("transport decision does not allow this exact route without authority")
+        if not isinstance(eligibility, ExecutionEligibilityDecision):
+            raise OperationError("outbound operation requires an explicit eligibility decision")
+        if eligibility.status != "ALLOW":
+            raise OperationError("execution eligibility denies or marks this route stale")
+        if (eligibility.job_id, eligibility.route_id, eligibility.subject_id, eligibility.capability) != (intent.job_id, operation.transport_route_id, operation.eligibility_subject_id, operation.eligibility_capability):
+            raise OperationError("eligibility decision does not match the exact prepared execution identity")
+        if eligibility.action_authority_granted is not False:
+            raise OperationError("eligibility decision must not grant action authority")
 
-    def _append_event(
-        self,
-        operation_id: str,
-        event_type: str,
-        *,
-        evidence_ref: str | None = None,
-        receipt_ref: str | None = None,
-        result_fingerprint: str | None = None,
-    ) -> None:
+    def _append(self, operation_id: str, event_type: str, evidence: str | None = None, receipt: str | None = None, result: str | None = None) -> None:
         if event_type not in OPERATION_EVENTS:
             raise OperationError(f"unsupported operation event: {event_type}")
-        self._conn.execute(
-            "INSERT INTO operation_events(id,operation_id,event_type,evidence_ref,receipt_ref,result_fingerprint) "
-            "VALUES(?,?,?,?,?,?)",
-            (
-                _new_id("opevt"),
-                operation_id,
-                event_type,
-                evidence_ref,
-                receipt_ref,
-                result_fingerprint,
-            ),
-        )
+        self._conn.execute("INSERT INTO operation_events(id,operation_id,event_type,evidence_ref,receipt_ref,result_fingerprint) VALUES(?,?,?,?,?,?)", (_id("opevt"), operation_id, event_type, evidence, receipt, result))
 
-    def prepare(
-        self,
-        *,
-        idempotency_key: str,
-        intent: ActionIntent,
-        approval: ApprovalBinding,
-        song_id: str | None = None,
-        version_id: str | None = None,
-        transport_route_id: str | None = None,
-    ) -> OperationRecord:
-        if not isinstance(intent, ActionIntent):
-            raise TypeError("intent must be ActionIntent")
-        if not isinstance(approval, ApprovalBinding):
-            raise TypeError("approval must be ApprovalBinding")
-        key = _text(idempotency_key, "idempotency_key")
-        self._require_valid_approval(intent, approval)
-        song_id, version_id = self._validate_song_version(song_id, version_id)
-        route_id = self._transport_route_for_intent(intent, transport_route_id)
-
+    def prepare(self, *, idempotency_key: str, intent: ActionIntent, approval: ApprovalBinding, song_id: str | None = None, version_id: str | None = None,
+                transport_route_id: str | None = None, eligibility_subject_id: str | None = None, eligibility_capability: str | None = None) -> OperationRecord:
+        if not isinstance(intent, ActionIntent): raise TypeError("intent must be ActionIntent")
+        if not isinstance(approval, ApprovalBinding): raise TypeError("approval must be ApprovalBinding")
+        key = _text(idempotency_key,"idempotency_key"); self._approval(intent, approval); song_id, version_id = self._song_version(song_id,version_id)
+        route, subject, capability = self._execution_identity(intent,transport_route_id,eligibility_subject_id,eligibility_capability)
         existing = self.by_idempotency_key(key)
+        exact = lambda x: (x.intent_fingerprint,x.approval_id,x.approval_source_ref,x.song_id,x.version_id,x.transport_route_id,x.eligibility_subject_id,x.eligibility_capability) == (intent.intent_fingerprint,approval.approval_id,approval.source_ref,song_id,version_id,route,subject,capability)
         if existing is not None:
-            if (
-                existing.intent_fingerprint == intent.intent_fingerprint
-                and existing.approval_id == approval.approval_id
-                and existing.approval_source_ref == approval.source_ref
-                and existing.song_id == song_id
-                and existing.version_id == version_id
-                and existing.transport_route_id == route_id
-            ):
-                return existing
+            if exact(existing): return existing
             raise OperationError("idempotency key is already bound to a different operation")
-
-        operation_id = _new_id("op")
+        op = _id("op")
         try:
             with self.store._tx():
-                self._conn.execute(
-                    "INSERT INTO operations("
-                    "id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,"
-                    "song_id,version_id,transport_route_id) VALUES(?,?,?,?,?,?,?,?)",
-                    (
-                        operation_id,
-                        key,
-                        intent.intent_fingerprint,
-                        approval.approval_id,
-                        approval.source_ref,
-                        song_id,
-                        version_id,
-                        route_id,
-                    ),
-                )
-                self._append_event(
-                    operation_id,
-                    "PREPARED",
-                    evidence_ref=approval.source_ref,
-                )
+                self._conn.execute("INSERT INTO operations(id,idempotency_key,intent_fingerprint,approval_id,approval_source_ref,song_id,version_id,transport_route_id,eligibility_subject_id,eligibility_capability) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                    (op,key,intent.intent_fingerprint,approval.approval_id,approval.source_ref,song_id,version_id,route,subject,capability))
+                self._append(op,"PREPARED",approval.source_ref)
         except sqlite3.IntegrityError as exc:
             existing = self.by_idempotency_key(key)
-            if existing is not None and (
-                existing.intent_fingerprint == intent.intent_fingerprint
-                and existing.approval_id == approval.approval_id
-                and existing.approval_source_ref == approval.source_ref
-                and existing.song_id == song_id
-                and existing.version_id == version_id
-                and existing.transport_route_id == route_id
-            ):
-                return existing
+            if existing is not None and exact(existing): return existing
             raise OperationError("cannot prepare operation with this idempotency key") from exc
-        return self.get(operation_id)
+        return self.get(op)
 
-    def _require_exact_identity(
-        self,
-        operation: OperationRecord,
-        intent: ActionIntent,
-        approval: ApprovalBinding,
-    ) -> None:
-        self._require_valid_approval(intent, approval)
-        if operation.intent_fingerprint != intent.intent_fingerprint:
-            raise OperationError("operation is bound to a different action intent")
-        if operation.approval_id != approval.approval_id:
-            raise OperationError("operation is bound to a different approval")
-        if operation.approval_source_ref != approval.source_ref:
-            raise OperationError("operation approval source does not match")
-
-    def claim_execution(
-        self,
-        operation_id: str,
-        *,
-        intent: ActionIntent,
-        approval: ApprovalBinding,
-        claim_evidence_ref: str,
-        transport_decision: TransportDecision | None = None,
-    ) -> OperationRecord:
-        claim_ref = _text(claim_evidence_ref, "claim_evidence_ref")
+    def claim_execution(self, operation_id: str, *, intent: ActionIntent, approval: ApprovalBinding, claim_evidence_ref: str,
+                        transport_decision: TransportDecision | None = None, eligibility_decision: ExecutionEligibilityDecision | None = None) -> OperationRecord:
+        evidence = _text(claim_evidence_ref,"claim_evidence_ref")
         with self.store._tx():
-            operation = self.get(operation_id)
-            self._require_exact_identity(operation, intent, approval)
-            self._require_transport_gate(operation, intent, transport_decision)
-            if operation.recorded_state != "PREPARED":
-                raise DuplicateExecutionError(
-                    f"operation cannot be claimed from state {operation.recorded_state}"
-                )
-            self._append_event(
-                operation_id,
-                "EXECUTION_CLAIMED",
-                evidence_ref=claim_ref,
-            )
+            op = self.get(operation_id); self._approval(intent,approval)
+            if (op.intent_fingerprint,op.approval_id,op.approval_source_ref) != (intent.intent_fingerprint,approval.approval_id,approval.source_ref):
+                raise OperationError("operation is bound to a different intent or approval")
+            self._gates(op,intent,transport_decision,eligibility_decision)
+            if op.recorded_state != "PREPARED":
+                raise DuplicateExecutionError(f"operation cannot be claimed from state {op.recorded_state}")
+            self._append(operation_id,"EXECUTION_CLAIMED",evidence)
         return self.get(operation_id)
 
-    def complete_success(
-        self,
-        operation_id: str,
-        *,
-        receipt_ref: str,
-        evidence_ref: str,
-        result_fingerprint: str,
-    ) -> OperationRecord:
-        receipt = _text(receipt_ref, "receipt_ref")
-        evidence = _text(evidence_ref, "evidence_ref")
-        result = _text(result_fingerprint, "result_fingerprint")
+    def _terminal(self, operation_id: str, event: str, *, evidence_ref: str, receipt_ref: str | None = None, result_fingerprint: str | None = None) -> OperationRecord:
+        evidence, receipt, result = _text(evidence_ref,"evidence_ref"), _optional(receipt_ref,"receipt_ref"), _optional(result_fingerprint,"result_fingerprint")
+        if event == "SUCCEEDED" and (receipt is None or result is None):
+            raise ValidationError("successful operation requires receipt_ref and result_fingerprint")
         with self.store._tx():
-            operation = self.get(operation_id)
-            if operation.recorded_state != "EXECUTING":
-                raise OperationError(
-                    f"success cannot be recorded from state {operation.recorded_state}"
-                )
-            self._append_event(
-                operation_id,
-                "SUCCEEDED",
-                evidence_ref=evidence,
-                receipt_ref=receipt,
-                result_fingerprint=result,
-            )
+            op = self.get(operation_id)
+            if op.recorded_state != "EXECUTING": raise OperationError(f"{event} cannot be recorded from state {op.recorded_state}")
+            self._append(operation_id,event,evidence,receipt,result)
         return self.get(operation_id)
 
-    def complete_failure(
-        self,
-        operation_id: str,
-        *,
-        evidence_ref: str,
-        receipt_ref: str | None = None,
-        result_fingerprint: str | None = None,
-    ) -> OperationRecord:
-        evidence = _text(evidence_ref, "evidence_ref")
-        receipt = _optional_text(receipt_ref, "receipt_ref")
-        result = _optional_text(result_fingerprint, "result_fingerprint")
-        with self.store._tx():
-            operation = self.get(operation_id)
-            if operation.recorded_state != "EXECUTING":
-                raise OperationError(
-                    f"failure cannot be recorded from state {operation.recorded_state}"
-                )
-            self._append_event(
-                operation_id,
-                "FAILED",
-                evidence_ref=evidence,
-                receipt_ref=receipt,
-                result_fingerprint=result,
-            )
-        return self.get(operation_id)
+    def complete_success(self, operation_id: str, *, receipt_ref: str, evidence_ref: str, result_fingerprint: str) -> OperationRecord:
+        return self._terminal(operation_id,"SUCCEEDED",evidence_ref=evidence_ref,receipt_ref=receipt_ref,result_fingerprint=result_fingerprint)
 
-    def mark_unknown(
-        self,
-        operation_id: str,
-        *,
-        evidence_ref: str,
-        receipt_ref: str | None = None,
-    ) -> OperationRecord:
-        evidence = _text(evidence_ref, "evidence_ref")
-        receipt = _optional_text(receipt_ref, "receipt_ref")
-        with self.store._tx():
-            operation = self.get(operation_id)
-            if operation.recorded_state != "EXECUTING":
-                raise OperationError(
-                    f"UNKNOWN cannot be recorded from state {operation.recorded_state}"
-                )
-            self._append_event(
-                operation_id,
-                "UNKNOWN",
-                evidence_ref=evidence,
-                receipt_ref=receipt,
-            )
-        return self.get(operation_id)
+    def complete_failure(self, operation_id: str, *, evidence_ref: str, receipt_ref: str | None = None, result_fingerprint: str | None = None) -> OperationRecord:
+        return self._terminal(operation_id,"FAILED",evidence_ref=evidence_ref,receipt_ref=receipt_ref,result_fingerprint=result_fingerprint)
 
-    def reconcile_unknown(
-        self,
-        operation_id: str,
-        *,
-        observed_outcome: str,
-        evidence_ref: str,
-        receipt_ref: str | None = None,
-        result_fingerprint: str | None = None,
-    ) -> OperationRecord:
+    def mark_unknown(self, operation_id: str, *, evidence_ref: str, receipt_ref: str | None = None) -> OperationRecord:
+        return self._terminal(operation_id,"UNKNOWN",evidence_ref=evidence_ref,receipt_ref=receipt_ref)
+
+    def reconcile_unknown(self, operation_id: str, *, observed_outcome: str, evidence_ref: str, receipt_ref: str | None = None, result_fingerprint: str | None = None) -> OperationRecord:
         outcome = str(observed_outcome).strip().upper()
-        if outcome not in {"SUCCEEDED", "FAILED"}:
-            raise OperationError("observed_outcome must be SUCCEEDED or FAILED")
-        evidence = _text(evidence_ref, "evidence_ref")
-        receipt = _optional_text(receipt_ref, "receipt_ref")
-        result = _optional_text(result_fingerprint, "result_fingerprint")
-        if outcome == "SUCCEEDED" and (receipt is None or result is None):
-            raise OperationError(
-                "reconciled success requires receipt_ref and result_fingerprint"
-            )
+        if outcome not in {"SUCCEEDED","FAILED"}: raise OperationError("observed_outcome must be SUCCEEDED or FAILED")
+        evidence, receipt, result = _text(evidence_ref,"evidence_ref"), _optional(receipt_ref,"receipt_ref"), _optional(result_fingerprint,"result_fingerprint")
+        if outcome == "SUCCEEDED" and (receipt is None or result is None): raise OperationError("reconciled success requires receipt_ref and result_fingerprint")
         with self.store._tx():
-            operation = self.get(operation_id)
-            if operation.recorded_state != "UNKNOWN" or operation.reconciled:
-                raise OperationError(
-                    "only unreconciled UNKNOWN operations may be reconciled"
-                )
-            self._append_event(
-                operation_id,
-                f"RECONCILED_{outcome}",
-                evidence_ref=evidence,
-                receipt_ref=receipt,
-                result_fingerprint=result,
-            )
+            op = self.get(operation_id)
+            if op.recorded_state != "UNKNOWN" or op.reconciled: raise OperationError("only unreconciled UNKNOWN operations may be reconciled")
+            self._append(operation_id,f"RECONCILED_{outcome}",evidence,receipt,result)
         return self.get(operation_id)
