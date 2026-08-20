@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-01",
-  "active_increment": "CORE-01C",
+  "active_increment": "CORE-01D",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -20,12 +20,11 @@
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01A established durable Song/version identity and CORE-01B added scoped conflict-aware evidence in the same canonical profile database.",
-    "CORE-01B hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
-    "CORE-01C is the only active product increment and adds append-only Song-scoped chronological Activity so an artist can reopen a Song and understand what changed.",
-    "Activity remains inside lineage.sqlite3; no event/context sidecar or second Headquarters store is authorized.",
-    "Newest/current never implies approved and Activity may not manufacture approval from recency.",
-    "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001.",
-    "Artist and Song semantics remain above every DAW/provider; no host integration is selected in this increment."
+    "CORE-01A/B/C provide durable Song/version identity, scoped conflict-aware evidence, and append-only Song Activity inside one canonical profile database.",
+    "CORE-01C hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
+    "CORE-01D is the only active product increment and turns canonical memory into a read-only Song Resume Brief for a normal returning artist.",
+    "The Resume Brief writes no state, never ranks conflicting evidence, keeps CURRENT separate from APPROVED, excludes other-Song history, and reports next action as UNKNOWN unless represented evidence resolves it.",
+    "No new persistence, full Artist Graph, universal search, DAW integration, app shell, or provider execution is selected in this increment.",
+    "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }

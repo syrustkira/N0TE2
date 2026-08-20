@@ -12,6 +12,14 @@ from .lineage import (
     Version,
 )
 from .memory import HeadquartersMemory
+from .resume import (
+    ResumeChange,
+    ResumeConflict,
+    ResumeEvidence,
+    ResumeVersion,
+    SongResumeBrief,
+    SongResumeService,
+)
 
 __all__ = [
     "ActivityEvent",
@@ -26,7 +34,13 @@ __all__ = [
     "LineageError",
     "LineageStore",
     "NotFoundError",
+    "ResumeChange",
+    "ResumeConflict",
+    "ResumeEvidence",
+    "ResumeVersion",
     "Song",
+    "SongResumeBrief",
+    "SongResumeService",
     "ValidationError",
     "Version",
 ]
