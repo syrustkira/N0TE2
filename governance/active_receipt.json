@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01J",
-  "node_id": "CORE-01",
-  "increment_id": "CORE-01J",
-  "baseline_sha": "ceb90b57a2d13022505a90224d87fdd2ded78ecd",
-  "purpose": "Close the remaining CORE-01 crash-consistency gap by making canonical profile initialization all-or-nothing and fault-injecting existing SQLite persistence for process interruption, disk-full rollback and interrupted evidence migration without inventing another persistence model.",
+  "receipt_id": "N0TE2-CORE-02A",
+  "node_id": "CORE-02",
+  "increment_id": "CORE-02A",
+  "baseline_sha": "782118d88b0d44a0a343c5e50a8464cef23b0bbc",
+  "purpose": "Implement the first customer-useful CORE-02 slice: Song-bound Session objective, scratch exploration, explicit promotion, debrief and next action so rough work survives restart without silently becoming Artist doctrine.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,36 +14,40 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist's last committed canonical Artist/Song state survives ordinary interruption, and damaged state fails visibly/recoverably instead of becoming trusted partial state.",
-    "journeys": ["J-TRUST", "J-CORE-LIFECYCLE", "J-IDEA-SONG"],
-    "capability": "Crash-consistent canonical local persistence",
-    "increment": "CORE-01J"
+    "outcome": "The artist can begin a real Song work session with an objective, preserve rough/rejected/unresolved thinking without hardening it into taste doctrine, explicitly promote only chosen learning, close with a debrief/next action and resume that state after restart.",
+    "journeys": ["J-IDEA-SONG", "J-CORE-LIFECYCLE", "J-TRUST", "J-IMPROVE"],
+    "capability": "Song Session objective, scratch memory, explicit promotion, debrief and next action",
+    "increment": "CORE-02A"
   },
   "reuse": {
-    "mode": "N0TE2_EXISTING_SQLITE_TRANSACTION_AND_RECOVERY_MODEL",
-    "n0te2_dependencies": ["LineageStore", "EvidenceMemory", "RecoveryManager"],
-    "legacy_candidates": ["crash/recovery semantics as evidence only"],
-    "legacy_rejections": ["second database", "silent auto-restore", "new backup subsystem", "best-effort partial commits"],
+    "mode": "N0TE2_CANONICAL_MEMORY_PLUS_ACTIVITY",
+    "n0te2_dependencies": ["LineageStore", "EvidenceMemory", "ActivityLog", "HeadquartersMemory"],
+    "legacy_candidates": ["session objective/debrief semantics as behavioral evidence only"],
+    "legacy_rejections": ["scratch auto-promotion", "parallel session history store", "DAW-bound session identity", "history as rigid Artist doctrine"],
     "direct_copy": false
   },
   "completion_proof": [
-    "a denied mid-initialization schema operation rolls back every canonical schema object rather than leaving a trusted partial profile",
-    "a subprocess terminated after an uncommitted Song mutation reopens to the exact prior committed Song state with quick_check ok",
-    "SQLITE_FULL during a large transactional Song write rolls back the mutation and preserves prior active Song, row count and integrity",
-    "an interrupted evidence v1-to-v2 migration rolls back both ALTER TABLE and metadata change, remains retryable as v1, then migrates to v2 without claim loss",
-    "existing CORE-01F corrupt-live tests continue to require explicit exact-hash snapshot restore and preserve the corrupt database rather than silently replacing it",
-    "same-class scan confirms Activity, context imports, provenance and normal evidence mutations use the canonical transaction boundary; evidence schema creation begins its transaction inside executescript",
-    "after fault proof, the full CORE-01 parent is re-audited rather than extending persistence work by adjacency"
+    "a Song/version-bound Session starts with an explicit objective and only one open Session exists per Song",
+    "OBSERVATION/DECISION/REJECTED_IDEA/UNRESOLVED/MARK scratch survives restart but creates no EvidenceClaim by itself",
+    "explicit promotion creates exactly one matching EvidenceClaim and immutable Session provenance link; retry is idempotent",
+    "a failed EvidenceClaim write may leave a harmless retryable promotion request but no durable doctrine claim",
+    "Session/version/promotion scope cannot cross Songs or profiles",
+    "closing requires a debrief plus next action, is one-way, and later scratch cannot rewrite the closed Session",
+    "Session rows, scratch, promotion requests and promotion links are immutable history",
+    "Session started/scratch/promoted/closed events appear in canonical Activity chronology",
+    "reopen restores latest Session, scratch, promoted evidence, debrief and next action",
+    "Session read APIs perform zero canonical writes after initialization"
   ],
   "non_scope": [
-    "universal search",
-    "broad Artist Graph population",
-    "cross-domain provider or entity population",
-    "cloud backup or sync",
-    "APP-01 install/update/rollback lifecycle",
-    "DAW/audio/plugin work",
-    "new persistence layer",
+    "skill-state maturation",
+    "universal Change-Consequence-Decision learning",
+    "friction/success pattern memory",
+    "full universal Activity/search UI",
+    "Artist World taste promotion policy beyond explicit Session promotion",
+    "CORE-03 capability resolver",
+    "DAW/audio/plugin/provider execution",
+    "UX shell",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-01J fault evidence, re-audit CORE-01. If no concrete parent foundation gap remains, close the construction dependency and globally reselect from newly dependency-ready nodes rather than continuing persistence by adjacency."
+  "next_selection_rule": "After CORE-02A evidence, reconcile and globally compare the remaining CORE-02 learning/session gaps against the still dependency-ready CORE-03 capability resolver. Do not continue Session storage by adjacency."
 }
