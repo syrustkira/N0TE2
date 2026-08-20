@@ -12,6 +12,7 @@ from .lineage import (
     NotFoundError,
     ValidationError,
 )
+from .network import TransportDecision
 
 OPERATION_SCHEMA_VERSION = 1
 OPERATION_EVENTS = {
@@ -86,9 +87,10 @@ class OperationJournal:
     """Durable execute-once identity and truthful outcome history.
 
     The journal owns no provider, DAW or network implementation. `claim_execution`
-    atomically grants one execution claim for an exact approved intent. The caller
-    may then execute through a separately authorized adapter and must record a
-    truthful terminal outcome. UNKNOWN is terminal for retry purposes and can be
+    atomically grants one execution claim for an exact approved intent. Outbound
+    intents additionally require an explicit CORE-04C transport ALLOW decision.
+    The caller may then execute through a separately authorized adapter and must
+    record a truthful outcome. UNKNOWN is terminal for retry purposes and can be
     resolved only by explicit evidence-backed reconciliation.
     """
 
@@ -241,9 +243,7 @@ class OperationJournal:
             evidence_ref=None if row["evidence_ref"] is None else str(row["evidence_ref"]),
             receipt_ref=None if row["receipt_ref"] is None else str(row["receipt_ref"]),
             result_fingerprint=(
-                None
-                if row["result_fingerprint"] is None
-                else str(row["result_fingerprint"])
+                None if row["result_fingerprint"] is None else str(row["result_fingerprint"])
             ),
         )
 
@@ -303,7 +303,12 @@ class OperationJournal:
     @staticmethod
     def _validate_event_evidence(events: tuple[OperationEvent, ...]) -> None:
         for event in events:
-            if event.event_type == "SUCCEEDED":
+            if event.event_type in {"PREPARED", "EXECUTION_CLAIMED"}:
+                if not event.evidence_ref:
+                    raise LineageCorruptionError(
+                        f"{event.event_type} operation event requires evidence"
+                    )
+            elif event.event_type == "SUCCEEDED":
                 if not event.receipt_ref or not event.evidence_ref or not event.result_fingerprint:
                     raise LineageCorruptionError(
                         "successful operation requires receipt, evidence and result fingerprint"
@@ -347,7 +352,9 @@ class OperationJournal:
                 "LIMIT 1"
             ).fetchone()
             if invalid is not None:
-                raise LineageCorruptionError("operation history contains invalid Song/version references")
+                raise LineageCorruptionError(
+                    "operation history contains invalid Song/version references"
+                )
             for row in self._conn.execute("SELECT id FROM operations ORDER BY id"):
                 events = self._events(str(row["id"]))
                 self._derive(events)
@@ -373,7 +380,6 @@ class OperationJournal:
         state, effective, attempts, reconciled = self._derive(events)
         terminal = events[-1]
         reconciliation = terminal if terminal.event_type.startswith("RECONCILED_") else None
-        effective_event = terminal
         return OperationRecord(
             operation_id=operation_id,
             idempotency_key=str(row["idempotency_key"]),
@@ -385,9 +391,9 @@ class OperationJournal:
             recorded_state=state,
             effective_outcome=effective,
             attempt_count=attempts,
-            receipt_ref=effective_event.receipt_ref,
-            evidence_ref=effective_event.evidence_ref,
-            result_fingerprint=effective_event.result_fingerprint,
+            receipt_ref=terminal.receipt_ref,
+            evidence_ref=terminal.evidence_ref,
+            result_fingerprint=terminal.result_fingerprint,
             reconciled=reconciled,
             reconciliation_evidence_ref=(
                 None if reconciliation is None else reconciliation.evidence_ref
@@ -419,7 +425,9 @@ class OperationJournal:
             return None, None
         song = self.store.get_song(song_id)
         if song is None:
-            raise NotFoundError(f"Song not found in profile {self.store.profile_id}: {song_id}")
+            raise NotFoundError(
+                f"Song not found in profile {self.store.profile_id}: {song_id}"
+            )
         if version_id is None:
             return song.id, None
         version = self.store.get_version(version_id)
@@ -434,6 +442,24 @@ class OperationJournal:
         validation = AuthorityService.validate(intent, approval)
         if validation.status != "VALID":
             raise OperationError("approval is stale for the current action intent")
+
+    @staticmethod
+    def _require_transport_gate(
+        intent: ActionIntent,
+        transport_decision: TransportDecision | None,
+    ) -> None:
+        if intent.destination is None:
+            if transport_decision is not None and transport_decision.status != "ALLOW":
+                raise OperationError("supplied transport decision denies execution")
+            return
+        if transport_decision is None:
+            raise OperationError("outbound operation requires an explicit transport decision")
+        if not isinstance(transport_decision, TransportDecision):
+            raise TypeError("transport_decision must be TransportDecision")
+        if transport_decision.status != "ALLOW":
+            raise OperationError("transport policy denies outbound execution")
+        if transport_decision.action_authority_granted is not False:
+            raise OperationError("transport decision must not grant action authority")
 
     def _append_event(
         self,
@@ -543,11 +569,13 @@ class OperationJournal:
         intent: ActionIntent,
         approval: ApprovalBinding,
         claim_evidence_ref: str,
+        transport_decision: TransportDecision | None = None,
     ) -> OperationRecord:
         claim_ref = _text(claim_evidence_ref, "claim_evidence_ref")
         with self.store._tx():
             operation = self.get(operation_id)
             self._require_exact_identity(operation, intent, approval)
+            self._require_transport_gate(intent, transport_decision)
             if operation.recorded_state != "PREPARED":
                 raise DuplicateExecutionError(
                     f"operation cannot be claimed from state {operation.recorded_state}"
@@ -656,7 +684,9 @@ class OperationJournal:
         with self.store._tx():
             operation = self.get(operation_id)
             if operation.recorded_state != "UNKNOWN" or operation.reconciled:
-                raise OperationError("only unreconciled UNKNOWN operations may be reconciled")
+                raise OperationError(
+                    "only unreconciled UNKNOWN operations may be reconciled"
+                )
             self._append_event(
                 operation_id,
                 f"RECONCILED_{outcome}",
