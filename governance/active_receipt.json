@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-04A",
+  "receipt_id": "N0TE2-CORE-04B",
   "node_id": "CORE-04",
-  "increment_id": "CORE-04A",
-  "baseline_sha": "f34833c24ff7ac57f082729ff3d8a8a5f975d265",
-  "purpose": "Implement the first bounded CORE-04 trust primitive: exact material action preview/fingerprinting plus explicit approval binding to that exact fingerprint, with stale invalidation on every material change and no execution capability.",
+  "increment_id": "CORE-04B",
+  "baseline_sha": "27d6433813bfdb00c006e64e5700b7e33e23b806",
+  "purpose": "Implement a pure inspect-before-egress envelope that makes proposed outbound material, provenance, privacy classification, destination, purpose, retention and cost statements explicit and binds artist confirmation to that exact package through CORE-04A, with no transmission capability.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,42 +14,40 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can inspect one exact action representation and an explicit approval can bind only to that exact revision/payload/target/destination/purpose fingerprint, becoming stale after any material change.",
-    "journeys": ["J-TRUST", "J-IMPROVE", "J-WORKSPACE"],
-    "capability": "Exact-revision action preview and stale-approval invalidation",
-    "increment": "CORE-04A"
+    "outcome": "Before private or public material crosses a trust boundary, the artist can inspect exactly what would leave, where, why and under which explicit provenance/privacy/rights/consent/retention/cost facts, and confirmation binds only to that exact package.",
+    "journeys": ["J-TRUST", "J-WORKSPACE", "J-IMPROVE"],
+    "capability": "Outbound provenance inspection and exact private-data confirmation envelope",
+    "increment": "CORE-04B"
   },
   "reuse": {
-    "mode": "PURE_AUTHORITY_BINDING_OVER_CANONICAL_IDS",
-    "n0te2_dependencies": ["CORE-01 stable identity/version/artifact lineage", "CORE-03 host-neutral job identifiers"],
-    "legacy_candidates": ["exact-revision approval semantics as behavioral evidence only"],
-    "legacy_rejections": ["generic are-you-sure approval", "approval not bound to revision", "approval as execution permission", "provider action inside authority binding", "parallel action state store"],
+    "mode": "PURE_EGRESS_ENVELOPE_OVER_CORE04A_AUTHORITY",
+    "n0te2_dependencies": ["ActionIntent", "ApprovalBinding", "ApprovalValidation", "AuthorityService", "CORE-01 stable source/revision identities"],
+    "legacy_candidates": ["outbound context inspector and consent semantics as behavioral evidence only"],
+    "legacy_rejections": ["silent outbound data", "destination-only confirmation", "provider-brand trust inference", "parallel approval mechanism", "network/provider call inside inspector", "credentials in outbound provenance"],
     "direct_copy": false
   },
   "completion_proof": [
-    "preview exposes all material action fields plus a stable SHA-256 intent fingerprint",
-    "explicit bind_approval requires a non-empty caller-supplied approval source reference and binds exactly to the current intent fingerprint",
-    "an unchanged intent validates the approval as VALID",
-    "changing action ID, job, action class, description, target, revision fingerprint, payload fingerprint, destination, purpose or data categories makes the prior approval STALE",
-    "data-category ordering/duplicates canonicalize without changing the material fingerprint",
-    "an outbound destination requires an explicit purpose and blank approval source is rejected",
-    "local actions may omit destination/purpose without gaining execution authority",
-    "AuthorityService public API contains preview, bind_approval and validate only, with no execute/send/post/publish/mutate/charge path",
-    "preview and validation are deterministic and pure with no persistence or side effect",
-    "approval binding proves only exact explicit approval representation and grants no provider/host permission"
+    "preview exposes every exact material item, category, source, revision, privacy flag, represented rights/consent reference, destination, purpose, retention statement and cost statement",
+    "private material IDs and data categories derive only from explicit material facts",
+    "confirmation delegates to CORE-04A exact ActionIntent fingerprint binding and unchanged package validates as VALID",
+    "changing material identity/category/source/revision/privacy/rights/consent, adding or removing material, or changing request/job/description/destination/purpose/retention/cost makes prior confirmation STALE",
+    "material input order canonicalizes without changing the outbound or authority fingerprint",
+    "duplicate material IDs, malformed privacy flags and blank outbound explanation fields are rejected",
+    "blank confirmation source is rejected",
+    "OutboundInspector public API contains preview, bind_confirmation and validate_confirmation only with no send/upload/transmit/request/model/provider/network/execute path",
+    "preview and confirmation validation are deterministic and pure",
+    "no external action, credential access, provider call or network transport occurs"
   ],
   "non_scope": [
-    "provider execution",
-    "DAW mutation",
-    "Recipe execution",
-    "transaction/rollback engine",
-    "credentials or network policy",
-    "cost/spend authorization",
+    "provider execution or receipt",
+    "network/offline switching",
+    "credential storage",
+    "cost charging or budget authorization",
+    "DAW or Recipe execution",
     "team/collaborator permissions",
-    "private-data egress confirmation UX",
     "CORE-02 Success Memory",
     "UI confirmation dialog",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-04A evidence, reconcile and globally compare the next authority/transaction/private-egress contract against preserved CORE-02 Success Memory. Do not add an executor merely because approval binding now exists."
+  "next_selection_rule": "After CORE-04B evidence, reconcile and globally compare transactional execution/recovery, universal provider receipts/reconciliation and network/offline trust against preserved CORE-02 Success Memory. Do not add transport merely because the outbound package is now approvable."
 }
