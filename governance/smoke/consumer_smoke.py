@@ -25,7 +25,7 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-03" or increment != "CORE-03B":
+if active != "CORE-03" or increment != "CORE-03C":
     print(
         f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}",
         file=sys.stderr,
@@ -34,23 +34,18 @@ if active != "CORE-03" or increment != "CORE-03B":
 
 from n0te2 import (  # noqa: E402
     CapabilityCandidate,
-    N0TEableJob,
-    ResolutionConstraints,
     StudioCapabilityProfile,
-)
-
-job = N0TEableJob(
-    id="job:vocal.tighten",
-    capability="vocal.tighten",
-    description="Tighten chorus vocals while preserving performance intent",
+    TemplateDefinition,
+    TemplatePlanner,
+    TemplateRole,
 )
 
 
-def candidate(candidate_id: str, route_kind: str, **overrides):
+def candidate(candidate_id: str, route_kind: str, capability: str, **overrides):
     values = dict(
         candidate_id=candidate_id,
         route_kind=route_kind,
-        capability=job.capability,
+        capability=capability,
         display_name=candidate_id,
         brand=None,
         verified=True,
@@ -72,23 +67,53 @@ def candidate(candidate_id: str, route_kind: str, **overrides):
     return CapabilityCandidate(**values)
 
 
-# Studio A truth makes the host-native route strongest. The host label itself is not evidence.
+template = TemplateDefinition(
+    template_id="template:vocal:production-start",
+    family="VOCAL",
+    name="Vocal Production Start",
+    intent="Start a vocal production pass without baking any DAW into the reusable structure",
+    roles=(
+        TemplateRole(
+            role_id="lead-edit",
+            capability="vocal.tighten",
+            description="Tighten the lead vocal while preserving performance intent",
+            required=True,
+            tags=("editing", "lead"),
+        ),
+        TemplateRole(
+            role_id="harmony-build",
+            capability="vocal.harmony.build",
+            description="Build supporting harmonies when the current studio can do so legitimately",
+            required=False,
+            tags=("harmony", "support"),
+        ),
+    ),
+)
+planner = TemplatePlanner()
+
+# Template structure itself contains no provider/host/candidate/track identity fields.
+assert set(TemplateDefinition.__dataclass_fields__) == {
+    "template_id", "family", "name", "intent", "roles"
+}
+assert set(TemplateRole.__dataclass_fields__) == {
+    "role_id", "capability", "description", "required", "tags"
+}
+
+# Studio A can realize every role, so the exact Template is FULL.
 studio_a_facts = [
     candidate(
-        "a-native",
+        "a-lead-native",
         "HOST_NATIVE",
-        display_name="Native Vocal Timing",
-        brand="Host Vendor",
-        task_fit=0.98,
-        editability=0.95,
+        "vocal.tighten",
+        task_fit=0.97,
         locality=1.0,
         privacy=1.0,
-        latency=0.98,
     ),
     candidate(
-        "a-guided",
+        "a-harmony-guided",
         "GUIDED",
-        task_fit=0.62,
+        "vocal.harmony.build",
+        task_fit=0.75,
         locality=1.0,
         privacy=1.0,
     ),
@@ -98,120 +123,80 @@ studio_a = StudioCapabilityProfile.build(
     host_label="Ableton Live",
     candidates=reversed(studio_a_facts),
 )
-studio_a_same_facts_other_label = StudioCapabilityProfile.build(
+full = planner.plan(template, studio_a)
+assert full.status == "FULL"
+assert full.template_id == template.template_id
+assert full.unavailable_required_role_ids == ()
+assert full.unavailable_optional_role_ids == ()
+lead_a = next(item for item in full.role_plans if item.role.role_id == "lead-edit")
+assert lead_a.resolution.recommended.candidate.route_kind == "HOST_NATIVE"
+
+# Changing only the descriptive host label cannot change the plan.
+studio_a_other_label = StudioCapabilityProfile.build(
     environment_id="studio:a",
     host_label="Generic Other",
     candidates=studio_a_facts,
 )
-resolution_a = studio_a.resolve(job)
-assert resolution_a.status == "RESOLVED"
-assert resolution_a.recommended.candidate.route_kind == "HOST_NATIVE"
-assert resolution_a == studio_a_same_facts_other_label.resolve(job)
-assert tuple(item.candidate_id for item in studio_a.candidates) == (
-    "a-guided",
-    "a-native",
-)
+assert planner.plan(template, studio_a_other_label) == full
 
-# Studio B has a host-native fact, but it is incompatible. A verified N0TE-native route wins instead.
+# Studio B can do the required role but lacks the optional harmony role: PARTIAL.
 studio_b = StudioCapabilityProfile.build(
     environment_id="studio:b",
     host_label="Logic Pro",
     candidates=[
         candidate(
-            "b-native",
-            "HOST_NATIVE",
-            compatible=False,
-            task_fit=1.0,
-        ),
-        candidate(
-            "b-n0te",
+            "b-lead-n0te",
             "N0TE_NATIVE",
+            "vocal.tighten",
             task_fit=0.94,
-            editability=0.92,
             locality=1.0,
             privacy=1.0,
-        ),
-        candidate(
-            "b-installed-famous-plugin",
-            "OWNED_TOOL",
-            display_name="Famous Tightener",
-            brand="Famous Vendor",
-            verified=False,
-            evidence_ref=None,
-            task_fit=1.0,
-            user_preference=1.0,
-        ),
+        )
     ],
 )
-resolution_b = studio_b.resolve(job)
-assert resolution_b.status == "RESOLVED"
-assert resolution_b.job_id == resolution_a.job_id == job.id
-assert resolution_b.recommended.candidate.route_kind == "N0TE_NATIVE"
-rejected_b = {item.candidate_id: item.reason_codes for item in resolution_b.rejected}
-assert "INCOMPATIBLE" in rejected_b["b-native"]
-assert "UNVERIFIED" in rejected_b["b-installed-famous-plugin"]
-summary_b = {item.route_kind: item for item in studio_b.route_summary()}
-assert summary_b["OWNED_TOOL"].verified_candidate_ids == ()
-assert summary_b["OWNED_TOOL"].unverified_candidate_ids == (
-    "b-installed-famous-plugin",
-)
+partial = planner.plan(template, studio_b)
+assert partial.status == "PARTIAL"
+assert partial.unavailable_required_role_ids == ()
+assert partial.unavailable_optional_role_ids == ("harmony-build",)
+lead_b = next(item for item in partial.role_plans if item.role.role_id == "lead-edit")
+assert lead_b.resolution.recommended.candidate.route_kind == "N0TE_NATIVE"
 
-# Studio C truthfully exposes a gap when its only represented route violates the artist constraints.
+# Studio C advertises a famous installed tool, but it is unverified and cannot satisfy the required role.
 studio_c = StudioCapabilityProfile.build(
     environment_id="studio:c",
     host_label="Pro Tools",
     candidates=[
         candidate(
-            "c-cloud-provider",
-            "PROVIDER",
-            brand="Cloud Vendor",
-            locality=0.10,
-            privacy=0.20,
-            paid=True,
+            "c-famous-installed",
+            "OWNED_TOOL",
+            "vocal.tighten",
+            display_name="Famous Vocal Tool",
+            brand="Famous Vendor",
+            verified=False,
+            evidence_ref=None,
+            task_fit=1.0,
             user_preference=1.0,
         )
     ],
 )
-constraints = ResolutionConstraints(
-    min_locality=0.90,
-    min_privacy=0.90,
-    allow_paid=False,
-    require_reversible=True,
-    max_evidence_age_seconds=30,
-)
-resolution_c = studio_c.resolve(job, constraints)
-assert resolution_c.status == "UNAVAILABLE"
-assert resolution_c.recommended is None
-gaps = studio_c.gaps([job], constraints)
-assert len(gaps) == 1
-assert gaps[0].job_id == job.id
-assert gaps[0].rejected_candidate_ids == ("c-cloud-provider",)
-for reason in (
-    "LOCALITY_BELOW_MINIMUM",
-    "PRIVACY_BELOW_MINIMUM",
-    "PAID_ROUTE_NOT_ALLOWED",
-):
-    assert reason in gaps[0].reason_codes
+unavailable = planner.plan(template, studio_c)
+assert unavailable.status == "UNAVAILABLE"
+assert unavailable.unavailable_required_role_ids == ("lead-edit",)
+lead_c = next(item for item in unavailable.role_plans if item.role.role_id == "lead-edit")
+assert "UNVERIFIED" in lead_c.resolution.reason_codes
 
-# Equal facts remain equal regardless of route/brand. Stable candidate ID is the explicit tie-break.
-tie_profile = StudioCapabilityProfile.build(
-    environment_id="studio:tie",
-    host_label="Studio One",
-    candidates=[
-        candidate("tie-z", "HOST_NATIVE", brand="Native Brand"),
-        candidate("tie-a", "PROVIDER", brand="Provider Brand"),
-    ],
+# One Template identity survives every environment; only the support plan changes.
+assert template == TemplateDefinition(
+    template_id="template:vocal:production-start",
+    family="vocal",
+    name="Vocal Production Start",
+    intent="Start a vocal production pass without baking any DAW into the reusable structure",
+    roles=tuple(reversed(template.roles)),
 )
-tie = tie_profile.resolve(job)
-assert tie.candidate_ids == ("tie-a", "tie-z")
-assert tie.recommended.score == tie.fallbacks[0].score
-assert "SCORE_TIE_BROKEN_BY_CANDIDATE_ID" in tie.reason_codes
-
-# Pure read model: repeated profile summaries and resolutions are identical and no persistence exists.
-assert studio_b.route_summary() == studio_b.route_summary()
-assert studio_b.resolve(job) == resolution_b
-assert studio_c.gaps([job], constraints) == gaps
+assert planner.plan(template, studio_a) == full
+assert planner.plan(template, studio_b) == partial
+assert planner.plan(template, studio_c) == unavailable
 
 print(
-    "CORE-03B CONSUMER SMOKE: GREEN: the same N0TEable job resolved from truthful per-studio capability facts; host labels/brands created no priority, an unverified installed tool remained unusable, and constrained missing capability surfaced as an explicit gap"
+    "CORE-03C CONSUMER SMOKE: GREEN: one provider-neutral Template kept the same semantic identity while truthful Studio facts produced FULL, PARTIAL and UNAVAILABLE plans; host labels and famous unverified tools gained no authority and no host was mutated"
 )
