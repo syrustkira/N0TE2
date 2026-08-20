@@ -88,6 +88,11 @@ from .skills import (
     SkillMemory,
     SkillState,
 )
+from .studio import (
+    RouteCapabilitySummary,
+    StudioCapabilityGap,
+    StudioCapabilityProfile,
+)
 from .twins import (
     SongTwinView,
     TwinAwareSongKnowledgeMapService,
@@ -147,6 +152,7 @@ __all__ = [
     "ResumeConflict",
     "ResumeEvidence",
     "ResumeVersion",
+    "RouteCapabilitySummary",
     "SESSION_ITEM_KINDS",
     "SESSION_STATES",
     "SKILL_LEVELS",
@@ -169,6 +175,8 @@ __all__ = [
     "SongResumeService",
     "SongSession",
     "SongTwinView",
+    "StudioCapabilityGap",
+    "StudioCapabilityProfile",
     "TWIN_DOMAINS",
     "TwinAwareSongKnowledgeMapService",
     "TwinConflict",
