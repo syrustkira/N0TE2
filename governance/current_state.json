@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-01",
-  "active_increment": "CORE-01I",
+  "active_increment": "CORE-01J",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -20,13 +20,13 @@
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01A-H establish canonical Song/version identity, scoped evidence, Activity, Resume, provenance, recovery, Song graph and explicit Technical/Creative Twin semantics.",
-    "CORE-01H hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
-    "CORE-01I is the only active product increment and implements the minimum fresh-consumer context isolation contract for REQ-SCOPE-143.",
-    "Generic ProductContext is code-owned and user-data-free; it is not persisted per profile and imported material cannot replace it.",
-    "Private Artist/Song evidence remains in the existing physically isolated profile database. Imported/synced context is a separate append-only EVIDENCE_ONLY ledger scoped only to the active Artist or one owned Song.",
-    "Imported payload is not inserted into EvidenceMemory and does not grant mutation/execution authority even if the payload text claims otherwise.",
-    "No onboarding UI, Artist World maturation, cloud sync, universal search, broad Artist Graph expansion, DAW/audio work or second context database is selected in this increment.",
+    "CORE-01A-I establish canonical Artist/Song/version/asset identity, scoped evidence, Activity, Resume, provenance, explicit recovery, Song graph, Technical/Creative Twin semantics and fresh-consumer context isolation.",
+    "CORE-01I is implemented at exact head ceb90b57a2d13022505a90224d87fdd2ded78ecd; hosted exact-head proof remains UNOBSERVED and is not converted to green.",
+    "The CORE-01 parent closure audit identified REQ-SCOPE-152 crash consistency as the only remaining concrete foundation blocker.",
+    "The audit exposed a real initializer defect: LineageStore._initialize opened a transaction before sqlite3.executescript, which can implicitly commit and leave partial schema after a mid-script failure.",
+    "CORE-01J is the only active increment. It repairs that transaction boundary and fault-injects kill-before-commit, SQLITE_FULL rollback and interrupted EvidenceMemory migration while preserving existing explicit recovery semantics.",
+    "Journey-wide requirements such as universal search, broad Artist Activity and future people/content/release/business graph population remain preserved downstream work and do not redefine CORE-01 closure.",
+    "No new persistence layer, cloud backup, APP-01 lifecycle, DAW/audio work or hosted-CI proof scaffolding is selected in this increment.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
