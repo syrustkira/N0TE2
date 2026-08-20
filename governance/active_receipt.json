@@ -1,20 +1,28 @@
 {
-  "schema_version": 1,
-  "receipt_id": "N0TE2-BOOT-02",
-  "node_id": "BOOT-02",
-  "baseline_sha": "b2ed1fea402822b1c187cc9ed4f29cac049ca462",
-  "purpose": "Install executable autonomous construction governance before any legacy/product implementation admission.",
+  "schema_version": 2,
+  "receipt_id": "N0TE2-LEGACY-01",
+  "node_id": "LEGACY-01",
+  "baseline_sha": "2e4f49dfe6516c21cd09a4272a53ebeae64ccf95",
+  "purpose": "Close legacy admission mechanically without copying legacy implementation into N0TE2 or starting product construction.",
   "product_code_allowed": false,
-  "legacy_admission_allowed": false,
+  "legacy_admission_allowed": true,
+  "legacy_source_copy_allowed": false,
+  "legacy_test_text_copy_allowed": false,
   "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore"],
   "allowed_prefixes": ["governance/", "tests/governance/", ".github/workflows/"],
   "forbidden_prefixes": ["app/", "src/", "n0te2/", "legacy/", "vendor/"],
+  "source_quarry": {
+    "repository": "syrustkira/N0TE",
+    "commit_sha": "25e2f2f5fd8ea4adc0c7e61650531430025e59db",
+    "tree_sha": "fb7eb7a9d3a6f2e1620dfbbfca7f21b51975b7c4"
+  },
   "close_proof": [
-    "governance validator green on exact head",
-    "adversarial governance regressions green",
-    "three-OS CI workflow defined",
-    "BOOT-02 smoke proves no product implementation admitted",
-    "changed paths remain inside receipt"
+    "331/331 legacy leaf assets remain mechanically classified with zero invisible assets",
+    "canonical disposition and contamination rules are machine enforced",
+    "direct legacy source/test-text copying remains blocked by LICENSE-GATE-001",
+    "selected legacy behavior evidence is separated from N0TE2 replacement regression gaps",
+    "governance/admission regressions green",
+    "no product or direct legacy implementation paths changed since baseline"
   ],
-  "next_node_after_close": "LEGACY-01"
+  "next_node_after_close": "CORE-01"
 }
