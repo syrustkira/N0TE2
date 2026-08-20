@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01B",
+  "receipt_id": "N0TE2-CORE-01C",
   "node_id": "CORE-01",
-  "increment_id": "CORE-01B",
-  "baseline_sha": "00ef21c29458d432537ea3a71a7ec6375988f91f",
-  "purpose": "Add trustworthy scope-bound evidence memory so N0TE remembers the right fact at the right Artist/Song/version scope, preserves provenance, surfaces conflict, and reconciles only by explicit supersession.",
+  "increment_id": "CORE-01C",
+  "baseline_sha": "d67e640addc0f14aac9bc95ae47ef5fda1fd5b83",
+  "purpose": "Add durable append-only Activity so an artist can reopen a Song and truthfully inspect what changed across lineage, current/approved decisions, and scoped evidence without another state store or silent history loss.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,35 +14,39 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "N0TE remembers evidence at the correct scope and never invents a winner when active evidence conflicts.",
-    "journeys": ["J-IDEA-SONG", "J-IMPROVE", "J-WHAT-NEXT", "J-TRUST", "J-CORE-LIFECYCLE"],
-    "capability": "Scoped evidence memory + provenance + truthful conflict/reconciliation",
-    "increment": "CORE-01B"
+    "outcome": "The artist can reopen a Song and understand what changed without losing approval truth or mixing another Song's history into it.",
+    "journeys": ["J-IDEA-SONG", "J-CORE-LIFECYCLE", "J-COMPARE-DECIDE"],
+    "capability": "Durable Song-scoped Activity / What Changed chronology",
+    "increment": "CORE-01C"
   },
   "reuse": {
-    "mode": "SEMANTICS_AND_EVIDENCE_ONLY",
-    "legacy_candidates": ["Context Engine", "HeadquartersRetrieval"],
+    "mode": "N0TE2_FOUNDATION_PLUS_SEMANTICS_ONLY",
+    "n0te2_dependencies": ["CORE-01A LineageStore", "CORE-01B EvidenceMemory"],
+    "legacy_candidates": ["EventEngine append-only envelope semantics"],
+    "legacy_rejections": ["silent max-events history truncation", "separate event-file/store ownership"],
     "direct_copy": false,
     "fresh_reimplementation_default": true
   },
   "completion_proof": [
-    "Song-scoped evidence never resolves for another Song",
-    "version evidence applies only to its own version and more-specific scope wins only by scope",
-    "source kind/reference and confidence survive restart",
-    "contradictory active values at the same applicable scope return CONFLICT with no selected value",
-    "multiple sources agreeing on the same value resolve while preserving all evidence",
-    "explicit reconciliation appends a new claim and supersedes prior active same-key/same-scope claims without deleting history",
-    "cross-scope or cross-key supersession is rejected",
-    "tampered scope references fail visibly on evidence open",
-    "all behavior remains inside the canonical profile lineage database with no context sidecar store"
+    "Song/asset/version/current/approved mutations append ordered Activity in the canonical profile database",
+    "scoped evidence claims and explicit reconciliation append Activity without deleting prior claims",
+    "Song-scoped retrieval excludes another Song's events",
+    "sequence checkpoints return only later events in stable order",
+    "close/reopen preserves identical activity references and current-vs-approved distinction",
+    "Activity history rejects update/delete mutation and has no silent fixed-size truncation",
+    "existing CORE-01A/B state enables Activity transactionally without identity loss",
+    "invalid/tampered Activity object references or payloads fail visibly rather than becoming empty history",
+    "tests and consumer smoke require no DAW/provider dependency"
   ],
   "non_scope": [
-    "universal search or Activity timeline",
-    "Technical Twin / Creative Twin consumer experience",
-    "full cross-domain Artist/Song Knowledge Graph",
+    "full Artist Graph",
+    "universal search",
+    "Technical Twin / Creative Twin UX",
     "DAW adapters or host hierarchy",
-    "application shell or provider execution",
-    "hosted-CI proof-loop scaffolding"
+    "application shell",
+    "release/content/business/provider execution",
+    "hosted-CI proof-loop scaffolding",
+    "second context/event database"
   ],
-  "next_selection_rule": "After CORE-01B proof, reconcile evidence and reselect from the whole remaining CORE-01/customer hierarchy. Do not continue evidence tables by adjacency."
+  "next_selection_rule": "After CORE-01C proof, reconcile evidence and globally reselect from the remaining customer hierarchy. Do not continue database/activity implementation by adjacency."
 }

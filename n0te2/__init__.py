@@ -1,3 +1,4 @@
+from .activity import ActivityEvent, ActivityLog
 from .evidence import EvidenceClaim, EvidenceMemory, EvidenceResolution
 from .lineage import (
     Asset,
@@ -10,13 +11,17 @@ from .lineage import (
     ValidationError,
     Version,
 )
+from .memory import HeadquartersMemory
 
 __all__ = [
+    "ActivityEvent",
+    "ActivityLog",
     "Asset",
     "Artist",
     "EvidenceClaim",
     "EvidenceMemory",
     "EvidenceResolution",
+    "HeadquartersMemory",
     "LineageCorruptionError",
     "LineageError",
     "LineageStore",

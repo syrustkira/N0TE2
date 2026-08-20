@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-01",
-  "active_increment": "CORE-01B",
+  "active_increment": "CORE-01C",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -20,11 +20,12 @@
   ],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "CORE-01A is implementation-green locally at 00ef21c29458d432537ea3a71a7ec6375988f91f and remains the stable identity/lineage baseline for CORE-01B.",
-    "CORE-01B is the only active product increment and adds scoped evidence/provenance/conflict/reconciliation to the same canonical profile database.",
-    "Scope specificity may identify the applicable evidence layer, but contradictory active claims at that layer may not be silently ranked or collapsed.",
+    "CORE-01A established durable Song/version identity and CORE-01B added scoped conflict-aware evidence in the same canonical profile database.",
+    "CORE-01B hosted exact-head proof remains UNOBSERVED and is not converted to green or allowed to block unrelated dependency-ready construction.",
+    "CORE-01C is the only active product increment and adds append-only Song-scoped chronological Activity so an artist can reopen a Song and understand what changed.",
+    "Activity remains inside lineage.sqlite3; no event/context sidecar or second Headquarters store is authorized.",
+    "Newest/current never implies approved and Activity may not manufacture approval from recency.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001.",
-    "Artist and Song semantics remain above every DAW/provider; no host integration is selected in this increment.",
-    "Hosted exact-head CI that is unavailable through the connector remains UNOBSERVED evidence, not a global construction stop."
+    "Artist and Song semantics remain above every DAW/provider; no host integration is selected in this increment."
   ]
 }
