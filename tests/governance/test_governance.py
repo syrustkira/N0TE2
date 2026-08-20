@@ -15,7 +15,11 @@ class GovernanceRegressionTests(unittest.TestCase):
     def clone(self):
         td = tempfile.TemporaryDirectory()
         dst = Path(td.name) / "repo"
-        shutil.copytree(ROOT, dst)
+        shutil.copytree(
+            ROOT,
+            dst,
+            ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
+        )
         self.addCleanup(td.cleanup)
         return dst
 
