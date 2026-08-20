@@ -26,79 +26,108 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-04" or increment != "CORE-04A":
+if active != "CORE-04" or increment != "CORE-04B":
     print(
         f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}",
         file=sys.stderr,
     )
     raise SystemExit(1)
 
-from n0te2 import ActionIntent, AuthorityService  # noqa: E402
+from n0te2 import OutboundEnvelope, OutboundInspector, OutboundMaterial  # noqa: E402
 
-intent = ActionIntent(
-    action_id="action:publish:master-v7",
-    job_id="job:publish-release-master",
-    action_class="IRREVERSIBLE",
-    description="Publish the approved master to the selected release destination",
-    target_ref="song:song-1/version:v7",
-    revision_fingerprint="sha256:revision-v7",
-    payload_fingerprint="sha256:rendered-master-v7",
-    destination="provider:distribution:selected-release",
-    purpose="Publish this exact approved master for release",
-    data_categories=("MASTER_AUDIO", "RELEASE_METADATA", "MASTER_AUDIO"),
+master = OutboundMaterial(
+    item_id="material:master-v7",
+    category="UNRELEASED_AUDIO",
+    source_ref="song:song-1/version:v7/asset:master",
+    revision_fingerprint="sha256:master-v7",
+    private=True,
+    rights_ref="rights:artist-owned",
+    consent_ref="consent:artist:analysis-provider",
+)
+notes = OutboundMaterial(
+    item_id="material:private-notes",
+    category="PRIVATE_ARTIST_CONTEXT",
+    source_ref="song:song-1/context:mix-notes",
+    revision_fingerprint="sha256:mix-notes-v3",
+    private=True,
+    rights_ref="rights:artist-private-context",
+    consent_ref="consent:artist:analysis-provider",
 )
 
-service = AuthorityService()
-preview = service.preview(intent)
-assert preview.intent_fingerprint == intent.intent_fingerprint
-assert preview.data_categories == ("MASTER_AUDIO", "RELEASE_METADATA")
-
-approval = service.bind_approval(intent, source_ref="artist-confirmation:approval-screen:42")
-valid = service.validate(intent, approval)
-assert valid.status == "VALID"
-assert valid.bound_intent_fingerprint == preview.intent_fingerprint
-
-# A material revision change makes the old approval unusable.
-stale_intent = replace(
-    intent,
-    revision_fingerprint="sha256:revision-v8",
-    payload_fingerprint="sha256:rendered-master-v8",
+envelope = OutboundEnvelope(
+    request_id="request:mix-analysis:001",
+    job_id="job:analyze-master",
+    description="Analyze the exact unreleased master and selected private mix notes",
+    destination="provider:model:selected-analysis",
+    purpose="Return bounded mix feedback for this exact Song version",
+    materials=(notes, master),
+    retention_statement="Provider retention policy reviewed for this bounded request",
+    cost_statement="Estimated maximum cost: $0.25",
 )
-stale = service.validate(stale_intent, approval)
-assert stale.status == "STALE"
-assert stale.current_intent_fingerprint != stale.bound_intent_fingerprint
 
-# Non-material category order/duplication canonicalizes to the same fingerprint.
-reordered = replace(
-    intent,
-    data_categories=("RELEASE_METADATA", "MASTER_AUDIO", "MASTER_AUDIO"),
+inspector = OutboundInspector()
+preview = inspector.preview(envelope)
+assert tuple(item.item_id for item in preview.materials) == (
+    "material:master-v7",
+    "material:private-notes",
 )
-assert reordered.intent_fingerprint == intent.intent_fingerprint
-assert service.validate(reordered, approval).status == "VALID"
-
-# A local reversible action can omit destination/purpose but still gains no executor.
-local = ActionIntent(
-    action_id="action:local:rename-version",
-    job_id="job:rename-version",
-    action_class="REVERSIBLE",
-    description="Rename the current local Song version",
-    target_ref="song:song-1/version:v7",
-    revision_fingerprint="sha256:revision-v7",
-    payload_fingerprint="sha256:rename-payload",
+assert preview.private_material_ids == (
+    "material:master-v7",
+    "material:private-notes",
 )
-local_approval = service.bind_approval(local, source_ref="artist-confirmation:local:1")
-assert service.validate(local, local_approval).status == "VALID"
+assert preview.data_categories == (
+    "PRIVATE_ARTIST_CONTEXT",
+    "UNRELEASED_AUDIO",
+)
+assert preview.destination == envelope.destination
+assert preview.purpose == envelope.purpose
+assert preview.retention_statement == envelope.retention_statement
+assert preview.cost_statement == envelope.cost_statement
 
-# Authority binding is not execution permission. The public service owns no action verb.
+confirmation = inspector.bind_confirmation(
+    envelope,
+    source_ref="artist-confirmation:egress-screen:17",
+)
+assert inspector.validate_confirmation(envelope, confirmation).status == "VALID"
+
+# Changing one represented consent fact invalidates the entire bounded confirmation.
+changed_consent = replace(
+    envelope,
+    materials=(replace(master, consent_ref="consent:artist:different-scope"), notes),
+)
+assert inspector.validate_confirmation(changed_consent, confirmation).status == "STALE"
+
+# Changing the exact source revision also invalidates it.
+changed_revision = replace(
+    envelope,
+    materials=(replace(master, revision_fingerprint="sha256:master-v8"), notes),
+)
+assert inspector.validate_confirmation(changed_revision, confirmation).status == "STALE"
+
+# Input order is non-material and canonicalizes.
+reordered = replace(envelope, materials=tuple(reversed(envelope.materials)))
+assert reordered == envelope
+assert inspector.validate_confirmation(reordered, confirmation).status == "VALID"
+
+# Inspect/confirm is still not transport.
 public_methods = {
     name
-    for name in dir(AuthorityService)
-    if not name.startswith("_") and callable(getattr(AuthorityService, name))
+    for name in dir(OutboundInspector)
+    if not name.startswith("_") and callable(getattr(OutboundInspector, name))
 }
-assert public_methods == {"preview", "bind_approval", "validate"}
-for forbidden in ("execute", "send", "post", "publish", "mutate", "charge"):
-    assert not hasattr(service, forbidden)
+assert public_methods == {"preview", "bind_confirmation", "validate_confirmation"}
+for forbidden in (
+    "send",
+    "upload",
+    "transmit",
+    "request",
+    "call_model",
+    "execute",
+    "publish",
+    "post",
+):
+    assert not hasattr(inspector, forbidden)
 
 print(
-    "CORE-04A CONSUMER SMOKE: GREEN: exact action preview bound approval to one material fingerprint; unchanged intent stayed VALID, changed revision/payload became STALE, category ordering canonicalized, and authority exposed no execution path"
+    "CORE-04B CONSUMER SMOKE: GREEN: exact private outbound material, destination, purpose, retention and cost were inspectable; confirmation bound to the exact package, consent/revision changes became STALE, input order canonicalized, and no transport API existed"
 )
