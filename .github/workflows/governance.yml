@@ -33,9 +33,9 @@ jobs:
         run: python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
       - name: Validate construction governance
         run: python governance/check_governance.py --repo .
-      - name: Governance regression tests
+      - name: Governance and product regression tests
         run: python -m unittest discover -s tests -p 'test_*.py'
-      - name: Pre-product smoke boundary
+      - name: Stage consumer smoke
         run: python governance/smoke/consumer_smoke.py
       - name: Publish exact-head success evidence
         if: ${{ success() }}

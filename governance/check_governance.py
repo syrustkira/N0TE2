@@ -138,6 +138,9 @@ def check_graph(repo: Path, requirements):
     require(by_id["TEST-01"]["depends_on"] == ["CAND-01"], "TEST-01 must never precede CAND-01")
     require({"REQ-SCOPE-148", "REQ-SCOPE-150"}.issubset(set(expand_requirement_expr(by_id["DAW-07"]["requirements"]))), "DAW-07 lost Generic Other/plugin baseline")
     require("AUDIO-02" in by_id["DAW-07"]["depends_on"], "DAW-07 flattened to manual-only: AUDIO-02 missing")
+
+    active_nodes = [n["id"] for n in nodes if n["state"] == "ACTIVE"]
+    require(len(active_nodes) == 1, f"exactly one graph node must be ACTIVE, found {active_nodes}")
     return by_id
 
 
@@ -250,19 +253,37 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
     expected = {
         "BOOT-02": "N0TE2-BOOT-02",
         "LEGACY-01": "N0TE2-LEGACY-01",
+        "CORE-01": "N0TE2-CORE-01A",
     }
     require(active in expected, f"unsupported active construction node: {active}")
     require(r["receipt_id"] == expected[active], "unexpected active receipt")
     require(r["node_id"] == active, "receipt must bind current active node")
     baseline = r["baseline_sha"]
     require(HEX40.match(baseline) is not None, "receipt baseline_sha must be exact 40-char lowercase SHA")
-    require(r["product_code_allowed"] is False, f"{active} receipt cannot allow product code")
+
     if active == "BOOT-02":
+        require(r["product_code_allowed"] is False, "BOOT-02 receipt cannot allow product code")
         require(r["legacy_admission_allowed"] is False, "BOOT-02 cannot authorize legacy admission")
-    else:
+    elif active == "LEGACY-01":
+        require(r["product_code_allowed"] is False, "LEGACY-01 receipt cannot allow product code")
         require(r["legacy_admission_allowed"] is True, "LEGACY-01 must authorize migration evidence work")
         require(r["legacy_source_copy_allowed"] is False, "LEGACY-01 cannot authorize direct legacy source copy")
         require(r["legacy_test_text_copy_allowed"] is False, "LEGACY-01 cannot authorize direct legacy test-text copy")
+    else:
+        require(r.get("increment_id") == "CORE-01A", "CORE-01 receipt must bind CORE-01A")
+        require(r["product_code_allowed"] is True, "CORE-01A must explicitly authorize bounded product code")
+        require(r["legacy_admission_allowed"] is False, "CORE-01A cannot reopen legacy admission")
+        require(r["legacy_source_copy_allowed"] is False, "CORE-01A cannot authorize direct legacy source copy")
+        require(r["legacy_test_text_copy_allowed"] is False, "CORE-01A cannot authorize direct legacy test-text copy")
+        require(
+            {"n0te2/", "tests/core/", "governance/", "tests/governance/", ".github/workflows/"}.issubset(set(r.get("allowed_prefixes", []))),
+            "CORE-01A receipt lost bounded implementation/test/governance paths",
+        )
+        require(
+            {"app/", "src/", "legacy/", "vendor/"}.issubset(set(r.get("forbidden_prefixes", []))),
+            "CORE-01A receipt weakened clean-room forbidden paths",
+        )
+
     if verify_git:
         try:
             inside = git(repo, "rev-parse", "--is-inside-work-tree") == "true"
@@ -278,7 +299,7 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
         require(not bad, f"changed paths outside {active} receipt: {', '.join(bad)}")
         forbidden = tuple(r.get("forbidden_prefixes", []))
         bad_forbidden = [p for p in changed if p.startswith(forbidden)]
-        require(not bad_forbidden, f"product/direct-legacy paths changed during {active}: {', '.join(bad_forbidden)}")
+        require(not bad_forbidden, f"forbidden clean-room paths changed during {active}: {', '.join(bad_forbidden)}")
     return r
 
 
@@ -291,17 +312,25 @@ def check_stage(repo: Path, graph: dict):
     require(held_ids == {f"HOLD-{n:03d}" for n in range(1, 8)}, "held scope changed without explicit promotion")
     require(active in graph, "current active node is not in completion graph")
     require(graph[active]["state"] == "ACTIVE", "current active node must be ACTIVE in graph")
+    require([n for n, row in graph.items() if row["state"] == "ACTIVE"] == [active], "graph/current-state active node mismatch")
     for done in current.get("completed_nodes", []):
         require(done in graph and graph[done]["state"] == "DONE", f"completed node not DONE in graph: {done}")
-    require(current["product_code_authorized"] is False, "pre-product stages cannot authorize product code")
+
     if active == "BOOT-02":
-        require(graph["BOOT-02"]["state"] == "ACTIVE", "BOOT-02 must be active during BOOT-02")
+        require(current["product_code_authorized"] is False, "BOOT-02 cannot authorize product code")
         require(current["legacy_admission_authorized"] is False, "BOOT-02 cannot authorize legacy admission")
     elif active == "LEGACY-01":
         require(graph["BOOT-02"]["state"] == "DONE", "LEGACY-01 cannot start before BOOT-02 is DONE")
-        require(graph["LEGACY-01"]["state"] == "ACTIVE", "LEGACY-01 must be ACTIVE")
         require("BOOT-02" in current.get("completed_nodes", []), "BOOT-02 missing from completed nodes")
+        require(current["product_code_authorized"] is False, "LEGACY-01 cannot authorize product code")
         require(current["legacy_admission_authorized"] is True, "LEGACY-01 migration evidence must be authorized")
+        check_legacy_admission(repo)
+    elif active == "CORE-01":
+        require(graph["LEGACY-01"]["state"] == "DONE", "CORE-01 cannot activate before LEGACY-01 construction dependency closes")
+        require("LEGACY-01" in current.get("completed_nodes", []), "LEGACY-01 missing from completed nodes")
+        require(current["product_code_authorized"] is True, "CORE-01 product slice must explicitly authorize product code")
+        require(current["legacy_admission_authorized"] is False, "CORE-01 cannot keep legacy admission active")
+        require(current.get("active_increment") == "CORE-01A", "CORE-01 active increment must be CORE-01A")
         check_legacy_admission(repo)
     else:
         raise GovernanceError(f"stage transition not yet supported by validator: {active}")
@@ -317,7 +346,7 @@ def run(repo: Path, verify_git: bool):
     current = check_stage(repo, graph)
     check_receipt(repo, verify_git, current)
     print("N0TE2 GOVERNANCE: GREEN")
-    print(f"requirements={len(requirements)} nodes={len(graph)} active={current['active_node']}")
+    print(f"requirements={len(requirements)} nodes={len(graph)} active={current['active_node']} increment={current.get('active_increment', '-')}")
 
 
 if __name__ == "__main__":

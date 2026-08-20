@@ -1,10 +1,11 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "repository": "syrustkira/N0TE2",
-  "construction_phase": "1 ADMIT",
-  "active_node": "LEGACY-01",
-  "product_code_authorized": false,
-  "legacy_admission_authorized": true,
+  "construction_phase": "2 CORE",
+  "active_node": "CORE-01",
+  "active_increment": "CORE-01A",
+  "product_code_authorized": true,
+  "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
   "completed_nodes": [
@@ -14,16 +15,16 @@
     "AUDIT-01",
     "AUDIT-HISTORY",
     "AUDIT-DESIGN",
-    "AUDIT-GRAPH"
+    "AUDIT-GRAPH",
+    "LEGACY-01"
   ],
-  "next_after_legacy_01": "CORE-01",
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "BOOT-02 is closed at exact green head 2e4f49dfe6516c21cd09a4272a53ebeae64ccf95.",
-    "LEGACY-01 classifies and verifies migration evidence; it does not admit product code by existence or adjacency.",
-    "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001 unless rights treatment is explicitly resolved.",
-    "Fresh N0TE2 reimplementation from canonical behavior contracts is the conservative default.",
-    "All six core DAWs plus DAW-07 and macOS+Windows+Linux platform acceptance still gate customer-mode handoff.",
+    "LEGACY-01 is closed as a construction dependency after substantive quarry classification, rights/contamination boundaries and selected behavior reconciliation; exact raw-head hosted acceptance remains an UNOBSERVED evidence item and is not promoted to green.",
+    "CORE-01A is the only active product increment and authorizes fresh clean-room N0TE2 implementation only within its receipt.",
+    "CORE-01A builds durable Artist/Song identity plus exact version/artifact lineage; it does not close all of CORE-01.",
+    "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001.",
+    "Artist and Song semantics remain above every DAW/provider; no host integration is selected in this increment.",
     "Missing future licenses/devices/accounts/certificates never stop unrelated dependency-ready construction."
   ]
 }

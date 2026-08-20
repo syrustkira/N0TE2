@@ -11,6 +11,7 @@ SPEC = importlib.util.spec_from_file_location("n0te2_governance", ROOT / "govern
 gov = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gov)
 
+
 class GovernanceRegressionTests(unittest.TestCase):
     def clone(self):
         td = tempfile.TemporaryDirectory()
@@ -138,27 +139,51 @@ class GovernanceRegressionTests(unittest.TestCase):
         self.write_json(p, d)
         self.assert_red(repo, "resource-wait loop")
 
-    def test_receipt_rejects_product_path_change(self):
+    def test_core_receipt_must_explicitly_authorize_product_code(self):
         repo = self.clone()
-        subprocess.run(["git","init","-b","main"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(["git","config","user.email","test@example.invalid"], cwd=repo, check=True)
-        subprocess.run(["git","config","user.name","N0TE2 Test"], cwd=repo, check=True)
-        subprocess.run(["git","add","README.md"], cwd=repo, check=True)
-        subprocess.run(["git","commit","-m","seed"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        baseline = subprocess.check_output(["git","rev-parse","HEAD"], cwd=repo, text=True).strip()
+        p = repo / "governance/active_receipt.json"
+        d = json.loads(p.read_text())
+        d["product_code_allowed"] = False
+        self.write_json(p, d)
+        self.assert_red(repo, "must explicitly authorize bounded product code")
+
+    def test_core_receipt_cannot_reopen_legacy_copy(self):
+        repo = self.clone()
+        p = repo / "governance/active_receipt.json"
+        d = json.loads(p.read_text())
+        d["legacy_source_copy_allowed"] = True
+        self.write_json(p, d)
+        self.assert_red(repo, "direct legacy source copy")
+
+    def test_receipt_rejects_unselected_product_path_change(self):
+        repo = self.clone()
+        subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
+        subprocess.run(["git", "config", "user.name", "N0TE2 Test"], cwd=repo, check=True)
+        subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
+        subprocess.run(["git", "commit", "-m", "seed"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        baseline = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
         rp = repo / "governance/active_receipt.json"
-        receipt = json.loads(rp.read_text()); receipt["baseline_sha"] = baseline; self.write_json(rp, receipt)
-        subprocess.run(["git","add","governance","tests",".github","AGENTS.md",".gitignore"], cwd=repo, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.run(["git","commit","-am","governance"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(["git","add","governance","tests","AGENTS.md",".gitignore"], cwd=repo, check=True)
-        if subprocess.check_output(["git","status","--porcelain"], cwd=repo, text=True).strip():
-            subprocess.run(["git","commit","-m","governance files"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        (repo / "src").mkdir(); (repo / "src/product.py").write_text("print('too early')\n")
-        subprocess.run(["git","add","src/product.py"], cwd=repo, check=True)
-        subprocess.run(["git","commit","-m","bad product change"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        receipt = json.loads(rp.read_text())
+        receipt["baseline_sha"] = baseline
+        self.write_json(rp, receipt)
+        subprocess.run(
+            ["git", "add", "governance", "tests", ".github", "AGENTS.md", ".gitignore", "n0te2"],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        subprocess.run(["git", "commit", "-m", "selected core slice"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        gov.run(repo, verify_git=True)
+
+        (repo / "src").mkdir()
+        (repo / "src/product.py").write_text("print('outside selected slice')\n")
+        subprocess.run(["git", "add", "src/product.py"], cwd=repo, check=True)
+        subprocess.run(["git", "commit", "-m", "bad adjacent product change"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
         with self.assertRaises(gov.GovernanceError) as cm:
             gov.run(repo, verify_git=True)
-        self.assertIn("outside LEGACY-01 receipt", str(cm.exception))
+        self.assertIn("outside CORE-01 receipt", str(cm.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

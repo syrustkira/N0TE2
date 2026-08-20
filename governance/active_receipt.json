@@ -1,30 +1,46 @@
 {
-  "schema_version": 2,
-  "receipt_id": "N0TE2-LEGACY-01",
-  "node_id": "LEGACY-01",
-  "baseline_sha": "2e4f49dfe6516c21cd09a4272a53ebeae64ccf95",
-  "purpose": "Close legacy admission mechanically without copying legacy implementation into N0TE2 or starting product construction.",
-  "product_code_allowed": false,
-  "legacy_admission_allowed": true,
+  "schema_version": 3,
+  "receipt_id": "N0TE2-CORE-01A",
+  "node_id": "CORE-01",
+  "increment_id": "CORE-01A",
+  "baseline_sha": "55fac36fee653a875c27f65a8feb59d6a1eb983b",
+  "purpose": "Build the first clean-room product slice: durable Artist/Song identity and exact version/artifact lineage that survives restart without current/approved aliasing or profile leakage.",
+  "product_code_allowed": true,
+  "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
   "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore"],
-  "allowed_prefixes": ["governance/", "tests/governance/", ".github/workflows/"],
-  "forbidden_prefixes": ["app/", "src/", "n0te2/", "legacy/", "vendor/"],
-  "source_quarry": {
-    "repository": "syrustkira/N0TE",
-    "commit_sha": "25e2f2f5fd8ea4adc0c7e61650531430025e59db",
-    "tree_sha": "fb7eb7a9d3a6f2e1620dfbbfca7f21b51975b7c4"
+  "allowed_prefixes": ["governance/", "tests/governance/", ".github/workflows/", "n0te2/", "tests/core/"],
+  "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
+  "lineage": {
+    "portfolio": "N0TE2",
+    "outcome": "A real Song can be created, left, reopened and resumed without identity or approval drift.",
+    "journeys": ["J-IDEA-SONG", "J-CORE-LIFECYCLE"],
+    "capability": "Durable Song identity + exact version/artifact lineage",
+    "increment": "CORE-01A"
   },
-  "close_proof": [
-    "331/331 legacy leaf assets remain mechanically classified with zero invisible assets",
-    "canonical disposition and contamination rules are machine enforced",
-    "direct legacy source/test-text copying remains blocked by LICENSE-GATE-001",
-    "selected legacy execution is reconciled without laundering failure: 10 behavior groups have all selected tests green and TESTMAP-006 remains explicitly red",
-    "head-derived PR-merge execution is labeled historical evidence rather than exact raw-head proof",
-    "N0TE2-only replacement regression gaps remain explicit and non-optional",
-    "governance/admission regressions green on the exact N0TE2 branch head",
-    "no product or direct legacy implementation paths changed since baseline"
+  "reuse": {
+    "mode": "SEMANTICS_AND_EVIDENCE_ONLY",
+    "legacy_candidates": ["SongStore", "AssetReferenceStore", "Context Engine", "VersionStore", "atomic-write findings"],
+    "direct_copy": false,
+    "fresh_reimplementation_default": true
+  },
+  "completion_proof": [
+    "clean profile creates one Artist and one Song with stable opaque identities",
+    "a source asset can be attached with exact content identity",
+    "v1 and v2 preserve immutable ancestry and artifact linkage",
+    "CURRENT may be v2 while APPROVED remains v1 until explicit approval",
+    "close and reopen preserve identical Artist/Song/asset/version IDs and active Song",
+    "another profile cannot read or link the first profile's Song/assets",
+    "copied or corrupt durable state fails visibly rather than silently resetting",
+    "tests and stage smoke pass without DAW/provider dependencies"
   ],
-  "next_node_after_close": "CORE-01"
+  "non_scope": [
+    "DAW adapters or host hierarchy",
+    "full Artist Graph or universal search/activity",
+    "UI polish or product shell",
+    "release/content/business/provider execution",
+    "wholesale legacy code or test import"
+  ],
+  "next_selection_rule": "After CORE-01A proof, reconcile evidence and reselect from the whole N0TE hierarchy. Do not continue by storage-code adjacency."
 }
