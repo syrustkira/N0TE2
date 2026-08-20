@@ -10,6 +10,7 @@ from .lineage import LineageStore
 from .provenance import ProvenanceLedger
 from .recovery import RecoveryManager
 from .session import SessionMemory
+from .skills import SkillMemory
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
 
 
@@ -22,6 +23,7 @@ class HeadquartersMemory:
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
         self.sessions = SessionMemory(store, self.evidence)
+        self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.provenance = ProvenanceLedger(store)
         self.recovery = RecoveryManager(store)
         self.context = ContextIsolationService(store, self.evidence)
