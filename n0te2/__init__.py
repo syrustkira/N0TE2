@@ -73,6 +73,13 @@ from .session import (
     SessionPromotion,
     SongSession,
 )
+from .skills import (
+    SKILL_LEVELS,
+    SKILL_SOURCE_KINDS,
+    SkillAssessment,
+    SkillMemory,
+    SkillState,
+)
 from .twins import (
     SongTwinView,
     TwinAwareSongKnowledgeMapService,
@@ -126,10 +133,15 @@ __all__ = [
     "ResumeVersion",
     "SESSION_ITEM_KINDS",
     "SESSION_STATES",
+    "SKILL_LEVELS",
+    "SKILL_SOURCE_KINDS",
     "ScoreContribution",
     "SessionItem",
     "SessionMemory",
     "SessionPromotion",
+    "SkillAssessment",
+    "SkillMemory",
+    "SkillState",
     "SnapshotHashMismatchError",
     "SnapshotInfo",
     "SnapshotNotFoundError",
