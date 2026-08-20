@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .activity import ActivityLog
 from .evidence import EvidenceMemory
+from .graph import SongKnowledgeMapService
 from .lineage import LineageStore
 from .provenance import ProvenanceLedger
 from .recovery import RecoveryManager
@@ -18,6 +19,7 @@ class HeadquartersMemory:
         self.activity = ActivityLog(store)
         self.provenance = ProvenanceLedger(store)
         self.recovery = RecoveryManager(store)
+        self.knowledge = SongKnowledgeMapService(store)
 
     @classmethod
     def create(cls, root: str | Path, artist_name: str) -> "HeadquartersMemory":

@@ -1,5 +1,6 @@
 from .activity import ActivityEvent, ActivityLog
 from .evidence import EvidenceClaim, EvidenceMemory, EvidenceResolution
+from .graph import GraphEdge, GraphNode, SongKnowledgeMap, SongKnowledgeMapService
 from .lineage import (
     Asset,
     Artist,
@@ -44,6 +45,8 @@ __all__ = [
     "EvidenceClaim",
     "EvidenceMemory",
     "EvidenceResolution",
+    "GraphEdge",
+    "GraphNode",
     "HeadquartersMemory",
     "LineageCorruptionError",
     "LineageError",
@@ -64,6 +67,8 @@ __all__ = [
     "SnapshotNotFoundError",
     "SnapshotValidationError",
     "Song",
+    "SongKnowledgeMap",
+    "SongKnowledgeMapService",
     "SongResumeBrief",
     "SongResumeService",
     "ValidationError",

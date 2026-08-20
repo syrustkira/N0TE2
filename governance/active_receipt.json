@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01F",
+  "receipt_id": "N0TE2-CORE-01G",
   "node_id": "CORE-01",
-  "increment_id": "CORE-01F",
-  "baseline_sha": "650180dcecd8ddef39cf13dd1694093cc1a8e65d",
-  "purpose": "Add explicit local recovery snapshots for the canonical profile database so a corrupt live DB can be inspected and restored by exact hash without silent fallback or loss of the pre-restore evidence.",
+  "increment_id": "CORE-01G",
+  "baseline_sha": "91a2f86240377f649cb80ca04bb0439eba05006c",
+  "purpose": "Add one pure-read Song Knowledge Map that projects canonical Song/version/asset/evidence/Activity/provenance relationships without creating a second graph store or leaking another Song.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,40 +14,37 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can explicitly restore a verified local canonical-memory snapshot after corruption and resume the same Song state represented by that restore point.",
-    "journeys": ["J-TRUST", "J-CORE-LIFECYCLE", "J-IDEA-SONG"],
-    "capability": "Explicit local snapshot / inspect / restore",
-    "increment": "CORE-01F"
+    "outcome": "The artist can inspect one coherent Song map and understand which versions, assets, evidence, Activity and provenance records belong together without state duplication or cross-Song leakage.",
+    "journeys": ["J-IDEA-SONG", "J-COMPARE-DECIDE", "J-WHAT-NEXT"],
+    "capability": "Canonical read-only Song Knowledge Graph projection",
+    "increment": "CORE-01G"
   },
   "reuse": {
-    "mode": "STANDARD_SQLITE_AND_N0TE2_IDENTITY_ONLY",
-    "n0te2_dependencies": ["LineageStore profile identity", "HeadquartersMemory canonical DB"],
-    "legacy_candidates": ["atomic-write findings", "backup/restore/recovery safety semantics"],
-    "legacy_rejections": ["silent fallback to stale state", "parallel canonical recovery store", "automatic creative undo"],
+    "mode": "N0TE2_CANONICAL_RELATIONAL_OWNERS_ONLY",
+    "n0te2_dependencies": ["LineageStore", "EvidenceMemory", "ActivityLog", "ProvenanceLedger", "HeadquartersMemory"],
+    "legacy_candidates": ["ProjectGraph node-kind ideas as evidence only"],
+    "legacy_rejections": ["second graph database", "duplicate object ownership", "portability scoring as relationship truth"],
     "direct_copy": false
   },
   "completion_proof": [
-    "snapshot uses SQLite backup into a temporary same-profile recovery file and is integrity/profile checked before atomic replacement",
-    "snapshot has an exact SHA-256 that is required for restore",
-    "normal HeadquartersMemory.open continues to fail visibly on a corrupt live DB even while a valid snapshot exists",
-    "inspect_snapshot works without opening or mutating the live canonical database",
-    "wrong restore hash refuses before replacing live state",
-    "explicit exact-hash restore preserves the current/corrupt database before installing the verified snapshot",
-    "restored profile reopens with the exact Artist/Song/version/evidence state present at snapshot and not post-snapshot mutations",
-    "a snapshot copied under another profile is rejected by embedded profile identity",
-    "failure while replacing a newly-created snapshot cannot destroy the previous valid snapshot",
-    "unreadable snapshot returns a bounded validation failure rather than an internal/uninitialized error"
+    "Song map emits unique immutable typed nodes and deterministic typed edges from existing canonical owners only",
+    "CURRENT and APPROVED remain separate edges to their exact versions",
+    "version parentage, Song assets and version-asset membership are projected without cross-Song links",
+    "Song/version evidence claims include superseded history and explicit supersession edges",
+    "Song-scoped Activity is represented chronologically by sequence and linked to its canonical target",
+    "provenance records describe canonical outputs and DERIVED_FROM links point to same-Song canonical input or explicit EXTERNAL_REF",
+    "unrelated Song/version/asset/evidence/Activity/provenance IDs are absent",
+    "repeated map reads after restart insert/update/delete zero canonical rows and return an equal deterministic map",
+    "missing or inconsistent canonical targets fail visibly rather than being omitted or fabricated"
   ],
   "non_scope": [
-    "cloud backup or multi-device sync",
-    "automatic rollback or auto-restore",
-    "crash reporting/upload",
-    "telemetry",
-    "full application lifecycle/update/uninstall",
-    "generic backup engine",
-    "Technical Twin / Creative Twin",
-    "DAW/provider work",
-    "hosted-CI proof-loop scaffolding"
+    "stored graph database or graph mutation API",
+    "universal search",
+    "graph editor or visualization UI",
+    "Technical Twin / Creative Twin consumer UX",
+    "DAW/provider implementation",
+    "broader Artist/business graph",
+    "CI-proof scaffolding"
   ],
-  "next_selection_rule": "After CORE-01F proof, reconcile evidence and globally reselect. Do not continue reliability/backup work by adjacency."
+  "next_selection_rule": "After CORE-01G proof, reconcile evidence and globally reselect. Do not expand the graph by adjacency."
 }
