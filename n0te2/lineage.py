@@ -140,6 +140,8 @@ class LineageStore:
     def _initialize(cls, conn: sqlite3.Connection, profile_id: str, artist_name: str) -> None:
         artist_id = _new_id("art")
         schema = """
+        BEGIN IMMEDIATE;
+
         CREATE TABLE metadata (
             key TEXT PRIMARY KEY,
             value TEXT NOT NULL
@@ -258,7 +260,9 @@ class LineageStore:
         END;
         """
         try:
-            conn.execute("BEGIN IMMEDIATE")
+            # executescript() may commit a transaction that was opened before the
+            # call. BEGIN therefore belongs inside the script so schema DDL and
+            # seed rows share one all-or-nothing transaction until conn.commit().
             conn.executescript(schema)
             conn.executemany(
                 "INSERT INTO metadata(key, value) VALUES(?, ?)",
