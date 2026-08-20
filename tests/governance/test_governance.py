@@ -158,7 +158,7 @@ class GovernanceRegressionTests(unittest.TestCase):
         subprocess.run(["git","commit","-m","bad product change"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
         with self.assertRaises(gov.GovernanceError) as cm:
             gov.run(repo, verify_git=True)
-        self.assertIn("outside BOOT-02 receipt", str(cm.exception))
+        self.assertIn("outside LEGACY-01 receipt", str(cm.exception))
 
 if __name__ == "__main__":
     unittest.main()
