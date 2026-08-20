@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-03D",
+  "receipt_id": "N0TE2-CORE-03E",
   "node_id": "CORE-03",
-  "increment_id": "CORE-03D",
-  "baseline_sha": "b756fe844b2c6e705c4938e48674419a344d406a",
-  "purpose": "Implement a provider-neutral ordered Recipe planning chassis so bounded multi-step producer jobs preserve capability, declared future authority, explicit postconditions and recovery expectations across studios without becoming blind macros or executing anything.",
+  "increment_id": "CORE-03E",
+  "baseline_sha": "608c95e0ec5366403e67eabc1241d7837f671000",
+  "purpose": "Implement the minimum semantic owned-tool identity layer required by REQ-SCOPE-111: one stable Tool identity may span explicit format endpoints while capability, parameter and state support remain separate evidence facts and no discovery/hosting behavior is pulled forward.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,41 +14,41 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can inspect and plan one bounded ordered producer job across studios while every step preserves capability truth, declared authority class, postconditions and recovery expectations and no authority is granted or host action executed.",
-    "journeys": ["J-IMPROVE", "J-WORKSPACE", "J-TRUST"],
-    "capability": "Composable host-neutral N0TE Recipe definition plus truthful per-studio plan",
-    "increment": "CORE-03D"
+    "outcome": "The artist's studio can represent one stable owned Tool across multiple explicit format endpoints and feed only explicit capability/parameter/state evidence into N0TE resolution without inferring capability from installation, brand or endpoint identity.",
+    "journeys": ["J-WORKSPACE", "J-TRUST"],
+    "capability": "Cross-format semantic Tool identity with explicit capability, parameter and state evidence",
+    "increment": "CORE-03E"
   },
   "reuse": {
-    "mode": "PURE_RECIPE_OVER_CORE03A_B",
-    "n0te2_dependencies": ["N0TEableJob", "CapabilityResolution", "ResolutionConstraints", "StudioCapabilityProfile"],
-    "legacy_candidates": ["multi-step producer-job/recipe semantics as behavioral evidence only"],
-    "legacy_rejections": ["blind host macro", "DAW click sequence", "host IDs in Recipe meaning", "candidate IDs in Recipe meaning", "authority declaration as approval", "execution inside planning"],
+    "mode": "SEMANTIC_IDENTITY_OVER_EXISTING_CAPABILITY_CANDIDATES",
+    "n0te2_dependencies": ["CapabilityCandidate", "StudioCapabilityProfile", "CapabilityResolver"],
+    "legacy_candidates": ["tool-profile/capability-graph semantics as behavioral evidence only"],
+    "legacy_rejections": ["installed name implies capability", "brand implies control", "format endpoint implies entitlement", "scanner inside identity", "hosting inside identity", "second capability scoring model"],
     "direct_copy": false
   },
   "completion_proof": [
-    "RecipeDefinition preserves declared semantic step order and rejects duplicate step IDs",
-    "each step declares a supported authority class, at least one explicit postcondition and a supported recovery policy",
-    "dependencies may reference only earlier step IDs, rejecting forward, unknown and cyclic dependency shapes before planning",
-    "Recipe structural fields contain no host, provider, candidate, track, plug-in, approval or authorization identity",
-    "stable N0TEable job IDs derive from Recipe/step identity and the same Recipe may resolve through different legitimate routes in different Studio profiles",
-    "all steps resolved returns READY; any unavailable step returns UNAVAILABLE with exact per-step resolver reason codes",
-    "unverified installed-tool identity cannot satisfy a Recipe step and user constraints are delegated to the existing resolver",
-    "authority_class remains declaration-only metadata and RecipePlan exposes no approval, authorization, executed or receipt state",
-    "host label and brand changes cannot alter plan results when explicit candidate facts are unchanged",
-    "planning is deterministic and pure with no persistence, host mutation, provider call, transaction, postcondition assertion or recovery action"
+    "one stable tool_id spans explicit VST3 and AU endpoints with different native identities without duplicating semantic Tool identity",
+    "endpoint presence alone creates zero capability candidates, parameter bindings or state support",
+    "ToolCapabilityBinding accepts only the existing CORE-03A OWNED_TOOL CapabilityCandidate type and rejects other route kinds",
+    "verified owned-tool candidates feed StudioCapabilityProfile unchanged while unverified candidates remain rejected by the existing resolver",
+    "the same semantic parameter key may map to different explicit native parameter refs and read/write support per endpoint",
+    "state read/write support is explicit endpoint evidence and may differ across endpoints",
+    "unknown endpoint references and duplicate endpoint/candidate/parameter/state identities are rejected",
+    "parameter/state boolean support requires real bool values and at least one supported direction",
+    "supported format vocabulary is explicit and does not imply that N0TE currently hosts any listed format",
+    "reads are deterministic and pure with no scan, load, licensing inference, parameter control, state I/O or external side effect"
   ],
   "non_scope": [
-    "Recipe execution",
-    "host macros or DAW click automation",
-    "CORE-04 approval/transactions",
-    "rollback implementation",
-    "tool discovery/scanning",
-    "semantic tool identity normalization",
+    "default/custom plugin scan paths",
+    "plugin discovery or inventory persistence",
+    "SDK hosting or instantiation",
+    "architecture bridging or sandboxing",
+    "DAW adapters",
+    "licensing/entitlement inference",
+    "parameter control or state I/O",
+    "CORE-04 execution/authority",
     "CORE-02 Success Memory",
-    "Template persistence/catalog UI",
-    "UX shell",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-03D evidence, reconcile and audit REQ-SCOPE-111 semantic owned-tool identity as the likely final CORE-03 foundation gap. Do not execute Recipes or select a DAW adapter by adjacency."
+  "next_selection_rule": "After CORE-03E evidence, reconcile and perform a full CORE-03 A-E closure audit. Keep REQ-SCOPE-150 discovery/hosting downstream. If the semantic foundation is satisfied, close CORE-03 as a construction dependency and globally reselect rather than growing tool identity by adjacency."
 }
