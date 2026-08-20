@@ -2,8 +2,8 @@
   "schema_version": 3,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
-  "active_node": "CORE-02",
-  "active_increment": "CORE-02D",
+  "active_node": "CORE-03",
+  "active_increment": "CORE-03B",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -22,14 +22,14 @@
   "truth": [
     "N0TE2 is the clean-room destination.",
     "CORE-01 remains closed as the canonical durable memory substrate.",
-    "CORE-02A Song Session, CORE-02B Reviewable Skill Evidence and CORE-02C Change -> Consequence -> Decision Memory are implemented on stacked draft PRs; hosted exact-head execution remains UNOBSERVED where the connector is blind and is not converted to green.",
-    "CORE-03A host-neutral N0TEable resolution is implemented on draft PR #15; CORE-03 remains incomplete and preserved for verified capability/profile/template work.",
-    "Global reselection chose CORE-02D because repeated Friction Memory can prevent avoidable workflow breakdown in the next real Session using explicit evidence now available from CORE-02C.",
-    "CORE-02D is the only active increment. Friction is represented only by explicit friction_key observations attached to canonical Learning episodes.",
-    "A recurring Friction pattern requires the same explicit friction_key across at least two distinct Session IDs; multiple rows or episodes inside one Session never satisfy that recurrence threshold.",
-    "Friction Memory never infers a blocker from prose, emotion, personality, health, decision type or consequence semantics and never generates a diagnosis.",
-    "Explicit prevention hints may be preserved and surfaced, but the system does not invent prevention advice in this increment.",
-    "CORE-02D selects no success-memory inference, Skill/taste mutation, DAW/provider execution or hosted-CI proof scaffolding.",
+    "CORE-02A-D provide Song Session, reviewable Skill evidence, causal-humble Change -> Consequence -> Decision memory and repeated explicit Friction memory on stacked draft PRs; CORE-02 remains incomplete and preserved for Success Memory and later learning outcomes.",
+    "CORE-03A host-neutral N0TEable resolution is implemented on draft PR #15 and remains the single owner of candidate legitimacy filtering and route scoring.",
+    "Global reselection chose CORE-03B because the resolver now needs truthful per-studio capability facts/gaps before additional memory enrichment or any DAW adapter is justified.",
+    "CORE-03B is the only active increment. StudioCapabilityProfile is a pure read model over explicit CapabilityCandidate facts; it performs no discovery, persistence, execution, approval or provider call.",
+    "host_label, route kind, brand, display_name and installed-name identity cannot create capability evidence or numeric priority. Unverified installed tools may be visible facts but remain illegitimate routes.",
+    "The same N0TEable job may resolve differently across studios because explicit verified capability facts and constraints differ, not because one DAW or provider is privileged.",
+    "All named DAWs remain peer future implementations. CORE-03B selects no Ableton, FL Studio, Logic Pro, Pro Tools, Studio One, Reaper or Generic Other adapter.",
+    "Hosted exact-head execution for prior stacked heads remains UNOBSERVED where the connector is blind and is not converted to green.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
