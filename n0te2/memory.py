@@ -9,6 +9,7 @@ from .friction import FrictionMemory
 from .graph import SongKnowledgeMapService
 from .learning import LearningMemory
 from .lineage import LineageStore
+from .operations import OperationJournal
 from .provenance import ProvenanceLedger
 from .recovery import RecoveryManager
 from .session import SessionMemory
@@ -24,6 +25,7 @@ class HeadquartersMemory:
         self.evidence = EvidenceMemory(store)
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
+        self.operations = OperationJournal(store, self.activity)
         self.sessions = SessionMemory(store, self.evidence)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.learning = LearningMemory(store, self.sessions)
