@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "node_id": "LEGACY-01",
+  "source": {
+    "repository": "syrustkira/N0TE",
+    "commit_sha": "25e2f2f5fd8ea4adc0c7e61650531430025e59db",
+    "tree_sha": "fb7eb7a9d3a6f2e1620dfbbfca7f21b51975b7c4"
+  },
+  "census": {
+    "total_leaf_files": 331,
+    "classified_leaf_files": 331,
+    "unclassified_leaf_files": 0,
+    "families": {
+      "root_files": 19,
+      "github_workflows": 3,
+      "app_top_level_python": 105,
+      "app_context": 7,
+      "app_static": 19,
+      "docs": 13,
+      "legacy_governance": 1,
+      "native": 12,
+      "packaging": 9,
+      "scripts": 9,
+      "tests": 131,
+      "third_party": 3
+    }
+  },
+  "allowed_dispositions": [
+    "REUSE_AS_IS",
+    "ADAPT",
+    "REPLACE",
+    "ARCHIVE",
+    "REJECT"
+  ],
+  "classification_authority": {
+    "semantic_source": "N0TE_PRODUCT_DB/N0TE2_LEGACY_CENSUS + N0TE2_AUDIT_LOG",
+    "repo_manifest_is_evidence_only": true,
+    "implementation_history_cannot_define_product_scope": true
+  },
+  "rights": {
+    "legacy_root_license_blob_sha": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+    "observed_license": "GNU GPL v3",
+    "license_gate_id": "LICENSE-GATE-001",
+    "direct_legacy_source_copy_authorized": false,
+    "direct_legacy_test_text_copy_authorized": false,
+    "fresh_reimplementation_default": true,
+    "rights_resolution_required_for_direct_copy": true
+  },
+  "selected_spec_evidence": {
+    "behavior_groups": 11,
+    "selected_legacy_test_files": 19,
+    "n0te2_replacement_regression_gaps": [
+      "CONNECTED_TO_OFFLINE_PENDING_STATE_CHOICE",
+      "OFFLINE_TO_CONNECTED_EXPLICIT_RECONCILIATION_CHOICE",
+      "PRIVATE_DATA_EGRESS_EXACT_DATA_DESTINATION_PURPOSE",
+      "CORRUPTION_VISIBILITY_AND_RECOVERY"
+    ],
+    "legacy_green_does_not_close_product_nodes": true
+  },
+  "contamination_classes": [
+    "ABLETON_SEMANTIC_PRIORITY",
+    "MANUAL_FALLBACK_AS_PRODUCT_IDENTITY",
+    "DEEPEST_ADAPTER_OR_FIXED_TIER_RANKING",
+    "DUPLICATE_PRODUCT_OR_COMPLETION_AUTHORITY",
+    "PARALLEL_STATE_STORE_SPIDERWEB",
+    "MONOLITHIC_SERVER_OR_ROUTE_MONKEY_PATCHING",
+    "PLAINTEXT_PERSISTENT_SECRET_FALLBACK",
+    "SILENT_CORRUPTION_TO_EMPTY_STATE",
+    "SILENT_FIXED_HISTORY_TRUNCATION",
+    "HISTORICAL_PLATFORM_OR_VERSION_FLOORS_AS_SCOPE",
+    "GENERIC_NAMES_HIDING_HOST_SPECIFIC_IMPLEMENTATION"
+  ],
+  "admission_law": {
+    "classification_is_not_copy_authority": true,
+    "test_green_is_not_admission": true,
+    "admission_requires_fresh_dependency_ready_receipt": true,
+    "no_file_enters_because_it_exists": true,
+    "no_product_code_during_legacy_01": true
+  }
+}
