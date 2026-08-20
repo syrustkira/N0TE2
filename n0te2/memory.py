@@ -5,6 +5,7 @@ from pathlib import Path
 from .activity import ActivityLog
 from .context import ContextIsolationService
 from .evidence import EvidenceMemory
+from .friction import FrictionMemory
 from .graph import SongKnowledgeMapService
 from .learning import LearningMemory
 from .lineage import LineageStore
@@ -26,6 +27,7 @@ class HeadquartersMemory:
         self.sessions = SessionMemory(store, self.evidence)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.learning = LearningMemory(store, self.sessions)
+        self.friction = FrictionMemory(store, self.learning)
         self.provenance = ProvenanceLedger(store)
         self.recovery = RecoveryManager(store)
         self.context = ContextIsolationService(store, self.evidence)
