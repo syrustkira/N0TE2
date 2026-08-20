@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-02",
-  "active_increment": "CORE-02C",
+  "active_increment": "CORE-02D",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -22,13 +22,14 @@
   "truth": [
     "N0TE2 is the clean-room destination.",
     "CORE-01 remains closed as the canonical durable memory substrate.",
-    "CORE-02A Song Session intent/scratch/debrief is implemented on draft PR #14; rough Session chronology remains non-authoritative until explicit promotion or assessment.",
+    "CORE-02A Song Session, CORE-02B Reviewable Skill Evidence and CORE-02C Change -> Consequence -> Decision Memory are implemented on stacked draft PRs; hosted exact-head execution remains UNOBSERVED where the connector is blind and is not converted to green.",
     "CORE-03A host-neutral N0TEable resolution is implemented on draft PR #15; CORE-03 remains incomplete and preserved for verified capability/profile/template work.",
-    "CORE-02B Reviewable Skill Evidence is implemented at exact head 491f3da8c9625ed0703c2404a2d242335c7f8697 on mergeable draft PR #16; hosted exact-head execution remains UNOBSERVED and is not converted to green.",
-    "Global reselection chose CORE-02C because REQ-SCOPE-126 Change -> Consequence -> Decision memory is the common evidence substrate for later friction and success memory and can now attach to real Song Sessions without free-floating inference.",
-    "CORE-02C is the only active increment. Learning episodes preserve explicit change, observed consequences, conditions, confounders, confidence and the explicit decision that followed.",
-    "No Learning episode or favorable observation automatically mutates SkillMemory, creative EvidenceMemory, Artist taste, a success rule, a friction rule or a causal rule.",
-    "CORE-02C contains no automatic causality/recommendation engine and selects no DAW/provider/tool execution.",
+    "Global reselection chose CORE-02D because repeated Friction Memory can prevent avoidable workflow breakdown in the next real Session using explicit evidence now available from CORE-02C.",
+    "CORE-02D is the only active increment. Friction is represented only by explicit friction_key observations attached to canonical Learning episodes.",
+    "A recurring Friction pattern requires the same explicit friction_key across at least two distinct Session IDs; multiple rows or episodes inside one Session never satisfy that recurrence threshold.",
+    "Friction Memory never infers a blocker from prose, emotion, personality, health, decision type or consequence semantics and never generates a diagnosis.",
+    "Explicit prevention hints may be preserved and surfaced, but the system does not invent prevention advice in this increment.",
+    "CORE-02D selects no success-memory inference, Skill/taste mutation, DAW/provider execution or hosted-CI proof scaffolding.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
