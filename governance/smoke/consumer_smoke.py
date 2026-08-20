@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
@@ -25,7 +26,7 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-04" or increment != "CORE-04C":
+if active != "CORE-04" or increment != "CORE-04D":
     print(
         f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}",
         file=sys.stderr,
@@ -33,137 +34,149 @@ if active != "CORE-04" or increment != "CORE-04C":
     raise SystemExit(1)
 
 from n0te2 import (  # noqa: E402
+    ActionIntent,
+    AuthorityService,
+    DuplicateExecutionError,
+    HeadquartersMemory,
     NetworkPolicy,
     NetworkRoute,
-    OfflineAccumulatedChange,
-    PendingExternalChange,
+    OperationError,
 )
 
-# OFFLINE preserves local work while denying Internet transport.
-offline = NetworkPolicy("OFFLINE")
-localhost = offline.evaluate(
-    NetworkRoute("route:localhost", "LOCALHOST", "Local N0TE/DAW bridge")
-)
-internet = offline.evaluate(
-    NetworkRoute("route:provider", "INTERNET", "Remote provider")
-)
-assert localhost.status == "ALLOW"
-assert internet.status == "DENY"
-assert "OFFLINE_BLOCKS_INTERNET" in internet.reason_codes
-assert localhost.action_authority_granted is False
-assert internet.action_authority_granted is False
+with tempfile.TemporaryDirectory() as temp:
+    root = Path(temp)
+    hq = HeadquartersMemory.create(root, "Artist")
+    profile_id = hq.store.profile_id
+    song = hq.store.create_song("Execute Once Song")
+    version = hq.store.create_version(song.id, label="v1")
 
-# LAN remains explicit-approval-only, independent of OFFLINE/CONNECTED state.
-lan_denied = offline.evaluate(
-    NetworkRoute("route:lan", "LAN", "Approved studio collaborator")
-)
-lan_allowed = offline.evaluate(
-    NetworkRoute(
-        "route:lan",
-        "LAN",
-        "Approved studio collaborator",
-        lan_approval_ref="artist:lan-approval:session-1",
+    intent = ActionIntent(
+        action_id="action:provider:publish-master",
+        job_id="job:publish-master",
+        action_class="IRREVERSIBLE",
+        description="Publish this exact approved master",
+        target_ref=f"version:{version.id}",
+        revision_fingerprint="sha256:revision-v1",
+        payload_fingerprint="sha256:master-v1",
+        destination="provider:distribution:selected-release",
+        purpose="Publish this exact approved master",
+        data_categories=("MASTER_AUDIO", "RELEASE_METADATA"),
     )
-)
-assert lan_denied.status == "DENY"
-assert lan_allowed.status == "ALLOW"
-assert lan_allowed.action_authority_granted is False
+    approval = AuthorityService.bind_approval(
+        intent, "artist-confirmation:operation-smoke"
+    )
 
-# Before going OFFLINE, pending remote work cannot silently disappear.
-connected = NetworkPolicy("CONNECTED")
-pending = (
-    PendingExternalChange(
-        "change:upload",
-        "UPLOAD",
-        "Master upload is still unsent",
-        "UNSENT",
-    ),
-    PendingExternalChange(
-        "change:receipt",
-        "PROVIDER_RECEIPT",
-        "Publication receipt has not been reconciled",
-        "UNRECONCILED",
-    ),
-)
-offline_plan = connected.plan_offline_transition(reversed(pending))
-assert offline_plan.status == "CHOICE_REQUIRED"
-assert offline_plan.change_ids == ("change:receipt", "change:upload")
+    operation = hq.operations.prepare(
+        idempotency_key="idem:publish-master:v1",
+        intent=intent,
+        approval=approval,
+        song_id=song.id,
+        version_id=version.id,
+        transport_route_id="route:distribution",
+    )
+    assert operation.recorded_state == "PREPARED"
+    assert operation.attempt_count == 0
+    assert operation.transport_route_id == "route:distribution"
 
-finish_first = connected.resolve_offline_transition(offline_plan, "FINISH_FIRST")
-assert finish_first.next_mode == "CONNECTED"
-assert finish_first.requires_external_work is True
-assert finish_first.preserved_change_ids == offline_plan.change_ids
-assert finish_first.performed_external_action is False
+    # Exact duplicate preparation returns the same operation identity.
+    assert hq.operations.prepare(
+        idempotency_key="idem:publish-master:v1",
+        intent=intent,
+        approval=approval,
+        song_id=song.id,
+        version_id=version.id,
+        transport_route_id="route:distribution",
+    ).operation_id == operation.operation_id
 
-preserve = connected.resolve_offline_transition(
-    offline_plan,
-    "PRESERVE_AND_GO_OFFLINE",
-)
-assert preserve.next_mode == "OFFLINE"
-assert preserve.preserved_change_ids == offline_plan.change_ids
-assert preserve.performed_external_action is False
+    wrong_route = NetworkPolicy("CONNECTED").evaluate(
+        NetworkRoute("route:other", "INTERNET", "Unrelated provider route")
+    )
+    try:
+        hq.operations.claim_execution(
+            operation.operation_id,
+            intent=intent,
+            approval=approval,
+            claim_evidence_ref="gate:wrong-route",
+            transport_decision=wrong_route,
+        )
+    except OperationError:
+        pass
+    else:
+        raise AssertionError("wrong transport route was allowed to claim execution")
 
-# Reconnect never auto-syncs. SYNC_NOW is a directive for a later executor only.
-offline_changes = (
-    OfflineAccumulatedChange(
-        "change:local-song",
-        "SONG_EDIT",
-        "Song changed while offline",
-    ),
-    OfflineAccumulatedChange(
-        "change:local-draft",
-        "DRAFT",
-        "Provider draft changed locally while offline",
-    ),
-)
-connected_plan = offline.plan_connected_transition(reversed(offline_changes))
-assert connected_plan.status == "CHOICE_REQUIRED"
-assert connected_plan.change_ids == ("change:local-draft", "change:local-song")
+    allowed = NetworkPolicy("CONNECTED").evaluate(
+        NetworkRoute("route:distribution", "INTERNET", "Distribution provider")
+    )
+    claimed = hq.operations.claim_execution(
+        operation.operation_id,
+        intent=intent,
+        approval=approval,
+        claim_evidence_ref="gate:exact-approval-and-route",
+        transport_decision=allowed,
+    )
+    assert claimed.recorded_state == "EXECUTING"
+    assert claimed.attempt_count == 1
+    assert allowed.action_authority_granted is False
 
-sync_directive = offline.resolve_connected_transition(connected_plan, "SYNC_NOW")
-assert sync_directive.next_mode == "CONNECTED"
-assert sync_directive.reconciliation_directive == "SYNC_NOW"
-assert sync_directive.requires_external_work is True
-assert sync_directive.performed_external_action is False
-assert sync_directive.action_authority_granted is False
+    # An ambiguous result becomes UNKNOWN, never an automatic retry.
+    unknown = hq.operations.mark_unknown(
+        operation.operation_id,
+        evidence_ref="transport-timeout:provider-outcome-ambiguous",
+    )
+    assert unknown.recorded_state == "UNKNOWN"
+    assert unknown.effective_outcome == "UNKNOWN"
+    try:
+        hq.operations.claim_execution(
+            operation.operation_id,
+            intent=intent,
+            approval=approval,
+            claim_evidence_ref="gate:blind-retry",
+            transport_decision=allowed,
+        )
+    except DuplicateExecutionError:
+        pass
+    else:
+        raise AssertionError("UNKNOWN operation was allowed to retry")
 
-postpone = offline.resolve_connected_transition(connected_plan, "POSTPONE")
-assert postpone.next_mode == "CONNECTED"
-assert postpone.reconciliation_directive == "POSTPONE"
-assert postpone.requires_external_work is False
-assert postpone.preserved_change_ids == connected_plan.change_ids
+    # Later observation may reconcile outcome without erasing UNKNOWN history.
+    reconciled = hq.operations.reconcile_unknown(
+        operation.operation_id,
+        observed_outcome="SUCCEEDED",
+        evidence_ref="provider-status-query:confirmed",
+        receipt_ref="provider-receipt:confirmed",
+        result_fingerprint="sha256:provider-result-v1",
+    )
+    assert reconciled.recorded_state == "UNKNOWN"
+    assert reconciled.effective_outcome == "SUCCEEDED"
+    assert reconciled.reconciled is True
+    assert [event.event_type for event in hq.operations.events(operation.operation_id)] == [
+        "PREPARED",
+        "EXECUTION_CLAIMED",
+        "UNKNOWN",
+        "RECONCILED_SUCCEEDED",
+    ]
 
-nothing = offline.plan_connected_transition()
-assert nothing.status == "READY"
-assert "NOTHING_TO_RECONCILE" in nothing.reason_codes
-assert offline.resolve_connected_transition(nothing).performed_external_action is False
+    checkpoint_events = [
+        event.event_type
+        for event in hq.activity.for_song(song.id)
+        if event.object_type == "OPERATION" and event.object_id == operation.operation_id
+    ]
+    assert checkpoint_events == [
+        "OPERATION_PREPARED",
+        "OPERATION_EXECUTION_CLAIMED",
+        "OPERATION_UNKNOWN",
+        "OPERATION_RECONCILED_SUCCEEDED",
+    ]
 
-# The policy has no networking or synchronization executor.
-public_methods = {
-    name
-    for name in dir(NetworkPolicy)
-    if not name.startswith("_") and callable(getattr(NetworkPolicy, name))
-}
-assert public_methods == {
-    "evaluate",
-    "plan_offline_transition",
-    "resolve_offline_transition",
-    "plan_connected_transition",
-    "resolve_connected_transition",
-}
-for forbidden in (
-    "connect",
-    "disconnect",
-    "send",
-    "upload",
-    "sync",
-    "publish",
-    "execute",
-    "request",
-    "call_provider",
-):
-    assert forbidden not in public_methods
+    hq.close()
+    hq = HeadquartersMemory.open(root, profile_id)
+    reopened = hq.operations.get(operation.operation_id)
+    assert reopened.recorded_state == "UNKNOWN"
+    assert reopened.effective_outcome == "SUCCEEDED"
+    assert reopened.receipt_ref == "provider-receipt:confirmed"
+    assert reopened.attempt_count == 1
+    hq.close()
 
 print(
-    "CORE-04C CONSUMER SMOKE: GREEN: OFFLINE blocked Internet but preserved localhost, LAN required explicit approval, pending remote work survived the offline choice, reconnect required a reconciliation directive, SYNC_NOW performed nothing, and connectivity granted no action authority"
+    "CORE-04D CONSUMER SMOKE: GREEN: exact approval plus exact route produced one durable execution claim; ambiguous outcome became UNKNOWN with no retry, later receipt evidence reconciled success without erasing UNKNOWN history, and the journal survived restart"
 )
