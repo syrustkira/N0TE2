@@ -93,6 +93,16 @@ from .studio import (
     StudioCapabilityGap,
     StudioCapabilityProfile,
 )
+from .templates import (
+    TEMPLATE_FAMILIES,
+    TEMPLATE_PLAN_STATUSES,
+    TemplateDefinition,
+    TemplatePlan,
+    TemplatePlanner,
+    TemplateRole,
+    TemplateRolePlan,
+    TemplateValidationError,
+)
 from .twins import (
     SongTwinView,
     TwinAwareSongKnowledgeMapService,
@@ -177,6 +187,14 @@ __all__ = [
     "SongTwinView",
     "StudioCapabilityGap",
     "StudioCapabilityProfile",
+    "TEMPLATE_FAMILIES",
+    "TEMPLATE_PLAN_STATUSES",
+    "TemplateDefinition",
+    "TemplatePlan",
+    "TemplatePlanner",
+    "TemplateRole",
+    "TemplateRolePlan",
+    "TemplateValidationError",
     "TWIN_DOMAINS",
     "TwinAwareSongKnowledgeMapService",
     "TwinConflict",
