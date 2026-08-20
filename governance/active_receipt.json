@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-03B",
+  "receipt_id": "N0TE2-CORE-03C",
   "node_id": "CORE-03",
-  "increment_id": "CORE-03B",
-  "baseline_sha": "62f64c33c127b34596ac6ff8b13fcbc4aaa06898",
-  "purpose": "Implement a pure verified Studio Capability Profile over CORE-03A CapabilityCandidate facts so a normal artist can inspect host-native, N0TE-native, owned-tool, provider and guided strengths/gaps and resolve the same N0TEable job without host/brand marketing or installed-name inference becoming capability authority.",
+  "increment_id": "CORE-03C",
+  "baseline_sha": "aafab7865bbc2470259e07cfde183488e15b3dbb",
+  "purpose": "Implement provider-neutral Template definitions and a pure per-studio Template plan so reusable creative/operational starts preserve semantic identity above DAWs/providers while StudioCapabilityProfile truthfully reports FULL, PARTIAL or UNAVAILABLE support without executing anything.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,41 +14,41 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can inspect truthful per-studio capability facts and gaps, then resolve a stable N0TEable job from those same facts without any host, route kind, installed brand or marketing label receiving semantic priority.",
-    "journeys": ["J-WORKSPACE", "J-IDEA-SONG", "J-TRUST"],
-    "capability": "Verified per-studio capability profile and truthful gap surface over host-neutral resolver facts",
-    "increment": "CORE-03B"
+    "outcome": "One reusable Template keeps the same semantic roles/intent across studios while each Studio profile truthfully reports which required/optional roles are resolvable and through which legitimate routes.",
+    "journeys": ["J-IDEA-SONG", "J-WORKSPACE", "J-TRUST"],
+    "capability": "Provider-neutral Template definition plus truthful per-studio support plan",
+    "increment": "CORE-03C"
   },
   "reuse": {
-    "mode": "PURE_PROFILE_OVER_CORE03A_CANDIDATES",
-    "n0te2_dependencies": ["CapabilityCandidate", "CapabilityResolver", "N0TEableJob", "ResolutionConstraints"],
-    "legacy_candidates": ["environment/capability profile semantics as behavioral evidence only"],
-    "legacy_rejections": ["host-name capability inference", "installed-name implies capability", "brand-first ranking", "second resolver", "profile persistence store", "execution inside profile"],
+    "mode": "PURE_TEMPLATE_OVER_CORE03A_B",
+    "n0te2_dependencies": ["N0TEableJob", "CapabilityResolution", "ResolutionConstraints", "StudioCapabilityProfile"],
+    "legacy_candidates": ["template/blank-state semantics as behavioral evidence only"],
+    "legacy_rejections": ["DAW template macro", "track-index recipe", "host IDs in Template meaning", "candidate IDs in Template meaning", "second scoring model", "execution inside planning"],
     "direct_copy": false
   },
   "completion_proof": [
-    "profile input order is normalized by stable candidate_id and repeated reads/resolution are deterministic",
-    "host_label is descriptive only and changing it cannot change candidate legitimacy, score or recommendation",
-    "brand and display_name do not change numeric score or break equal-score route ties",
-    "unverified installed-tool facts remain visible as unverified but are rejected by the CORE-03A resolver",
-    "route summaries expose represented capabilities and verified/unverified candidate identities without ranking route kinds",
-    "the same N0TEable job may resolve to different route kinds in different Studio profiles based only on explicit candidate facts and constraints",
-    "truthful gaps reuse CORE-03A UNAVAILABLE/rejection reason codes rather than inventing marketing copy or fallback capability",
-    "multi-job resolution is deterministic by stable job.id and duplicate job/candidate identities are rejected",
-    "profile construction, summaries, gaps and resolution create no persistence, provider call, host mutation, approval or external side effect",
-    "no DAW brand, provider brand or installed tool name can create capability evidence by itself"
+    "TemplateDefinition supports the retained Song/Arrangement/Production/Mix/Vocal/Drum/Sound Design/Release/Content/Campaign/Social/Live families without host-specific structural fields",
+    "Template roles contain only stable role ID, capability, description, required flag and semantic tags; duplicate role IDs and malformed required flags are rejected",
+    "role input order is normalized and stable derived N0TEable job IDs preserve Template/role identity",
+    "all required and optional roles resolved returns FULL",
+    "only optional unavailable roles returns PARTIAL",
+    "any required unavailable role returns UNAVAILABLE",
+    "the same Template plans differently across different Studio profiles without mutating Template identity",
+    "host labels, brands and unverified installed names do not change Template meaning or resolver legitimacy",
+    "Template planning delegates constraints/rejection reasons to StudioCapabilityProfile / CORE-03A instead of scoring independently",
+    "planning is deterministic and pure with no persistence, adapter invocation, provider call, host mutation or approval side effect"
   ],
   "non_scope": [
-    "environment discovery or plugin scanning",
-    "DAW adapters or host automation",
-    "provider calls or paid execution",
-    "template instantiation or Recipes",
-    "CORE-04 authority/approval/transaction semantics",
-    "persistent studio inventory database",
-    "marketing copy generation",
-    "CORE-02 success-memory work",
+    "template persistence/catalog UI",
+    "template suggestion or randomization",
+    "DAW/provider instantiation",
+    "track creation or host macros",
+    "Recipes",
+    "tool discovery/scanning",
+    "CORE-04 authority/approval",
+    "CORE-02 Success Memory",
     "UX shell",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-03B evidence, reconcile and globally compare host-neutral Template/Recipe chassis, verified tool/environment discovery prerequisites, preserved CORE-02 Success Memory and any newly dependency-ready customer outcome. Do not select a DAW adapter merely because a Studio profile exists."
+  "next_selection_rule": "After CORE-03C evidence, reconcile and globally compare remaining CORE-03 Recipe/tool-identity closure gaps against preserved CORE-02 Success Memory. Do not implement a DAW-specific Template adapter by adjacency."
 }
