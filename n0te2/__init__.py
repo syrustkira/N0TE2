@@ -1,4 +1,14 @@
 from .activity import ActivityEvent, ActivityLog
+from .authority import (
+    ACTION_CLASSES,
+    APPROVAL_VALIDATION_STATUSES,
+    ActionIntent,
+    ActionPreview,
+    ApprovalBinding,
+    ApprovalValidation,
+    AuthorityService,
+    AuthorityValidationError,
+)
 from .capabilities import (
     RESOLUTION_STATUSES,
     ROUTE_KINDS,
@@ -131,10 +141,18 @@ from .twins import (
 )
 
 __all__ = [
+    "ACTION_CLASSES",
+    "APPROVAL_VALIDATION_STATUSES",
+    "ActionIntent",
+    "ActionPreview",
     "ActivityEvent",
     "ActivityLog",
+    "ApprovalBinding",
+    "ApprovalValidation",
     "Asset",
     "Artist",
+    "AuthorityService",
+    "AuthorityValidationError",
     "CONTEXT_IMPORT_AUTHORITY",
     "CONTEXT_IMPORT_SCOPES",
     "CONTEXT_IMPORT_SOURCES",
