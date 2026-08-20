@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "bands": {
+    "GREEN": {
+      "action": "DECIDE_IMPLEMENT_TEST_CONTINUE",
+      "examples": ["module layout", "algorithms", "tests", "reversible refactors", "error handling", "caching", "internal APIs"]
+    },
+    "AMBER": {
+      "action": "DECIDE_RECORD_RATIONALE_KEEP_REVERSIBLE",
+      "examples": ["equivalent library choice", "UI component/layout detail", "temporary implementation mechanism"]
+    },
+    "RED": {
+      "action": "HUMAN_REQUIRED",
+      "examples": ["product identity/scope change", "destructive data change", "privacy/rights", "money/spend", "surprise publication", "major security boundary", "enduring subjective artist/brand decision"]
+    }
+  },
+  "question_policy": "ASK_ONLY_IF_ALL_LEGITIMATE_AUTONOMOUS_PATHS_BLOCKED_OR_RED_AUTHORITY_REQUIRED"
+}
