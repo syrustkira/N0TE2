@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-04D",
+  "receipt_id": "N0TE2-CORE-04E",
   "node_id": "CORE-04",
-  "increment_id": "CORE-04D",
-  "baseline_sha": "ad167c6b597ba54b1520e541ff14d85aed447229",
-  "purpose": "Implement the shared durable execute-once operation journal: exact approved operation identity, route-bound outbound execution claim, append-only terminal receipt/evidence history, explicit UNKNOWN with no retry, and evidence-backed reconciliation without provider or DAW execution.",
+  "increment_id": "CORE-04E",
+  "baseline_sha": "52303150d539733ab31b05f281e11d10c5e02130",
+  "purpose": "Implement the universal pre-claim current-usability evidence gate: selected outbound execution identity must be freshly verified, entitled and permitted in the exact environment before OperationJournal may issue its one execution claim.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,43 +14,29 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "N0TE can durably identify one exact approved operation, issue at most one execution claim, preserve real receipts/evidence or UNKNOWN truth, and reconcile ambiguity later without retrying blindly.",
-    "journeys": ["J-TRUST", "J-WORKSPACE", "J-IMPROVE"],
-    "capability": "Execute-once operation journal with receipt, UNKNOWN and reconciliation semantics",
-    "increment": "CORE-04D"
+    "outcome": "An exact approved/connected operation still cannot claim execution if its selected route capability is stale, unverified, revoked, unentitled, unpermitted or for a different environment/subject/capability.",
+    "journeys": ["J-TRUST", "J-WORKSPACE"],
+    "capability": "Fresh entitlement, permission and capability evidence gate",
+    "increment": "CORE-04E"
   },
   "reuse": {
-    "mode": "CANONICAL_SQLITE_OPERATION_JOURNAL_OVER_CORE04A_CORE04C",
-    "n0te2_dependencies": ["CORE-04A exact approval binding", "CORE-04C network transport decisions", "CORE-01 Activity and durable local persistence"],
-    "legacy_candidates": ["provider idempotency/receipt and Gate-style transaction semantics as behavioral evidence only"],
-    "legacy_rejections": ["retry UNKNOWN", "mutable status row", "parallel operation database", "approval as connectivity", "connectivity as authority", "provider or DAW executor inside journal"],
+    "mode": "PURE_ELIGIBILITY_DECISION_PLUS_CORE04D_PRECLAIM_BINDING",
+    "n0te2_dependencies": ["CORE-03 stable route/capability identities", "CORE-04A exact approval", "CORE-04C transport policy", "CORE-04D execute-once operation identity"],
+    "legacy_rejections": ["installed means entitled", "connected means permitted", "verified once means forever", "eligibility as authority", "secret storage in evidence", "second capability resolver"],
     "direct_copy": false
   },
   "completion_proof": [
-    "exact duplicate preparation is idempotent while one key cannot bind a materially different operation",
-    "outbound preparation binds one exact transport route and rejects a missing route",
-    "claim requires the exact still-valid approval and, for outbound work, an ALLOW decision for the exact prepared route",
-    "wrong-route or DENY transport evidence cannot claim execution",
-    "execution may be claimed at most once and terminal/UNKNOWN operations cannot be claimed again",
-    "SUCCEEDED requires receipt, evidence and result fingerprint; FAILED and UNKNOWN require explicit evidence",
-    "UNKNOWN remains recorded history and may be reconciled exactly once to observed SUCCEEDED/FAILED with explicit evidence",
-    "reconciled success requires real receipt and result fingerprint; failed reconciliation does not invent a receipt",
-    "operation identity and lifecycle events are immutable/append-only and survive restart",
-    "operation lifecycle journals into canonical Activity chronology",
-    "tampered event ordering or invalid Song/version binding fails visibly on reopen",
-    "journal contains no provider, DAW, socket, sync, upload, publish or mutation executor"
+    "fresh verified evidence with matching job/route/subject/capability/environment and explicit GRANTED or NOT_REQUIRED access returns ALLOW",
+    "unverified, denied/unknown entitlement, denied/unknown permission or wrong identity dimensions return DENY",
+    "expired evidence or changed environment returns STALE",
+    "DENY dominates STALE while preserving all reason codes",
+    "NOT_REQUIRED must be explicit and is never inferred",
+    "verified and age fields use strict bool/integer validation",
+    "eligibility decision never grants action authority and exposes no execution/network/credential verb",
+    "outbound operation identity binds route + eligibility subject + capability and idempotency includes all three",
+    "outbound claim requires exact transport ALLOW plus exact eligibility ALLOW; missing/stale/wrong-subject/wrong-route decisions fail before claim",
+    "operation schema v1 migrates additively to v2; legacy outbound prepared operations without eligibility identity remain preserved but fail closed for execution"
   ],
-  "non_scope": [
-    "provider adapter execution",
-    "DAW/host mutation",
-    "multi-step compensation/rollback engine",
-    "actual network transport",
-    "credential storage",
-    "spend authorization",
-    "team permissions",
-    "CORE-02 Success Memory",
-    "UI Job Center",
-    "hosted-CI proof-loop scaffolding"
-  ],
-  "next_selection_rule": "After CORE-04D evidence, reconcile and globally compare host multi-step transaction/compensation, provider contract/receipts, entitlement/freshness/credential trust and preserved CORE-02 Success Memory. Do not add a real executor merely because the journal can issue an execution claim."
+  "non_scope": ["credential/keychain implementation", "OAuth/provider connection", "DAW/plugin scanner", "license-server query", "host transaction rollback", "spend authorization", "team permissions", "CORE-02 Success Memory", "UI Health screen", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After CORE-04E evidence, reconcile and globally compare host multi-step transaction/compensation, provider connection/revoke/scopes, secure credential boundary, team permissions and preserved CORE-02 Success Memory. Do not extend eligibility by adjacency."
 }
