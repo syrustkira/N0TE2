@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "2 CORE",
   "active_node": "CORE-02",
-  "active_increment": "CORE-02B",
+  "active_increment": "CORE-02C",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -22,13 +22,13 @@
   "truth": [
     "N0TE2 is the clean-room destination.",
     "CORE-01 remains closed as the canonical durable memory substrate.",
-    "CORE-02A Song Session objective/scratch/debrief is implemented at head 12247dcf5c090ac48b08205edbbb6136e8751d14; Session scratch remains durable chronology but not durable competence or taste doctrine.",
-    "CORE-03A host-neutral N0TEable resolution is implemented at head 83f675a49e65274cb4e9c23df82b3108d18dcdbf on draft PR #15; CORE-03 remains incomplete and preserved for later verified capability/profile/template work.",
-    "Global portfolio/journey reselection returned to CORE-02B because J-LEARN now has trustworthy real-work Session boundaries and explicit skill evidence is more customer-visible than another capability-profile chassis increment.",
-    "CORE-02B is the only active product increment. Skill state changes only through explicit append-only assessment or artist correction; Session scratch, notes and EvidenceMemory row volume never auto-promote mastery.",
-    "Non-artist PRACTICED/APPLIED/INDEPENDENT assessments require an owned closed Session; INDEPENDENT additionally requires explicit zero assistance.",
-    "Artist correction can move the model up, down or to UNKNOWN without deleting prior evidence, and Skill competence remains separate from Technical/Creative taste evidence.",
-    "No lesson generation, friction/success/causality engine, universal search, DAW/provider execution or hosted-CI proof scaffolding is selected in CORE-02B.",
+    "CORE-02A Song Session intent/scratch/debrief is implemented on draft PR #14; rough Session chronology remains non-authoritative until explicit promotion or assessment.",
+    "CORE-03A host-neutral N0TEable resolution is implemented on draft PR #15; CORE-03 remains incomplete and preserved for verified capability/profile/template work.",
+    "CORE-02B Reviewable Skill Evidence is implemented at exact head 491f3da8c9625ed0703c2404a2d242335c7f8697 on mergeable draft PR #16; hosted exact-head execution remains UNOBSERVED and is not converted to green.",
+    "Global reselection chose CORE-02C because REQ-SCOPE-126 Change -> Consequence -> Decision memory is the common evidence substrate for later friction and success memory and can now attach to real Song Sessions without free-floating inference.",
+    "CORE-02C is the only active increment. Learning episodes preserve explicit change, observed consequences, conditions, confounders, confidence and the explicit decision that followed.",
+    "No Learning episode or favorable observation automatically mutates SkillMemory, creative EvidenceMemory, Artist taste, a success rule, a friction rule or a causal rule.",
+    "CORE-02C contains no automatic causality/recommendation engine and selects no DAW/provider/tool execution.",
     "Direct legacy source/test-text copying remains blocked by LICENSE-GATE-001."
   ]
 }
