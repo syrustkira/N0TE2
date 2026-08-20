@@ -22,59 +22,70 @@ if active in {"BOOT-02", "LEGACY-01"}:
     print("PRE-PRODUCT SMOKE: GREEN")
     raise SystemExit(0)
 
-if active != "CORE-01" or increment != "CORE-01D":
+if active != "CORE-01" or increment != "CORE-01E":
     print(f"STAGE SMOKE: RED: unsupported active stage {active}/{increment}", file=sys.stderr)
     raise SystemExit(1)
 
-from n0te2 import HeadquartersMemory, SongResumeService  # noqa: E402
+from n0te2 import HeadquartersMemory  # noqa: E402
 
 with tempfile.TemporaryDirectory() as td:
     hq = HeadquartersMemory.create(td, "Smoke Artist")
     profile = hq.store.profile_id
-    song_a = hq.store.create_song("Smoke Song A")
-    song_b = hq.store.create_song("Smoke Song B")
-    asset = hq.store.attach_asset(song_a.id, name="source.wav", sha256="f" * 64)
-    v1 = hq.store.create_version(song_a.id, label="v1", asset_ids=[asset.id])
-    hq.store.approve_version(song_a.id, v1.id)
-    v2 = hq.store.create_version(song_a.id, label="v2", parent_version_id=v1.id, asset_ids=[asset.id])
-    hq.evidence.record_claim(
-        scope_kind="ARTIST", scope_id=hq.store.primary_artist_id, key="next.action", value="review arrangement", source_kind="REMEMBERED"
+    song = hq.store.create_song("Smoke Song")
+    asset = hq.store.attach_asset(song.id, name="take.wav", sha256="f" * 64)
+    asset_record = hq.provenance.record(
+        output_kind="ASSET",
+        output_id=asset.id,
+        input_kind="EXTERNAL",
+        input_ref="file:///recordings/take.wav",
+        operation="IMPORTED",
+        evidence_source_kind="OBSERVED",
+        evidence_ref="import:1",
     )
-    hq.evidence.record_claim(
-        scope_kind="SONG", scope_id=song_a.id, key="next.action", value="record bridge", source_kind="USER_DECLARED"
+    v1 = hq.store.create_version(song.id, label="v1", asset_ids=[asset.id])
+    hq.provenance.record(
+        output_kind="VERSION",
+        output_id=v1.id,
+        input_kind="ASSET",
+        input_ref=asset.id,
+        operation="ASSEMBLED",
+        evidence_source_kind="USER_DECLARED",
     )
-    next_claim = hq.evidence.record_claim(
-        scope_kind="VERSION", scope_id=v2.id, key="next.action", value="tighten chorus", source_kind="USER_DECLARED", source_ref="session-end"
+    v2 = hq.store.create_version(song.id, label="v2", parent_version_id=v1.id, asset_ids=[asset.id])
+    checkpoint = hq.activity.checkpoint()
+    transform = hq.provenance.record(
+        output_kind="VERSION",
+        output_id=v2.id,
+        input_kind="VERSION",
+        input_ref=v1.id,
+        operation="TRANSFORMED",
+        tool_ref="tool:owned-compressor",
+        model_ref="model:mix-assistant-v1",
+        recipe_ref="recipe:chorus-lift-2",
+        evidence_source_kind="USER_DECLARED",
+        evidence_ref="session:42",
     )
-    first = hq.evidence.record_claim(
-        scope_kind="SONG", scope_id=song_a.id, key="chorus.energy", value="needs lift", source_kind="USER_DECLARED"
-    )
-    second = hq.evidence.record_claim(
-        scope_kind="SONG", scope_id=song_a.id, key="chorus.energy", value="already right", source_kind="INFERRED", confidence=0.55
-    )
-    hq.evidence.record_claim(
-        scope_kind="SONG", scope_id=song_b.id, key="chorus.energy", value="other song only", source_kind="USER_DECLARED"
-    )
-    hq.store.select_song(song_a.id)
+    events = hq.activity.for_song(song.id, after_sequence=checkpoint)
+    assert len(events) == 1 and events[0].event_type == "PROVENANCE_RECORDED"
+    assert events[0].object_id == v2.id and events[0].payload["provenance_id"] == transform.id
     hq.close()
 
     hq = HeadquartersMemory.open(td, profile)
     conn = hq.store._conn
-    tables = ("metadata", "songs", "versions", "assets", "evidence_claims", "evidence_supersessions", "activity_events")
+    tables = ("metadata", "songs", "versions", "assets", "provenance_records", "activity_events")
     before = {table: int(conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]) for table in tables}
-    brief = SongResumeService(hq).brief(recent_limit=50)
+    explanation = hq.provenance.explain_version(v2.id)
     after = {table: int(conn.execute(f"SELECT COUNT(*) AS n FROM {table}").fetchone()["n"]) for table in tables}
-
     assert before == after
-    assert brief.song_id == song_a.id and brief.song_title == "Smoke Song A" and brief.is_active_song
-    assert brief.current_version.id == v2.id and brief.approved_version.id == v1.id
-    assert brief.next_action_status == "RESOLVED" and brief.next_action == "tighten chorus"
-    assert brief.next_action_evidence[0].claim_id == next_claim.id
-    conflict = next(c for c in brief.unresolved_conflicts if c.key == "chorus.energy")
-    assert {e.claim_id for e in conflict.evidence} == {first.id, second.id}
-    assert all(change.sequence > 0 for change in brief.recent_changes)
-    assert [change.sequence for change in brief.recent_changes] == sorted(change.sequence for change in brief.recent_changes)
-    assert song_b.id not in {change.object_id for change in brief.recent_changes}
+    assert explanation.parent_version_id == v1.id
+    assert [item.id for item in explanation.attached_assets] == [asset.id]
+    assert explanation.attached_assets[0].records[0].id == asset_record.id
+    assert explanation.derivations[0].id == transform.id
+    assert explanation.derivations[0].input_ref == v1.id
+    assert explanation.derivations[0].tool_ref == "tool:owned-compressor"
+    assert explanation.derivations[0].model_ref == "model:mix-assistant-v1"
+    assert explanation.derivations[0].rights_ref is None
+    assert explanation.derivations[0].cost_ref is None
     hq.close()
 
-print("CORE-01D CONSUMER SMOKE: GREEN: returning artist gets a pure-read Song Resume Brief with current/approved, changes, conflicts and represented next-action truth")
+print("CORE-01E CONSUMER SMOKE: GREEN: Explain Version preserves immutable source/derivation provenance without inventing missing rights or cost evidence")

@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-CORE-01D",
+  "receipt_id": "N0TE2-CORE-01E",
   "node_id": "CORE-01",
-  "increment_id": "CORE-01D",
-  "baseline_sha": "1b8dc94e0f5186029692bbe93c4ec1da080683b1",
-  "purpose": "Turn canonical Song identity, current/approved lineage, scoped evidence and Activity into one pure-read Song Resume Brief so a returning artist can understand where they left off without N0TE inventing a decision or mutating state.",
+  "increment_id": "CORE-01E",
+  "baseline_sha": "bee7e724853848585c8c19505ad65efc021d30b6",
+  "purpose": "Add immutable canonical derivation provenance so N0TE can explain where a version or asset came from, with explicit evidence/tool/provider/model/recipe/rights/consent/cost references and no invented certainty.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,37 +14,39 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A returning artist gets one truthful Song brief: current, approved, what changed, unresolved conflicts and represented next action truth.",
-    "journeys": ["J-IDEA-SONG", "J-CORE-LIFECYCLE", "J-WHAT-NEXT"],
-    "capability": "Read-only Song Resume Brief over canonical Headquarters memory",
-    "increment": "CORE-01D"
+    "outcome": "The artist can inspect a version and truthfully see represented source/derivation provenance without N0TE inventing rights, approval or causality.",
+    "journeys": ["J-COMPARE-DECIDE", "J-IDEA-SONG", "J-FINISH"],
+    "capability": "Version/asset derivation provenance + Explain Version",
+    "increment": "CORE-01E"
   },
   "reuse": {
-    "mode": "N0TE2_COMPOSITION_ONLY",
-    "n0te2_dependencies": ["CORE-01A LineageStore", "CORE-01B EvidenceMemory", "CORE-01C ActivityLog", "HeadquartersMemory"],
-    "legacy_candidates": ["HeadquartersRetrieval", "local Headquarters read-model semantics"],
-    "legacy_rejections": ["fan-out reads across parallel stores", "filename/recency-as-approval", "implicit next-action invention"],
+    "mode": "N0TE2_FOUNDATION_PLUS_SEMANTICS_ONLY",
+    "n0te2_dependencies": ["LineageStore", "ActivityLog", "HeadquartersMemory"],
+    "legacy_candidates": ["ProjectGraph provenance concepts", "ProductStore provenance concepts"],
+    "legacy_rejections": ["parallel graph/store ownership", "coarse portability scoring as provenance", "rights certainty by metadata presence"],
     "direct_copy": false
   },
   "completion_proof": [
-    "reopen returns the same Artist/Song identity with CURRENT and APPROVED represented separately",
-    "recent Song Activity is chronological and excludes another Song",
-    "applicable same-scope evidence conflicts are surfaced with source/provenance and no selected winner",
-    "version-scoped evidence outranks broader Song/Artist/Profile evidence only by scope specificity",
-    "next action is UNKNOWN when absent, RESOLVED only when represented evidence resolves it, and CONFLICT when represented evidence conflicts",
-    "requesting a Resume Brief inserts/updates/deletes zero rows across canonical durable tables",
-    "missing/corrupt canonical references fail visibly rather than creating an empty/default brief",
-    "tests and consumer smoke require no DAW/provider dependency"
+    "VERSION and ASSET outputs accept immutable provenance records bound to their canonical Song",
+    "canonical VERSION/ASSET inputs must exist and belong to the same Song as the output",
+    "external inputs remain explicit references and are never promoted to canonical objects by inference",
+    "operation and evidence source are required while tool/provider/model/recipe/rights/consent/cost references remain optional",
+    "provenance writes append a PROVENANCE_RECORDED Activity event in the same successful transaction",
+    "Explain Version returns parent version, attached assets and represented derivation records after restart",
+    "missing provenance fields remain absent rather than guessed and provenance does not imply approval or rights certainty",
+    "provenance update/delete is rejected and tampered canonical references fail visibly",
+    "Explain Version is a pure read and inserts/updates/deletes zero rows"
   ],
   "non_scope": [
-    "new tables or persistence",
-    "full Artist Graph",
+    "full cross-domain Artist/Song Graph",
     "universal search",
-    "Technical Twin / Creative Twin visual UX",
-    "DAW adapters or host hierarchy",
-    "application shell",
-    "release/content/business/provider execution",
+    "Technical Twin / Creative Twin UX",
+    "DAW adapters",
+    "provider execution",
+    "rights adjudication or legal certainty",
+    "billing/accounting or spend authority",
+    "second graph/provenance database",
     "hosted-CI proof-loop scaffolding"
   ],
-  "next_selection_rule": "After CORE-01D proof, reconcile evidence and globally reselect. Do not continue read-model/UI work by adjacency."
+  "next_selection_rule": "After CORE-01E proof, reconcile evidence and globally reselect from remaining CORE-01/customer work. Do not grow a generic graph by adjacency."
 }

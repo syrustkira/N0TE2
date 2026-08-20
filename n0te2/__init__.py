@@ -12,6 +12,12 @@ from .lineage import (
     Version,
 )
 from .memory import HeadquartersMemory
+from .provenance import (
+    ProvenanceAsset,
+    ProvenanceLedger,
+    ProvenanceRecord,
+    VersionExplanation,
+)
 from .resume import (
     ResumeChange,
     ResumeConflict,
@@ -34,6 +40,9 @@ __all__ = [
     "LineageError",
     "LineageStore",
     "NotFoundError",
+    "ProvenanceAsset",
+    "ProvenanceLedger",
+    "ProvenanceRecord",
     "ResumeChange",
     "ResumeConflict",
     "ResumeEvidence",
@@ -43,4 +52,5 @@ __all__ = [
     "SongResumeService",
     "ValidationError",
     "Version",
+    "VersionExplanation",
 ]
