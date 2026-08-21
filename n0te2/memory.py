@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .activity import ActivityLog
+from .attention import AttentionMemory
 from .context import ContextIsolationService
 from .evidence import EvidenceMemory
 from .focus import FocusContextService
@@ -31,6 +32,7 @@ class HeadquartersMemory:
         self.evidence = EvidenceMemory(store)
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
+        self.attention = AttentionMemory(store)
         self.workspaces = WorkspaceMemory(store)
         self.shadow = HostShadow(store, self.workspaces)
         self.reconciliation = ReconciliationService(store, self.twins, self.shadow)
