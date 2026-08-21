@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from .memory import HeadquartersMemory
 from .update import (
     ApplicationUpdateCoordinator as _BaseApplicationUpdateCoordinator,
+    ApplicationUpdateError,
     UpdateRejectedError,
     UpdateResult,
 )
@@ -14,14 +16,38 @@ class _ValidationDatabaseOwnershipUncertain(BaseException):
     """Bypass automatic compensation when the validation database may still be open."""
 
 
+def _canonical_data_root(path: str | Path) -> Path:
+    root = Path(path)
+    if not root.is_absolute():
+        raise ApplicationUpdateError("data_root must be absolute")
+    lexical = Path(os.path.abspath(os.path.normpath(str(root))))
+    try:
+        resolved = lexical.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise UpdateRejectedError(
+            "data_root must exist and resolve to a real directory"
+        ) from exc
+    if resolved != lexical:
+        raise UpdateRejectedError(
+            "data_root must not traverse a symlink or filesystem alias during update"
+        )
+    if not resolved.is_dir():
+        raise UpdateRejectedError("data_root must resolve to a directory")
+    return resolved
+
+
 class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
     """Consumer-safe APP-01C update coordinator.
 
     The durable transaction/state machine lives in ``n0te2.update``. This thin
-    guard changes only the post-install validation-close failure class: package
-    rollback and creative-state restore are forbidden unless the validation
-    Headquarters proves it released the canonical database first.
+    guard adds two fail-closed boundaries: update roots must resolve to one
+    canonical real directory, and package/data compensation is forbidden when
+    post-install validation cannot prove the canonical database was released.
     """
+
+    def prepare(self, *, runtime, **kwargs):  # type: ignore[override]
+        _canonical_data_root(runtime.data_root)
+        return super().prepare(runtime=runtime, **kwargs)
 
     def _validate_installed_headquarters(
         self,
@@ -57,8 +83,12 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
 
     def apply(self, **kwargs) -> UpdateResult:  # type: ignore[override]
         plan = kwargs.get("plan")
+        if "data_root" not in kwargs:
+            raise TypeError("apply requires data_root")
+        guarded_kwargs = dict(kwargs)
+        guarded_kwargs["data_root"] = _canonical_data_root(kwargs["data_root"])
         try:
-            return super().apply(**kwargs)
+            return super().apply(**guarded_kwargs)
         except _ValidationDatabaseOwnershipUncertain as exc:
             if plan is None:
                 raise
