@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "universal_n0te_capability": true,
+  "scan_standard_locations": true,
+  "ask_for_additional_locations": true,
+  "persist_custom_locations": true,
+  "silent_arbitrary_disk_crawl": false,
+  "prefer_out_of_process_architecture_specific_workers": true,
+  "states": ["DISCOVERED","LICENSED_OR_ENTITLED","DIRECTLY_N0TE_HOSTABLE","DAW_NATIVE_ONLY","CONTROLLABLE","UNAVAILABLE","UNVERIFIED"],
+  "formats": {
+    "VST3":{"route":"DIRECT_HOST_WHERE_IMPLEMENTED","platforms":["macOS","Windows","Linux"]},
+    "AU":{"route":"APPLE_PLATFORM_HOST","platforms":["macOS"]},
+    "CLAP":{"route":"DIRECT_HOST_WHERE_IMPLEMENTED","platforms":["macOS","Windows","Linux"]},
+    "LV2":{"route":"DIRECT_HOST_WHERE_IMPLEMENTED","platforms":["Linux"]},
+    "LADSPA":{"route":"DIRECT_HOST_WHERE_IMPLEMENTED","platforms":["Linux"]},
+    "AAX":{"route":"LEGITIMATE_AAX_CAPABLE_HOST_OR_SDK_ROUTE","platforms":["macOS","Windows"],"standalone_direct_host_claim":false},
+    "LEGACY_VST":{"route":"ONLY_IF_LEGAL_TECHNICAL_ROUTE_VERIFIED","platforms":["macOS","Windows","Linux"]}
+  },
+  "failure_isolation_required": true
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 3,
+  "repository": "syrustkira/N0TE2",
+  "construction_phase": "3 PRODUCT SHELL",
+  "active_node": "APP-01",
+  "active_increment": "APP-01D",
+  "product_code_authorized": true,
+  "legacy_admission_authorized": false,
+  "direct_legacy_source_copy_authorized": false,
+  "direct_legacy_test_text_copy_authorized": false,
+  "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00"],
+  "truth": [
+    "N0TE2 is the clean-room destination.",
+    "APP-01 is ACTIVE at APP-01D. APP-01A-C are implemented on draft PRs #40/#41/#42; DAW-00 is PRESERVED incomplete; OPS-04 is READY.",
+    "APP-01D exact baseline is final APP-01C head 797137af65b0b0d89591c3b6e45b73fe28eee1e7; the stale cbdd1fc8 baseline was corrected before product implementation.",
+    "ApplicationRemovalPlanner is a pure shared uninstall/data-retention plan. It performs no package removal, filesystem deletion, profile purge, network action or held-service activation.",
+    "Canonical data_root, exact profile data and recovery snapshots remain RETAIN_DURABLE_DATA by default. Uninstall/package authority never implies creative-data erase authority.",
+    "Runtime/config/cache/log roots become direct removal candidates only when app state is STOPPED, physical path evidence is canonical/non-symlink and the root is disjoint from retained data.",
+    "macOS config/state overlap with Application Support biases toward retention; Linux nested log/state roots produce one parent candidate rather than double removal; Windows disjoint runtime roots follow the same evidence law.",
+    "Platform-managed package paths are descriptive only and any overlap with retained/runtime/another package path is rejected.",
+    "HOLD-001 through HOLD-006 remain HELD_NOT_ACTIVE with explicit promotion required: accounts/auth, cloud backup/sync, subscriptions/billing, telemetry, crash upload and DRM/activation.",
+    "Exact uninstall.py Git blob ef007c7494ea7cfecd0bdefdaae4643cb22eab6a was reproduced locally and passed a 15-case cross-platform adversarial harness. Repository regressions are authored separately.",
+    "REQ-SCOPE-112 versioned semantic schema migration remains preserved for the next APP parent audit and is not included in APP-01D.",
+    "No real macOS/Windows/Linux uninstaller or destructive data erase action is implemented in APP-01D."
+  ]
+}

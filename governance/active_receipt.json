@@ -1,0 +1,39 @@
+{
+  "schema_version": 3,
+  "receipt_id": "N0TE2-APP-01D",
+  "node_id": "APP-01",
+  "increment_id": "APP-01D",
+  "baseline_sha": "797137af65b0b0d89591c3b6e45b73fe28eee1e7",
+  "purpose": "Define the shared uninstall/data-retention law beneath platform-specific package removers: normal uninstall preserves canonical Artist/Song/profile/recovery data, removable runtime state requires STOPPED plus exact non-symlink path evidence, package paths remain platform-managed, and held future services remain explicitly inactive.",
+  "product_code_allowed": true,
+  "legacy_admission_allowed": false,
+  "legacy_source_copy_allowed": false,
+  "legacy_test_text_copy_allowed": false,
+  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore"],
+  "allowed_prefixes": ["governance/", "tests/governance/", ".github/workflows/", "n0te2/", "tests/platform/", "tests/app/", "tests/core/", "tests/daw/"],
+  "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
+  "lineage": {
+    "portfolio": "N0TE2",
+    "outcome": "Removing N0TE application/runtime mechanics never silently removes the Artist's durable work or activates held cloud/account/billing/telemetry/crash/DRM services.",
+    "journeys": ["J-CORE-LIFECYCLE", "J-TRUST"],
+    "capability": "Shared uninstall retention policy and held-service absence boundary",
+    "increment": "APP-01D"
+  },
+  "reuse": {
+    "mode": "PLATFORM00_ROOTS_PLUS_APP_PROFILE_LAYOUT_PLUS_CORE_RECOVERY",
+    "n0te2_dependencies": ["PLATFORM-00 application roots", "APP-01A runtime STOPPED semantics", "APP-01B canonical profile identity", "CORE recovery snapshot layout", "DO_NOT_WORK_ON_YET held-service register"],
+    "legacy_rejections": ["uninstall implies delete Artist data", "remove overlapping Application Support root", "delete runtime state while app is active", "trust symlink/retargeted path as removable", "double-remove nested runtime roots", "platform package path overlaps creative data", "implement held services to prove their absence"],
+    "direct_copy": false
+  },
+  "completion_proof": [
+    "data_root, exact profile_data_root and recovery root are always RETAIN_DURABLE_DATA and never removal candidates",
+    "runtime/config/cache/log paths are removal candidates only when app state is STOPPED, path evidence is canonical/non-symlink, and the path is disjoint from retained creative data",
+    "overlap with retained data biases to RETAIN_OVERLAP; nested runtime roots produce one parent candidate rather than ambiguous double removal",
+    "platform-managed package paths remain descriptive/non-executing and any overlap with retained/runtime paths is rejected",
+    "macOS, Windows and Linux path conventions produce the same retention law even when their physical root layouts differ",
+    "held services HOLD-001 through HOLD-006 remain HELD_NOT_ACTIVE with explicit promotion required",
+    "ApplicationRemovalPlanner exposes plan only and contains no delete/unlink/rmtree/package-driver/service-activation action"
+  ],
+  "non_scope": ["OS-specific uninstall/package removal adapters", "destructive Artist/profile data purge", "profile deletion/merge", "accounts/cloud/billing/telemetry/crash upload/DRM implementation", "schema migration", "UX", "DAW/AUDIO/OPS", "platform customer acceptance", "hosted-CI proof scaffolding"],
+  "next_selection_rule": "After APP-01D evidence, audit APP-01 against all mapped requirements. REQ-SCOPE-112 schema migration remains explicitly preserved and must be selected only if still a real shared APP gap."
+}

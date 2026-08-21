@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "version_name_alone_is_breakpoint": false,
+    "default_direction": "MAXIMIZE_REACH",
+    "unsupported_requires_named_break": true,
+    "support_states": ["SUPPORTED","LEGACY_SUPPORTED","UNVERIFIED","EXPERIMENTAL","NOT_YET_BUILT","UNSUPPORTED_KNOWN_BREAK"],
+    "core_platforms": ["macOS","Windows","Linux"]
+  },
+  "core_architectures": {
+    "macOS": ["arm64","x86_64"],
+    "Windows": ["x86_64","arm64"],
+    "Linux": ["x86_64","aarch64"]
+  },
+  "extended_architectures": {
+    "Windows": ["x86"],
+    "Linux": ["riscv64","armv7","i686"]
+  },
+  "platforms": [
+    {
+      "platform":"macOS",
+      "architecture":"arm64",
+      "tier":"CORE",
+      "initial_range":"macOS 11 Big Sur -> current",
+      "packages":["universal-app-when-possible","arm64-specific-worker-when-needed"],
+      "audio":["CoreAudio"],
+      "plugins":["AU","VST3","CLAP"],
+      "foreign_arch_bridge":"x86_64 helper via Rosetta where legitimate and verified"
+    },
+    {
+      "platform":"macOS",
+      "architecture":"x86_64",
+      "tier":"CORE",
+      "initial_range":"macOS 11 -> current; 10.15 legacy target; probe 10.13-10.14",
+      "packages":["universal-app","x86_64-legacy-artifact-if-needed"],
+      "audio":["CoreAudio"],
+      "plugins":["AU","VST3","CLAP"]
+    },
+    {
+      "platform":"Windows",
+      "architecture":"x86_64",
+      "tier":"CORE",
+      "initial_range":"Windows 10 22H2 -> current Windows 11",
+      "packages":["installer","portable-archive"],
+      "audio":["WASAPI","ASIO-when-driver-route-exists"],
+      "plugins":["VST3","CLAP","AAX-via-legitimate-host-route"]
+    },
+    {
+      "platform":"Windows",
+      "architecture":"arm64",
+      "tier":"CORE",
+      "initial_range":"Windows 11 ARM64; 24H2+ first acceptance baseline; probe older Win11 ARM64",
+      "packages":["native-arm64-installer","x64-helper-binaries-where-needed"],
+      "audio":["WASAPI","ASIO-when-arm64-driver-exists"],
+      "plugins":["native-arm64","x64-helper-under-Windows-emulation-where-verified"]
+    },
+    {
+      "platform":"Linux",
+      "architecture":"x86_64",
+      "tier":"CORE",
+      "initial_range":"broad glibc desktop Linux; representative Ubuntu LTS, Debian stable, Fedora current/prior, rolling via portable artifact",
+      "packages":["AppImage","tar.zst","deb","rpm","Flatpak-when-parity-proven"],
+      "audio":["PipeWire-first","JACK-compatible","ALSA-fallback"],
+      "plugins":["VST3","CLAP","LV2","LADSPA"]
+    },
+    {
+      "platform":"Linux",
+      "architecture":"aarch64",
+      "tier":"CORE",
+      "initial_range":"Ubuntu/Debian ARM64 and other compatible glibc distributions",
+      "packages":["AppImage-or-portable","deb","rpm","Flatpak-when-proven"],
+      "audio":["PipeWire-first","JACK-compatible","ALSA-fallback"],
+      "plugins":["VST3","CLAP","LV2","LADSPA"]
+    },
+    {"platform":"Windows","architecture":"x86","tier":"EXTENDED","state":"NOT_YET_BUILT"},
+    {"platform":"Linux","architecture":"riscv64","tier":"EXTENDED","state":"EXPERIMENTAL"},
+    {"platform":"Linux","architecture":"armv7","tier":"EXTENDED","state":"NOT_YET_BUILT"},
+    {"platform":"Linux","architecture":"i686","tier":"EXTENDED","state":"NOT_YET_BUILT"}
+  ],
+  "linux_packaging": {
+    "broad_baseline": ["AppImage","tar.zst"],
+    "native": ["deb","rpm"],
+    "conditional": ["Flatpak"],
+    "demand_driven": ["Snap","AUR","native-distro-recipes"]
+  },
+  "mobile_later": {
+    "ios_ipados": {"architectures":["arm64"],"initial_minimum":"iOS/iPadOS 15+","state":"HELD"},
+    "android": {"architectures":["arm64-v8a","x86_64","armeabi-v7a-extended"],"initial_minimum":"API 23+ unless dependencies require higher","state":"HELD"},
+    "web": {"architecture":"PWA","state":"HELD"}
+  }
+}
