@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-PLATFORM-00B",
+  "receipt_id": "N0TE2-PLATFORM-00C",
   "node_id": "PLATFORM-00",
-  "increment_id": "PLATFORM-00B",
-  "baseline_sha": "9e170351aa591221b21776df6a1477242e802134",
-  "purpose": "Implement canonical cross-platform process identity plus an atomic per-profile application-instance lease so N0TE can enforce single-instance ownership without PID-only identity, OS-specific priority, force-killing, or stealing a lease whose owner liveness is uncertain.",
+  "increment_id": "PLATFORM-00C",
+  "baseline_sha": "2c60018d6e000768336322db40e134079a7b7a6c",
+  "purpose": "Implement one shared executable support-envelope law so platform/architecture target policy, exact acceptance evidence, legacy acceptance, experimentation and named known breaks remain mechanically distinct before APP-01 packaging or customer support claims exist.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,31 +14,33 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A consumer N0TE profile can have one truthfully identified application owner across peer macOS, Windows and Linux semantics; crashes can be recovered only from verified-dead ownership while live or uncertain owners are never stolen.",
+    "outcome": "N0TE can truthfully distinguish which macOS, Windows and Linux targets are required from which exact targets have actually earned acceptance evidence; extended reach remains visible without substituting for or blocking required core targets.",
     "journeys": ["J-CORE-LIFECYCLE", "J-TRUST"],
-    "capability": "Cross-platform process identity and fail-closed single-instance lease",
-    "increment": "PLATFORM-00B"
+    "capability": "Executable support policy, acceptance evidence and customer-mode blocker projection",
+    "increment": "PLATFORM-00C"
   },
   "reuse": {
-    "mode": "STANDARD_LIBRARY_ATOMIC_FILE_LEASE_OVER_PLATFORM00A_STATE_ROOTS_WITH_INJECTED_PROCESS_PROBE",
-    "n0te2_dependencies": ["PLATFORM-00A PlatformEnvironment and PlatformRoots", "CORE-04 recovery/trust semantics", "CORE-02 closed construction dependency"],
-    "legacy_rejections": ["PID as identity", "macOS process model as universal law", "cwd/developer-path lock", "unknown liveness treated as dead", "force-kill to steal lease", "browser tab as application lifetime", "one OS becoming platform priority"],
+    "mode": "PURE_SUPPORT_POLICY_AND_EVIDENCE_PROJECTION_OVER_PLATFORM00A_TARGET_IDENTITY",
+    "n0te2_dependencies": ["PLATFORM-00A canonical OS/architecture identity and target tiers", "PLATFORM-00B process/lease implementation evidence", "PLATFORM_SUPPORT_MATRIX canonical policy"],
+    "legacy_rejections": ["configured target equals supported", "OS marketing version raises the floor automatically", "extended target substitutes for core", "known break without named reason/evidence", "boolean supported shortcut", "macOS chronology defines support order"],
     "direct_copy": false
   },
   "completion_proof": [
-    "ProcessIdentity combines canonical platform/architecture, positive PID and hashed opaque process-start token; PID reuse with a different start token is different identity",
-    "PLATFORM-00A macOS, Windows and Linux state roots map the same semantic per-profile lease reference",
-    "first atomic acquire has exactly one winner and same exact process acquire is idempotent",
-    "foreign verified ALIVE ownership returns HELD_BY_OTHER and leaves the lease unchanged",
-    "foreign UNKNOWN ownership returns UNCERTAIN and leaves the lease unchanged",
-    "only verified DEAD ownership may be archived and replaced, returning REPLACED_STALE with exact previous lease receipt",
-    "takeover re-reads and re-probes the exact current owner before replacement so DEAD→ALIVE/UNKNOWN changes cancel takeover",
-    "interrupted takeover can resume for the same exact process before or after stale archival; live/unknown foreign takeover markers remain fail-closed and a verified-dead marker cannot block forever",
-    "release requires exact current process fingerprint and lease nonce",
-    "malformed, tampered or symlink lease state fails visibly",
-    "profile isolation and opaque profile path validation hold; manager requires an absolute state root and does not depend on cwd",
-    "InstanceLeaseManager exposes no launch/kill/terminate/signal/connect behavior"
+    "default architecture policy contains exactly six CORE peer targets: macOS arm64/x86_64, Windows x86_64/arm64, Linux x86_64/arm64",
+    "extended reach remains separate: Windows x86_32 plus Linux x86_32/armv7/riscv64",
+    "all CORE targets begin UNVERIFIED and block customer-mode readiness until exact ACCEPTED or LEGACY_ACCEPTED evidence exists",
+    "accepting one target removes only its exact fingerprint blocker",
+    "LEGACY_ACCEPTED requires an explicit upstream limitation and still preserves that limitation in status",
+    "KNOWN_BREAK requires a named reason plus evidence and remains blocking for CORE",
+    "EXPERIMENTAL CORE evidence remains blocking",
+    "EXTENDED failures/findings never block or satisfy a CORE target",
+    "evidence referencing a target outside the envelope or duplicate/conflicting evidence for one target is rejected",
+    "canonical CORE targets cannot be silently downgraded to EXTENDED",
+    "runtime OS/architecture aliases reuse PLATFORM-00A normalization and converge to one exact target",
+    "scope tags create exact distro/package/hardware subtargets while tag ordering/duplicates do not change identity",
+    "OS version policy participates in exact target identity but the support layer performs no version-name heuristic",
+    "model exposes no generic supported boolean shortcut; target/status ordering is deterministic and reads are pure"
   ],
-  "non_scope": ["OS-specific process probe implementation", "application launcher", "quit/update/uninstall", "IPC/socket activation", "package signing", "credential store", "audio/plugin worker", "DAW discovery", "UI", "OPS-04 business work", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After PLATFORM-00B evidence, reconcile and globally compare remaining shared PLATFORM-00 process/security/package/audio/plugin-worker chassis against DAW-00, OPS-04 and any newly unblocked application work. Do not make macOS chronology the platform roadmap."
+  "non_scope": ["platform packaging", "installer/update", "real macOS/Windows/Linux acceptance", "CI build matrix generation", "plugin discovery/hosting", "OS-specific process probes", "DAW work", "OPS-04", "UI", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After PLATFORM-00C evidence, audit remaining PLATFORM-00 foundation gaps against REQ-SCOPE-149/150/151/153. Keep AUDIO-02 plugin hosting and real PLATFORM-01/02/03 acceptance downstream; globally compare any true shared platform gap against DAW-00 and OPS-04 rather than extending support.py by adjacency."
 }
