@@ -12,6 +12,7 @@ from .learning import LearningMemory
 from .lineage import LineageStore
 from .operations import OperationJournal
 from .provenance import ProvenanceLedger
+from .reconcile import ReconciliationService
 from .recovery import RecoveryManager
 from .session import SessionMemory
 from .shadow import HostShadow
@@ -31,6 +32,7 @@ class HeadquartersMemory:
         self.activity = ActivityLog(store)
         self.workspaces = WorkspaceMemory(store)
         self.shadow = HostShadow(store, self.workspaces)
+        self.reconciliation = ReconciliationService(store, self.twins, self.shadow)
         self.focus = FocusContextService(self.workspaces)
         self.operations = OperationJournal(store, self.activity)
         self.transactions = TransactionCoordinator(self.operations)
