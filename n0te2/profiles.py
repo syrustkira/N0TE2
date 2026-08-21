@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -102,9 +103,11 @@ class ApplicationProfiles:
     """Local application profile discovery and first-profile bootstrap.
 
     Only direct canonical profile candidates under data_root/profiles are read.
-    Discovery opens only the lineage store, so catalog reads do not initialize or
-    migrate unrelated Headquarters services. This service never deletes, merges,
-    renames, uploads, syncs or crawls for profiles outside the application data root.
+    Discovery uses SQLite read-only mode plus the canonical LineageStore integrity
+    validator, so catalog reads cannot enable WAL, initialize service schemas or
+    otherwise turn profile selection into a write path. This service never
+    deletes, merges, renames, uploads, syncs or crawls for profiles outside the
+    application data root.
     """
 
     def __init__(self, *, data_root: str | Path, state_root: str | Path):
@@ -129,6 +132,37 @@ class ApplicationProfiles:
         else:
             reason = str(exc)
         return ProfileIssue(profile_ref, reason)
+
+    def _inspect_profile_read_only(self, profile_id: str) -> ApplicationProfile:
+        LineageStore._validate_profile_id(profile_id)
+        db_path = self.data_root / "profiles" / profile_id / LineageStore.DB_NAME
+        if db_path.is_symlink():
+            raise ApplicationProfilesError("lineage database must not be a symlink")
+        if not db_path.is_file():
+            raise ApplicationProfilesError("lineage database is missing")
+        try:
+            uri = db_path.resolve(strict=True).as_uri() + "?mode=ro"
+            conn = sqlite3.connect(uri, uri=True, timeout=5.0)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA query_only = ON")
+            try:
+                LineageStore._validate_existing(conn, profile_id)
+                row = conn.execute(
+                    "SELECT a.id, a.display_name "
+                    "FROM artists a "
+                    "JOIN metadata m ON m.key = 'primary_artist_id' AND m.value = a.id"
+                ).fetchone()
+                if row is None:
+                    raise ApplicationProfilesError("primary Artist identity is missing")
+                return ApplicationProfile(profile_id, str(row["display_name"]))
+            finally:
+                conn.close()
+        except ApplicationProfilesError:
+            raise
+        except Exception as exc:
+            raise ApplicationProfilesError(
+                f"read-only lineage inspection failed: {exc}"
+            ) from exc
 
     def discover(self) -> ProfileCatalogSnapshot:
         root = self.profiles_root
@@ -162,28 +196,10 @@ class ApplicationProfiles:
             if entry.is_symlink() or not entry.is_dir(follow_symlinks=False):
                 issues.append(ProfileIssue(name, "profile candidate is not a real directory"))
                 continue
-
-            store: LineageStore | None = None
-            profile: ApplicationProfile | None = None
             try:
-                store = LineageStore.open(self.data_root, name)
-                if store.profile_id != name:
-                    raise ApplicationProfilesError(
-                        "opened lineage profile identity differs from directory identity"
-                    )
-                artist = store.artist()
-                profile = ApplicationProfile(name, artist.display_name)
+                profiles.append(self._inspect_profile_read_only(name))
             except Exception as exc:
                 issues.append(self._issue(name, exc))
-            finally:
-                if store is not None:
-                    try:
-                        store.close()
-                    except Exception as exc:
-                        issues.append(self._issue(name, f"lineage close failed: {exc}"))
-                        profile = None
-            if profile is not None:
-                profiles.append(profile)
 
         return ProfileCatalogSnapshot(tuple(profiles), tuple(issues))
 
