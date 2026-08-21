@@ -18,10 +18,19 @@ _MAX_FORM_BYTES = 4096
 _MAX_ARTIST_NAME = 120
 _MAX_SONG_TITLE = 200
 _NAV_ROUTES = {"/": "Home", "/song": "Song", "/now": "Now", "/settings": "Settings"}
+_FOCUS_MODE_ORDER = ("MAKE", "FINISH", "MANAGE", "RELEASE", "PERFORM")
+_FOCUS_SONG_DEFAULT_MODES = {"MAKE", "FINISH"}
+_FOCUS_HINTS = {
+    "MAKE": "Protect creating, exploring and getting the idea out.",
+    "FINISH": "Protect the decisions that move the current work toward done.",
+    "MANAGE": "Protect planning and Artist Headquarters work.",
+    "RELEASE": "Protect release work without dragging it into a creative session.",
+    "PERFORM": "Protect rehearsal and live-performance attention.",
+}
 
 
 class ConsumerShellError(RuntimeError):
-    """Invalid or unsafe UX-01A consumer-shell operation."""
+    """Invalid or unsafe UX-01A/B consumer-shell operation."""
 
 
 class ConsumerShellRecoveryRequired(ConsumerShellError):
@@ -140,7 +149,7 @@ def _clean_human_text(value: str, field: str, *, maximum: int) -> str:
 
 
 class ConsumerShell:
-    """Local-first UX-01A Artist Headquarters front door.
+    """Local-first UX-01A/B Artist Headquarters front door.
 
     Product semantics remain in ApplicationProfiles/ApplicationRuntime/Headquarters.
     This shell owns only bounded presentation, browser-session action authority and
@@ -417,7 +426,14 @@ class ConsumerShell:
             )
             return
         path = self._path(handler)
-        if path not in {"/profile/create", "/profile/select", "/song/start", "/quit"}:
+        if path not in {
+            "/profile/create",
+            "/profile/select",
+            "/song/start",
+            "/focus/set",
+            "/focus/end",
+            "/quit",
+        }:
             self._send_html(handler, 404, self._simple_error("That N0TE action is not available."))
             return
         form = self._read_form(handler)
@@ -435,6 +451,10 @@ class ConsumerShell:
                 self._post_select_profile(handler, form)
             elif path == "/song/start":
                 self._post_start_song(handler, form)
+            elif path == "/focus/set":
+                self._post_focus_set(handler, form)
+            elif path == "/focus/end":
+                self._post_focus_end(handler, form)
             else:
                 self._post_quit(handler, form)
         except ConsumerShellError as exc:
@@ -620,6 +640,73 @@ class ConsumerShell:
         self._consumer_notice = f"{song.title} is now your active Song."
         self._redirect(handler, "/song")
 
+    def _post_focus_set(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before choosing Focus."),
+            )
+            return
+        action = self._consume_action(form.get("action", ""), "focus-set")
+        if action is None or action.value not in _FOCUS_MODE_ORDER:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That Focus choice was already handled or expired."),
+            )
+            return
+        store = self.runtime.headquarters.store
+        song = store.active_song()
+        song_id = (
+            song.id
+            if song is not None and action.value in _FOCUS_SONG_DEFAULT_MODES
+            else None
+        )
+        focus = self.runtime.headquarters.attention.start_focus(
+            action.value,
+            song_id=song_id,
+        )
+        if focus.song_id is not None:
+            bound_song = store.get_song(focus.song_id)
+            label = "this Song" if bound_song is None else bound_song.title
+            self._consumer_notice = f"{focus.mode} Focus is active for {label}."
+        else:
+            self._consumer_notice = f"{focus.mode} Focus is active for your Artist Headquarters."
+        self._redirect(handler, "/now")
+
+    def _post_focus_end(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before changing Focus."),
+            )
+            return
+        action = self._consume_action(form.get("action", ""), "focus-end")
+        if action is None:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That End Focus action was already handled or expired."),
+            )
+            return
+        ended = self.runtime.headquarters.attention.end_focus()
+        self._consumer_notice = (
+            "Focus is already open."
+            if ended is None
+            else f"{ended.mode} Focus ended. Headquarters is open again."
+        )
+        self._redirect(handler, "/now")
+
     def _post_quit(
         self,
         handler: BaseHTTPRequestHandler,
@@ -705,7 +792,7 @@ class ConsumerShell:
                 "running-now",
                 "What matters now",
                 "Attention",
-                "Creative work stays in front. N0TE will surface other work here only when it is useful and relevant instead of flooding your session with admin.",
+                "Choose the kind of work N0TE should protect. Focus changes attention posture only; it does not send, publish, purchase, connect or mutate a DAW.",
                 artist_name=artist.display_name,
                 song_title=None if song is None else song.title,
             )
@@ -755,6 +842,13 @@ class ConsumerShell:
             if state.artist_name
             else '<span class="local-badge">Local-first</span>'
         )
+        focus_context = ""
+        if self.runtime.state == "RUNNING":
+            focus = self.runtime.headquarters.attention.active_focus()
+            if focus is not None:
+                focus_context = (
+                    f'<span class="local-badge">{html.escape(focus.mode.title())} Focus</span>'
+                )
         return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -769,7 +863,7 @@ class ConsumerShell:
 <div class="shell">
   <header class="topbar">
     <a class="brand" href="/" aria-label="N0TE Artist Headquarters home"><span class="brand-mark" aria-hidden="true">N0</span><span>N0TE</span></a>
-    {artist_context}
+    <div class="row">{focus_context}{artist_context}</div>
   </header>
   <div class="layout">
     {nav}
@@ -809,6 +903,55 @@ class ConsumerShell:
 <div class="row"><button class="primary" type="submit">Start this Song</button></div>
 </form>"""
 
+    def _focus_content(self, state: _PageState) -> str:
+        focus = self.runtime.headquarters.attention.active_focus()
+        store = self.runtime.headquarters.store
+        mode_forms: list[str] = []
+        for mode in _FOCUS_MODE_ORDER:
+            token = self._new_action("focus-set", mode)
+            current = focus is not None and focus.mode == mode
+            button_class = "primary" if current else ""
+            mode_forms.append(
+                f'<form method="post" action="/focus/set">{self._hidden(token)}'
+                f'<button class="{button_class}" type="submit">{html.escape(mode.title())}</button></form>'
+            )
+        mode_buttons = "".join(mode_forms)
+
+        if focus is None:
+            status = '<p class="status caution">No Focus Session active</p>'
+            binding = (
+                f'<p>Make and Finish will follow {html.escape(state.song_title)}. Other modes stay Artist-wide unless a later journey supplies a more exact context.</p>'
+                if state.song_title
+                else '<p>You can choose an Artist-wide Focus now. Make or Finish can be rebound once a Song is active.</p>'
+            )
+            end_form = ""
+        else:
+            status = f'<p class="status good">{html.escape(focus.mode.title())} Focus active</p>'
+            if focus.song_id is None:
+                binding = '<p>Scope: your Artist Headquarters.</p>'
+            else:
+                song = store.get_song(focus.song_id)
+                song_title = "this Song" if song is None else song.title
+                binding = f'<p>Focused Song: <strong>{html.escape(song_title)}</strong></p>'
+            end_token = self._new_action("focus-end")
+            end_form = (
+                f'<form method="post" action="/focus/end">{self._hidden(end_token)}'
+                '<button type="submit">End Focus</button></form>'
+            )
+
+        hints = "".join(
+            f'<p><strong>{html.escape(mode.title())}</strong> · {html.escape(_FOCUS_HINTS[mode])}</p>'
+            for mode in _FOCUS_MODE_ORDER
+        )
+        return (
+            '<section class="grid">'
+            '<div class="card"><h2>Your Focus</h2>'
+            f'{status}{binding}<div class="row">{mode_buttons}{end_form}</div></div>'
+            '<div class="card"><h2>Choose the lane, not the plumbing</h2>'
+            f'{hints}<p>Changing Focus only changes what Headquarters should protect. It does not perform work in your DAW or on external services.</p></div>'
+            '</section>'
+        )
+
     def _recovery_content(self) -> str:
         if self.runtime.state == "RECOVERY_REQUIRED":
             token = self._new_action("quit")
@@ -845,12 +988,7 @@ class ConsumerShell:
             assert state.song_title is not None
             return f'<section class="grid"><div class="card"><h2>Your active Song</h2><p class="song-name">{html.escape(state.song_title)}</p><a class="button primary" href="/song">Resume Song</a></div><div class="card"><h2>Context stays with you</h2><p>Move through Headquarters and come back. This Artist and Song remain the active creative context.</p><p class="status good">Song context active</p></div></section>'
         if state.kind == "running-now":
-            song = (
-                "No active Song yet"
-                if not state.song_title
-                else f'Keep making {html.escape(state.song_title)}'
-            )
-            return f'<section class="grid"><div class="card"><h2>Creative priority</h2><p class="song-name">{song}</p>{"" if state.song_title else self._start_song_form()}</div><div class="card"><h2>Quiet by design</h2><p>Jobs, approvals and business work will live here later, but they do not crowd the creative session before they are useful.</p></div></section>'
+            return self._focus_content(state)
         raise ConsumerShellError(f"unsupported page state: {state.kind}")
 
     def _closed_page(self) -> str:
