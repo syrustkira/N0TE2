@@ -8,7 +8,7 @@ from typing import Iterable
 from .artifacts import ReleaseManifest
 from .instance import ProcessIdentity
 from .memory import HeadquartersMemory
-from .migration import MigrationStep, MigrationValidationError
+from .migration import MigrationStep
 from .update import (
     ApplicationUpdateCoordinator as _BaseApplicationUpdateCoordinator,
     ApplicationUpdateError,
@@ -131,7 +131,12 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
         plan: UpdatePlan,
         manifest: ReleaseManifest,
     ) -> UpdateMigrationBinding:
-        binding = self._migration_bindings.read(plan.update_id)
+        try:
+            binding = self._migration_bindings.read(plan.update_id)
+        except Exception as exc:
+            raise UpdateRejectedError(
+                "schema migration binding is missing, corrupt or no longer trustworthy"
+            ) from exc
         if binding.update_plan_fingerprint != plan.fingerprint:
             raise UpdateRejectedError("schema migration binding belongs to a different update plan")
         if binding.manifest_fingerprint != manifest.fingerprint:
@@ -146,6 +151,19 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
             raise UpdateRejectedError("schema migration binding belongs to a different profile")
         return binding
 
+    def _inspect_exact_hold(self, profile_id: str, process: ProcessIdentity):
+        try:
+            hold = self._leases.inspect(profile_id)
+        except Exception as exc:
+            raise _SchemaMigrationRecoveryRequired(
+                f"update maintenance ownership state is unreadable: {exc}"
+            ) from exc
+        if hold is None or hold.process.fingerprint != process.fingerprint:
+            raise _SchemaMigrationRecoveryRequired(
+                "exact update maintenance hold is missing or owned by a different process"
+            )
+        return hold
+
     def _run_bound_schema_migration(self, data_root: Path, profile_id: str) -> None:
         context = self._schema_apply_context
         if context is None:
@@ -156,11 +174,7 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
             raise _SchemaMigrationRecoveryRequired(
                 "post-install schema migration context belongs to a different profile"
             )
-        hold = self._leases.inspect(profile_id)
-        if hold is None or hold.process.fingerprint != context.process.fingerprint:
-            raise _SchemaMigrationRecoveryRequired(
-                "exact update maintenance hold is missing or owned by a different process"
-            )
+        hold = self._inspect_exact_hold(profile_id, context.process)
         migrator = UpdateBoundSchemaMigrator(
             data_root,
             self.state_root,
@@ -172,8 +186,13 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
                 context.binding.migration_plan,
                 maintenance_lease=hold,
             )
-        except MigrationValidationError as exc:
-            current_hold = self._leases.inspect(profile_id)
+        except Exception as exc:
+            try:
+                current_hold = self._leases.inspect(profile_id)
+            except Exception as hold_exc:
+                raise _SchemaMigrationRecoveryRequired(
+                    f"schema migration failed and maintenance ownership became unreadable: {hold_exc}"
+                ) from exc
             if current_hold != hold:
                 raise _SchemaMigrationRecoveryRequired(
                     f"schema migration lost exact maintenance ownership: {exc}"
@@ -189,6 +208,7 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
             raise _SchemaMigrationRecoveryRequired(
                 f"unsupported schema migration terminal state: {result.state}"
             )
+        self._inspect_exact_hold(profile_id, context.process)
 
     def _validate_installed_headquarters(
         self,
