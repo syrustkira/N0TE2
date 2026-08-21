@@ -22,12 +22,13 @@
   "reuse": {
     "mode": "PLATFORM00D_ARTIFACT_TRUST_PLUS_CORE_RECOVERY_PLUS_PLATFORM00B_LEASE_PLUS_APP01A_RUNTIME",
     "n0te2_dependencies": ["PLATFORM-00D authenticated release artifact verifier", "CORE-01 explicit RecoveryManager snapshots", "PLATFORM-00B exact process/profile leases", "APP-01A explicit runtime quit/reopen", "APP-01B durable local profile identity"],
-    "legacy_rejections": ["installer receipt alone means success", "update while Headquarters remains open", "two updates mutate one profile concurrently", "Song changed after snapshot but old update still installs", "UNKNOWN install is retried", "rollback attempted after ambiguous install", "snapshot restored before package rollback is proven", "post-update database close failure ignored", "manifest/target/artifact mismatch tolerated", "update journal hash without legal state-machine validation"],
+    "legacy_rejections": ["installer receipt alone means success", "update while Headquarters remains open", "two updates mutate one profile concurrently", "Song changed after snapshot but old update still installs", "data-root path may be retargeted through a symlink or filesystem alias", "UNKNOWN install is retried", "rollback attempted after ambiguous install", "snapshot restored before package rollback is proven", "post-update database close failure ignored", "manifest/target/artifact mismatch tolerated", "update journal hash without legal state-machine validation"],
     "direct_copy": false
   },
   "completion_proof": [
     "prepare requires the exact process that owns a RUNNING ApplicationRuntime, verifies authenticated target artifact bytes, creates a canonical recovery snapshot, reaches STOPPED and rechecks logical database truth before persisting PREPARED",
     "only one unresolved/prepared update may exist per profile and package mutation also requires the normal profile runtime lease, preventing a second app runtime from editing the profile during maintenance",
+    "the consumer-safe wrapper requires data_root to resolve to one canonical real directory at both prepare and apply; symlink/filesystem-alias routes fail before update mutation",
     "apply re-verifies manifest, target and artifact bytes, re-inspects the exact snapshot and rejects if live logical creative state differs from the prepared snapshot before any package callback",
     "INSTALLING is durably written before the package driver callback; package callbacks return request-bound receipts with explicit resulting release identity",
     "UNKNOWN/exception install outcomes become RECOVERY_REQUIRED with no blind retry or automatic rollback",
