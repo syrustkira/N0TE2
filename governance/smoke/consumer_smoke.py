@@ -9,150 +9,88 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "DAW-00" or state.get("active_increment") != "DAW-00E":
+if state.get("active_node") != "CORE-02" or state.get("active_increment") != "CORE-02E":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2.hosts import HostRuntimeIdentity  # noqa: E402
 from n0te2.memory import HeadquartersMemory  # noqa: E402
-from n0te2.reconcile import ReconciliationError, ReconciliationTarget  # noqa: E402
-from n0te2.shadow import ShadowEventInput  # noqa: E402
-
-
-def runtime():
-    return HostRuntimeIdentity.from_runtime_labels(
-        host_family="ABLETON_LIVE",
-        version="12.1",
-        edition="Suite",
-        os_name="Darwin",
-        machine="arm64",
-    )
 
 
 with tempfile.TemporaryDirectory() as temp:
-    hq = HeadquartersMemory.create(Path(temp), "Artist")
-    song = hq.store.create_song("Reconciliation Song")
-    workspace = hq.workspaces.create(
-        song.id,
-        runtime=runtime(),
-        location_ref="file:///song/project",
-    )
-    observation = hq.workspaces.state(workspace.id).current_observation
-    full = hq.shadow.record_batch(
-        workspace.id,
-        workspace_observation_id=observation.id,
-        host_runtime_fingerprint=observation.host_runtime_fingerprint,
-        coverage="FULL",
-        actor="EXTERNAL",
-        evidence_ref="host:verified-full-scan",
-        verified=True,
-        events=(
-            ShadowEventInput(
-                "TRACK",
-                "track:1",
-                "mute",
-                "SET",
-                True,
-                "host:track-1-mute",
-            ),
-        ),
-    )
-    claim = hq.evidence.record_claim(
-        scope_kind="SONG",
-        scope_id=song.id,
-        key="workspace.track.track:1.mute",
-        value=False,
-        source_kind="USER_DECLARED",
-        source_ref="song:technical-intent",
-        confidence=1.0,
-        twin_domain="TECHNICAL",
-    )
-    target = ReconciliationTarget(
-        "workspace.track.track:1.mute",
-        "TRACK",
-        "track:1",
-        "mute",
-    )
+    root = Path(temp)
+    hq = HeadquartersMemory.create(root, "Artist")
+    profile_id = hq.store.profile_id
+    song = hq.store.create_song("Success Memory Song")
+    version = hq.store.create_version(song.id, label="v1")
 
-    comparison = hq.reconciliation.compare(
-        song_id=song.id,
-        workspace_id=workspace.id,
-        target=target,
-    )
-    assert comparison.status == "CONFLICT"
-    assert comparison.canonical_claim_ids == (claim.id,)
-    assert comparison.canonical_values == (False,)
-    assert comparison.host_fact is not None
-    assert comparison.host_fact.value is True
-    assert comparison.host_baseline_batch_id == full.id
-    assert comparison.host_latest_batch_id == full.id
-
-    case = hq.reconciliation.open_case(
-        song_id=song.id,
-        workspace_id=workspace.id,
-        target=target,
-    )
-    evidence_before = hq.store._conn.execute(
-        "SELECT COUNT(*) FROM evidence_claims"
-    ).fetchone()[0]
-    shadow_before = hq.store._conn.execute(
-        "SELECT COUNT(*) FROM host_shadow_batches"
-    ).fetchone()[0]
-    decision = hq.reconciliation.record_decision(
-        case.id,
-        choice="KEEP_WORKSPACE_SPECIFIC",
-        evidence_ref="user:keep-workspace-specific",
-        rationale="Keep the current DAW variation without changing canonical Song intent.",
-    )
-    assert decision.choice == "KEEP_WORKSPACE_SPECIFIC"
-    assert hq.reconciliation.state(case.id).status == "DECIDED"
-    assert hq.store._conn.execute(
-        "SELECT COUNT(*) FROM evidence_claims"
-    ).fetchone()[0] == evidence_before
-    assert hq.store._conn.execute(
-        "SELECT COUNT(*) FROM host_shadow_batches"
-    ).fetchone()[0] == shadow_before
-    assert case.id in {
-        item.case.id
-        for item in hq.reconciliation.unresolved_for_workspace(workspace.id)
-    }
-
-    # New verified host evidence makes the old decision receipt stale, even if
-    # the latest host value now happens to match canonical memory.
-    observation = hq.workspaces.state(workspace.id).current_observation
-    hq.shadow.record_batch(
-        workspace.id,
-        workspace_observation_id=observation.id,
-        host_runtime_fingerprint=observation.host_runtime_fingerprint,
-        coverage="INCREMENTAL",
-        actor="HUMAN",
-        evidence_ref="host:user-unmuted-track",
-        verified=True,
-        events=(
-            ShadowEventInput(
-                "TRACK",
-                "track:1",
-                "mute",
-                "SET",
-                False,
-                "host:track-1-unmute",
-            ),
-        ),
-    )
-    assert hq.reconciliation.state(case.id).status == "STALE"
-    try:
-        hq.reconciliation.record_decision(
-            case.id,
-            choice="DO_NOTHING",
-            evidence_ref="user:stale-choice",
+    def episode(decision, source_ref, confidence, *, confounders=()):
+        session = hq.sessions.start_session(
+            song_id=song.id,
+            version_id=version.id,
+            objective="Evaluate a bounded vocal EQ change",
         )
-    except ReconciliationError:
-        pass
-    else:
-        raise AssertionError("stale reconciliation receipt accepted a new decision")
+        item = hq.learning.create_episode(
+            session_id=session.id,
+            domain="MIX",
+            subject_ref="vocal",
+            change_description="Cut 300 Hz",
+        )
+        hq.learning.append_consequence(
+            item.id,
+            observation="The vocal feels clearer",
+            source_kind="OBSERVED",
+            source_ref=source_ref,
+            confidence=confidence,
+            conditions=("same chorus", "same monitor level"),
+            confounders=confounders,
+        )
+        hq.learning.decide(
+            item.id,
+            decision=decision,
+            rationale=f"{decision} after bounded comparison",
+            confidence=confidence,
+        )
+        return item
+
+    first = episode("KEEP", "listen:1", 0.8, confounders=("fresh ears",))
+    second = episode("KEEP", "listen:2", 0.6, confounders=("listening order",))
+
+    before = hq.store._conn.total_changes
+    (promising,) = hq.success.patterns_for_song(song.id)
+    assert hq.store._conn.total_changes == before
+    assert promising.humility_state == "SUCCESS_ONLY"
+    assert promising.causal_status == "ASSOCIATION_ONLY"
+    assert promising.sample_size == 2
+    assert promising.supporting_episode_ids == (first.id, second.id)
+    assert promising.counterexample_episode_ids == ()
+    assert "Absence of counterexamples" in promising.warning
+    assert {item.term for item in promising.alternative_explanations} == {
+        "fresh ears",
+        "listening order",
+    }
+    assert promising.consequence_confidence.minimum == 0.6
+    assert promising.consequence_confidence.maximum == 0.8
+
+    third = episode("REVERT", "listen:3", 0.9, confounders=("different vocal take",))
+    (mixed,) = hq.success.patterns_for_song(song.id)
+    assert mixed.humility_state == "MIXED"
+    assert mixed.supporting_episode_ids == (first.id, second.id)
+    assert mixed.counterexample_episode_ids == (third.id,)
+    assert mixed.has_counterexamples
+    assert mixed.causal_status == "ASSOCIATION_ONLY"
+
+    # Success Memory is a lens, not another persistence owner.
+    assert hq.store._conn.execute(
+        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'success%'"
+    ).fetchone()[0] == 0
+    snapshot = hq.success.patterns_for_song(song.id)
+    hq.close()
+
+    hq = HeadquartersMemory.open(root, profile_id)
+    assert hq.success.patterns_for_song(song.id) == snapshot
     hq.close()
 
 print(
-    "DAW-00E CONSUMER SMOKE: GREEN: canonical Song technical memory and verified Host Shadow disagreement produced an explicit CONFLICT case with exact provenance, KEEP_WORKSPACE_SPECIFIC recorded a decision without changing either side, the decided case remained visible as pending, new host evidence made the receipt STALE, and stale evidence could not accept another decision"
+    "CORE-02E CONSUMER SMOKE: GREEN: two retained examples were remembered with conditions, confounders, confidence and an explicit survivorship warning rather than causal certainty; a later REVERT became visible counterevidence and changed the pattern to MIXED; Success Memory created no persistence table and restart reproduced the same synthesis"
 )
