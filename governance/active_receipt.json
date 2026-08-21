@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-APP-01C",
+  "receipt_id": "N0TE2-APP-01D",
   "node_id": "APP-01",
-  "increment_id": "APP-01C",
-  "baseline_sha": "35bf5b0a781c70e7ea46674990c219e2923c915b",
-  "purpose": "Implement the shared application update transaction above replaceable platform installers: verify exact authenticated artifact bytes, snapshot canonical creative state, explicitly stop the owned runtime, prevent concurrent profile mutation, execute package change once, reopen and integrity-check the same Headquarters, and either settle success or compensate package plus exact creative snapshot without laundering ambiguous outcomes into success.",
+  "increment_id": "APP-01D",
+  "baseline_sha": "797137af65b0b0d89591c3b6e45b73fe28eee1e7",
+  "purpose": "Define the shared uninstall/data-retention law beneath platform-specific package removers: normal uninstall preserves canonical Artist/Song/profile/recovery data, removable runtime state requires STOPPED plus exact non-symlink path evidence, package paths remain platform-managed, and held future services remain explicitly inactive.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,33 +14,26 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A normal N0TE application can attempt an authenticated update without gambling the Artist's current durable work: package success requires real post-update Headquarters validation, known changed failures compensate, and ambiguity remains explicit recovery work.",
-    "journeys": ["J-CORE-LIFECYCLE", "J-TRUST", "J-IDEA-SONG"],
-    "capability": "Authenticated application update transaction with creative-state rollback",
-    "increment": "APP-01C"
+    "outcome": "Removing N0TE application/runtime mechanics never silently removes the Artist's durable work or activates held cloud/account/billing/telemetry/crash/DRM services.",
+    "journeys": ["J-CORE-LIFECYCLE", "J-TRUST"],
+    "capability": "Shared uninstall retention policy and held-service absence boundary",
+    "increment": "APP-01D"
   },
   "reuse": {
-    "mode": "PLATFORM00D_ARTIFACT_TRUST_PLUS_CORE_RECOVERY_PLUS_PLATFORM00B_LEASE_PLUS_APP01A_RUNTIME",
-    "n0te2_dependencies": ["PLATFORM-00D authenticated release artifact verifier", "CORE-01 explicit RecoveryManager snapshots", "PLATFORM-00B exact process/profile leases", "APP-01A explicit runtime quit/reopen", "APP-01B durable local profile identity"],
-    "legacy_rejections": ["installer receipt alone means success", "update while Headquarters remains open", "two updates mutate one profile concurrently", "Song changed after snapshot but old update still installs", "data-root path may be retargeted through a symlink or filesystem alias", "UNKNOWN install is retried", "rollback attempted after ambiguous install", "snapshot restored before package rollback is proven", "post-update database close failure ignored", "manifest/target/artifact mismatch tolerated", "update journal hash without legal state-machine validation"],
+    "mode": "PLATFORM00_ROOTS_PLUS_APP_PROFILE_LAYOUT_PLUS_CORE_RECOVERY",
+    "n0te2_dependencies": ["PLATFORM-00 application roots", "APP-01A runtime STOPPED semantics", "APP-01B canonical profile identity", "CORE recovery snapshot layout", "DO_NOT_WORK_ON_YET held-service register"],
+    "legacy_rejections": ["uninstall implies delete Artist data", "remove overlapping Application Support root", "delete runtime state while app is active", "trust symlink/retargeted path as removable", "double-remove nested runtime roots", "platform package path overlaps creative data", "implement held services to prove their absence"],
     "direct_copy": false
   },
   "completion_proof": [
-    "prepare requires the exact process that owns a RUNNING ApplicationRuntime, verifies authenticated target artifact bytes, creates a canonical recovery snapshot, reaches STOPPED and rechecks logical database truth before persisting PREPARED",
-    "only one unresolved/prepared update may exist per profile and package mutation also requires the normal profile runtime lease, preventing a second app runtime from editing the profile during maintenance",
-    "the consumer-safe wrapper requires data_root to resolve to one canonical real directory at both prepare and apply; symlink/filesystem-alias routes fail before update mutation",
-    "apply re-verifies manifest, target and artifact bytes, re-inspects the exact snapshot and rejects if live logical creative state differs from the prepared snapshot before any package callback",
-    "INSTALLING is durably written before the package driver callback; package callbacks return request-bound receipts with explicit resulting release identity",
-    "UNKNOWN/exception install outcomes become RECOVERY_REQUIRED with no blind retry or automatic rollback",
-    "FAILED_SAFE settles only when the package receipt proves the original release remained installed",
-    "FAILED_CHANGED or clean post-update validation failure rolls the package back first and restores the exact prepared creative snapshot only after rollback is proven SUCCEEDED",
-    "rollback failure/UNKNOWN or restore failure becomes RECOVERY_REQUIRED and never claims compensation",
-    "successful install settles only after the real same-profile Headquarters opens, passes SQLite quick_check/foreign_key_check and closes cleanly",
-    "if post-update Headquarters cannot prove canonical database release, the consumer-safe guard records RECOVERY_REQUIRED and forbids automatic rollback underneath a potentially open database",
-    "journal integrity validates legal lifecycle transitions and request-bound receipts; recomputing only the envelope hash cannot make PREPARED->SUCCEEDED valid",
-    "crash-visible in-flight states are requires_recovery=true and retry_allowed=false",
-    "settled outcomes release both profile maintenance and update-coordination ownership before terminal success/failed-safe/rolled-back truth"
+    "data_root, exact profile_data_root and recovery root are always RETAIN_DURABLE_DATA and never removal candidates",
+    "runtime/config/cache/log paths are removal candidates only when app state is STOPPED, path evidence is canonical/non-symlink, and the path is disjoint from retained creative data",
+    "overlap with retained data biases to RETAIN_OVERLAP; nested runtime roots produce one parent candidate rather than ambiguous double removal",
+    "platform-managed package paths remain descriptive/non-executing and any overlap with retained/runtime paths is rejected",
+    "macOS, Windows and Linux path conventions produce the same retention law even when their physical root layouts differ",
+    "held services HOLD-001 through HOLD-006 remain HELD_NOT_ACTIVE with explicit promotion required",
+    "ApplicationRemovalPlanner exposes plan only and contains no delete/unlink/rmtree/package-driver/service-activation action"
   ],
-  "non_scope": ["real macOS/Windows/Linux installer implementation", "download service", "signature creation/notarization", "background automatic update policy", "UI/progress screens", "uninstall", "account/cloud update service", "DAW/AUDIO/OPS work", "platform acceptance", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After APP-01C evidence, audit the remaining APP-01 lifecycle obligations and globally compare them against preserved DAW-00 and ready OPS-04. Do not continue APP merely because update code is adjacent."
+  "non_scope": ["OS-specific uninstall/package removal adapters", "destructive Artist/profile data purge", "profile deletion/merge", "accounts/cloud/billing/telemetry/crash upload/DRM implementation", "schema migration", "UX", "DAW/AUDIO/OPS", "platform customer acceptance", "hosted-CI proof scaffolding"],
+  "next_selection_rule": "After APP-01D evidence, audit APP-01 against all mapped requirements. REQ-SCOPE-112 schema migration remains explicitly preserved and must be selected only if still a real shared APP gap."
 }
