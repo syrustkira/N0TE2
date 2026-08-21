@@ -19,6 +19,7 @@ from n0te2.migration import MigrationResult, MigrationStep
 from n0te2.platforms import PlatformEnvironment
 from n0te2.recovery import RecoveryManager
 from n0te2.safe_update import ApplicationUpdateCoordinator
+from n0te2.schema_program import migration_steps_fingerprint
 from n0te2.support import SupportTarget
 from n0te2.update import (
     PackageActionReceipt,
@@ -53,11 +54,18 @@ def schema_step_v2(*statements: str) -> MigrationStep:
         1,
         2,
         "release-v2 semantic schema",
-        tuple(statements) or ("CREATE TABLE release_v2_schema_marker(value TEXT NOT NULL)",),
+        tuple(statements)
+        or ("CREATE TABLE release_v2_schema_marker(value TEXT NOT NULL)",),
     )
 
 
-def release_fixture(payload: bytes = b"n0te2-release-v2"):
+def release_fixture(
+    payload: bytes = b"n0te2-release-v2",
+    *,
+    schema_target_version: int = 1,
+    schema_steps=(),
+):
+    steps = tuple(schema_steps)
     target = SupportTarget.from_runtime_labels(os_name="Linux", machine="x86_64")
     record = ArtifactRecord(
         artifact_id="linux-x86_64-package",
@@ -74,6 +82,8 @@ def release_fixture(payload: bytes = b"n0te2-release-v2"):
         dependency_inventory_sha256="c" * 64,
         license_inventory_sha256="d" * 64,
         artifacts=(record,),
+        application_schema_version=schema_target_version,
+        application_schema_migrations_sha256=migration_steps_fingerprint(steps),
     )
     authenticity = ManifestAuthenticityEvidence(
         manifest_fingerprint=manifest.fingerprint,
@@ -124,7 +134,8 @@ def application_schema_version(data_root: Path, profile_id: str) -> int:
     conn = sqlite3.connect(db)
     try:
         row = conn.execute(
-            "SELECT value FROM metadata WHERE key='application_semantic_schema_version'"
+            "SELECT value FROM metadata "
+            "WHERE key='application_semantic_schema_version'"
         ).fetchone()
         return 1 if row is None else int(row[0])
     finally:
@@ -136,11 +147,14 @@ def migration_history_count(data_root: Path, profile_id: str) -> int:
     conn = sqlite3.connect(db)
     try:
         exists = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='application_schema_migrations'"
+            "SELECT 1 FROM sqlite_master "
+            "WHERE type='table' AND name='application_schema_migrations'"
         ).fetchone()
         if exists is None:
             return 0
-        return int(conn.execute("SELECT COUNT(*) FROM application_schema_migrations").fetchone()[0])
+        return int(
+            conn.execute("SELECT COUNT(*) FROM application_schema_migrations").fetchone()[0]
+        )
     finally:
         conn.close()
 
@@ -167,13 +181,18 @@ def prepared_update(
     schema_target_version: int = 2,
     schema_steps=None,
 ):
-    data_root, state_root, profile_id, proc, probe, runtime, song, version = running_profile(tmp_path)
-    target, record, manifest, authenticity, payload = release_fixture()
+    data_root, state_root, profile_id, proc, probe, runtime, song, version = running_profile(
+        tmp_path
+    )
+    steps = (schema_step_v2(),) if schema_steps is None else tuple(schema_steps)
+    target, record, manifest, authenticity, payload = release_fixture(
+        schema_target_version=schema_target_version,
+        schema_steps=steps,
+    )
     coordinator = ApplicationUpdateCoordinator(
         state_root=state_root,
         memory_opener=memory_opener,
     )
-    steps = (schema_step_v2(),) if schema_steps is None else tuple(schema_steps)
     plan = coordinator.prepare(
         runtime=runtime,
         current_release_id="release-v1",
@@ -206,7 +225,18 @@ def prepared_update(
     )
 
 
-def apply(coordinator, plan, data_root, manifest, payload, target, authenticity, driver, proc, probe):
+def apply(
+    coordinator,
+    plan,
+    data_root,
+    manifest,
+    payload,
+    target,
+    authenticity,
+    driver,
+    proc,
+    probe,
+):
     return coordinator.apply(
         plan=plan,
         data_root=data_root,
@@ -220,12 +250,31 @@ def apply(coordinator, plan, data_root, manifest, payload, target, authenticity,
     )
 
 
-def test_success_runs_bound_schema_migration_then_reopens_exact_song(tmp_path: Path) -> None:
+def test_success_runs_bound_schema_migration_then_reopens_exact_song(
+    tmp_path: Path,
+) -> None:
     values = prepared_update(tmp_path)
-    data_root, state_root, profile_id, proc, probe, coordinator, plan, target, _, manifest, auth, payload, song, version = values
+    (
+        data_root,
+        state_root,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        song,
+        version,
+    ) = values
     driver = Driver()
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "SUCCEEDED"
     assert driver.calls == ["INSTALL"]
     assert application_schema_version(data_root, profile_id) == 2
@@ -242,12 +291,31 @@ def test_success_runs_bound_schema_migration_then_reopens_exact_song(tmp_path: P
     assert runtime.quit().status == "STOPPED"
 
 
-def test_failed_changed_package_rolls_back_before_schema_migration(tmp_path: Path) -> None:
+def test_failed_changed_package_rolls_back_before_schema_migration(
+    tmp_path: Path,
+) -> None:
     values = prepared_update(tmp_path)
-    data_root, _, profile_id, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        _,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver(install_state="FAILED_CHANGED", install_release=None)
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "ROLLED_BACK"
     assert result.restored_sha256 == plan.snapshot_sha256
     assert driver.calls == ["INSTALL", "ROLLBACK"]
@@ -255,16 +323,35 @@ def test_failed_changed_package_rolls_back_before_schema_migration(tmp_path: Pat
     assert migration_history_count(data_root, profile_id) == 0
 
 
-def test_schema_failure_after_package_success_rolls_back_package_and_snapshot(tmp_path: Path) -> None:
+def test_schema_failure_after_package_success_rolls_back_package_and_snapshot(
+    tmp_path: Path,
+) -> None:
     bad_step = schema_step_v2(
         "CREATE TABLE release_v2_schema_marker(value TEXT)",
         "INSERT INTO missing_schema_table(value) VALUES('boom')",
     )
     values = prepared_update(tmp_path, schema_steps=(bad_step,))
-    data_root, _, profile_id, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        _,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver()
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "ROLLED_BACK"
     assert driver.calls == ["INSTALL", "ROLLBACK"]
     assert result.restored_sha256 == plan.snapshot_sha256
@@ -273,15 +360,34 @@ def test_schema_failure_after_package_success_rolls_back_package_and_snapshot(tm
     assert RecoveryManager.inspect_snapshot(data_root, profile_id).sha256 == plan.snapshot_sha256
 
 
-def test_migration_success_then_headquarters_failure_rolls_back_both_layers(tmp_path: Path) -> None:
+def test_migration_success_then_headquarters_failure_rolls_back_both_layers(
+    tmp_path: Path,
+) -> None:
     def bad_open(root, profile_id):
         raise RuntimeError("simulated updated build cannot open Headquarters")
 
     values = prepared_update(tmp_path, memory_opener=bad_open)
-    data_root, _, profile_id, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        _,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver()
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "ROLLED_BACK"
     assert driver.calls == ["INSTALL", "ROLLBACK"]
     assert result.restored_sha256 == plan.snapshot_sha256
@@ -290,9 +396,26 @@ def test_migration_success_then_headquarters_failure_rolls_back_both_layers(tmp_
     assert RecoveryManager.inspect_snapshot(data_root, profile_id).sha256 == plan.snapshot_sha256
 
 
-def test_schema_recovery_required_does_not_blindly_roll_back_package(tmp_path: Path, monkeypatch) -> None:
+def test_schema_recovery_required_does_not_blindly_roll_back_package(
+    tmp_path: Path, monkeypatch
+) -> None:
     values = prepared_update(tmp_path)
-    data_root, state_root, profile_id, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        state_root,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver()
 
     def ambiguous(self, migration_plan, *, maintenance_lease):
@@ -305,7 +428,9 @@ def test_schema_recovery_required_does_not_blindly_roll_back_package(tmp_path: P
         )
 
     monkeypatch.setattr(UpdateBoundSchemaMigrator, "migrate_under_maintenance", ambiguous)
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "RECOVERY_REQUIRED"
     assert driver.calls == ["INSTALL"]
     assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
@@ -314,10 +439,27 @@ def test_schema_recovery_required_does_not_blindly_roll_back_package(tmp_path: P
 
 def test_unknown_install_is_recovery_required_and_never_retried(tmp_path: Path) -> None:
     values = prepared_update(tmp_path)
-    data_root, state_root, profile_id, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        state_root,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver(install_state="UNKNOWN", install_release=None)
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "RECOVERY_REQUIRED"
     status = coordinator.status(plan.update_id)
     assert status.requires_recovery is True
@@ -325,22 +467,65 @@ def test_unknown_install_is_recovery_required_and_never_retried(tmp_path: Path) 
     assert driver.calls == ["INSTALL"]
     assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
     with pytest.raises(UpdateExecuteOnceError):
-        apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+        apply(
+            coordinator,
+            plan,
+            data_root,
+            manifest,
+            payload,
+            target,
+            auth,
+            driver,
+            proc,
+            probe,
+        )
 
 
 def test_wrong_success_release_receipt_becomes_ambiguous_recovery(tmp_path: Path) -> None:
     values = prepared_update(tmp_path)
-    data_root, _, _, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        _,
+        _,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver(install_release="some-other-release")
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "RECOVERY_REQUIRED"
     assert driver.calls == ["INSTALL"]
 
 
 def test_rollback_failure_does_not_attempt_snapshot_restore(tmp_path: Path) -> None:
     values = prepared_update(tmp_path)
-    data_root, _, _, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        _,
+        _,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver(
         install_state="FAILED_CHANGED",
         install_release=None,
@@ -348,7 +533,9 @@ def test_rollback_failure_does_not_attempt_snapshot_restore(tmp_path: Path) -> N
         rollback_release=None,
     )
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "RECOVERY_REQUIRED"
     assert result.restored_sha256 is None
     assert driver.calls == ["INSTALL", "ROLLBACK"]
@@ -356,21 +543,141 @@ def test_rollback_failure_does_not_attempt_snapshot_restore(tmp_path: Path) -> N
 
 def test_song_change_after_prepare_refuses_before_package_callback(tmp_path: Path) -> None:
     values = prepared_update(tmp_path)
-    data_root, _, profile_id, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        _,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     reopened = HeadquartersMemory.open(data_root, profile_id)
     reopened.store.create_song("Sneaky post-prepare edit")
     reopened.close()
     driver = Driver()
 
     with pytest.raises(UpdateRejectedError):
-        apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+        apply(
+            coordinator,
+            plan,
+            data_root,
+            manifest,
+            payload,
+            target,
+            auth,
+            driver,
+            proc,
+            probe,
+        )
     assert driver.calls == []
     assert coordinator.status(plan.update_id).state == "PREPARED"
 
 
-def test_invalid_schema_chain_fails_before_package_mutation_and_marks_update_recovery(tmp_path: Path) -> None:
-    data_root, state_root, profile_id, proc, probe, runtime, _, _ = running_profile(tmp_path)
-    target, record, manifest, auth, payload = release_fixture()
+def test_manifest_schema_target_mismatch_rejects_before_snapshot_or_quit(
+    tmp_path: Path,
+) -> None:
+    (
+        _,
+        state_root,
+        _,
+        proc,
+        probe,
+        runtime,
+        _,
+        _,
+    ) = running_profile(tmp_path)
+    step = schema_step_v2()
+    target, record, manifest, auth, payload = release_fixture(
+        schema_target_version=2,
+        schema_steps=(step,),
+    )
+    coordinator = ApplicationUpdateCoordinator(state_root=state_root)
+
+    with pytest.raises(UpdateRejectedError, match="authenticated release manifest"):
+        coordinator.prepare(
+            runtime=runtime,
+            current_release_id="release-v1",
+            manifest=manifest,
+            artifact_id=record.artifact_id,
+            artifact_bytes=payload,
+            target=target,
+            authenticity=auth,
+            process=proc,
+            probe=probe,
+            schema_target_version=1,
+            schema_steps=(),
+        )
+    assert runtime.state == "RUNNING"
+    assert not coordinator.updates_root.exists()
+    assert runtime.quit().status == "STOPPED"
+
+
+def test_manifest_schema_program_mismatch_rejects_before_snapshot_or_quit(
+    tmp_path: Path,
+) -> None:
+    (
+        _,
+        state_root,
+        _,
+        proc,
+        probe,
+        runtime,
+        _,
+        _,
+    ) = running_profile(tmp_path)
+    authenticated = schema_step_v2()
+    supplied = schema_step_v2("CREATE TABLE another_v2_marker(value TEXT)")
+    target, record, manifest, auth, payload = release_fixture(
+        schema_target_version=2,
+        schema_steps=(authenticated,),
+    )
+    coordinator = ApplicationUpdateCoordinator(state_root=state_root)
+
+    with pytest.raises(UpdateRejectedError, match="schema migration program"):
+        coordinator.prepare(
+            runtime=runtime,
+            current_release_id="release-v1",
+            manifest=manifest,
+            artifact_id=record.artifact_id,
+            artifact_bytes=payload,
+            target=target,
+            authenticity=auth,
+            process=proc,
+            probe=probe,
+            schema_target_version=2,
+            schema_steps=(supplied,),
+        )
+    assert runtime.state == "RUNNING"
+    assert not coordinator.updates_root.exists()
+    assert runtime.quit().status == "STOPPED"
+
+
+def test_invalid_schema_chain_fails_before_package_mutation_and_marks_update_recovery(
+    tmp_path: Path,
+) -> None:
+    (
+        data_root,
+        state_root,
+        profile_id,
+        proc,
+        probe,
+        runtime,
+        _,
+        _,
+    ) = running_profile(tmp_path)
+    step = schema_step_v2()
+    target, record, manifest, auth, payload = release_fixture(
+        schema_target_version=3,
+        schema_steps=(step,),
+    )
     coordinator = ApplicationUpdateCoordinator(state_root=state_root)
 
     with pytest.raises(UpdateRejectedError):
@@ -385,7 +692,7 @@ def test_invalid_schema_chain_fails_before_package_mutation_and_marks_update_rec
             process=proc,
             probe=probe,
             schema_target_version=3,
-            schema_steps=(schema_step_v2(),),
+            schema_steps=(step,),
         )
     assert runtime.state == "STOPPED"
     updates = list(coordinator.updates_root.glob("upd_*.json"))
@@ -397,22 +704,67 @@ def test_invalid_schema_chain_fails_before_package_mutation_and_marks_update_rec
 
 def test_schema_binding_tamper_is_rejected_before_package_callback(tmp_path: Path) -> None:
     values = prepared_update(tmp_path)
-    data_root, state_root, _, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        state_root,
+        _,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     binding_path = state_root / "update-schema" / f"{plan.update_id}.json"
     envelope = json.loads(binding_path.read_text())
     envelope["payload"]["target_release_id"] = "tampered-release"
-    binding_path.write_text(json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n")
+    binding_path.write_text(
+        json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n"
+    )
     driver = Driver()
 
-    with pytest.raises(Exception):
-        apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    with pytest.raises(UpdateRejectedError):
+        apply(
+            coordinator,
+            plan,
+            data_root,
+            manifest,
+            payload,
+            target,
+            auth,
+            driver,
+            proc,
+            probe,
+        )
     assert driver.calls == []
     assert coordinator.status(plan.update_id).state == "PREPARED"
 
 
-def test_existing_prepared_update_blocks_second_update_for_same_profile(tmp_path: Path) -> None:
+def test_existing_prepared_update_blocks_second_update_for_same_profile(
+    tmp_path: Path,
+) -> None:
     values = prepared_update(tmp_path)
-    data_root, state_root, profile_id, proc, probe, coordinator, _, target, record, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        state_root,
+        profile_id,
+        proc,
+        probe,
+        coordinator,
+        _,
+        target,
+        record,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     runtime = ApplicationRuntime(data_root=data_root, state_root=state_root)
     assert runtime.launch(profile_id=profile_id, process=proc, probe=probe).status == "STARTED"
 
@@ -441,9 +793,17 @@ def test_illegal_recomputed_history_is_rejected_as_corruption(tmp_path: Path) ->
     envelope = json.loads(path.read_text())
     envelope["state"] = "SUCCEEDED"
     envelope["history"].append({"state": "SUCCEEDED", "evidence": "tampered:shortcut"})
-    payload = {key: value for key, value in envelope.items() if key != "integrity_sha256"}
+    payload = {
+        key: value for key, value in envelope.items() if key != "integrity_sha256"
+    }
     envelope["integrity_sha256"] = hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False).encode()
+        json.dumps(
+            payload,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        ).encode()
     ).hexdigest()
     path.write_text(json.dumps(envelope, sort_keys=True, separators=(",", ":")) + "\n")
 
@@ -466,7 +826,9 @@ def test_crash_breadcrumb_is_recovery_not_retry_permission(tmp_path: Path) -> No
     assert status.retry_allowed is False
 
 
-def test_validation_close_failure_does_not_auto_rollback_under_open_database(tmp_path: Path) -> None:
+def test_validation_close_failure_does_not_auto_rollback_under_open_database(
+    tmp_path: Path,
+) -> None:
     opened: list[HeadquartersMemory] = []
 
     def close_failing_open(root, profile_id):
@@ -480,10 +842,27 @@ def test_validation_close_failure_does_not_auto_rollback_under_open_database(tmp
         return headquarters
 
     values = prepared_update(tmp_path, memory_opener=close_failing_open)
-    data_root, _, _, proc, probe, coordinator, plan, target, _, manifest, auth, payload, _, _ = values
+    (
+        data_root,
+        _,
+        _,
+        proc,
+        probe,
+        coordinator,
+        plan,
+        target,
+        _,
+        manifest,
+        auth,
+        payload,
+        _,
+        _,
+    ) = values
     driver = Driver()
 
-    result = apply(coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe)
+    result = apply(
+        coordinator, plan, data_root, manifest, payload, target, auth, driver, proc, probe
+    )
     assert result.state == "RECOVERY_REQUIRED"
     assert driver.calls == ["INSTALL"]
     for headquarters in opened:
