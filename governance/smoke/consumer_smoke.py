@@ -26,6 +26,7 @@ from n0te2.instance import ProcessIdentity  # noqa: E402
 from n0te2.migration import MigrationStep  # noqa: E402
 from n0te2.platforms import PlatformEnvironment  # noqa: E402
 from n0te2.safe_update import ApplicationUpdateCoordinator  # noqa: E402
+from n0te2.schema_program import migration_steps_fingerprint  # noqa: E402
 from n0te2.support import SupportTarget  # noqa: E402
 from n0te2.update import PackageActionReceipt  # noqa: E402
 
@@ -97,6 +98,12 @@ with tempfile.TemporaryDirectory() as temp:
         size_bytes=len(package_bytes),
         sha256=hashlib.sha256(package_bytes).hexdigest(),
     )
+    step = MigrationStep(
+        1,
+        2,
+        "release-app-01e semantic schema",
+        ("CREATE TABLE app_v2_marker(value TEXT NOT NULL DEFAULT 'ready')",),
+    )
     manifest = ReleaseManifest(
         release_id="release-app-01e",
         version="2.0.0",
@@ -105,6 +112,8 @@ with tempfile.TemporaryDirectory() as temp:
         dependency_inventory_sha256="c" * 64,
         license_inventory_sha256="d" * 64,
         artifacts=(artifact,),
+        application_schema_version=2,
+        application_schema_migrations_sha256=migration_steps_fingerprint((step,)),
     )
     authenticity = ManifestAuthenticityEvidence(
         manifest_fingerprint=manifest.fingerprint,
@@ -112,12 +121,6 @@ with tempfile.TemporaryDirectory() as temp:
         verifier_id="smoke-verifier",
         scheme="SMOKE-ONLY-VERIFIER-RECEIPT",
         evidence_ref="smoke:manifest-authenticity",
-    )
-    step = MigrationStep(
-        1,
-        2,
-        "release-app-01e semantic schema",
-        ("CREATE TABLE app_v2_marker(value TEXT NOT NULL DEFAULT 'ready')",),
     )
 
     coordinator = ApplicationUpdateCoordinator(state_root=state_root)
@@ -184,5 +187,5 @@ with tempfile.TemporaryDirectory() as temp:
     assert resumed_runtime.quit().status == "STOPPED"
 
 print(
-    "APP-01E CONSUMER SMOKE: GREEN: an authenticated target package was prepared from a running Artist profile, the runtime stopped, package installation executed under update maintenance ownership, the bound semantic schema migrated 1→2 before Headquarters validation, and the exact Artist/Song/version/asset identities reopened normally afterward"
+    "APP-01E CONSUMER SMOKE: GREEN: an authenticated target package and exact semantic-schema program were prepared from a running Artist profile, the runtime stopped, package installation executed under update maintenance ownership, the bound schema migrated 1→2 before Headquarters validation, and the exact Artist/Song/version/asset identities reopened normally afterward"
 )
