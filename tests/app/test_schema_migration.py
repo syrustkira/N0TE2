@@ -57,13 +57,10 @@ def seeded_profile(tmp_path: Path) -> tuple[Path, Path, str, str]:
 def table_exists(db_path: Path, table_name: str) -> bool:
     conn = sqlite3.connect(db_path)
     try:
-        return (
-            conn.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-                (table_name,),
-            ).fetchone()
-            is not None
-        )
+        return conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (table_name,),
+        ).fetchone() is not None
     finally:
         conn.close()
 
@@ -101,6 +98,7 @@ def test_current_version_plan_is_explicit_no_change_and_writes_no_schema_state(t
     result = migrator.migrate(plan, maintenance_process=process(9001, "migration"), probe=Probe())
     assert result.state == "NO_CHANGE"
     assert result.installed_version == 1
+    assert result.rollback_snapshot_sha256 is None
     assert migrator.history(profile_id) == ()
     assert not table_exists(db_path, "application_schema_migrations")
 
@@ -139,12 +137,14 @@ def test_prepare_refuses_any_existing_runtime_lease_instead_of_trusting_stopped_
     owner = process(1001, "runtime")
     probe = Probe("ALIVE")
     probe.set(owner, "ALIVE")
-    acquired = InstanceLeaseManager(state_root).acquire(profile_id, owner, probe)
-    assert acquired.status == "ACQUIRED"
+    assert InstanceLeaseManager(state_root).acquire(profile_id, owner, probe).status == "ACQUIRED"
 
-    migrator = ApplicationSchemaMigrator(data_root, state_root)
     with pytest.raises(MigrationPlanError, match="runtime ownership"):
-        migrator.prepare(profile_id=profile_id, target_version=2, steps=(step_v2(),))
+        ApplicationSchemaMigrator(data_root, state_root).prepare(
+            profile_id=profile_id,
+            target_version=2,
+            steps=(step_v2(),),
+        )
 
 
 def test_runtime_race_after_prepare_blocks_migration_before_staged_install(tmp_path: Path) -> None:
@@ -175,13 +175,13 @@ def test_verified_stale_runtime_lease_can_be_replaced_by_bounded_maintenance_own
         probe=dead_probe,
     )
     assert result.state == "SUCCEEDED"
+    assert result.rollback_snapshot_sha256 is not None
     assert InstanceLeaseManager(state_root).inspect(profile_id) is None
 
 
-def test_failed_staged_sql_leaves_live_database_and_schema_version_untouched(tmp_path: Path) -> None:
+def test_failed_staged_sql_leaves_live_database_byte_for_byte_untouched(tmp_path: Path) -> None:
     data_root, state_root, profile_id, _ = seeded_profile(tmp_path)
     db_path = data_root / "profiles" / profile_id / "lineage.sqlite3"
-    before = db_sha(db_path)
     migrator = ApplicationSchemaMigrator(data_root, state_root)
     plan = migrator.prepare(
         profile_id=profile_id,
@@ -193,6 +193,7 @@ def test_failed_staged_sql_leaves_live_database_and_schema_version_untouched(tmp
             ),
         ),
     )
+    before = db_sha(db_path)
 
     with pytest.raises(SchemaMigrationError, match="before install"):
         migrator.migrate(plan, maintenance_process=process(9004, "migration"), probe=Probe())
@@ -204,13 +205,13 @@ def test_failed_staged_sql_leaves_live_database_and_schema_version_untouched(tmp
 def test_identity_repointing_in_stage_is_detected_before_live_install(tmp_path: Path) -> None:
     data_root, state_root, profile_id, song_id = seeded_profile(tmp_path)
     db_path = data_root / "profiles" / profile_id / "lineage.sqlite3"
-    before = db_sha(db_path)
     migrator = ApplicationSchemaMigrator(data_root, state_root)
     plan = migrator.prepare(
         profile_id=profile_id,
         target_version=2,
         steps=(step_v2("UPDATE metadata SET value='' WHERE key='active_song_id'"),),
     )
+    before = db_sha(db_path)
     assert song_id
 
     with pytest.raises(MigrationValidationError, match="changed canonical Artist/Song identity"):
@@ -229,6 +230,7 @@ def test_successful_migration_installs_only_validated_candidate_and_exposes_hist
     db_path = data_root / "profiles" / profile_id / "lineage.sqlite3"
     assert result.state == "SUCCEEDED"
     assert result.installed_version == 2
+    assert result.rollback_snapshot_sha256 is not None
     assert app_version(db_path) == 2
     assert table_exists(db_path, "app_v2_marker")
     with HeadquartersMemory.open(data_root, profile_id) as reopened:
@@ -244,35 +246,42 @@ def test_successful_migration_installs_only_validated_candidate_and_exposes_hist
     assert history[0].description == step.description
 
 
-def test_changed_snapshot_after_prepare_fails_before_maintenance_install(tmp_path: Path) -> None:
+def test_identity_change_after_prepare_invalidates_plan_before_maintenance_snapshot(tmp_path: Path) -> None:
     data_root, state_root, profile_id, _ = seeded_profile(tmp_path)
     migrator = ApplicationSchemaMigrator(data_root, state_root)
     plan = migrator.prepare(profile_id=profile_id, target_version=2, steps=(step_v2(),))
     with HeadquartersMemory.open(data_root, profile_id) as memory:
         memory.store.create_song("changed after plan")
-        RecoveryManager(memory.store).create_snapshot()
 
-    with pytest.raises(MigrationValidationError):
+    with pytest.raises(MigrationValidationError, match="identity changed"):
         migrator.migrate(plan, maintenance_process=process(9007, "migration"), probe=Probe())
 
 
-def test_post_install_reopen_failure_restores_exact_pre_migration_snapshot(tmp_path: Path, monkeypatch) -> None:
+def test_post_install_reopen_failure_restores_exact_maintenance_owned_snapshot(tmp_path: Path, monkeypatch) -> None:
     data_root, state_root, profile_id, song_id = seeded_profile(tmp_path)
     migrator = ApplicationSchemaMigrator(data_root, state_root)
     plan = migrator.prepare(profile_id=profile_id, target_version=2, steps=(step_v2(),))
-    snapshot = RecoveryManager.inspect_snapshot(data_root, profile_id)
+
+    real_snapshot = RecoveryManager.create_snapshot
+    captured: dict[str, str] = {}
+
+    def capture_snapshot(self):
+        snapshot = real_snapshot(self)
+        captured["sha256"] = snapshot.sha256
+        return snapshot
 
     def fail_open(cls, root, requested_profile):
         raise RuntimeError("simulated post-install reopen failure")
 
+    monkeypatch.setattr(RecoveryManager, "create_snapshot", capture_snapshot)
     monkeypatch.setattr(HeadquartersMemory, "open", classmethod(fail_open))
     result = migrator.migrate(plan, maintenance_process=process(9008, "migration"), probe=Probe())
     db_path = data_root / "profiles" / profile_id / "lineage.sqlite3"
 
     assert result.state == "ROLLED_BACK"
     assert result.installed_version == 1
-    assert result.restored_snapshot_sha256 == snapshot.sha256
-    assert db_sha(db_path) == snapshot.sha256
+    assert result.rollback_snapshot_sha256 == captured["sha256"]
+    assert db_sha(db_path) == captured["sha256"]
     assert app_version(db_path) == 1
     assert not table_exists(db_path, "app_v2_marker")
     conn = sqlite3.connect(db_path)
@@ -299,7 +308,34 @@ def test_restore_failure_is_explicit_recovery_required_not_false_rollback(tmp_pa
 
     assert result.state == "RECOVERY_REQUIRED"
     assert result.installed_version is None
+    assert result.rollback_snapshot_sha256 is not None
     assert "restore also failed" in result.evidence
+
+
+def test_step_cannot_rewrite_prior_migration_history(tmp_path: Path) -> None:
+    data_root, state_root, profile_id, _ = seeded_profile(tmp_path)
+    migrator = ApplicationSchemaMigrator(data_root, state_root)
+    first = migrator.prepare(profile_id=profile_id, target_version=2, steps=(step_v2(),))
+    assert migrator.migrate(first, maintenance_process=process(9010, "migration-one"), probe=Probe()).state == "SUCCEEDED"
+
+    rewrite = MigrationStep(
+        2,
+        3,
+        "attempt to rewrite prior history",
+        (
+            "UPDATE application_schema_migrations SET description='rewritten' WHERE sequence=1",
+            "CREATE TABLE app_v3_marker(value TEXT)",
+        ),
+    )
+    second = migrator.prepare(profile_id=profile_id, target_version=3, steps=(rewrite,))
+    db_path = data_root / "profiles" / profile_id / "lineage.sqlite3"
+    before = db_sha(db_path)
+
+    with pytest.raises(MigrationValidationError, match="rewrote prior migration history"):
+        migrator.migrate(second, maintenance_process=process(9011, "migration-two"), probe=Probe())
+    assert app_version(db_path) == 2
+    assert db_sha(db_path) == before
+    assert migrator.history(profile_id)[0].description == "add bounded v2 application schema"
 
 
 def test_plan_sql_cannot_modify_live_database_before_candidate_validation(tmp_path: Path) -> None:
@@ -313,7 +349,7 @@ def test_plan_sql_cannot_modify_live_database_before_candidate_validation(tmp_pa
     )
 
     with pytest.raises(MigrationValidationError):
-        migrator.migrate(plan, maintenance_process=process(9010, "migration"), probe=Probe())
+        migrator.migrate(plan, maintenance_process=process(9012, "migration"), probe=Probe())
     with HeadquartersMemory.open(data_root, profile_id) as memory:
         assert memory.store.artist().display_name == "TellMeN0TE"
     assert app_version(db_path) == 1
