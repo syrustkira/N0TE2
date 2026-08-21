@@ -17,6 +17,7 @@ VERIFICATION_STATES = {
     "SIZE_MISMATCH",
     "HASH_MISMATCH",
 }
+EMPTY_SCHEMA_MIGRATION_SHA256 = "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
 
 
 class ArtifactTrustError(ValueError):
@@ -93,6 +94,8 @@ class ReleaseManifest:
     dependency_inventory_sha256: str
     license_inventory_sha256: str
     artifacts: tuple[ArtifactRecord, ...]
+    application_schema_version: int = 1
+    application_schema_migrations_sha256: str = EMPTY_SCHEMA_MIGRATION_SHA256
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "release_id", _text(self.release_id, "release_id"))
@@ -108,6 +111,21 @@ class ReleaseManifest:
             "license_inventory_sha256",
         ):
             object.__setattr__(self, field, _hex(getattr(self, field), 64, field))
+        if (
+            isinstance(self.application_schema_version, bool)
+            or not isinstance(self.application_schema_version, int)
+            or self.application_schema_version < 1
+        ):
+            raise ArtifactTrustError("application_schema_version must be a positive integer")
+        object.__setattr__(
+            self,
+            "application_schema_migrations_sha256",
+            _hex(
+                self.application_schema_migrations_sha256,
+                64,
+                "application_schema_migrations_sha256",
+            ),
+        )
 
         records = tuple(self.artifacts)
         if not records:
@@ -132,6 +150,8 @@ class ReleaseManifest:
 
     def canonical_payload(self) -> dict[str, object]:
         return {
+            "application_schema_migrations_sha256": self.application_schema_migrations_sha256,
+            "application_schema_version": self.application_schema_version,
             "artifacts": [record.canonical_payload() for record in self.artifacts],
             "build_inputs_sha256": self.build_inputs_sha256,
             "dependency_inventory_sha256": self.dependency_inventory_sha256,
@@ -197,9 +217,9 @@ class ArtifactVerification:
 class ReleaseArtifactVerifier:
     """Pure fail-closed verifier for already-produced package/update bytes.
 
-    This class does not create signatures, install artifacts, update an app,
-    download bytes, or decide whether an older/newer release should be chosen.
-    Platform/release-specific trust systems produce ManifestAuthenticityEvidence.
+    The authenticated manifest binds both package bytes and the application
+    semantic-schema version/program expected by that release. This class does
+    not execute migrations, install artifacts, download bytes, or choose releases.
     """
 
     @staticmethod
@@ -287,5 +307,5 @@ class ReleaseArtifactVerifier:
             artifact_id=wanted_id,
             expected_target_fingerprint=expected_fingerprint,
             actual_sha256=actual_sha256,
-            reason="artifact bytes, target and exact authenticated manifest agree",
+            reason="artifact bytes, target, semantic-schema declaration and exact authenticated manifest agree",
         )

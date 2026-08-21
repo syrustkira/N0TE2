@@ -105,6 +105,7 @@ def test_prepare_rejects_symlinked_data_root_before_snapshot_or_quit(tmp_path: P
             authenticity=auth,
             process=proc,
             probe=probe,
+            schema_target_version=1,
         )
 
     assert runtime.state == "RUNNING"
@@ -133,6 +134,7 @@ def test_apply_rejects_symlink_alias_before_package_driver(tmp_path: Path) -> No
         authenticity=auth,
         process=proc,
         probe=probe,
+        schema_target_version=1,
     )
     assert runtime.state == "STOPPED"
 

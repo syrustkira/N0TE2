@@ -1,99 +1,191 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import json
+import sqlite3
 import sys
 import tempfile
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "APP-01" or state.get("active_increment") != "APP-01D":
+if state.get("active_node") != "APP-01" or state.get("active_increment") != "APP-01E":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2.memory import HeadquartersMemory  # noqa: E402
-from n0te2.platforms import PlatformRoots  # noqa: E402
-from n0te2.uninstall import (  # noqa: E402
-    ApplicationRemovalPlanner,
-    ResolvedPathEvidence,
+from n0te2.app_runtime import ApplicationRuntime  # noqa: E402
+from n0te2.artifacts import (  # noqa: E402
+    ArtifactRecord,
+    ManifestAuthenticityEvidence,
+    ReleaseManifest,
 )
+from n0te2.instance import ProcessIdentity  # noqa: E402
+from n0te2.migration import MigrationStep  # noqa: E402
+from n0te2.platforms import PlatformEnvironment  # noqa: E402
+from n0te2.safe_update import ApplicationUpdateCoordinator  # noqa: E402
+from n0te2.schema_program import migration_steps_fingerprint  # noqa: E402
+from n0te2.support import SupportTarget  # noqa: E402
+from n0te2.update import PackageActionReceipt  # noqa: E402
 
 
-def verified(path: PurePosixPath, ref: str) -> ResolvedPathEvidence:
-    physical = Path(str(path))
-    physical.mkdir(parents=True, exist_ok=True)
-    assert not physical.is_symlink()
-    assert physical.resolve() == physical
-    return ResolvedPathEvidence(path, path, False, ref)
+class Probe:
+    def status(self, process: ProcessIdentity) -> str:
+        return "DEAD"
+
+
+class SuccessfulPackageDriver:
+    def perform(self, request, artifact_bytes):
+        if request.action == "INSTALL":
+            return PackageActionReceipt(
+                request_fingerprint=request.fingerprint,
+                action="INSTALL",
+                state="SUCCEEDED",
+                evidence_ref="smoke:package-installed",
+                resulting_release_id=request.target_release_id,
+            )
+        return PackageActionReceipt(
+            request_fingerprint=request.fingerprint,
+            action="ROLLBACK",
+            state="SUCCEEDED",
+            evidence_ref="smoke:package-rolled-back",
+            resulting_release_id=request.current_release_id,
+        )
 
 
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp).resolve()
-    data_root = root / "data"
-    state_root = root / "state"
-    cache_root = root / "cache"
-    log_root = state_root / "logs"
-    config_root = root / "config"
-    app_path = root / "package" / "n0te"
-    app_path.parent.mkdir(parents=True)
-    app_path.write_text("test package placeholder")
-
-    headquarters = HeadquartersMemory.create(data_root, "Uninstall Retention Artist")
-    profile_id = headquarters.store.profile_id
-    song = headquarters.store.create_song("Retained Song")
-    version = headquarters.store.create_version(song.id, label="Retained Version")
-    snapshot = headquarters.recovery.create_snapshot()
-    headquarters.close()
-
-    roots = PlatformRoots(
-        os_family="LINUX",
-        data_root=PurePosixPath(str(data_root)),
-        config_root=PurePosixPath(str(config_root)),
-        state_root=PurePosixPath(str(state_root)),
-        cache_root=PurePosixPath(str(cache_root)),
-        log_root=PurePosixPath(str(log_root)),
+    data_root = (root / "data").resolve()
+    state_root = (root / "state").resolve()
+    platform = PlatformEnvironment.from_runtime_labels("Linux", "x86_64")
+    process = ProcessIdentity.from_start_token(
+        platform,
+        pid=99001,
+        start_token="app-01e-update-consumer-smoke",
     )
-    plan = ApplicationRemovalPlanner.plan(
-        roots=roots,
+    probe = Probe()
+
+    from n0te2.memory import HeadquartersMemory  # noqa: E402
+
+    seed = HeadquartersMemory.create(data_root, "Schema Update Artist")
+    profile_id = seed.store.profile_id
+    artist_id = seed.store.primary_artist_id
+    seed.close()
+
+    runtime = ApplicationRuntime(data_root=data_root, state_root=state_root)
+    assert runtime.launch(profile_id=profile_id, process=process, probe=probe).status == "STARTED"
+    song = runtime.headquarters.store.create_song("Migration-Safe Song")
+    asset = runtime.headquarters.store.attach_asset(
+        song.id,
+        name="song.wav",
+        sha256="a" * 64,
+        source_uri="file:///song.wav",
+    )
+    version = runtime.headquarters.store.create_version(
+        song.id,
+        label="Pre-Update Version",
+        asset_ids=(asset.id,),
+    )
+
+    package_bytes = b"n0te2-app-01e-release"
+    target = SupportTarget.from_runtime_labels(os_name="Linux", machine="x86_64")
+    artifact = ArtifactRecord(
+        artifact_id="linux-x86_64-package",
+        target_fingerprint=target.fingerprint,
+        package_kind="TEST_PACKAGE",
+        size_bytes=len(package_bytes),
+        sha256=hashlib.sha256(package_bytes).hexdigest(),
+    )
+    step = MigrationStep(
+        1,
+        2,
+        "release-app-01e semantic schema",
+        ("CREATE TABLE app_v2_marker(value TEXT NOT NULL DEFAULT 'ready')",),
+    )
+    manifest = ReleaseManifest(
+        release_id="release-app-01e",
+        version="2.0.0",
+        source_commit_sha="a" * 40,
+        build_inputs_sha256="b" * 64,
+        dependency_inventory_sha256="c" * 64,
+        license_inventory_sha256="d" * 64,
+        artifacts=(artifact,),
+        application_schema_version=2,
+        application_schema_migrations_sha256=migration_steps_fingerprint((step,)),
+    )
+    authenticity = ManifestAuthenticityEvidence(
+        manifest_fingerprint=manifest.fingerprint,
+        status="VERIFIED",
+        verifier_id="smoke-verifier",
+        scheme="SMOKE-ONLY-VERIFIER-RECEIPT",
+        evidence_ref="smoke:manifest-authenticity",
+    )
+
+    coordinator = ApplicationUpdateCoordinator(state_root=state_root)
+    plan = coordinator.prepare(
+        runtime=runtime,
+        current_release_id="release-v1",
+        manifest=manifest,
+        artifact_id=artifact.artifact_id,
+        artifact_bytes=package_bytes,
+        target=target,
+        authenticity=authenticity,
+        process=process,
+        probe=probe,
+        schema_target_version=2,
+        schema_steps=(step,),
+    )
+    assert runtime.state == "STOPPED"
+
+    result = coordinator.apply(
+        plan=plan,
+        data_root=data_root,
+        manifest=manifest,
+        artifact_bytes=package_bytes,
+        target=target,
+        authenticity=authenticity,
+        driver=SuccessfulPackageDriver(),
+        process=process,
+        probe=probe,
+    )
+    assert result.state == "SUCCEEDED"
+
+    db = data_root / "profiles" / profile_id / "lineage.sqlite3"
+    conn = sqlite3.connect(db)
+    try:
+        assert int(
+            conn.execute(
+                "SELECT value FROM metadata WHERE key='application_semantic_schema_version'"
+            ).fetchone()[0]
+        ) == 2
+        history = conn.execute(
+            "SELECT migration_id,from_version,to_version,step_fingerprint,description "
+            "FROM application_schema_migrations ORDER BY sequence"
+        ).fetchall()
+        assert len(history) == 1
+        assert history[0][1:] == (1, 2, step.fingerprint, step.description)
+    finally:
+        conn.close()
+
+    resumed_runtime = ApplicationRuntime(data_root=data_root, state_root=state_root)
+    assert resumed_runtime.launch(
         profile_id=profile_id,
-        runtime_state="STOPPED",
-        path_evidence=(
-            verified(roots.config_root, "smoke:path:config"),
-            verified(roots.state_root, "smoke:path:state"),
-            verified(roots.cache_root, "smoke:path:cache"),
-            verified(PurePosixPath(str(app_path)), "smoke:path:package"),
-        ),
-        platform_managed_paths=(PurePosixPath(str(app_path)),),
-    )
-
-    retained = {str(entry.path) for entry in plan.retained}
-    assert str(roots.data_root) in retained
-    assert str(roots.profile_data_root(profile_id)) in retained
-    assert str(roots.profile_data_root(profile_id) / "recovery") in retained
-    assert str(snapshot.path).startswith(str(roots.profile_data_root(profile_id) / "recovery"))
-    assert roots.data_root not in {entry.path for entry in plan.removal_candidates}
-    assert roots.profile_data_root(profile_id) not in {entry.path for entry in plan.removal_candidates}
-    assert roots.log_root not in {entry.path for entry in plan.removal_candidates}
-    assert {entry.path for entry in plan.removal_candidates} == {
-        roots.config_root,
-        roots.state_root,
-        roots.cache_root,
-    }
-    package = next(entry for entry in plan.entries if entry.path == PurePosixPath(str(app_path)))
-    assert package.classification == "PLATFORM_MANAGED"
-    assert package.eligible_for_removal is False
-    assert all(item.status == "HELD_NOT_ACTIVE" for item in plan.held_services)
-    assert all(item.promotion_required for item in plan.held_services)
-
-    reopened = HeadquartersMemory.open(data_root, profile_id)
+        process=process,
+        probe=probe,
+    ).status == "STARTED"
+    reopened = resumed_runtime.headquarters
+    assert reopened.store.primary_artist_id == artist_id
     resumed = reopened.store.active_song()
     assert resumed is not None and resumed.id == song.id
     assert resumed.current_version_id == version.id
-    reopened.close()
+    reopened_version = reopened.store.get_version(version.id)
+    assert reopened_version is not None and reopened_version.song_id == song.id
+    reopened_asset = reopened.store.get_asset(asset.id)
+    assert reopened_asset is not None and reopened_asset.song_id == song.id
+    assert resumed_runtime.quit().status == "STOPPED"
 
 print(
-    "APP-01D CONSUMER SMOKE: GREEN: a stopped local N0TE profile produced a non-destructive uninstall plan in which package/runtime mechanics were separated from retained Artist/Song/profile/recovery data, nested runtime roots did not double-remove, the real Song/version remained reopenable, and accounts/cloud/billing/telemetry/crash-upload/DRM stayed explicitly held-not-active"
+    "APP-01E CONSUMER SMOKE: GREEN: an authenticated target package and exact semantic-schema program were prepared from a running Artist profile, the runtime stopped, package installation executed under update maintenance ownership, the bound schema migrated 1→2 before Headquarters validation, and the exact Artist/Song/version/asset identities reopened normally afterward"
 )
