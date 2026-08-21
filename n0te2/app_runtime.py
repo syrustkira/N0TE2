@@ -170,6 +170,20 @@ class ApplicationRuntime:
         lease = acquired.lease
         try:
             headquarters = self._memory_opener(self.data_root, profile)
+            if not isinstance(headquarters, HeadquartersMemory):
+                raise ApplicationRuntimeError(
+                    "memory_opener did not return HeadquartersMemory"
+                )
+            if headquarters.store.profile_id != profile:
+                try:
+                    headquarters.close()
+                except Exception as close_exc:
+                    raise ApplicationRuntimeError(
+                        "memory_opener returned a different profile and that Headquarters could not be closed"
+                    ) from close_exc
+                raise ApplicationRuntimeError(
+                    "memory_opener returned Headquarters for a different profile"
+                )
         except Exception as exc:
             try:
                 self._leases.release(
