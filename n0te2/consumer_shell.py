@@ -144,8 +144,8 @@ class ConsumerShell:
 
     Product semantics remain in ApplicationProfiles/ApplicationRuntime/Headquarters.
     This shell owns only bounded presentation, browser-session action authority and
-    loopback transport. The HTTP server is intentionally single-threaded because
-    canonical SQLite Headquarters ownership is thread-bound.
+    loopback transport. The server is deliberately single-threaded because the
+    canonical SQLite Headquarters connection is thread-bound.
     """
 
     def __init__(
@@ -205,7 +205,6 @@ class ConsumerShell:
     def start(self) -> ShellAddress:
         if self._thread is not None:
             raise ConsumerShellError("one ConsumerShell instance can be started only once")
-
         shell = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -232,11 +231,7 @@ class ConsumerShell:
             raise ConsumerShellError("consumer shell must bind only to IPv4 loopback")
         self._server = server
         self._address = ShellAddress(_LOOPBACK_HOST, int(bound_port))
-        self._thread = threading.Thread(
-            target=self._serve,
-            name="n0te-consumer-shell",
-            daemon=True,
-        )
+        self._thread = threading.Thread(target=self._serve, name="n0te-consumer-shell", daemon=True)
         self._thread.start()
         if not self._ready.wait(timeout=2.0):
             raise ConsumerShellError("consumer shell did not enter its serve loop")
@@ -267,14 +262,13 @@ class ConsumerShell:
             self._stopped.set()
 
     def stop(self, *, timeout: float = 2.0) -> None:
-        if self._thread is None:
-            return
-        if self._stopped.is_set():
+        if self._thread is None or self._stopped.is_set():
             return
         self._stop_requested.set()
         if not self._stopped.wait(timeout=timeout):
-            message = self._stop_error or "consumer shell could not stop safely"
-            raise ConsumerShellRecoveryRequired(message)
+            raise ConsumerShellRecoveryRequired(
+                self._stop_error or "consumer shell could not stop safely"
+            )
 
     def wait_stopped(self, *, timeout: float = 2.0) -> bool:
         return self._stopped.wait(timeout=timeout)
@@ -287,9 +281,7 @@ class ConsumerShell:
 
     def _post_origin_is_allowed(self, handler: BaseHTTPRequestHandler) -> bool:
         origin = handler.headers.get("Origin")
-        if origin is None:
-            return True
-        return origin.strip() == self.address.origin
+        return origin is None or origin.strip() == self.address.origin
 
     @staticmethod
     def _path(handler: BaseHTTPRequestHandler) -> str:
@@ -362,9 +354,12 @@ class ConsumerShell:
             return None
         if length <= 0 or length > _MAX_FORM_BYTES:
             return None
-        raw = handler.rfile.read(length)
         try:
-            parsed = parse_qs(raw.decode("utf-8"), keep_blank_values=True, strict_parsing=False)
+            parsed = parse_qs(
+                handler.rfile.read(length).decode("utf-8"),
+                keep_blank_values=True,
+                strict_parsing=False,
+            )
         except UnicodeDecodeError:
             return None
         values: dict[str, str] = {}
@@ -379,11 +374,20 @@ class ConsumerShell:
 
     def _handle_get(self, handler: BaseHTTPRequestHandler) -> None:
         if not self._request_host_is_exact(handler):
-            self._send_html(handler, 421, self._simple_error("This N0TE window is available only from its exact local address."))
+            self._send_html(
+                handler,
+                421,
+                self._simple_error("This N0TE window is available only from its exact local address."),
+            )
             return
         path = self._path(handler)
         if path == "/assets/shell.css":
-            self._send_bytes(handler, 200, _CSS.encode("utf-8"), content_type="text/css; charset=utf-8")
+            self._send_bytes(
+                handler,
+                200,
+                _CSS.encode("utf-8"),
+                content_type="text/css; charset=utf-8",
+            )
             return
         if path not in _NAV_ROUTES:
             self._send_html(handler, 404, self._simple_error("That N0TE page is not available."))
@@ -406,7 +410,11 @@ class ConsumerShell:
 
     def _handle_post(self, handler: BaseHTTPRequestHandler) -> None:
         if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(handler):
-            self._send_html(handler, 403, self._simple_error("That action did not come from this N0TE window."))
+            self._send_html(
+                handler,
+                403,
+                self._simple_error("That action did not come from this N0TE window."),
+            )
             return
         path = self._path(handler)
         if path not in {"/profile/create", "/profile/select", "/song/start", "/quit"}:
@@ -414,9 +422,12 @@ class ConsumerShell:
             return
         form = self._read_form(handler)
         if form is None or not self._form_authorized(form):
-            self._send_html(handler, 403, self._simple_error("That action expired. Reload N0TE and try again."))
+            self._send_html(
+                handler,
+                403,
+                self._simple_error("That action expired. Reload N0TE and try again."),
+            )
             return
-
         try:
             if path == "/profile/create":
                 self._post_create_profile(handler, form)
@@ -433,7 +444,9 @@ class ConsumerShell:
             self._send_html(
                 handler,
                 500,
-                self._simple_error("N0TE stopped that action before it could become an unclear consumer state."),
+                self._simple_error(
+                    "N0TE stopped that action before it could become an unclear consumer state."
+                ),
             )
 
     def _ensure_runtime(self) -> _PageState | None:
@@ -483,91 +496,148 @@ class ConsumerShell:
         raise ConsumerShellError("N0TE could not determine a safe Artist workspace")
 
     def _launch_profile(self, profile_id: str) -> _PageState | None:
-        result = self.runtime.launch(profile_id=profile_id, process=self.process, probe=self.probe)
+        result = self.runtime.launch(
+            profile_id=profile_id,
+            process=self.process,
+            probe=self.probe,
+        )
         if result.status in {"STARTED", "ALREADY_RUNNING"}:
             self._blocked_state = None
             return None
-        if result.status == "REOPEN_EXISTING":
-            return _PageState(
+        states = {
+            "REOPEN_EXISTING": _PageState(
                 "blocked",
                 "N0TE is already open for this Artist",
                 "Existing window",
                 "Return to the N0TE window that already owns this Artist workspace instead of opening a duplicate.",
-            )
-        if result.status == "HELD_BY_OTHER":
-            return _PageState(
+            ),
+            "HELD_BY_OTHER": _PageState(
                 "blocked",
                 "This Artist is already open",
                 "Existing N0TE session",
                 "Use the existing N0TE window. Your local Artist workspace was not changed.",
-            )
-        if result.status == "UNCERTAIN":
-            return _PageState(
+            ),
+            "UNCERTAIN": _PageState(
                 "recovery",
                 "N0TE cannot prove this Artist is safe to reopen yet",
                 "Protected state",
                 "N0TE kept the existing ownership record instead of guessing. Close any other N0TE session and try again.",
-            )
-        if result.status in {"RECOVERY_REQUIRED", "START_FAILED"}:
-            return _PageState(
+            ),
+            "RECOVERY_REQUIRED": _PageState(
                 "recovery",
                 "This Artist workspace could not open safely",
                 "Recovery needed",
                 "Your local creative state was not replaced. Try again after the workspace is safe to reopen.",
-            )
+            ),
+            "START_FAILED": _PageState(
+                "recovery",
+                "This Artist workspace could not open safely",
+                "Recovery needed",
+                "Your local creative state was not replaced. Try again after the workspace is safe to reopen.",
+            ),
+        }
+        if result.status in states:
+            return states[result.status]
         raise ConsumerShellError("N0TE returned an unsupported Artist launch state")
 
-    def _post_create_profile(self, handler: BaseHTTPRequestHandler, form: Mapping[str, str]) -> None:
+    def _post_create_profile(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
         action = self._consume_action(form.get("action", ""), "profile-create")
         if action is None:
-            self._send_html(handler, 409, self._simple_error("That create action was already handled or expired."))
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That create action was already handled or expired."),
+            )
             return
-        artist_name = _clean_human_text(form.get("artist_name", ""), "Artist name", maximum=_MAX_ARTIST_NAME)
-        resolution = self.profiles.resolve(artist_name=artist_name, process=self.process, probe=self.probe)
+        artist_name = _clean_human_text(
+            form.get("artist_name", ""),
+            "Artist name",
+            maximum=_MAX_ARTIST_NAME,
+        )
+        resolution = self.profiles.resolve(
+            artist_name=artist_name,
+            process=self.process,
+            probe=self.probe,
+        )
         if resolution.state not in {"CREATED", "SELECTED_EXISTING"} or not resolution.selected_profile_id:
             self._blocked_state = self._resolution_state(resolution)
             self._redirect(handler, "/")
             return
-        blocked = self._launch_profile(resolution.selected_profile_id)
-        self._blocked_state = blocked
+        self._blocked_state = self._launch_profile(resolution.selected_profile_id)
         self._redirect(handler, "/")
 
-    def _post_select_profile(self, handler: BaseHTTPRequestHandler, form: Mapping[str, str]) -> None:
+    def _post_select_profile(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
         action = self._consume_action(form.get("action", ""), "profile-select")
         if action is None or action.value is None:
-            self._send_html(handler, 409, self._simple_error("That Artist choice was already handled or expired."))
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That Artist choice was already handled or expired."),
+            )
             return
         resolution = self.profiles.resolve(selected_profile_id=action.value)
         if resolution.state != "SELECTED_EXISTING" or not resolution.selected_profile_id:
             self._blocked_state = self._resolution_state(resolution)
             self._redirect(handler, "/")
             return
-        blocked = self._launch_profile(resolution.selected_profile_id)
-        self._blocked_state = blocked
+        self._blocked_state = self._launch_profile(resolution.selected_profile_id)
         self._redirect(handler, "/")
 
-    def _post_start_song(self, handler: BaseHTTPRequestHandler, form: Mapping[str, str]) -> None:
+    def _post_start_song(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
         if self.runtime.state != "RUNNING":
-            self._send_html(handler, 409, self._simple_error("Open an Artist workspace before starting a Song."))
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before starting a Song."),
+            )
             return
         action = self._consume_action(form.get("action", ""), "song-start")
         if action is None:
-            self._send_html(handler, 409, self._simple_error("That Song action was already handled or expired."))
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That Song action was already handled or expired."),
+            )
             return
-        title = _clean_human_text(form.get("song_title", ""), "Song title", maximum=_MAX_SONG_TITLE)
+        title = _clean_human_text(
+            form.get("song_title", ""),
+            "Song title",
+            maximum=_MAX_SONG_TITLE,
+        )
         song = self.runtime.headquarters.store.create_song(title)
         self._consumer_notice = f"{song.title} is now your active Song."
         self._redirect(handler, "/song")
 
-    def _post_quit(self, handler: BaseHTTPRequestHandler, form: Mapping[str, str]) -> None:
+    def _post_quit(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
         action = self._consume_action(form.get("action", ""), "quit")
         if action is None:
-            self._send_html(handler, 409, self._simple_error("That Quit action was already handled or expired."))
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That Quit action was already handled or expired."),
+            )
             return
-        if self.runtime.state == "STOPPED":
-            result_status = "ALREADY_STOPPED"
-        else:
-            result_status = self.runtime.quit().status
+        result_status = (
+            "ALREADY_STOPPED"
+            if self.runtime.state == "STOPPED"
+            else self.runtime.quit().status
+        )
         if result_status not in {"STOPPED", "ALREADY_STOPPED"}:
             self._send_html(
                 handler,
@@ -675,12 +745,16 @@ class ConsumerShell:
         self._consumer_notice = None
         nav = self._nav(path) if self.runtime.state == "RUNNING" else ""
         content = self._state_content(state)
-        notice_html = "" if not notice else f'<div class="notice" role="status" aria-live="polite">{html.escape(notice)}</div>'
-        artist_context = ""
-        if state.artist_name:
-            artist_context = f'<span class="local-badge">{html.escape(state.artist_name)} · Local</span>'
-        else:
-            artist_context = '<span class="local-badge">Local-first</span>'
+        notice_html = (
+            ""
+            if not notice
+            else f'<div class="notice" role="status" aria-live="polite">{html.escape(notice)}</div>'
+        )
+        artist_context = (
+            f'<span class="local-badge">{html.escape(state.artist_name)} · Local</span>'
+            if state.artist_name
+            else '<span class="local-badge">Local-first</span>'
+        )
         return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -735,6 +809,12 @@ class ConsumerShell:
 <div class="row"><button class="primary" type="submit">Start this Song</button></div>
 </form>"""
 
+    def _recovery_content(self) -> str:
+        if self.runtime.state == "RECOVERY_REQUIRED":
+            token = self._new_action("quit")
+            return f"""<section class="grid"><div class="card"><h2>Nothing was overwritten</h2><p class="status caution">Protected local state</p><p>N0TE still owns this Artist workspace because the previous close could not finish safely. Retry the same safe cleanup; N0TE will not claim it closed until Headquarters and its exact lease are released.</p><form method="post" action="/quit">{self._hidden(token)}<button class="danger" type="submit">Retry safe close</button></form></div></section>"""
+        return '<section class="grid"><div class="card"><h2>Nothing was overwritten</h2><p class="status caution">Protected local state</p><p>Try Home again after the other N0TE session or recovery condition is resolved.</p><a class="button" href="/">Try again</a></div></section>'
+
     def _state_content(self, state: _PageState) -> str:
         if state.kind == "create-profile":
             token = self._new_action("profile-create")
@@ -747,20 +827,29 @@ class ConsumerShell:
                     f'<form method="post" action="/profile/select">{self._hidden(token)}<button class="primary" type="submit">Work as {html.escape(profile.artist_name)}</button></form>'
                 )
             return f'<section class="grid" aria-label="Artist selection"><div class="card stack"><h2>Your local Artists</h2>{"".join(choices)}</div><div class="card"><h2>Separate on purpose</h2><p>N0TE never merges Artist histories just because they live on the same machine.</p></div></section>'
-        if state.kind in {"recovery", "blocked"}:
-            level = "caution"
-            return f'<section class="grid"><div class="card"><h2>Nothing was overwritten</h2><p class="status {level}">Protected local state</p><p>Try Home again after the other N0TE session or recovery condition is resolved.</p><a class="button" href="/">Try again</a></div></section>'
+        if state.kind == "recovery":
+            return self._recovery_content()
+        if state.kind == "blocked":
+            return '<section class="grid"><div class="card"><h2>Nothing was overwritten</h2><p class="status caution">Protected local state</p><p>Try Home again after the other N0TE session is resolved.</p><a class="button" href="/">Try again</a></div></section>'
         if state.kind == "running-settings":
             quit_token = self._new_action("quit")
-            song_line = "No active Song yet" if not state.song_title else f'Active Song: {html.escape(state.song_title)}'
+            song_line = (
+                "No active Song yet"
+                if not state.song_title
+                else f'Active Song: {html.escape(state.song_title)}'
+            )
             return f"""<section class="grid"><div class="card"><h2>Session</h2><p>{song_line}</p><p class="status good">Local shell active</p></div><div class="card"><h2>Connections</h2><p>DAWs, AI and services stay out of the way until a specific job needs them.</p></div><div class="card"><h2>Quit N0TE</h2><p>Quit closes Headquarters and releases this Artist workspace. Closing only the browser tab does not count as quitting.</p><form method="post" action="/quit">{self._hidden(quit_token)}<button class="danger" type="submit">Quit N0TE</button></form></div></section>"""
-        if state.kind in {"running-no-song"}:
+        if state.kind == "running-no-song":
             return f'<section class="grid"><div class="card"><h2>Start a Song</h2><p>Create the durable Song you want N0TE to keep in context.</p>{self._start_song_form()}</div><div class="card"><h2>Nothing else required</h2><p>Production tools and connections can be added when this Song actually needs them.</p><p class="status good">Ready locally</p></div></section>'
         if state.kind in {"running-home", "running-song"}:
             assert state.song_title is not None
             return f'<section class="grid"><div class="card"><h2>Your active Song</h2><p class="song-name">{html.escape(state.song_title)}</p><a class="button primary" href="/song">Resume Song</a></div><div class="card"><h2>Context stays with you</h2><p>Move through Headquarters and come back. This Artist and Song remain the active creative context.</p><p class="status good">Song context active</p></div></section>'
         if state.kind == "running-now":
-            song = "No active Song yet" if not state.song_title else f'Keep making {html.escape(state.song_title)}'
+            song = (
+                "No active Song yet"
+                if not state.song_title
+                else f'Keep making {html.escape(state.song_title)}'
+            )
             return f'<section class="grid"><div class="card"><h2>Creative priority</h2><p class="song-name">{song}</p>{"" if state.song_title else self._start_song_form()}</div><div class="card"><h2>Quiet by design</h2><p>Jobs, approvals and business work will live here later, but they do not crowd the creative session before they are useful.</p></div></section>'
         raise ConsumerShellError(f"unsupported page state: {state.kind}")
 
