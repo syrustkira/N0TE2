@@ -437,6 +437,10 @@ class ConsumerShell:
             )
 
     def _ensure_runtime(self) -> _PageState | None:
+        if self._blocked_state is not None:
+            state = self._blocked_state
+            self._blocked_state = None
+            return state
         if self.runtime.state == "RECOVERY_REQUIRED":
             return _PageState(
                 "recovery",
@@ -761,7 +765,7 @@ class ConsumerShell:
         raise ConsumerShellError(f"unsupported page state: {state.kind}")
 
     def _closed_page(self) -> str:
-        return """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>N0TE closed</title><style>body{font-family:system-ui,sans-serif;background:#0b0d10;color:#f3f5f7;display:grid;place-items:center;min-height:100vh;margin:0}main{max-width:42rem;padding:2rem}p{color:#a9b2bd;line-height:1.6}</style></head><body><main><p>Artist Headquarters</p><h1>N0TE closed safely.</h1><p>Your local Artist and Song state is preserved. You can close this browser tab.</p></main></body></html>"""
+        return """<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="color-scheme" content="dark"><title>N0TE closed</title></head><body><main><p>Artist Headquarters</p><h1>N0TE closed safely.</h1><p>Your local Artist and Song state is preserved. You can close this browser tab.</p></main></body></html>"""
 
     def _simple_error(self, message: str) -> str:
         safe = html.escape(message)
