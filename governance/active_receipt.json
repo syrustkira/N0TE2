@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-APP-01A",
+  "receipt_id": "N0TE2-APP-01B",
   "node_id": "APP-01",
-  "increment_id": "APP-01A",
-  "baseline_sha": "087955688bc9e235d0979b082fbc5e21084da93a",
-  "purpose": "Implement one real consumer runtime lifecycle owner over the canonical per-profile instance lease and HeadquartersMemory so launch, duplicate launch, explicit quit and relaunch/resume have truthful state ownership instead of browser-tab or developer-process semantics.",
+  "increment_id": "APP-01B",
+  "baseline_sha": "36082df3f29d2fe9b1ff4b5e1f29474a001ef16f",
+  "purpose": "Implement the local first-run application profile front door beneath future UX: discover healthy durable Artist profiles without mutating unrelated services, create the first profile only on a truly empty healthy install, require explicit choice for multiple profiles, surface corrupt/malformed candidates as recovery issues, and serialize first creation so racing starts cannot silently fork Artist identity.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,30 +14,32 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A normal N0TE runtime can acquire one profile, open canonical Headquarters state, refuse unsafe duplicate ownership, quit by closing durable state before releasing ownership, then relaunch the same profile and resume the same Song without developer tooling.",
+    "outcome": "A fresh local N0TE install can establish exactly one durable Artist profile safely, while later launches discover/resume healthy profiles or require explicit selection/recovery instead of guessing or creating around corrupted state.",
     "journeys": ["J-CORE-LIFECYCLE", "J-TRUST", "J-IDEA-SONG"],
-    "capability": "Application runtime ownership, explicit quit and durable reopen/resume",
-    "increment": "APP-01A"
+    "capability": "Local profile discovery, first-profile bootstrap and explicit profile resolution",
+    "increment": "APP-01B"
   },
   "reuse": {
-    "mode": "COMPOSE_PLATFORM00B_INSTANCE_LEASE_WITH_REAL_HEADQUARTERS_MEMORY",
-    "n0te2_dependencies": ["PLATFORM-00B exact per-profile instance lease", "PLATFORM-00 closed shared chassis", "CORE-01 crash-consistent canonical persistence", "CORE-04 fail-closed trust semantics"],
-    "legacy_rejections": ["browser tab equals app lifetime", "second backend on duplicate launch", "PID-only ownership", "force-kill another runtime", "release lease before Headquarters closes", "failed open strands lease", "close failure pretends stopped", "developer shell as consumer quit"],
+    "mode": "LINEAGE_ONLY_DISCOVERY_PLUS_HEADQUARTERS_CREATE_AND_PLATFORM00B_BOOTSTRAP_LEASE",
+    "n0te2_dependencies": ["APP-01A runtime lifecycle", "CORE-01 LineageStore and HeadquartersMemory profile identity", "PLATFORM-00B exact process/lease semantics"],
+    "legacy_rejections": ["fresh install assumes profile exists", "corrupt profile silently ignored", "multiple profiles guessed by recency/path", "disk-wide profile crawl", "symlink profile roots/candidates followed", "same-process concurrent creation treated as idempotent permission", "profile delete/merge as bootstrap convenience", "account/cloud identity introduced implicitly"],
     "direct_copy": false
   },
   "completion_proof": [
-    "first launch acquires the exact profile lease and opens HeadquartersMemory exactly once",
-    "repeating launch through the same ApplicationRuntime returns ALREADY_RUNNING without another Headquarters open",
-    "another runtime in the same exact process returns REOPEN_EXISTING and does not open a second Headquarters",
-    "verified-live foreign ownership returns HELD_BY_OTHER and UNKNOWN liveness returns UNCERTAIN without opening Headquarters or stealing ownership",
-    "verified-dead foreign ownership may be replaced through PLATFORM-00B and the new runtime receives the exact previous lease receipt",
-    "Headquarters open failure releases the just-acquired lease; cleanup failure enters RECOVERY_REQUIRED with exact ownership retained",
-    "explicit quit closes Headquarters before exact lease release",
-    "Headquarters close failure or lease-release failure remains RECOVERY_REQUIRED and cannot masquerade as STOPPED",
-    "successful quit returns STOPPED and a subsequent launch can reacquire the profile",
-    "real Headquarters integration persists a Song through launch -> create/select -> quit -> relaunch and restores the same active Song identity/title",
-    "ApplicationRuntime exposes no install/update/rollback/kill/window/browser/daemon behavior; packaging and OS activation remain downstream"
+    "empty healthy data root resolves NEEDS_CREATION until artist identity input is provided",
+    "first creation is serialized by an opaque bootstrap lease, re-discovers under ownership and creates exactly one Headquarters profile only if still empty",
+    "after creation the bootstrap lease is released and later resolve returns the same SELECTED_EXISTING profile",
+    "one healthy existing profile resolves deterministically; multiple healthy profiles return NEEDS_SELECTION until an exact existing profile is selected",
+    "invalid or unknown explicit selection is refused rather than guessed",
+    "valid-looking corrupt/malformed profile candidates yield RECOVERY_REQUIRED and prevent silent creation around them",
+    "profile-root or profile-candidate symlinks are recovery issues, including dangling root symlinks",
+    "catalog discovery uses LineageStore only and does not initialize unrelated Headquarters service schemas",
+    "non-profile noise is ignored and discovery never crawls outside data_root/profiles",
+    "same-process ALREADY_OWNED bootstrap state is BOOTSTRAP_BUSY rather than permission for a second concurrent create",
+    "foreign ALIVE bootstrap ownership is busy; UNKNOWN ownership fails closed; verified DEAD ownership may be replaced with previous-lease evidence",
+    "a profile appearing after initial discovery but before creation is observed by the under-lock recheck and prevents duplicate identity creation",
+    "ApplicationProfiles exposes only discover and resolve; no delete/merge/rename/account/cloud/sync behavior exists"
   ],
-  "non_scope": ["installer/package creation", "code signing/notarization", "updater/download", "rollback selection", "uninstall", "window/UI implementation", "OS activation/focus existing window", "platform-specific process probe", "worker shutdown orchestration beyond HeadquartersMemory", "DAW work", "AUDIO-02", "OPS-04", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After APP-01A evidence, audit remaining APP-01 lifecycle requirements 042/106/112/141/146/149/151/152/153 and globally compare the highest-value real app gap against DAW-00, OPS-04 and newly eligible downstream work. Do not continue APP work merely by adjacency."
+  "non_scope": ["UX/onboarding screens or copy", "profile deletion/merge/rename", "accounts/auth/cloud sync", "installer/update/rollback/uninstall", "DAW/AUDIO/OPS work", "platform acceptance", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After APP-01B evidence, audit remaining APP-01 obligations and globally compare the next real consumer lifecycle blocker against DAW-00, OPS-04 and any newly eligible work. Do not keep APP active merely because APP-01B is adjacent."
 }
