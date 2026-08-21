@@ -5,6 +5,7 @@ from pathlib import Path
 from .activity import ActivityLog
 from .context import ContextIsolationService
 from .evidence import EvidenceMemory
+from .focus import FocusContextService
 from .friction import FrictionMemory
 from .graph import SongKnowledgeMapService
 from .learning import LearningMemory
@@ -28,6 +29,7 @@ class HeadquartersMemory:
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
         self.workspaces = WorkspaceMemory(store)
+        self.focus = FocusContextService(self.workspaces)
         self.operations = OperationJournal(store, self.activity)
         self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
