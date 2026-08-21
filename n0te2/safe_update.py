@@ -9,7 +9,11 @@ from .artifacts import ReleaseManifest
 from .instance import ProcessIdentity
 from .memory import HeadquartersMemory
 from .migration import MigrationStep
-from .schema_program import migration_steps_fingerprint
+from .schema_program import (
+    migration_steps_fingerprint,
+    normalize_migration_program,
+    select_migration_chain,
+)
 from .update import (
     ApplicationUpdateCoordinator as _BaseApplicationUpdateCoordinator,
     ApplicationUpdateError,
@@ -65,8 +69,9 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
 
     The base coordinator owns package mutation, update journaling, maintenance
     holds and package/data compensation. This guard requires the authenticated
-    release manifest to declare the exact semantic schema/program, durably binds
-    that program to the prepared update, and executes it inside the same profile
+    release manifest to declare the target semantic schema and the full ordered
+    migration program, derives the exact contiguous subset needed by this profile,
+    durably binds it to the prepared update, and executes it inside the same
     maintenance hold after package installation but before Headquarters validation.
     """
 
@@ -87,12 +92,19 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
         manifest = kwargs.get("manifest")
         if not isinstance(manifest, ReleaseManifest):
             raise TypeError("prepare requires manifest=ReleaseManifest")
-        steps = tuple(schema_steps)
+        try:
+            program = normalize_migration_program(schema_steps)
+        except Exception as exc:
+            raise UpdateRejectedError("schema migration program is not ordered/contiguous") from exc
         if manifest.application_schema_version != schema_target_version:
             raise UpdateRejectedError(
                 "requested semantic schema target differs from authenticated release manifest"
             )
-        if manifest.application_schema_migrations_sha256 != migration_steps_fingerprint(steps):
+        if program and program[-1].to_version != schema_target_version:
+            raise UpdateRejectedError(
+                "schema migration program does not terminate at authenticated target schema"
+            )
+        if manifest.application_schema_migrations_sha256 != migration_steps_fingerprint(program):
             raise UpdateRejectedError(
                 "schema migration program differs from authenticated release manifest"
             )
@@ -107,7 +119,7 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
             migration_plan = migrator.prepare_read_only(
                 profile_id=plan.profile_id,
                 target_version=schema_target_version,
-                steps=steps,
+                steps=program,
             )
             binding = UpdateMigrationBinding(
                 update_id=plan.update_id,
@@ -116,6 +128,7 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
                 target_release_id=plan.target_release_id,
                 rollback_snapshot_sha256=plan.snapshot_sha256,
                 rollback_snapshot_size_bytes=plan.snapshot_size_bytes,
+                schema_program=program,
                 migration_plan=migration_plan,
             )
             self._migration_bindings.create(binding)
@@ -162,10 +175,20 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
         if binding.migration_plan.target_version != manifest.application_schema_version:
             raise UpdateRejectedError("bound schema target differs from authenticated release manifest")
         if (
-            migration_steps_fingerprint(binding.migration_plan.steps)
+            migration_steps_fingerprint(binding.schema_program)
             != manifest.application_schema_migrations_sha256
         ):
             raise UpdateRejectedError("bound schema program differs from authenticated release manifest")
+        try:
+            expected = select_migration_chain(
+                source_version=binding.migration_plan.source_version,
+                target_version=binding.migration_plan.target_version,
+                program=binding.schema_program,
+            )
+        except Exception as exc:
+            raise UpdateRejectedError("bound schema program cannot reproduce migration plan") from exc
+        if expected != binding.migration_plan.steps:
+            raise UpdateRejectedError("bound profile migration chain differs from authenticated program")
         return binding
 
     def _inspect_exact_hold(self, profile_id: str, process: ProcessIdentity):
