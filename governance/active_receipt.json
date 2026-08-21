@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-UX-01B",
+  "receipt_id": "N0TE2-UX-01C",
   "node_id": "UX-01",
-  "increment_id": "UX-01B",
-  "baseline_sha": "3e33277ece9d014ab37a50af3b0db40a621e81de",
-  "purpose": "Give the artist one durable Headquarters-level Focus Session contract independent of DAW targeting: choose MAKE, FINISH, MANAGE, RELEASE or PERFORM, optionally bind the focus to the current canonical Song, preserve that focus across Headquarters navigation and application relaunch, switch modes without losing history, and explicitly end focus without mutating unrelated Song, provider, DAW or business state.",
+  "increment_id": "UX-01C",
+  "baseline_sha": "347dec8eb883ca58bf107d14bb8ff79d105843b3",
+  "purpose": "Turn the landed Artist Headquarters shell into an explicit reusable design/accessibility contract rather than a pile of incidental CSS: centralize semantic shell tokens and interaction rules, make selected controls screen-reader-readable, harden high-contrast/forced-colors and narrow-screen behavior, and add executable representative-state fixtures that prove current consumer states preserve Artist/Song/Focus context and hide developer plumbing.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,30 +14,30 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "An artist can tell Headquarters what kind of work deserves attention now and N0TE preserves that intention instead of treating every known task as equally urgent.",
-    "journeys": ["J-WHAT-NEXT", "J-SONG-START-RESUME", "J-TRUST"],
-    "capability": "Durable Headquarters Focus Sessions",
-    "increment": "UX-01B"
+    "outcome": "The current Headquarters states remain understandable and operable across keyboard, screen-reader, high-contrast and narrow-screen use, and their accepted interaction invariants are executable instead of living only in prose.",
+    "journeys": ["J-CORE-LIFECYCLE", "J-SONG-START-RESUME", "J-WHAT-NEXT", "J-TRUST"],
+    "capability": "Canonical Headquarters shell design and accessibility contract",
+    "increment": "UX-01C"
   },
   "reuse": {
-    "mode": "NEW_CANONICAL_ATTENTION_MEMORY_USING_EXISTING_LINEAGE_ACTIVITY_AND_CONSUMER_SHELL_PATTERNS",
-    "n0te2_dependencies": ["UX-01A landed Artist Headquarters / Now surface", "CORE-01 canonical LineageStore and Activity chronology", "CORE-02 durable Session/learning history patterns", "APP-01 canonical profile persistence/relaunch", "AUDIT-DESIGN progressive-disclosure and attention-protection invariants"],
-    "legacy_rejections": ["reuse DAW FocusContext for artist attention mode", "ephemeral browser-only focus", "global mode that crosses Artist profiles", "mode switch that deletes prior focus history", "fake jobs/suggestions created only to demonstrate attention UX", "automatic provider/DAW/business action when focus changes", "claim REQ-SCOPE-097 fully closed before Not Now semantics exist"],
+    "mode": "HARDEN_AND_EXTRACT_THE_LANDED_CLEAN_ROOM_SHELL_WITH_EXECUTABLE_STATE_FIXTURES",
+    "n0te2_dependencies": ["UX-01A landed Artist Headquarters front door", "UX-01B landed durable Focus Sessions", "AUDIT-DESIGN interaction invariants", "REQ-SCOPE-100 accessibility/expert ergonomics", "REQ-SCOPE-136 creative accessibility", "REQ-SCOPE-142 canonical visual/interaction contract"],
+    "legacy_rejections": ["wholesale legacy UI transplant", "invent final brand art direction", "screenshot pixels promoted to immutable product doctrine", "visual-only selected state", "color-only status", "keyboard shortcuts that collide with browser/DAW conventions", "fake loading/offline/provider states with no truthful product substrate", "performance claims without real measurement"],
     "direct_copy": false
   },
   "completion_proof": [
-    "canonical profile persistence contains one active Headquarters Focus Session at most and preserves closed/superseded focus history",
-    "supported modes are exactly MAKE, FINISH, MANAGE, RELEASE and PERFORM; invalid or blank modes fail before persistence",
-    "a Focus Session may bind only to a Song in the active profile; cross-profile or nonexistent Song references fail closed",
-    "starting a new Focus Session transactionally closes the prior active Focus Session before activating the replacement; history is not deleted or rewritten",
-    "ending focus is explicit and leaves no active Focus Session while preserving prior history",
-    "Focus Session changes append understandable Activity chronology without mutating Song identity/version/assets/evidence/provider/DAW state",
-    "Headquarters /now lets a normal consumer choose/switch/end Focus without raw IDs or developer plumbing and shows the active mode plus bound Song title when applicable",
-    "active Focus survives Home/Song/Now/Settings navigation and full explicit Quit/relaunch through the same canonical profile",
-    "multiple Artist profiles retain isolated Focus histories and never render another profile's active mode or Song binding",
-    "DAW FocusContext remains a distinct read-only exact-targeting concept and is not imported, renamed or overloaded by this increment",
-    "authored unit/HTTP/consumer smoke proof is kept separate from executed evidence; absent hosted execution remains UNOBSERVED"
+    "shell presentation tokens and interaction/accessibility CSS live in one reusable clean-room design module rather than duplicated incidental strings",
+    "current toggle-like Focus choices expose selected state with aria-pressed in addition to visual styling",
+    "keyboard focus remains visibly distinct; status meaning remains textual/non-color-only; forms retain explicit labels and semantic landmarks",
+    "prefers-reduced-motion, prefers-contrast and forced-colors environments receive explicit safe CSS behavior without depending on animation, gradients or custom color alone",
+    "very narrow layouts preserve comfortable navigation/control targets by scrolling/reflowing rather than compressing route controls below the product target",
+    "long Artist/Song labels wrap without forcing the primary shell wider than its viewport contract",
+    "an executable canonical-state fixture enumerates the representative shell states currently implemented: first profile, profile selection, no Song, active Song, no Focus, active Focus, settings, blocked ownership and recovery",
+    "real HTTP regression walks each supported representative state against required artist-language, landmark/action and prohibited-internal-token invariants from the fixture",
+    "fixtures do not fabricate provider/offline/loading/release/job states that are not yet truthfully implemented; those remain retained downstream design states",
+    "existing Artist/Song/Focus persistence, security headers, one-shot action authority and explicit Quit/recovery semantics remain behaviorally unchanged",
+    "authored fixture/regression proof stays separate from executed evidence; empty hosted evidence remains UNOBSERVED"
   ],
-  "non_scope": ["Not Now deferral horizons", "attention-item/job/approval persistence", "release-completion triggers", "future suggestion generation or ranking", "full SONG-01 session objective/debrief UI", "DAW FocusContext changes", "DAW/audio/provider integration", "business/release automation", "final visual brand direction", "Gate-B customer acceptance"],
-  "next_selection_rule": "After UX-01B is implemented, red-teamed and landed, re-audit REQ-SCOPE-097 and the NOW/Attention lineage. Implement durable Not Now only against a truthful attention-item lifecycle; do not create fake reminders, release triggers or job objects solely to satisfy the wording."
+  "non_scope": ["final brand palette/art direction", "pixel-perfect visual regression screenshots", "full Creative Studio waveform/timeline design", "captions/transcripts for media surfaces that do not yet exist", "producer keyboard shortcut system", "latency/performance acceptance", "Not Now", "Job/Approval Center", "provider/offline states not yet reachable", "DAW/audio/provider integration", "Gate-B customer acceptance"],
+  "next_selection_rule": "After UX-01C lands, audit the remaining UX-01 obligations by truthful product substrate. Do not turn visual fixtures into final brand doctrine, do not claim inaccessible future states are implemented, and do not select performance/Not Now/Job work until their required runtime objects or measurement environment exist."
 }
