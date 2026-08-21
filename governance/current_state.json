@@ -12,18 +12,22 @@
   "truth": [
     "N0TE2 is the clean-room destination.",
     "Cumulative construction through APP-01D is landed in canonical main by merged integration PR #44 at main head 215b90d177db915048da3d15ea0b274115766788. Historical stacked PRs #1-#43 remain bounded provenance receipts, not new merge targets.",
-    "APP-01 is ACTIVE at APP-01E. APP-01A-D are implemented and landed; DAW-00 is PRESERVED incomplete; OPS-04 is dependency-ready but preserved until global reselection.",
+    "APP-01 is ACTIVE at APP-01E. APP-01A-D are implemented and landed. APP-01E is implemented on draft PR #45 but not yet merged; DAW-00 remains PRESERVED incomplete and OPS-04 remains dependency-ready/preserved pending global reselection.",
     "APP-01E exact baseline is canonical main 215b90d177db915048da3d15ea0b274115766788.",
-    "REQ-SCOPE-112 versioned semantic schema migration is the remaining concrete shared APP foundation gap named by the APP-01 parent audit.",
-    "APP-01E preparation refuses any existing runtime lease. Execution acquires the same shared profile lease as bounded maintenance ownership; a caller assertion of STOPPED is never sufficient.",
-    "Migration plans bind exact source/target version chains, canonical identity and prior migration-history fingerprints. No downgrade, missing edge, duplicate edge, out-of-order edge or best-effort version jump is permitted.",
-    "The exact RecoveryManager rollback snapshot is created only after maintenance ownership has excluded normal runtime and is revalidated immediately before installation.",
-    "All supplied schema transforms execute transactionally against an off-live staged SQLite candidate. The live canonical database is not mutated before candidate validation.",
-    "Candidate validation requires SQLite quick/fk integrity, exact embedded profile identity and preservation of canonical Artist/Song/version/asset identity fingerprint.",
+    "REQ-SCOPE-112 versioned semantic schema migration is implemented as part of the real safe application-update path rather than as an orphan migration utility.",
+    "Authenticated ReleaseManifest state now includes the target application semantic-schema version and SHA-256 of the exact canonical migration-step program; target/program mismatch is rejected before update snapshot, runtime quit or package mutation.",
+    "APP-01C update preparation still owns the pre-package rollback law: start from the owned RUNNING profile, create the exact RecoveryManager snapshot, stop the runtime, and prove the stopped live database is logically identical to the prepared snapshot before a package can mutate.",
+    "After update preparation, APP-01E durably binds one exact source/target migration chain to the update-plan fingerprint, authenticated manifest fingerprint, target release, profile and original rollback snapshot.",
+    "Read-only update schema planning does not treat a persisted lease as authoritative liveness. Package/schema execution resolves authoritative ownership through the existing shared update maintenance hold and process probe.",
+    "Update-bound schema migration reuses the exact profile hold already owned by ApplicationUpdateCoordinator and reuses/revalidates the updater's original pre-package snapshot; it does not create a competing lease or overwrite the compensation snapshot.",
+    "Migration plans bind exact contiguous source/target version edges plus canonical identity and prior migration-history fingerprints. Downgrade, missing edge, duplicate edge, out-of-order edge and best-effort version jumps fail closed.",
+    "All supplied schema transforms execute transactionally against an off-live staged SQLite candidate. Candidate quick/fk integrity, embedded profile identity, primary/active identity and canonical Artist/Song/version/asset/version-asset fingerprint must match before installation.",
     "Prior migration history is immutable; a successful version edge appends one exact migration ID/version/fingerprint/description record and installed history must equal staged history.",
-    "Only a fully validated candidate may be atomically installed. Success additionally requires normal Headquarters reopen and exact target-version/identity/history validation.",
-    "Installed-state validation failure must attempt exact maintenance-owned snapshot restore; restore failure or maintenance-lease release failure remains explicit RECOVERY_REQUIRED.",
-    "Destructive semantic transforms that intentionally discard Artist-owned durable meaning are outside autonomous APP-01E scope.",
-    "Hosted exact-head workflow/status evidence remains accepted only when actually observed; absence is UNOBSERVED and does not create proof-only work."
+    "Only a fully validated candidate may be atomically installed while the update maintenance hold remains exact. Target Headquarters reopen/integrity/close remains mandatory before update success.",
+    "Package-success plus schema failure and schema-success plus target-Headquarters failure enter the existing package rollback plus exact original snapshot restore compensation transaction. The canonical update snapshot remains unchanged by schema migration.",
+    "Ambiguous schema result, unreadable/lost maintenance ownership, package rollback ambiguity, snapshot restore failure or validation-database release uncertainty remains RECOVERY_REQUIRED and never authorizes blind retry or compensation.",
+    "The authored consumer smoke now exercises the full path: RUNNING Artist profile -> authenticated package/schema program -> STOPPED -> package install under update ownership -> semantic schema 1->2 -> target Headquarters validation -> exact Artist/Song/version/asset reopen.",
+    "Exact-head PR #45 hosted workflow lookup remains [] / UNOBSERVED. Authored tests and static cross-file red-team evidence are not relabeled as executed hosted proof.",
+    "Destructive semantic transforms that intentionally discard Artist-owned durable meaning remain outside autonomous APP-01E scope."
   ]
 }
