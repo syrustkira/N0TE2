@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-DAW-00D",
+  "receipt_id": "N0TE2-DAW-00E",
   "node_id": "DAW-00",
-  "increment_id": "DAW-00D",
-  "baseline_sha": "a597ff190305a53dcc68f37a44c6f48245483aca",
-  "purpose": "Implement a bounded append-only Host Shadow over the exact current DAW-00B workspace observation so verified human/N0TE/external technical changes can be represented without silently mutating canonical Song memory, with FULL versus INCREMENTAL coverage preventing stale partial observations from masquerading as a current workspace model.",
+  "increment_id": "DAW-00E",
+  "baseline_sha": "17706aba2b765698945f9cb5c20c29bf78011328",
+  "purpose": "Implement one explicit bidirectional Song↔workspace reconciliation contract over canonical Technical Twin evidence and CURRENT DAW-00D Host Shadow so legitimate disagreement is surfaced, provenance is snapshotted and bounded user choices can be recorded without silently mutating either side.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,31 +14,31 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "N0TE can truthfully say what verified technical state it currently knows about a workspace, including human-made changes, and can expose EMPTY or STALE instead of planning from obsolete host state.",
-    "journeys": ["J-WORKSPACE", "J-TRUST"],
-    "capability": "Bounded verified Host Shadow and human-change ledger",
-    "increment": "DAW-00D"
+    "outcome": "When verified DAW state differs from canonical Song technical memory, N0TE shows the difference and preserves an explicit decision receipt instead of silently overwriting artist changes or canonical intent.",
+    "journeys": ["J-WORKSPACE", "J-TRUST", "J-COMPARE-DECIDE"],
+    "capability": "Bidirectional Song↔workspace difference detection and explicit reconciliation decision ledger",
+    "increment": "DAW-00E"
   },
   "reuse": {
-    "mode": "APPEND_ONLY_TECHNICAL_TWIN_OVER_CURRENT_WORKSPACE_OBSERVATION",
-    "n0te2_dependencies": ["CORE-01 canonical SQLite and Activity chronology", "DAW-00A host runtime fingerprint", "DAW-00B WorkspaceMemory current observation", "DAW-00C target-safety boundary"],
-    "legacy_rejections": ["mutable current-state cache as authority", "single-field refresh laundering stale workspace state", "human edits ignored because N0TE did not execute them", "actor identity used as truth ranking", "Host Shadow auto-writing Song memory", "Ableton ProjectGraph vocabulary as universal owner"],
+    "mode": "PURE_COMPARE_PLUS_APPEND_ONLY_DECISION_LEDGER_OVER_TECHNICAL_TWIN_AND_CURRENT_HOST_SHADOW",
+    "n0te2_dependencies": ["CORE-01 EvidenceMemory scoped provenance/conflict", "CORE-01 Technical/Creative Twin separation", "DAW-00B WorkspaceMemory Song ownership", "DAW-00D CURRENT Host Shadow", "CORE-04 authority/transaction separation"],
+    "legacy_rejections": ["host state automatically wins", "canonical Song memory automatically wins", "source ranking as truth", "decision receipt treated as execution receipt", "choice silently mutating EvidenceMemory", "choice silently mutating Host Shadow", "cross-Song reconciliation"],
     "direct_copy": false
   },
   "completion_proof": [
-    "Host Shadow is EMPTY before any verified FULL baseline",
-    "verified FULL baseline produces CURRENT and defines the complete bounded projection for that workspace observation",
-    "INCREMENTAL changes are accepted only after a FULL baseline for the same current workspace observation",
-    "a later FULL resets omitted facts instead of carrying them forward from older baselines",
-    "workspace move/recovery or runtime observation change makes prior shadow STALE",
-    "STALE shadow refuses incremental refresh until a fresh FULL baseline is recorded",
-    "fresh FULL after a workspace/runtime observation change restores CURRENT",
-    "HUMAN, N0TE and EXTERNAL actor/evidence attribution is retained without actor priority semantics",
-    "TRACK, CLIP_REGION, DEVICE_PLUGIN, AUTOMATION, ROUTING, TEMPO, MARKER and TRANSPORT facts use SET/REMOVE canonical JSON events",
-    "workspace isolation, append-only SQL history, Activity journaling and restart validation hold",
-    "repeated projection/history/current reads write zero rows",
-    "Host Shadow writes no evidence claims, Song truth or Creative Twin state"
+    "matching canonical technical and host facts return MATCH and do not open a case",
+    "HOST_ONLY, SONG_ONLY, CONFLICT and internally unresolved canonical evidence remain distinct outcomes",
+    "comparison requires CURRENT Host Shadow and exact workspace/Song ownership",
+    "cases snapshot canonical claim IDs/values and exact Host Shadow baseline/latest batch plus host fact provenance",
+    "UPDATE_SONG, RESTORE_HOST, KEEP_WORKSPACE_SPECIFIC and DO_NOTHING are append-only decision intents only",
+    "UPDATE_SONG requires snapped host truth and RESTORE_HOST requires exactly one snapped canonical technical value",
+    "recording UPDATE_SONG creates no evidence claim and recording RESTORE_HOST creates no Host Shadow batch/event",
+    "canonical claim-set change, Host Shadow latest/baseline change or Host Shadow becoming STALE makes the case STALE",
+    "stale cases refuse new decisions until reopened from fresh evidence",
+    "DECIDED cases remain visible as pending because choice is not execution/verification",
+    "cross-Song workspace mixing is rejected",
+    "comparison reads are write-free, cases/decisions are SQL immutable, Activity records case and decision receipts, restart preserves them"
   ],
-  "non_scope": ["bidirectional Song reconciliation", "automatic update/restore choice", "host feature/capability registry", "FocusContext expansion", "process/DAW discovery", "filesystem watcher/poller", "named DAW adapter", "DAW mutation", "Musical IR", "UI", "platform packaging", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After DAW-00D evidence, reconcile and globally compare bidirectional Song↔workspace reconciliation against feature/environment evidence, Musical IR/portability, remaining PLATFORM-00 and CORE-02 Success Memory. Do not stay on Host Shadow implementation by adjacency and do not select a named DAW adapter by historical maturity."
+  "non_scope": ["DAW mutation", "automatic Song-memory update", "execution/application receipt", "host feature registry", "Musical IR/compiler", "named DAW adapter", "watcher/poller", "UI", "platform packaging", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After DAW-00E evidence, globally compare feature/environment registry, Musical IR/portability, any universal reconciliation execution-receipt prerequisite, remaining PLATFORM-00 and CORE-02 Success Memory. Do not remain on reconciliation by adjacency and do not select a named DAW adapter by historical maturity."
 }
