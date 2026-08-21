@@ -4,9 +4,9 @@ import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from .instance import InstanceLease, InstanceLeaseManager, ProcessIdentity, ProcessProbe
+from .lineage import LineageStore
 from .memory import HeadquartersMemory
 
 _PROFILE_ID = re.compile(r"^prf_[0-9a-f]{32}$")
@@ -102,8 +102,9 @@ class ApplicationProfiles:
     """Local application profile discovery and first-profile bootstrap.
 
     Only direct canonical profile candidates under data_root/profiles are read.
-    This service never deletes, merges, renames, uploads, syncs or crawls for
-    profiles outside the application data root.
+    Discovery opens only the lineage store, so catalog reads do not initialize or
+    migrate unrelated Headquarters services. This service never deletes, merges,
+    renames, uploads, syncs or crawls for profiles outside the application data root.
     """
 
     def __init__(self, *, data_root: str | Path, state_root: str | Path):
@@ -131,12 +132,17 @@ class ApplicationProfiles:
 
     def discover(self) -> ProfileCatalogSnapshot:
         root = self.profiles_root
-        if not root.exists():
-            return ProfileCatalogSnapshot((), ())
-        if root.is_symlink() or not root.is_dir():
+        if root.is_symlink():
             return ProfileCatalogSnapshot(
                 (),
-                (ProfileIssue("profiles", "canonical profiles root is not a real directory"),),
+                (ProfileIssue("profiles", "canonical profiles root must not be a symlink"),),
+            )
+        if not root.exists():
+            return ProfileCatalogSnapshot((), ())
+        if not root.is_dir():
+            return ProfileCatalogSnapshot(
+                (),
+                (ProfileIssue("profiles", "canonical profiles root is not a directory"),),
             )
 
         profiles: list[ApplicationProfile] = []
@@ -157,24 +163,24 @@ class ApplicationProfiles:
                 issues.append(ProfileIssue(name, "profile candidate is not a real directory"))
                 continue
 
-            headquarters: HeadquartersMemory | None = None
+            store: LineageStore | None = None
             profile: ApplicationProfile | None = None
             try:
-                headquarters = HeadquartersMemory.open(self.data_root, name)
-                if headquarters.store.profile_id != name:
+                store = LineageStore.open(self.data_root, name)
+                if store.profile_id != name:
                     raise ApplicationProfilesError(
-                        "opened Headquarters profile identity differs from directory identity"
+                        "opened lineage profile identity differs from directory identity"
                     )
-                artist = headquarters.store.artist()
+                artist = store.artist()
                 profile = ApplicationProfile(name, artist.display_name)
             except Exception as exc:
                 issues.append(self._issue(name, exc))
             finally:
-                if headquarters is not None:
+                if store is not None:
                     try:
-                        headquarters.close()
+                        store.close()
                     except Exception as exc:
-                        issues.append(self._issue(name, f"Headquarters close failed: {exc}"))
+                        issues.append(self._issue(name, f"lineage close failed: {exc}"))
                         profile = None
             if profile is not None:
                 profiles.append(profile)
@@ -248,7 +254,7 @@ class ApplicationProfiles:
             raise ApplicationProfilesError("first-profile creation requires ProcessProbe")
 
         acquired = self._leases.acquire(_BOOTSTRAP_LEASE_ID, process, probe)
-        if acquired.status == "HELD_BY_OTHER":
+        if acquired.status in {"HELD_BY_OTHER", "ALREADY_OWNED"}:
             return ProfileResolution(
                 "BOOTSTRAP_BUSY",
                 (),
@@ -266,7 +272,7 @@ class ApplicationProfiles:
                 ),
                 blocking_lease=acquired.lease,
             )
-        if acquired.status not in {"ACQUIRED", "ALREADY_OWNED", "REPLACED_STALE"}:
+        if acquired.status not in {"ACQUIRED", "REPLACED_STALE"}:
             raise ApplicationProfilesError(
                 f"unexpected bootstrap lease status: {acquired.status}"
             )
