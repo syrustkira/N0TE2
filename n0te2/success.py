@@ -77,6 +77,7 @@ class ConsequenceSummary:
     episode_ids: tuple[str, ...]
     song_ids: tuple[str, ...]
     source_kinds: tuple[str, ...]
+    source_refs: tuple[str, ...]
     confidence: ConfidenceSummary
 
 
@@ -185,16 +186,18 @@ class SuccessMemory:
         episodes: tuple[LearningEpisode, ...], attr: str
     ) -> tuple[TermEvidence, ...]:
         buckets: dict[str, set[str]] = {}
-        counts: dict[str, int] = {}
         for episode in episodes:
+            episode_terms: set[str] = set()
             for consequence in episode.consequences:
                 for raw in getattr(consequence, attr):
-                    term = _text(raw, attr[:-1] if attr.endswith("s") else attr)
-                    counts[term] = counts.get(term, 0) + 1
-                    buckets.setdefault(term, set()).add(episode.id)
+                    episode_terms.add(
+                        _text(raw, attr[:-1] if attr.endswith("s") else attr)
+                    )
+            for term in episode_terms:
+                buckets.setdefault(term, set()).add(episode.id)
         return tuple(
-            TermEvidence(term, counts[term], tuple(sorted(buckets[term])))
-            for term in sorted(counts)
+            TermEvidence(term, len(buckets[term]), tuple(sorted(buckets[term])))
+            for term in sorted(buckets)
         )
 
     @staticmethod
@@ -217,6 +220,9 @@ class SuccessMemory:
                     song_ids=tuple(sorted({episode.song_id for episode, _ in items})),
                     source_kinds=tuple(
                         sorted({str(consequence.source_kind) for _, consequence in items})
+                    ),
+                    source_refs=tuple(
+                        sorted({str(consequence.source_ref) for _, consequence in items})
                     ),
                     confidence=ConfidenceSummary.from_values(
                         consequence.confidence for _, consequence in items
