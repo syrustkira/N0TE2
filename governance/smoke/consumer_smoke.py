@@ -9,15 +9,16 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "APP-01" or state.get("active_increment") != "APP-01A":
+if state.get("active_node") != "APP-01" or state.get("active_increment") != "APP-01B":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2.app_runtime import ApplicationRuntime, ApplicationRuntimeError  # noqa: E402
-from n0te2.instance import InstanceLeaseManager, ProcessIdentity  # noqa: E402
+from n0te2.app_runtime import ApplicationRuntime  # noqa: E402
+from n0te2.instance import ProcessIdentity  # noqa: E402
 from n0te2.memory import HeadquartersMemory  # noqa: E402
 from n0te2.platforms import PlatformEnvironment  # noqa: E402
+from n0te2.profiles import ApplicationProfiles  # noqa: E402
 
 
 class Probe:
@@ -43,102 +44,94 @@ with tempfile.TemporaryDirectory() as temp:
     root = Path(temp)
     data_root = root / "data"
     state_root = root / "state"
-
-    bootstrap = HeadquartersMemory.create(data_root, "Consumer Runtime Artist")
-    profile_id = bootstrap.store.profile_id
-    bootstrap.close()
-
-    owner_process = process(5001, "consumer-owner")
-    foreign_process = process(5002, "consumer-foreign")
+    proc = process(6001, "fresh-install-owner")
     probe = Probe()
 
-    owner = ApplicationRuntime(data_root=data_root, state_root=state_root)
-    started = owner.launch(profile_id=profile_id, process=owner_process, probe=probe)
+    profiles = ApplicationProfiles(data_root=data_root, state_root=state_root)
+    empty = profiles.resolve()
+    assert empty.state == "NEEDS_CREATION"
+    assert empty.profiles == ()
+    assert empty.issues == ()
+
+    created = profiles.resolve(
+        artist_name="Fresh Install Artist",
+        process=proc,
+        probe=probe,
+    )
+    assert created.state == "CREATED"
+    assert created.selected_profile_id is not None
+    assert len(created.profiles) == 1
+    assert created.profiles[0].artist_name == "Fresh Install Artist"
+    profile_id = created.selected_profile_id
+
+    runtime = ApplicationRuntime(data_root=data_root, state_root=state_root)
+    started = runtime.launch(profile_id=profile_id, process=proc, probe=probe)
     assert started.status == "STARTED"
-    assert owner.state == "RUNNING"
-
-    song = owner.headquarters.store.create_song("Quit Means Quit")
-    version = owner.headquarters.store.create_version(
+    song = runtime.headquarters.store.create_song("Fresh Install Song")
+    version = runtime.headquarters.store.create_version(
         song.id,
-        label="Durable before quit",
+        label="First version",
     )
-    assert owner.headquarters.store.active_song().id == song.id
-    assert owner.headquarters.store.active_song().current_version_id == version.id
+    assert runtime.quit().status == "STOPPED"
 
-    duplicate_same_runtime = owner.launch(
-        profile_id=profile_id,
-        process=owner_process,
-        probe=probe,
-    )
-    assert duplicate_same_runtime.status == "ALREADY_RUNNING"
-
-    same_process_reopen = ApplicationRuntime(data_root=data_root, state_root=state_root)
-    reopen_result = same_process_reopen.launch(
-        profile_id=profile_id,
-        process=owner_process,
-        probe=probe,
-    )
-    assert reopen_result.status == "REOPEN_EXISTING"
-    assert same_process_reopen.state == "STOPPED"
-
-    probe.set(owner_process, "ALIVE")
-    foreign = ApplicationRuntime(data_root=data_root, state_root=state_root)
-    held = foreign.launch(
-        profile_id=profile_id,
-        process=foreign_process,
-        probe=probe,
-    )
-    assert held.status == "HELD_BY_OTHER"
-    assert foreign.state == "STOPPED"
-
-    stopped = owner.quit()
-    assert stopped.status == "STOPPED"
-    assert owner.state == "STOPPED"
-    assert InstanceLeaseManager(state_root).inspect(profile_id) is None
-    try:
-        _ = owner.headquarters
-    except ApplicationRuntimeError:
-        pass
-    else:
-        raise AssertionError("Headquarters remained accessible after explicit quit")
+    # A new application-profile resolver on the same durable roots finds the
+    # same Artist identity without requiring creation input again.
+    rediscovered = ApplicationProfiles(
+        data_root=data_root,
+        state_root=state_root,
+    ).resolve()
+    assert rediscovered.state == "SELECTED_EXISTING"
+    assert rediscovered.selected_profile_id == profile_id
+    assert len(rediscovered.profiles) == 1
 
     relaunched = ApplicationRuntime(data_root=data_root, state_root=state_root)
-    restarted = relaunched.launch(
-        profile_id=profile_id,
-        process=owner_process,
+    assert relaunched.launch(
+        profile_id=rediscovered.selected_profile_id,
+        process=proc,
         probe=probe,
-    )
-    assert restarted.status == "STARTED"
+    ).status == "STARTED"
     resumed = relaunched.headquarters.store.active_song()
     assert resumed is not None
     assert resumed.id == song.id
-    assert resumed.title == "Quit Means Quit"
+    assert resumed.title == "Fresh Install Song"
     assert resumed.current_version_id == version.id
     assert relaunched.headquarters.store.get_version(version.id) == version
     assert relaunched.quit().status == "STOPPED"
-    assert InstanceLeaseManager(state_root).inspect(profile_id) is None
+
+    # Once a second healthy profile exists, the application must stop guessing
+    # and request an explicit profile choice.
+    second = HeadquartersMemory.create(data_root, "Second Local Artist")
+    second_profile_id = second.store.profile_id
+    second.close()
+    ambiguous = profiles.resolve()
+    assert ambiguous.state == "NEEDS_SELECTION"
+    assert {item.profile_id for item in ambiguous.profiles} == {
+        profile_id,
+        second_profile_id,
+    }
+    explicit = profiles.resolve(selected_profile_id=second_profile_id)
+    assert explicit.state == "SELECTED_EXISTING"
+    assert explicit.selected_profile_id == second_profile_id
 
     public = {
         name
-        for name in dir(ApplicationRuntime)
-        if not name.startswith("_") and callable(getattr(ApplicationRuntime, name))
+        for name in dir(ApplicationProfiles)
+        if not name.startswith("_") and callable(getattr(ApplicationProfiles, name))
     }
-    assert public == {"launch", "quit"}
+    assert public == {"discover", "resolve"}
     assert not (
         {
-            "install",
-            "update",
-            "rollback",
-            "uninstall",
-            "kill",
-            "terminate",
-            "open_browser",
-            "launch_window",
-            "spawn_daemon",
+            "delete",
+            "merge",
+            "rename",
+            "upload",
+            "sync",
+            "login",
+            "create_account",
         }
         & public
     )
 
 print(
-    "APP-01A CONSUMER SMOKE: GREEN: a real profile launched through the canonical lease into real Headquarters state, created a durable Song/version, duplicate same-runtime launch stayed idempotent, same-process reopen refused a second Headquarters, a verified-live foreign owner could not steal the profile, explicit quit closed Headquarters and released the lease, relaunch restored the exact active Song/version from disk, and the runtime exposed only launch/quit rather than installer/updater/browser/kill behavior"
+    "APP-01B CONSUMER SMOKE: GREEN: a truly empty install requested Artist-profile creation, created exactly one durable local profile under bootstrap ownership, launched that profile through the real application runtime, created and persisted a Song/version, explicitly quit, rediscovered the same Artist profile on a fresh resolver, relaunched the exact Song/version, required explicit selection once a second healthy local profile existed, and exposed no destructive/cloud/account profile action"
 )
