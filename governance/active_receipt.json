@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-UX-01A",
+  "receipt_id": "N0TE2-UX-01B",
   "node_id": "UX-01",
-  "increment_id": "UX-01A",
-  "baseline_sha": "1b2b008dbbc830524ad7d149fd287bfd4b82f286",
-  "purpose": "Create the first consumer-visible N0TE2 front door: a context-safe Artist Headquarters shell that uses existing profile/runtime/Headquarters semantics, lets a normal local consumer create/select a healthy Artist profile, understand whether there is an active Song, start or resume that Song, navigate bounded Headquarters surfaces without losing context, and explicitly quit without developer tools.",
+  "increment_id": "UX-01B",
+  "baseline_sha": "3e33277ece9d014ab37a50af3b0db40a621e81de",
+  "purpose": "Give the artist one durable Headquarters-level Focus Session contract independent of DAW targeting: choose MAKE, FINISH, MANAGE, RELEASE or PERFORM, optionally bind the focus to the current canonical Song, preserve that focus across Headquarters navigation and application relaunch, switch modes without losing history, and explicitly end focus without mutating unrelated Song, provider, DAW or business state.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,32 +14,30 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A normal artist reaches a real Artist Headquarters first, sees their own Song state in artist language, can start/resume creative work, navigate without context loss and quit cleanly without configuring unrelated infrastructure.",
-    "journeys": ["J-CORE-LIFECYCLE", "J-SONG-START-RESUME", "J-TRUST"],
-    "capability": "Artist Headquarters front door and context-safe bounded navigation",
-    "increment": "UX-01A"
+    "outcome": "An artist can tell Headquarters what kind of work deserves attention now and N0TE preserves that intention instead of treating every known task as equally urgent.",
+    "journeys": ["J-WHAT-NEXT", "J-SONG-START-RESUME", "J-TRUST"],
+    "capability": "Durable Headquarters Focus Sessions",
+    "increment": "UX-01B"
   },
   "reuse": {
-    "mode": "EXPOSE_EXISTING_APP_PROFILE_RUNTIME_AND_HEADQUARTERS_SEMANTICS_THROUGH_NEW_CLEAN_ROOM_UI",
-    "n0te2_dependencies": ["APP-01A ApplicationRuntime launch/quit/single-instance ownership", "APP-01B ApplicationProfiles discovery/bootstrap/selection", "CORE-01 canonical HeadquartersMemory/LineageStore Artist and Song identity", "CORE-02 context/attention foundations", "CORE-03 host-neutral intent/capability foundations", "AUDIT-DESIGN accepted Artist/Song interaction invariants"],
-    "legacy_rejections": ["wholesale legacy UI transplant", "developer-console-first home screen", "raw IDs/JSON/registry/provider/debug internals in primary UX", "force DAW/provider/AI setup before an artist can start", "one profile inheriting another Artist World", "browser tab close treated as application quit", "remote/network listening shell by default", "cross-origin localhost write authority", "UI-only fake Song state disconnected from canonical Headquarters", "framework choice promoted to product doctrine"],
+    "mode": "NEW_CANONICAL_ATTENTION_MEMORY_USING_EXISTING_LINEAGE_ACTIVITY_AND_CONSUMER_SHELL_PATTERNS",
+    "n0te2_dependencies": ["UX-01A landed Artist Headquarters / Now surface", "CORE-01 canonical LineageStore and Activity chronology", "CORE-02 durable Session/learning history patterns", "APP-01 canonical profile persistence/relaunch", "AUDIT-DESIGN progressive-disclosure and attention-protection invariants"],
+    "legacy_rejections": ["reuse DAW FocusContext for artist attention mode", "ephemeral browser-only focus", "global mode that crosses Artist profiles", "mode switch that deletes prior focus history", "fake jobs/suggestions created only to demonstrate attention UX", "automatic provider/DAW/business action when focus changes", "claim REQ-SCOPE-097 fully closed before Not Now semantics exist"],
     "direct_copy": false
   },
   "completion_proof": [
-    "consumer shell is reachable only through loopback-local ownership and does not expose a LAN/network control surface by default",
-    "write actions require an unguessable shell-session token and reject foreign Origin/Host authority; no permissive CORS or unauthenticated localhost mutation endpoint is introduced",
-    "profile discovery/creation/selection reuses ApplicationProfiles and never fabricates or merges Artist identities; healthy multiple-profile state requires explicit selection",
-    "launch reuses ApplicationRuntime and the canonical selected profile; another live owner, uncertain ownership or recovery state is shown as an understandable non-destructive consumer state rather than stolen",
-    "Artist Headquarters primary rendering uses artist/job vocabulary and does not surface raw profile/Song IDs, JSON, stack traces, transport/registry internals or provider plumbing",
-    "no-Song state offers a bounded Start a Song action backed by the canonical Headquarters store; active-Song state offers Resume and displays human Song title/status without creating a parallel UI-only Song object",
-    "bounded Home/Song/Now/Settings navigation preserves the same selected Artist and active Song context; navigation itself performs no unrelated business/provider mutation",
-    "DAW/AI/provider setup is absent from the primary first-run requirement path and remains contextual/skippable until a downstream job needs it",
-    "representative empty/selection/busy/uncertain/recovery states are understandable and actionable without developer vocabulary",
-    "basic accessibility is structural: semantic landmarks/headings/labels, keyboard-reachable controls, visible focus, non-color-only status, reduced-motion support, scalable responsive layout and comfortable targets",
-    "explicit Quit closes canonical Headquarters/releases the exact ApplicationRuntime profile lease and stops/releases the shell listener; closing a browser tab alone is not falsely recorded as N0TE quit",
-    "cross-profile tests prove shell state for one Artist never renders another profile's Artist/Song data unless that profile is explicitly selected and launched",
-    "consumer smoke proves a fresh local path from no profile or selected healthy profile -> Headquarters -> Start/Resume Song -> navigate away/back with context intact -> explicit Quit -> clean relaunch to the same durable Artist/Song state"
+    "canonical profile persistence contains one active Headquarters Focus Session at most and preserves closed/superseded focus history",
+    "supported modes are exactly MAKE, FINISH, MANAGE, RELEASE and PERFORM; invalid or blank modes fail before persistence",
+    "a Focus Session may bind only to a Song in the active profile; cross-profile or nonexistent Song references fail closed",
+    "starting a new Focus Session transactionally closes the prior active Focus Session before activating the replacement; history is not deleted or rewritten",
+    "ending focus is explicit and leaves no active Focus Session while preserving prior history",
+    "Focus Session changes append understandable Activity chronology without mutating Song identity/version/assets/evidence/provider/DAW state",
+    "Headquarters /now lets a normal consumer choose/switch/end Focus without raw IDs or developer plumbing and shows the active mode plus bound Song title when applicable",
+    "active Focus survives Home/Song/Now/Settings navigation and full explicit Quit/relaunch through the same canonical profile",
+    "multiple Artist profiles retain isolated Focus histories and never render another profile's active mode or Song binding",
+    "DAW FocusContext remains a distinct read-only exact-targeting concept and is not imported, renamed or overloaded by this increment",
+    "authored unit/HTTP/consumer smoke proof is kept separate from executed evidence; absent hosted execution remains UNOBSERVED"
   ],
-  "non_scope": ["full SONG-01 intent/session workflow", "full Creative Studio timeline/waveform/stems canvas", "DAW adapter connection", "audio playback/rendering", "AI/provider setup or calls", "Focus modes beyond truthful placeholder/navigation affordance", "persistent Job/Approval Center", "business/social/release workflows", "held accounts/cloud/billing/telemetry/crash-upload/DRM services", "OS-specific packaging/window chrome", "final brand art direction", "full visual regression matrix", "Gate-B customer acceptance"],
-  "next_selection_rule": "After UX-01A is implemented, red-teamed and consumer-proven, audit UX-01 remaining requirements by consumer outcome. Continue with the highest-leverage bounded UX increment rather than drifting into DAW/AUDIO/OPS seams or claiming UX-01 complete from one front-door shell."
+  "non_scope": ["Not Now deferral horizons", "attention-item/job/approval persistence", "release-completion triggers", "future suggestion generation or ranking", "full SONG-01 session objective/debrief UI", "DAW FocusContext changes", "DAW/audio/provider integration", "business/release automation", "final visual brand direction", "Gate-B customer acceptance"],
+  "next_selection_rule": "After UX-01B is implemented, red-teamed and landed, re-audit REQ-SCOPE-097 and the NOW/Attention lineage. Implement durable Not Now only against a truthful attention-item lifecycle; do not create fake reminders, release triggers or job objects solely to satisfy the wording."
 }
