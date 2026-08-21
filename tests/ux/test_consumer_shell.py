@@ -479,7 +479,7 @@ def test_security_and_accessibility_contract_is_present_on_real_shell_response(
     quit_shell(shell)
 
 
-@pytest.mark.parametrize("path", ["/?debug=1", "/song#raw", "/unknown"])
+@pytest.mark.parametrize("path", ["/?debug=1", "/song?raw=1", "/unknown"])
 def test_noncanonical_shell_paths_do_not_open_debug_or_internal_surfaces(
     tmp_path: Path,
     path: str,
