@@ -1,42 +1,41 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-PLATFORM-00A",
-  "node_id": "PLATFORM-00",
-  "increment_id": "PLATFORM-00A",
-  "baseline_sha": "f85443582a901aa692b57b5d721417086ce20238",
-  "purpose": "Implement the first cross-system platform chassis slice: canonical OS/CPU environment identity and deterministic N0TE application data/config/state/cache/log root resolution for macOS, Windows and Linux without leaking platform/path mechanics into Artist/Song identity.",
+  "receipt_id": "N0TE2-DAW-00A",
+  "node_id": "DAW-00",
+  "increment_id": "DAW-00A",
+  "baseline_sha": "73c350b7c9b93b7617b4f36ac1fa9d1e92f34729",
+  "purpose": "Implement one peer host-runtime identity contract for Ableton Live, FL Studio, Logic Pro, Pro Tools, Studio One, REAPER and GENERIC_OTHER so active-host context can be exact without becoming product priority, support truth or capability ranking.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
   "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore"],
-  "allowed_prefixes": ["governance/", "tests/governance/", ".github/workflows/", "n0te2/", "tests/platform/", "tests/core/"],
+  "allowed_prefixes": ["governance/", "tests/governance/", ".github/workflows/", "n0te2/", "tests/daw/", "tests/platform/", "tests/core/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The same N0TE profile/Artist/Song meaning can live in normal OS-conventional application locations across macOS, Windows and Linux without developer paths or host-branded state becoming identity.",
-    "journeys": ["J-CORE-LIFECYCLE", "J-TRUST"],
-    "capability": "Platform environment identity and application-root resolution",
-    "increment": "PLATFORM-00A"
+    "outcome": "N0TE knows exactly which creative workspace/runtime is active while all six named DAWs remain peers and the Song remains canonical above them.",
+    "journeys": ["J-WORKSPACE", "J-TRUST"],
+    "capability": "Peer host-family identity and deterministic runtime fingerprint",
+    "increment": "DAW-00A"
   },
   "reuse": {
-    "mode": "PURE_PLATFORM_ENVIRONMENT_AND_ROOT_RESOLUTION",
-    "n0te2_dependencies": ["CORE-01 opaque profile identity", "CORE-04 closed trust/durability foundation", "PLATFORM_SUPPORT_MATRIX policy evidence"],
-    "legacy_rejections": ["~/.n0te-ableton-ai state root", "cwd as app state", "macOS as product identity", "path equality as Artist/Song identity", "implicit filesystem mutation during resolution", "historical platform maturity as priority"],
+    "mode": "PURE_PEER_HOST_IDENTITY_OVER_PLATFORM00A",
+    "n0te2_dependencies": ["PLATFORM-00A PlatformEnvironment", "CORE-03 host-neutral resolver doctrine", "CORE-04 closed authority/trust foundation"],
+    "legacy_rejections": ["Ableton-first identity", "historical adapter maturity as priority", "process-name identity", "path identity", "host support inferred from detection", "host family embedded in Song identity", "host ranking/default/preference fields"],
     "direct_copy": false
   },
   "completion_proof": [
-    "Darwin/macOS, Windows aliases and Linux normalize to canonical platform families; unknown families remain explicit UNSUPPORTED",
-    "arm64/aarch64, x86_64/amd64/x64, x86-32, armv7 and riscv64 aliases normalize without turning unknown architectures into supported claims",
-    "target tier distinguishes CORE_TARGET, EXTENDED_TARGET, UNVERIFIED and UNSUPPORTED_PLATFORM as policy targets rather than acceptance evidence",
-    "macOS resolves Application Support, Caches and Logs roots under the supplied home",
-    "Windows honors explicit APPDATA/LOCALAPPDATA and has deterministic user-home fallbacks",
-    "Linux honors XDG_DATA_HOME/XDG_CONFIG_HOME/XDG_STATE_HOME/XDG_CACHE_HOME and standard home fallbacks",
-    "relative homes/overrides and unsupported platform families fail visibly instead of guessing",
-    "profile IDs remain opaque path components and root relocation does not regenerate or reinterpret identity",
-    "resolution performs zero filesystem writes and never consults cwd",
-    "no resolved root uses legacy .n0te-ableton-ai or a DAW-branded product directory"
+    "six named DAWs plus GENERIC_OTHER construct peer host identities",
+    "explicit aliases normalize deterministically and unknown hosts do not silently become GENERIC_OTHER",
+    "GENERIC_OTHER requires an explicit host label and distinct labels produce distinct identity",
+    "core-host display labels are cosmetic and excluded from fingerprint identity",
+    "canonical OS/architecture aliases from PLATFORM-00A converge to the same host fingerprint",
+    "version, edition, canonical platform/architecture and translation mode changes invalidate the fingerprint",
+    "raw OS/machine spelling and platform target tier are not host identity",
+    "identity payload contains no rank/default/preferred/capability/support/adapter/path/process fields",
+    "repeated identity reads are deterministic and perform no process/filesystem discovery"
   ],
-  "non_scope": ["installer/package creation", "signing/notarization", "real OS credential store", "audio backend", "plugin scan/hosting", "DAW adapter", "process/single-instance lifecycle", "support-envelope acceptance", "UI", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After PLATFORM-00A evidence, reconcile and globally compare the remaining PLATFORM-00 shared prerequisites (process/security/package/architecture-worker boundary) against dependency-ready DAW-00 and preserved CORE-02 Success Memory. Do not stay on path code by adjacency."
+  "non_scope": ["named DAW adapter", "host process discovery", "host feature registry", "project/workspace file identity", "FocusContext", "Host Shadow", "route scoring", "official vendor support matrix", "plugin scan/hosting", "DAW mutation", "UI", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After DAW-00A evidence, reconcile and globally compare the next DAW-00 universal chassis gaps (feature registry/environment evidence, workspace identity, FocusContext, Musical IR, Host Shadow/reconciliation) against preserved PLATFORM-00 and CORE-02. Do not select a named DAW adapter merely because its historical code is mature."
 }
