@@ -9,155 +9,85 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "CORE-04" or state.get("active_increment") != "CORE-04F":
+if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00A":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2 import ActionIntent, AuthorityService, HeadquartersMemory  # noqa: E402
-from n0te2.transactions import (  # noqa: E402
-    CompensationResult,
-    PostconditionResult,
-    StepExecution,
-    TransactionPlan,
-    TransactionReceipt,
-    TransactionSnapshot,
-    TransactionStep,
+from n0te2.platforms import PlatformEnvironment, PlatformError, resolve_application_roots  # noqa: E402
+
+profile_id = "profile_consumer_smoke"
+mac = PlatformEnvironment.from_runtime_labels("Darwin", "arm64")
+windows = PlatformEnvironment.from_runtime_labels("Windows", "AMD64")
+linux = PlatformEnvironment.from_runtime_labels("Linux", "aarch64")
+assert mac.target_tier == windows.target_tier == linux.target_tier == "CORE_TARGET"
+
+mac_roots = resolve_application_roots(mac, home="/Users/artist")
+windows_roots = resolve_application_roots(
+    windows,
+    home=r"C:\Users\Artist",
+    environment={"APPDATA": r"D:\Roaming", "LOCALAPPDATA": r"E:\Local"},
+)
+linux_roots = resolve_application_roots(
+    linux,
+    home="/home/artist",
+    environment={
+        "XDG_DATA_HOME": "/var/n0te-data",
+        "XDG_CONFIG_HOME": "/var/n0te-config",
+        "XDG_STATE_HOME": "/var/n0te-state",
+        "XDG_CACHE_HOME": "/var/n0te-cache",
+    },
 )
 
+assert str(mac_roots.data_root) == "/Users/artist/Library/Application Support/N0TE"
+assert str(windows_roots.config_root) == r"D:\Roaming\N0TE"
+assert str(windows_roots.data_root) == r"E:\Local\N0TE\Data"
+assert str(linux_roots.data_root) == "/var/n0te-data/N0TE"
+assert str(linux_roots.log_root) == "/var/n0te-state/N0TE/logs"
 
-class Driver:
-    def __init__(self):
-        self.events = []
+# A platform/root move changes storage location, never the opaque profile identity.
+assert mac_roots.profile_data_root(profile_id).name == profile_id
+assert windows_roots.profile_data_root(profile_id).name == profile_id
+assert linux_roots.profile_data_root(profile_id).name == profile_id
 
-    def prepare_snapshot(self, plan):
-        self.events.append(("snapshot", plan.transaction_id))
-        return TransactionSnapshot(
-            plan.transaction_id,
-            plan.operation_id,
-            "snapshot:smoke",
-            "sha256:snapshot-smoke",
-            "evidence:snapshot:smoke",
+for roots in (mac_roots, windows_roots, linux_roots):
+    rendered = "|".join(
+        str(value)
+        for value in (
+            roots.data_root,
+            roots.config_root,
+            roots.state_root,
+            roots.cache_root,
+            roots.log_root,
         )
+    )
+    assert ".n0te-ableton-ai" not in rendered.lower()
+    assert "N0TE" in rendered
 
-    def execute_step(self, step):
-        self.events.append(("execute", step.step_id))
-        if step.step_id == "step:2":
-            return StepExecution(
-                step.step_id,
-                "FAILED",
-                "APPLIED",
-                "evidence:step2:partial-failure",
-            )
-        return StepExecution(
-            step.step_id,
-            "SUCCEEDED",
-            "APPLIED",
-            f"evidence:execute:{step.step_id}",
-            f"sha256:result:{step.step_id}",
-        )
-
-    def verify_postcondition(self, step, execution):
-        self.events.append(("verify", step.step_id))
-        return PostconditionResult(
-            step.step_id,
-            step.postcondition_ref,
-            "SATISFIED",
-            f"evidence:post:{step.step_id}",
-        )
-
-    def compensate_step(self, step, snapshot):
-        self.events.append(("compensate", step.step_id))
-        return CompensationResult(
-            step.step_id,
-            snapshot.snapshot_ref,
-            "RESTORED",
-            f"evidence:compensate:{step.step_id}",
-        )
-
-    def success_receipt(self, plan, snapshot):
-        raise AssertionError("success receipt must not be requested after a failed step")
-
-
+# Pure resolution must not create a consumer's application tree as a side effect.
 with tempfile.TemporaryDirectory() as temp:
-    root = Path(temp)
-    hq = HeadquartersMemory.create(root, "Artist")
-    profile_id = hq.store.profile_id
-    song = hq.store.create_song("Bounded Transaction Song")
-    version = hq.store.create_version(song.id, label="v1")
-    intent = ActionIntent(
-        action_id="action:local:bounded-routing",
-        job_id="job:bounded-routing",
-        action_class="REVERSIBLE",
-        description="Apply one exact three-step local routing change",
-        target_ref=f"version:{version.id}",
-        revision_fingerprint="sha256:txn-revision-v1",
-        payload_fingerprint="sha256:txn-plan-v1",
-    )
-    approval = AuthorityService.bind_approval(intent, "artist-confirmation:txn-smoke")
-    operation = hq.operations.prepare(
-        idempotency_key="idem:txn-smoke:v1",
-        intent=intent,
-        approval=approval,
-        song_id=song.id,
-        version_id=version.id,
-    )
-    operation = hq.operations.claim_execution(
-        operation.operation_id,
-        intent=intent,
-        approval=approval,
-        claim_evidence_ref="execution-gate:txn-smoke",
-    )
+    not_created_home = Path(temp) / "home-does-not-exist"
+    resolved = resolve_application_roots(linux, home=str(not_created_home))
+    assert not not_created_home.exists()
+    assert not Path(str(resolved.data_root)).exists()
 
-    plan = TransactionPlan(
-        "txn:smoke",
-        operation.operation_id,
-        (
-            TransactionStep("step:1", "Create object", "post:object-exists", True),
-            TransactionStep(
-                "step:2",
-                "Route object",
-                "post:route-matches",
-                True,
-                ("step:1",),
-            ),
-            TransactionStep(
-                "step:3",
-                "Apply final value",
-                "post:value-matches",
-                True,
-                ("step:2",),
-            ),
-        ),
-    )
-    driver = Driver()
-    result = hq.transactions.run(plan, driver)
+# Unsupported systems and relative roots are explicit failures, not guessed portability.
+unsupported = PlatformEnvironment.from_runtime_labels("FreeBSD", "amd64")
+assert unsupported.target_tier == "UNSUPPORTED_PLATFORM"
+try:
+    resolve_application_roots(unsupported, home="/home/artist")
+except PlatformError:
+    pass
+else:
+    raise AssertionError("unsupported platform was assigned application roots")
 
-    assert result.status == "COMPENSATED"
-    assert result.operation.recorded_state == "FAILED"
-    assert result.executed_step_ids == ("step:1", "step:2")
-    assert result.compensated_step_ids == ("step:2", "step:1")
-    assert ("execute", "step:3") not in driver.events
-    assert driver.events.index(("compensate", "step:2")) < driver.events.index(
-        ("compensate", "step:1")
-    )
-
-    history = hq.transactions.history("txn:smoke")
-    assert history.plan_fingerprint == plan.plan_fingerprint
-    assert history.unresolved_execution_step_ids == ()
-    assert history.unresolved_compensation_step_ids == ()
-    assert history.requires_recovery_review is False
-    assert any(event.event_type == "STEP_EXECUTION_STARTED" for event in history.events)
-    assert any(event.event_type == "COMPENSATION_RECORDED" for event in history.events)
-
-    hq.close()
-    hq = HeadquartersMemory.open(root, profile_id)
-    reopened = hq.transactions.history("txn:smoke")
-    assert reopened.steps == plan.steps
-    assert reopened.operation.recorded_state == "FAILED"
-    assert reopened.requires_recovery_review is False
-    hq.close()
+try:
+    resolve_application_roots(linux, home="relative-home")
+except PlatformError:
+    pass
+else:
+    raise AssertionError("relative home was accepted")
 
 print(
-    "CORE-04F CONSUMER SMOKE: GREEN: a middle-step partial failure stopped forward execution, restored changed steps in strict reverse order, recorded whole-job failure rather than success, and preserved transaction recovery evidence across Headquarters restart"
+    "PLATFORM-00A CONSUMER SMOKE: GREEN: macOS, Windows and Linux resolved deterministic N0TE application roots from one platform-neutral contract, preserved the same opaque profile identity across root changes, created no filesystem state, and never revived the legacy Ableton-branded path"
 )
