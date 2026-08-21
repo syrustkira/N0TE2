@@ -1,19 +1,42 @@
 from __future__ import annotations
 
 import os
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
+from .artifacts import ReleaseManifest
+from .instance import ProcessIdentity
 from .memory import HeadquartersMemory
+from .migration import MigrationStep, MigrationValidationError
 from .update import (
     ApplicationUpdateCoordinator as _BaseApplicationUpdateCoordinator,
     ApplicationUpdateError,
+    UpdatePlan,
     UpdateRejectedError,
     UpdateResult,
+)
+from .update_migration import (
+    UpdateBoundSchemaMigrator,
+    UpdateMigrationBinding,
+    UpdateMigrationBindingStore,
 )
 
 
 class _ValidationDatabaseOwnershipUncertain(BaseException):
     """Bypass automatic compensation when the validation database may still be open."""
+
+
+class _SchemaMigrationRecoveryRequired(BaseException):
+    """Bypass blind package rollback when schema/maintenance outcome is ambiguous."""
+
+
+@dataclass(frozen=True)
+class _SchemaApplyContext:
+    plan: UpdatePlan
+    manifest: ReleaseManifest
+    process: ProcessIdentity
+    binding: UpdateMigrationBinding
 
 
 def _canonical_data_root(path: str | Path) -> Path:
@@ -37,23 +60,142 @@ def _canonical_data_root(path: str | Path) -> Path:
 
 
 class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
-    """Consumer-safe APP-01C update coordinator.
+    """Consumer-safe APP-01C/E update coordinator.
 
-    The durable transaction/state machine lives in ``n0te2.update``. This thin
-    guard adds two fail-closed boundaries: update roots must resolve to one
-    canonical real directory, and package/data compensation is forbidden when
-    post-install validation cannot prove the canonical database was released.
+    The base coordinator owns package mutation, update journaling, maintenance
+    holds and package/data compensation. This guard binds one explicit semantic
+    schema plan to the prepared target release and executes it inside the same
+    maintenance hold after package installation but before Headquarters validation.
     """
 
-    def prepare(self, *, runtime, **kwargs):  # type: ignore[override]
-        _canonical_data_root(runtime.data_root)
-        return super().prepare(runtime=runtime, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._migration_bindings = UpdateMigrationBindingStore(self.state_root)
+        self._schema_apply_context: _SchemaApplyContext | None = None
+
+    def prepare(
+        self,
+        *,
+        runtime,
+        schema_target_version: int,
+        schema_steps: Iterable[MigrationStep] = (),
+        **kwargs,
+    ):  # type: ignore[override]
+        data_root = _canonical_data_root(runtime.data_root)
+        manifest = kwargs.get("manifest")
+        if not isinstance(manifest, ReleaseManifest):
+            raise TypeError("prepare requires manifest=ReleaseManifest")
+        steps = tuple(schema_steps)
+        plan = super().prepare(runtime=runtime, **kwargs)
+        try:
+            migrator = UpdateBoundSchemaMigrator(
+                data_root,
+                self.state_root,
+                rollback_snapshot_sha256=plan.snapshot_sha256,
+                rollback_snapshot_size_bytes=plan.snapshot_size_bytes,
+            )
+            migration_plan = migrator.prepare_read_only(
+                profile_id=plan.profile_id,
+                target_version=schema_target_version,
+                steps=steps,
+            )
+            binding = UpdateMigrationBinding(
+                update_id=plan.update_id,
+                update_plan_fingerprint=plan.fingerprint,
+                manifest_fingerprint=manifest.fingerprint,
+                target_release_id=plan.target_release_id,
+                rollback_snapshot_sha256=plan.snapshot_sha256,
+                rollback_snapshot_size_bytes=plan.snapshot_size_bytes,
+                migration_plan=migration_plan,
+            )
+            self._migration_bindings.create(binding)
+        except Exception as exc:
+            try:
+                self._transition(
+                    plan.update_id,
+                    expected={"PREPARED"},
+                    new_state="RECOVERY_REQUIRED",
+                    evidence="schema:prepare-binding-failed",
+                    reason=f"update schema migration could not be durably bound before package mutation: {exc}",
+                )
+            except Exception:
+                pass
+            raise UpdateRejectedError(
+                "update schema migration could not be safely prepared; package mutation did not start"
+            ) from exc
+        return plan
+
+    def _load_schema_binding(
+        self,
+        *,
+        plan: UpdatePlan,
+        manifest: ReleaseManifest,
+    ) -> UpdateMigrationBinding:
+        binding = self._migration_bindings.read(plan.update_id)
+        if binding.update_plan_fingerprint != plan.fingerprint:
+            raise UpdateRejectedError("schema migration binding belongs to a different update plan")
+        if binding.manifest_fingerprint != manifest.fingerprint:
+            raise UpdateRejectedError("schema migration binding belongs to a different release manifest")
+        if binding.target_release_id != plan.target_release_id:
+            raise UpdateRejectedError("schema migration binding target release differs from update plan")
+        if binding.rollback_snapshot_sha256 != plan.snapshot_sha256:
+            raise UpdateRejectedError("schema migration binding rollback snapshot differs from update plan")
+        if binding.rollback_snapshot_size_bytes != plan.snapshot_size_bytes:
+            raise UpdateRejectedError("schema migration binding rollback size differs from update plan")
+        if binding.migration_plan.profile_id != plan.profile_id:
+            raise UpdateRejectedError("schema migration binding belongs to a different profile")
+        return binding
+
+    def _run_bound_schema_migration(self, data_root: Path, profile_id: str) -> None:
+        context = self._schema_apply_context
+        if context is None:
+            raise _SchemaMigrationRecoveryRequired(
+                "post-install validation has no exact schema migration apply context"
+            )
+        if context.plan.profile_id != profile_id:
+            raise _SchemaMigrationRecoveryRequired(
+                "post-install schema migration context belongs to a different profile"
+            )
+        hold = self._leases.inspect(profile_id)
+        if hold is None or hold.process.fingerprint != context.process.fingerprint:
+            raise _SchemaMigrationRecoveryRequired(
+                "exact update maintenance hold is missing or owned by a different process"
+            )
+        migrator = UpdateBoundSchemaMigrator(
+            data_root,
+            self.state_root,
+            rollback_snapshot_sha256=context.binding.rollback_snapshot_sha256,
+            rollback_snapshot_size_bytes=context.binding.rollback_snapshot_size_bytes,
+        )
+        try:
+            result = migrator.migrate_under_maintenance(
+                context.binding.migration_plan,
+                maintenance_lease=hold,
+            )
+        except MigrationValidationError as exc:
+            current_hold = self._leases.inspect(profile_id)
+            if current_hold != hold:
+                raise _SchemaMigrationRecoveryRequired(
+                    f"schema migration lost exact maintenance ownership: {exc}"
+                ) from exc
+            raise
+        if result.state == "RECOVERY_REQUIRED":
+            raise _SchemaMigrationRecoveryRequired(result.evidence)
+        if result.state == "ROLLED_BACK":
+            raise UpdateRejectedError(
+                f"target package schema migration rolled back before Headquarters validation: {result.evidence}"
+            )
+        if result.state not in {"NO_CHANGE", "SUCCEEDED"}:
+            raise _SchemaMigrationRecoveryRequired(
+                f"unsupported schema migration terminal state: {result.state}"
+            )
 
     def _validate_installed_headquarters(
         self,
         data_root: Path,
         profile_id: str,
     ) -> None:
+        self._run_bound_schema_migration(data_root, profile_id)
         headquarters: HeadquartersMemory | None = None
         validation_error: Exception | None = None
         try:
@@ -83,22 +225,46 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
 
     def apply(self, **kwargs) -> UpdateResult:  # type: ignore[override]
         plan = kwargs.get("plan")
+        manifest = kwargs.get("manifest")
+        process = kwargs.get("process")
+        if not isinstance(plan, UpdatePlan):
+            raise TypeError("apply requires plan=UpdatePlan")
+        if not isinstance(manifest, ReleaseManifest):
+            raise TypeError("apply requires manifest=ReleaseManifest")
+        if not isinstance(process, ProcessIdentity):
+            raise TypeError("apply requires process=ProcessIdentity")
         if "data_root" not in kwargs:
             raise TypeError("apply requires data_root")
+        if self._schema_apply_context is not None:
+            raise UpdateRejectedError("one coordinator cannot execute two schema-bound updates concurrently")
         guarded_kwargs = dict(kwargs)
         guarded_kwargs["data_root"] = _canonical_data_root(kwargs["data_root"])
+        binding = self._load_schema_binding(plan=plan, manifest=manifest)
+        self._schema_apply_context = _SchemaApplyContext(plan, manifest, process, binding)
         try:
-            return super().apply(**guarded_kwargs)
-        except _ValidationDatabaseOwnershipUncertain as exc:
-            if plan is None:
-                raise
-            journal = self._read_journal(plan.update_id)
-            if journal.state == "VALIDATING":
-                journal = self._mark_recovery(
-                    plan,
-                    expected={"VALIDATING"},
-                    evidence="validation:database-release-uncertain",
-                    reason=str(exc),
-                    install_receipt=journal.install_receipt,
-                )
-            return self._to_result(journal)
+            try:
+                return super().apply(**guarded_kwargs)
+            except _ValidationDatabaseOwnershipUncertain as exc:
+                journal = self._read_journal(plan.update_id)
+                if journal.state == "VALIDATING":
+                    journal = self._mark_recovery(
+                        plan,
+                        expected={"VALIDATING"},
+                        evidence="validation:database-release-uncertain",
+                        reason=str(exc),
+                        install_receipt=journal.install_receipt,
+                    )
+                return self._to_result(journal)
+            except _SchemaMigrationRecoveryRequired as exc:
+                journal = self._read_journal(plan.update_id)
+                if journal.state == "VALIDATING":
+                    journal = self._mark_recovery(
+                        plan,
+                        expected={"VALIDATING"},
+                        evidence="schema:migration-recovery-required",
+                        reason=str(exc),
+                        install_receipt=journal.install_receipt,
+                    )
+                return self._to_result(journal)
+        finally:
+            self._schema_apply_context = None
