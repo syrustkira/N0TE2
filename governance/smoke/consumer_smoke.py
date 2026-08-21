@@ -4,96 +4,85 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "APP-01" or state.get("active_increment") != "APP-01D":
+if state.get("active_node") != "APP-01" or state.get("active_increment") != "APP-01E":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
+from n0te2.instance import ProcessIdentity  # noqa: E402
 from n0te2.memory import HeadquartersMemory  # noqa: E402
-from n0te2.platforms import PlatformRoots  # noqa: E402
-from n0te2.uninstall import (  # noqa: E402
-    ApplicationRemovalPlanner,
-    ResolvedPathEvidence,
-)
+from n0te2.migration import ApplicationSchemaMigrator, MigrationStep  # noqa: E402
+from n0te2.platforms import PlatformEnvironment  # noqa: E402
 
 
-def verified(path: PurePosixPath, ref: str) -> ResolvedPathEvidence:
-    physical = Path(str(path))
-    physical.mkdir(parents=True, exist_ok=True)
-    assert not physical.is_symlink()
-    assert physical.resolve() == physical
-    return ResolvedPathEvidence(path, path, False, ref)
+class DeadProbe:
+    def status(self, process: ProcessIdentity) -> str:
+        return "DEAD"
 
 
 with tempfile.TemporaryDirectory() as temp:
     root = Path(temp).resolve()
-    data_root = root / "data"
-    state_root = root / "state"
-    cache_root = root / "cache"
-    log_root = state_root / "logs"
-    config_root = root / "config"
-    app_path = root / "package" / "n0te"
-    app_path.parent.mkdir(parents=True)
-    app_path.write_text("test package placeholder")
+    data_root = (root / "data").resolve()
+    state_root = (root / "state").resolve()
 
-    headquarters = HeadquartersMemory.create(data_root, "Uninstall Retention Artist")
+    headquarters = HeadquartersMemory.create(data_root, "Schema Migration Artist")
     profile_id = headquarters.store.profile_id
-    song = headquarters.store.create_song("Retained Song")
-    version = headquarters.store.create_version(song.id, label="Retained Version")
-    snapshot = headquarters.recovery.create_snapshot()
+    artist_id = headquarters.store.primary_artist_id
+    song = headquarters.store.create_song("Migration-Safe Song")
+    asset = headquarters.store.attach_asset(
+        song.id,
+        name="song.wav",
+        sha256="a" * 64,
+        source_uri="file:///song.wav",
+    )
+    version = headquarters.store.create_version(
+        song.id,
+        label="Pre-Migration Version",
+        asset_ids=(asset.id,),
+    )
     headquarters.close()
 
-    roots = PlatformRoots(
-        os_family="LINUX",
-        data_root=PurePosixPath(str(data_root)),
-        config_root=PurePosixPath(str(config_root)),
-        state_root=PurePosixPath(str(state_root)),
-        cache_root=PurePosixPath(str(cache_root)),
-        log_root=PurePosixPath(str(log_root)),
+    migrator = ApplicationSchemaMigrator(data_root, state_root)
+    step = MigrationStep(
+        1,
+        2,
+        "add bounded application schema v2 marker",
+        ("CREATE TABLE app_v2_marker(value TEXT NOT NULL DEFAULT 'ready')",),
     )
-    plan = ApplicationRemovalPlanner.plan(
-        roots=roots,
-        profile_id=profile_id,
-        runtime_state="STOPPED",
-        path_evidence=(
-            verified(roots.config_root, "smoke:path:config"),
-            verified(roots.state_root, "smoke:path:state"),
-            verified(roots.cache_root, "smoke:path:cache"),
-            verified(PurePosixPath(str(app_path)), "smoke:path:package"),
-        ),
-        platform_managed_paths=(PurePosixPath(str(app_path)),),
+    plan = migrator.prepare(profile_id=profile_id, target_version=2, steps=(step,))
+    platform = PlatformEnvironment.from_runtime_labels("Linux", "x86_64")
+    maintenance = ProcessIdentity.from_start_token(
+        platform,
+        pid=99001,
+        start_token="app-01e-consumer-smoke",
     )
+    result = migrator.migrate(plan, maintenance_process=maintenance, probe=DeadProbe())
+    assert result.state == "SUCCEEDED"
+    assert result.installed_version == 2
 
-    retained = {str(entry.path) for entry in plan.retained}
-    assert str(roots.data_root) in retained
-    assert str(roots.profile_data_root(profile_id)) in retained
-    assert str(roots.profile_data_root(profile_id) / "recovery") in retained
-    assert str(snapshot.path).startswith(str(roots.profile_data_root(profile_id) / "recovery"))
-    assert roots.data_root not in {entry.path for entry in plan.removal_candidates}
-    assert roots.profile_data_root(profile_id) not in {entry.path for entry in plan.removal_candidates}
-    assert roots.log_root not in {entry.path for entry in plan.removal_candidates}
-    assert {entry.path for entry in plan.removal_candidates} == {
-        roots.config_root,
-        roots.state_root,
-        roots.cache_root,
-    }
-    package = next(entry for entry in plan.entries if entry.path == PurePosixPath(str(app_path)))
-    assert package.classification == "PLATFORM_MANAGED"
-    assert package.eligible_for_removal is False
-    assert all(item.status == "HELD_NOT_ACTIVE" for item in plan.held_services)
-    assert all(item.promotion_required for item in plan.held_services)
+    history = migrator.history(profile_id)
+    assert len(history) == 1
+    assert history[0].migration_id == plan.migration_id
+    assert history[0].from_version == 1
+    assert history[0].to_version == 2
+    assert history[0].step_fingerprint == step.fingerprint
 
     reopened = HeadquartersMemory.open(data_root, profile_id)
+    assert reopened.store.primary_artist_id == artist_id
     resumed = reopened.store.active_song()
     assert resumed is not None and resumed.id == song.id
     assert resumed.current_version_id == version.id
+    reopened_version = reopened.store.get_version(version.id)
+    assert reopened_version is not None and reopened_version.song_id == song.id
+    reopened_asset = reopened.store.get_asset(asset.id)
+    assert reopened_asset is not None and reopened_asset.song_id == song.id
     reopened.close()
 
 print(
-    "APP-01D CONSUMER SMOKE: GREEN: a stopped local N0TE profile produced a non-destructive uninstall plan in which package/runtime mechanics were separated from retained Artist/Song/profile/recovery data, nested runtime roots did not double-remove, the real Song/version remained reopenable, and accounts/cloud/billing/telemetry/crash-upload/DRM stayed explicitly held-not-active"
+    "APP-01E CONSUMER SMOKE: GREEN: a stopped canonical Artist profile migrated through one explicit semantic-schema edge using a staged candidate and maintenance lease; the migration was inspectable, and the exact Artist/Song/version/asset identities reopened normally at the target schema"
 )
