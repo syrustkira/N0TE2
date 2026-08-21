@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-DAW-00A",
+  "receipt_id": "N0TE2-DAW-00B",
   "node_id": "DAW-00",
-  "increment_id": "DAW-00A",
-  "baseline_sha": "73c350b7c9b93b7617b4f36ac1fa9d1e92f34729",
-  "purpose": "Implement one peer host-runtime identity contract for Ableton Live, FL Studio, Logic Pro, Pro Tools, Studio One, REAPER and GENERIC_OTHER so active-host context can be exact without becoming product priority, support truth or capability ranking.",
+  "increment_id": "DAW-00B",
+  "baseline_sha": "16e1ac9128a06ef27cfa08144fad94ab27a58f14",
+  "purpose": "Implement durable host-neutral workspace identity so project path/name/location observations never become identity and move/recovery can be distinguished explicitly from duplicate/fork without cross-Song context leakage.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,28 +14,31 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "N0TE knows exactly which creative workspace/runtime is active while all six named DAWs remain peers and the Song remains canonical above them.",
+    "outcome": "Moving, renaming, Save-As, duplicating, forking or recovering a DAW project cannot silently attach the wrong Song/context or manufacture a new workspace identity from a filesystem path.",
     "journeys": ["J-WORKSPACE", "J-TRUST"],
-    "capability": "Peer host-family identity and deterministic runtime fingerprint",
-    "increment": "DAW-00A"
+    "capability": "Stable workspace identity and explicit move/duplicate/fork/recovery reconciliation",
+    "increment": "DAW-00B"
   },
   "reuse": {
-    "mode": "PURE_PEER_HOST_IDENTITY_OVER_PLATFORM00A",
-    "n0te2_dependencies": ["PLATFORM-00A PlatformEnvironment", "CORE-03 host-neutral resolver doctrine", "CORE-04 closed authority/trust foundation"],
-    "legacy_rejections": ["Ableton-first identity", "historical adapter maturity as priority", "process-name identity", "path identity", "host support inferred from detection", "host family embedded in Song identity", "host ranking/default/preference fields"],
+    "mode": "CANONICAL_SQLITE_WORKSPACE_IDENTITY_OVER_SONG_AND_DAW00A_HOST_IDENTITY",
+    "n0te2_dependencies": ["CORE-01 Song/profile identity and durable SQLite", "CORE-01 Activity chronology", "DAW-00A peer host identity"],
+    "legacy_rejections": ["path equality as identity", "Ableton Set as universal workspace owner", "silent Save-As merge", "host process name as project identity", "cross-Song source lineage", "mutable workspace history"],
     "direct_copy": false
   },
   "completion_proof": [
-    "six named DAWs plus GENERIC_OTHER construct peer host identities",
-    "explicit aliases normalize deterministically and unknown hosts do not silently become GENERIC_OTHER",
-    "GENERIC_OTHER requires an explicit host label and distinct labels produce distinct identity",
-    "core-host display labels are cosmetic and excluded from fingerprint identity",
-    "canonical OS/architecture aliases from PLATFORM-00A converge to the same host fingerprint",
-    "version, edition, canonical platform/architecture and translation mode changes invalidate the fingerprint",
-    "raw OS/machine spelling and platform target tier are not host identity",
-    "identity payload contains no rank/default/preferred/capability/support/adapter/path/process fields",
-    "repeated identity reads are deterministic and perform no process/filesystem discovery"
+    "move/rename and recovery append observations while preserving the same opaque workspace ID",
+    "duplicate and fork create distinct workspace IDs with explicit source-workspace lineage",
+    "cross-Song derivation/reconciliation is rejected",
+    "a location currently claimed by another workspace cannot silently merge identities",
+    "an old location becomes reusable after the original workspace has explicitly moved elsewhere without resurrecting the old identity",
+    "ambiguous SAVE_AS/unknown relation is rejected until caller chooses SAME_OR_MOVED, RECOVERED, DUPLICATE or FORK",
+    "an existing workspace cannot silently change host family; cross-host continuation must be an explicit fork/new workspace",
+    "runtime version changes remain observations and do not regenerate workspace identity",
+    "workspace identity and observation history are immutable/append-only and survive restart",
+    "runtime identity evidence is reproducibly fingerprint-validated on reopen and tampering fails visibly",
+    "current-location lookup returns observational candidates only; no get-by-path identity API exists",
+    "repeated reads write zero rows and workspace events enter canonical Activity chronology"
   ],
-  "non_scope": ["named DAW adapter", "host process discovery", "host feature registry", "project/workspace file identity", "FocusContext", "Host Shadow", "route scoring", "official vendor support matrix", "plugin scan/hosting", "DAW mutation", "UI", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After DAW-00A evidence, reconcile and globally compare the next DAW-00 universal chassis gaps (feature registry/environment evidence, workspace identity, FocusContext, Musical IR, Host Shadow/reconciliation) against preserved PLATFORM-00 and CORE-02. Do not select a named DAW adapter merely because its historical code is mature."
+  "non_scope": ["FocusContext", "Host Shadow", "host feature registry", "process/project discovery", "filesystem watcher", "named DAW adapter", "capability scoring", "plugin hosting", "DAW mutation", "UI", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After DAW-00B evidence, reconcile and globally compare FocusContext, Host Shadow/reconciliation, feature/environment evidence and Musical IR/portability against preserved PLATFORM-00 and CORE-02. Do not select a named DAW adapter by historical maturity."
 }
