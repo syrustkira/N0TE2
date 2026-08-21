@@ -121,11 +121,32 @@ class MigrationStep:
 
 
 @dataclass(frozen=True)
+class MigrationHistoryEntry:
+    sequence: int
+    migration_id: str
+    from_version: int
+    to_version: int
+    step_fingerprint: str
+    description: str
+
+    def fingerprint_data(self) -> dict[str, object]:
+        return {
+            "sequence": self.sequence,
+            "migration_id": self.migration_id,
+            "from_version": self.from_version,
+            "to_version": self.to_version,
+            "step_fingerprint": self.step_fingerprint,
+            "description": self.description,
+        }
+
+
+@dataclass(frozen=True)
 class SchemaState:
     profile_id: str
     application_version: int
     lineage_version: str
     identity_fingerprint: str
+    history_fingerprint: str
 
 
 @dataclass(frozen=True)
@@ -135,8 +156,7 @@ class MigrationPlan:
     source_version: int
     target_version: int
     source_identity_fingerprint: str
-    snapshot_sha256: str
-    snapshot_size_bytes: int
+    source_history_fingerprint: str
     steps: tuple[MigrationStep, ...]
 
     def __post_init__(self) -> None:
@@ -152,12 +172,8 @@ class MigrationPlan:
             raise MigrationPlanError("schema versions must be positive")
         if not _SHA256.fullmatch(str(self.source_identity_fingerprint)):
             raise MigrationPlanError("source identity fingerprint must be SHA-256")
-        if not _SHA256.fullmatch(str(self.snapshot_sha256)):
-            raise MigrationPlanError("snapshot_sha256 must be SHA-256")
-        if isinstance(self.snapshot_size_bytes, bool) or not isinstance(self.snapshot_size_bytes, int):
-            raise MigrationPlanError("snapshot_size_bytes must be an integer")
-        if self.snapshot_size_bytes <= 0:
-            raise MigrationPlanError("snapshot_size_bytes must be positive")
+        if not _SHA256.fullmatch(str(self.source_history_fingerprint)):
+            raise MigrationPlanError("source history fingerprint must be SHA-256")
         object.__setattr__(self, "steps", tuple(self.steps))
         ApplicationSchemaMigrator._validate_chain(
             self.source_version, self.target_version, self.steps
@@ -172,21 +188,10 @@ class MigrationPlan:
                 "source_version": self.source_version,
                 "target_version": self.target_version,
                 "source_identity_fingerprint": self.source_identity_fingerprint,
-                "snapshot_sha256": self.snapshot_sha256,
-                "snapshot_size_bytes": self.snapshot_size_bytes,
+                "source_history_fingerprint": self.source_history_fingerprint,
                 "steps": [step.fingerprint for step in self.steps],
             }
         )
-
-
-@dataclass(frozen=True)
-class MigrationHistoryEntry:
-    sequence: int
-    migration_id: str
-    from_version: int
-    to_version: int
-    step_fingerprint: str
-    description: str
 
 
 @dataclass(frozen=True)
@@ -194,7 +199,7 @@ class MigrationResult:
     state: str
     plan: MigrationPlan
     installed_version: int | None
-    restored_snapshot_sha256: str | None
+    rollback_snapshot_sha256: str | None
     evidence: str
 
     def __post_init__(self) -> None:
@@ -205,10 +210,10 @@ class MigrationResult:
 class ApplicationSchemaMigrator:
     """Snapshot-backed staged semantic-schema migration for one stopped profile.
 
-    Preparation is read-only except for creating the canonical RecoveryManager snapshot.
-    Execution takes the shared profile instance lease as maintenance ownership before any
-    staged work. Normal runtime ownership, unknown ownership, and same-process runtime
-    ownership all fail closed rather than trusting a caller-supplied STOPPED flag.
+    `prepare()` is a non-mutating plan read. `migrate()` acquires the same profile
+    instance lease used by normal runtime, revalidates the plan, then creates the
+    exact rollback snapshot while maintenance ownership prevents normal runtime
+    from opening the profile. No staged SQL touches the live database.
     """
 
     def __init__(self, data_root: str | Path, state_root: str | Path):
@@ -228,7 +233,31 @@ class ApplicationSchemaMigrator:
         return self.data_root / "profiles" / str(profile_id) / LineageStore.DB_NAME
 
     @staticmethod
-    def _read_state_from_connection(conn: sqlite3.Connection, profile_id: str) -> SchemaState:
+    def _history_rows(conn: sqlite3.Connection) -> tuple[MigrationHistoryEntry, ...]:
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='application_schema_migrations'"
+        ).fetchone()
+        if exists is None:
+            return ()
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT sequence,migration_id,from_version,to_version,step_fingerprint,description "
+            "FROM application_schema_migrations ORDER BY sequence"
+        ).fetchall()
+        return tuple(
+            MigrationHistoryEntry(
+                sequence=int(row["sequence"]),
+                migration_id=str(row["migration_id"]),
+                from_version=int(row["from_version"]),
+                to_version=int(row["to_version"]),
+                step_fingerprint=str(row["step_fingerprint"]),
+                description=str(row["description"]),
+            )
+            for row in rows
+        )
+
+    @classmethod
+    def _read_state_from_connection(cls, conn: sqlite3.Connection, profile_id: str) -> SchemaState:
         conn.row_factory = sqlite3.Row
         quick = conn.execute("PRAGMA quick_check").fetchone()
         if quick is None or str(quick[0]) != "ok":
@@ -278,11 +307,13 @@ class ApplicationSchemaMigrator:
         }
         for name, query in queries.items():
             identity[name] = [tuple(row) for row in conn.execute(query)]
+        history = cls._history_rows(conn)
         return SchemaState(
             profile_id=profile_id,
             application_version=app_version,
             lineage_version=lineage_version,
             identity_fingerprint=_digest(identity),
+            history_fingerprint=_digest([entry.fingerprint_data() for entry in history]),
         )
 
     @classmethod
@@ -297,6 +328,20 @@ class ApplicationSchemaMigrator:
             return cls._read_state_from_connection(conn, profile_id)
         except sqlite3.DatabaseError as exc:
             raise MigrationValidationError("profile database is unreadable") from exc
+        finally:
+            if conn is not None:
+                conn.close()
+
+    @classmethod
+    def _history_from_path(cls, path: Path) -> tuple[MigrationHistoryEntry, ...]:
+        conn: sqlite3.Connection | None = None
+        try:
+            uri = path.resolve().as_uri() + "?mode=ro"
+            conn = sqlite3.connect(uri, uri=True, timeout=5.0)
+            conn.execute("PRAGMA query_only=ON")
+            return cls._history_rows(conn)
+        except sqlite3.DatabaseError as exc:
+            raise MigrationValidationError("migration history is unreadable") from exc
         finally:
             if conn is not None:
                 conn.close()
@@ -339,65 +384,24 @@ class ApplicationSchemaMigrator:
         if target_version < 1:
             raise MigrationPlanError("target_version must be positive")
         self._assert_no_runtime_lease(profile_id)
-        live = self._db_path(profile_id)
-        source = self._inspect_path(live, profile_id)
+        source = self._inspect_path(self._db_path(profile_id), profile_id)
         step_tuple = tuple(steps)
         self._validate_chain(source.application_version, target_version, step_tuple)
-
-        store = LineageStore.open(self.data_root, profile_id)
-        try:
-            snapshot: SnapshotInfo = RecoveryManager(store).create_snapshot()
-        finally:
-            store.close()
         self._assert_no_runtime_lease(profile_id)
-        latest = self._inspect_path(live, profile_id)
-        if latest != source:
-            raise MigrationValidationError("profile changed while migration was being prepared")
         return MigrationPlan(
             migration_id=f"mig_{uuid.uuid4().hex}",
             profile_id=profile_id,
             source_version=source.application_version,
             target_version=target_version,
             source_identity_fingerprint=source.identity_fingerprint,
-            snapshot_sha256=snapshot.sha256,
-            snapshot_size_bytes=snapshot.size_bytes,
+            source_history_fingerprint=source.history_fingerprint,
             steps=step_tuple,
         )
 
     def history(self, profile_id: str) -> tuple[MigrationHistoryEntry, ...]:
         live = self._db_path(profile_id)
         self._inspect_path(live, profile_id)
-        conn: sqlite3.Connection | None = None
-        try:
-            uri = live.resolve().as_uri() + "?mode=ro"
-            conn = sqlite3.connect(uri, uri=True, timeout=5.0)
-            conn.row_factory = sqlite3.Row
-            conn.execute("PRAGMA query_only=ON")
-            exists = conn.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='application_schema_migrations'"
-            ).fetchone()
-            if exists is None:
-                return ()
-            rows = conn.execute(
-                "SELECT sequence,migration_id,from_version,to_version,step_fingerprint,description "
-                "FROM application_schema_migrations ORDER BY sequence"
-            ).fetchall()
-            return tuple(
-                MigrationHistoryEntry(
-                    sequence=int(row["sequence"]),
-                    migration_id=str(row["migration_id"]),
-                    from_version=int(row["from_version"]),
-                    to_version=int(row["to_version"]),
-                    step_fingerprint=str(row["step_fingerprint"]),
-                    description=str(row["description"]),
-                )
-                for row in rows
-            )
-        except sqlite3.DatabaseError as exc:
-            raise MigrationValidationError("migration history is unreadable") from exc
-        finally:
-            if conn is not None:
-                conn.close()
+        return self._history_from_path(live)
 
     def migrate(
         self,
@@ -415,16 +419,14 @@ class ApplicationSchemaMigrator:
         self._validate_chain(plan.source_version, plan.target_version, plan.steps)
         live = self._db_path(plan.profile_id)
         current = self._inspect_path(live, plan.profile_id)
-        if current.application_version != plan.source_version:
-            raise MigrationValidationError("live application schema version changed after preparation")
-        if current.identity_fingerprint != plan.source_identity_fingerprint:
-            raise MigrationValidationError("Artist/Song identity changed after migration preparation")
-        snapshot = RecoveryManager.inspect_snapshot(self.data_root, plan.profile_id)
-        if snapshot.sha256 != plan.snapshot_sha256 or snapshot.size_bytes != plan.snapshot_size_bytes:
-            raise MigrationValidationError("prepared recovery snapshot changed or disappeared")
+        self._require_prepared_state(plan, current)
         if plan.target_version == plan.source_version:
             return MigrationResult(
-                "NO_CHANGE", plan, plan.source_version, None, "already at target schema; no migration write performed"
+                "NO_CHANGE",
+                plan,
+                plan.source_version,
+                None,
+                "already at target schema; no migration write or maintenance lease was required",
             )
 
         acquired = self._leases.acquire(plan.profile_id, maintenance_process, probe)
@@ -459,24 +461,66 @@ class ApplicationSchemaMigrator:
                 "RECOVERY_REQUIRED",
                 plan,
                 result.installed_version,
-                result.restored_snapshot_sha256,
+                result.rollback_snapshot_sha256,
                 f"{result.evidence}; migration maintenance lease release failed: {release_exc}",
             )
         return result
 
+    @staticmethod
+    def _require_prepared_state(plan: MigrationPlan, state: SchemaState) -> None:
+        if state.application_version != plan.source_version:
+            raise MigrationValidationError("live application schema version changed after preparation")
+        if state.identity_fingerprint != plan.source_identity_fingerprint:
+            raise MigrationValidationError("Artist/Song identity changed after migration preparation")
+        if state.history_fingerprint != plan.source_history_fingerprint:
+            raise MigrationValidationError("migration history changed after migration preparation")
+
+    def _create_execution_snapshot(self, plan: MigrationPlan) -> SnapshotInfo:
+        store = LineageStore.open(self.data_root, plan.profile_id)
+        try:
+            return RecoveryManager(store).create_snapshot()
+        finally:
+            store.close()
+
+    @staticmethod
+    def _validate_history_append(
+        before: tuple[MigrationHistoryEntry, ...],
+        after: tuple[MigrationHistoryEntry, ...],
+        plan: MigrationPlan,
+    ) -> None:
+        if after[: len(before)] != before:
+            raise MigrationValidationError("migration rewrote prior migration history")
+        appended = after[len(before) :]
+        if len(appended) != len(plan.steps):
+            raise MigrationValidationError("migration history append count does not match plan")
+        previous_sequence = before[-1].sequence if before else 0
+        for index, (entry, step) in enumerate(zip(appended, plan.steps), start=1):
+            if entry.sequence != previous_sequence + index:
+                raise MigrationValidationError("migration history sequence is not contiguous")
+            if (
+                entry.migration_id != plan.migration_id
+                or entry.from_version != step.from_version
+                or entry.to_version != step.to_version
+                or entry.step_fingerprint != step.fingerprint
+                or entry.description != step.description
+            ):
+                raise MigrationValidationError("migration history does not exactly describe executed step")
+
     def _migrate_owned(self, plan: MigrationPlan, maintenance_lease: InstanceLease) -> MigrationResult:
         live = self._db_path(plan.profile_id)
-        owned = self._leases.inspect(plan.profile_id)
-        if owned != maintenance_lease:
+        if self._leases.inspect(plan.profile_id) != maintenance_lease:
             raise MigrationValidationError("exact migration maintenance lease ownership was lost")
         current = self._inspect_path(live, plan.profile_id)
-        if current.application_version != plan.source_version:
-            raise MigrationValidationError("live schema version changed before staged migration")
-        if current.identity_fingerprint != plan.source_identity_fingerprint:
-            raise MigrationValidationError("live canonical identity changed before staged migration")
-        snapshot = RecoveryManager.inspect_snapshot(self.data_root, plan.profile_id)
-        if snapshot.sha256 != plan.snapshot_sha256 or snapshot.size_bytes != plan.snapshot_size_bytes:
-            raise MigrationValidationError("prepared recovery snapshot changed before staged migration")
+        self._require_prepared_state(plan, current)
+
+        snapshot = self._create_execution_snapshot(plan)
+        if self._leases.inspect(plan.profile_id) != maintenance_lease:
+            raise MigrationValidationError("maintenance ownership changed while creating rollback snapshot")
+        latest = self._inspect_path(live, plan.profile_id)
+        self._require_prepared_state(plan, latest)
+        inspected_snapshot = RecoveryManager.inspect_snapshot(self.data_root, plan.profile_id)
+        if inspected_snapshot.sha256 != snapshot.sha256 or inspected_snapshot.size_bytes != snapshot.size_bytes:
+            raise MigrationValidationError("execution rollback snapshot changed after creation")
 
         profile_dir = live.parent
         migration_dir = profile_dir / "migration"
@@ -487,15 +531,19 @@ class ApplicationSchemaMigrator:
         source_conn: sqlite3.Connection | None = None
         stage_conn: sqlite3.Connection | None = None
         installed = False
+        expected_history: tuple[MigrationHistoryEntry, ...] | None = None
         try:
             if stage.exists() or stage.is_symlink():
                 raise MigrationValidationError("migration stage path already exists")
+            if preserved.exists() or preserved.is_symlink():
+                raise MigrationValidationError("migration preservation path already exists")
             source_uri = live.resolve().as_uri() + "?mode=ro"
             source_conn = sqlite3.connect(source_uri, uri=True, timeout=5.0)
             stage_conn = sqlite3.connect(stage, timeout=5.0)
             source_conn.backup(stage_conn)
             source_conn.close()
             source_conn = None
+            stage_conn.row_factory = sqlite3.Row
             stage_conn.execute("PRAGMA foreign_keys=ON")
             stage_conn.execute("BEGIN IMMEDIATE")
             existing = stage_conn.execute(
@@ -517,6 +565,10 @@ class ApplicationSchemaMigrator:
                     UNIQUE(migration_id,to_version)
                 )"""
             )
+            history_before = self._history_rows(stage_conn)
+            if _digest([entry.fingerprint_data() for entry in history_before]) != plan.source_history_fingerprint:
+                raise MigrationValidationError("staged source migration history does not match prepared plan")
+
             version = plan.source_version
             for step in plan.steps:
                 if step.from_version != version:
@@ -541,6 +593,8 @@ class ApplicationSchemaMigrator:
                     ),
                 )
                 version = step.to_version
+            expected_history = self._history_rows(stage_conn)
+            self._validate_history_append(history_before, expected_history, plan)
             stage_conn.commit()
             stage_conn.close()
             stage_conn = None
@@ -550,18 +604,17 @@ class ApplicationSchemaMigrator:
                 raise MigrationValidationError("staged migration did not reach target version")
             if candidate.identity_fingerprint != plan.source_identity_fingerprint:
                 raise MigrationValidationError("staged migration changed canonical Artist/Song identity")
+            if self._history_from_path(stage) != expected_history:
+                raise MigrationValidationError("staged migration history changed after commit")
             _fsync_file(stage)
 
             if self._leases.inspect(plan.profile_id) != maintenance_lease:
                 raise MigrationValidationError("migration maintenance ownership changed before install")
             latest = self._inspect_path(live, plan.profile_id)
-            if latest.application_version != plan.source_version:
-                raise MigrationValidationError("live schema version changed before install")
-            if latest.identity_fingerprint != plan.source_identity_fingerprint:
-                raise MigrationValidationError("live canonical identity changed before install")
-            snapshot = RecoveryManager.inspect_snapshot(self.data_root, plan.profile_id)
-            if snapshot.sha256 != plan.snapshot_sha256 or snapshot.size_bytes != plan.snapshot_size_bytes:
-                raise MigrationValidationError("prepared recovery snapshot changed before install")
+            self._require_prepared_state(plan, latest)
+            inspected_snapshot = RecoveryManager.inspect_snapshot(self.data_root, plan.profile_id)
+            if inspected_snapshot.sha256 != snapshot.sha256 or inspected_snapshot.size_bytes != snapshot.size_bytes:
+                raise MigrationValidationError("execution rollback snapshot changed before install")
 
             shutil.copyfile(live, preserved)
             _fsync_file(preserved)
@@ -592,63 +645,25 @@ class ApplicationSchemaMigrator:
                         raise MigrationValidationError("installed database reports wrong target version")
                     if final_state.identity_fingerprint != plan.source_identity_fingerprint:
                         raise MigrationValidationError("installed migration changed canonical identity")
+                    if expected_history is None or self._history_rows(headquarters.store._conn) != expected_history:
+                        raise MigrationValidationError("installed migration history does not match staged history")
                 finally:
                     headquarters.close()
             except Exception as validation_exc:
-                try:
-                    restored = RecoveryManager.restore_snapshot(
-                        self.data_root,
-                        plan.profile_id,
-                        expected_sha256=plan.snapshot_sha256,
-                    )
-                except Exception as restore_exc:
-                    return MigrationResult(
-                        "RECOVERY_REQUIRED",
-                        plan,
-                        None,
-                        None,
-                        f"installed migration validation failed ({validation_exc}) and exact snapshot restore also failed ({restore_exc})",
-                    )
-                return MigrationResult(
-                    "ROLLED_BACK",
-                    plan,
-                    plan.source_version,
-                    restored.installed_sha256,
-                    f"installed migration validation failed and exact pre-migration snapshot was restored: {validation_exc}",
-                )
+                return self._restore_after_install_failure(plan, snapshot, validation_exc)
             return MigrationResult(
                 "SUCCEEDED",
                 plan,
                 plan.target_version,
-                None,
-                "staged migration preserved canonical identity, installed atomically and reopened Headquarters successfully",
+                snapshot.sha256,
+                "staged migration preserved canonical identity and prior history, installed atomically, and reopened Headquarters successfully",
             )
         except (MigrationPlanError, MigrationValidationError):
             raise
         except Exception as exc:
             if not installed:
                 raise SchemaMigrationError(f"staged migration failed before install: {exc}") from exc
-            try:
-                restored = RecoveryManager.restore_snapshot(
-                    self.data_root,
-                    plan.profile_id,
-                    expected_sha256=plan.snapshot_sha256,
-                )
-            except Exception as restore_exc:
-                return MigrationResult(
-                    "RECOVERY_REQUIRED",
-                    plan,
-                    None,
-                    None,
-                    f"post-install migration failure ({exc}) and exact snapshot restore also failed ({restore_exc})",
-                )
-            return MigrationResult(
-                "ROLLED_BACK",
-                plan,
-                plan.source_version,
-                restored.installed_sha256,
-                f"post-install migration failure was compensated by exact snapshot restore: {exc}",
-            )
+            return self._restore_after_install_failure(plan, snapshot, exc)
         finally:
             if source_conn is not None:
                 source_conn.close()
@@ -662,3 +677,31 @@ class ApplicationSchemaMigrator:
                 stage.unlink(missing_ok=True)
             except OSError:
                 pass
+
+    def _restore_after_install_failure(
+        self,
+        plan: MigrationPlan,
+        snapshot: SnapshotInfo,
+        failure: Exception,
+    ) -> MigrationResult:
+        try:
+            restored = RecoveryManager.restore_snapshot(
+                self.data_root,
+                plan.profile_id,
+                expected_sha256=snapshot.sha256,
+            )
+        except Exception as restore_exc:
+            return MigrationResult(
+                "RECOVERY_REQUIRED",
+                plan,
+                None,
+                snapshot.sha256,
+                f"installed migration validation failed ({failure}) and exact snapshot restore also failed ({restore_exc})",
+            )
+        return MigrationResult(
+            "ROLLED_BACK",
+            plan,
+            plan.source_version,
+            restored.installed_sha256,
+            f"installed migration failure was compensated by exact maintenance-owned snapshot restore: {failure}",
+        )
