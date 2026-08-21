@@ -17,6 +17,7 @@ from .recovery import RecoveryManager
 from .session import SessionMemory
 from .shadow import HostShadow
 from .skills import SkillMemory
+from .success import SuccessMemory
 from .transactions import TransactionCoordinator
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
 from .workspace import WorkspaceMemory
@@ -39,6 +40,7 @@ class HeadquartersMemory:
         self.sessions = SessionMemory(store, self.evidence)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.learning = LearningMemory(store, self.sessions)
+        self.success = SuccessMemory(self.learning)
         self.friction = FrictionMemory(store, self.learning)
         self.provenance = ProvenanceLedger(store)
         self.recovery = RecoveryManager(store)
