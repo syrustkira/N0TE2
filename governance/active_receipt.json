@@ -4,7 +4,7 @@
   "node_id": "APP-01",
   "increment_id": "APP-01E",
   "baseline_sha": "215b90d177db915048da3d15ea0b274115766788",
-  "purpose": "Provide one stopped-profile, snapshot-backed semantic-schema migration transaction that stages every version step off the live canonical database, preserves profile/Artist/Song/version identity, validates SQLite integrity, installs only a fully validated candidate, and restores the exact maintenance-owned pre-migration snapshot when installed-state validation fails.",
+  "purpose": "Make semantic schema migration a real part of the authenticated application-update journey: bind the target release to an exact schema version and migration-program fingerprint, stage every version edge off the live canonical database, preserve Artist/Song/version/asset identity, install only a fully validated candidate under the update maintenance hold, and preserve the updater's exact pre-package rollback snapshot for whole-transaction compensation.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,31 +14,32 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "A new N0TE application version can understand an existing Artist profile through explicit contiguous semantic-schema migration without silently losing or cross-linking durable creative identity.",
+    "outcome": "An authenticated N0TE release can update a real Artist profile across an explicit semantic-schema boundary without silently losing durable creative identity or splitting package rollback from creative-state rollback.",
     "journeys": ["J-CORE-LIFECYCLE", "J-TRUST"],
-    "capability": "Shared stopped-profile semantic-schema migration with staged validation and exact snapshot rollback",
+    "capability": "Authenticated release-bound semantic-schema migration inside the safe update transaction",
     "increment": "APP-01E"
   },
   "reuse": {
-    "mode": "CORE_CANONICAL_SQLITE_PLUS_RECOVERY_PLUS_PLATFORM_INSTANCE_LEASE",
-    "n0te2_dependencies": ["CORE-01 canonical LineageStore metadata/identity", "CORE-01 RecoveryManager exact snapshot/restore", "CORE-01 crash-consistent SQLite discipline", "PLATFORM-00B InstanceLeaseManager stopped-profile ownership truth", "APP-01A runtime lease semantics"],
-    "legacy_rejections": ["in-place live migration before candidate validation", "best-effort version jumps", "caller-asserted STOPPED without lease evidence", "snapshot taken before exclusive maintenance ownership", "silent destructive Artist-data transforms", "rewrite prior migration history", "install an identity-changing candidate", "retry past ambiguous installed state", "claim success when post-install reopen fails"],
+    "mode": "APP_SAFE_UPDATE_PLUS_AUTHENTICATED_RELEASE_MANIFEST_PLUS_CORE_SQLITE_RECOVERY_PLUS_SHARED_INSTANCE_LEASE",
+    "n0te2_dependencies": ["APP-01C durable ApplicationUpdateCoordinator and compensation journal", "PLATFORM-00D authenticated ReleaseManifest/artifact trust", "CORE-01 canonical LineageStore metadata/identity", "CORE-01 RecoveryManager exact snapshot/restore", "PLATFORM-00B InstanceLeaseManager maintenance ownership", "APP-01A runtime stop/reopen semantics"],
+    "legacy_rejections": ["orphan migration utility not used by the real updater", "caller-asserted STOPPED without ownership evidence", "release package not cryptographically bound to its semantic schema/program", "in-place live migration before candidate validation", "best-effort version jumps", "overwrite the update rollback snapshot during schema migration", "silent destructive Artist-data transforms", "rewrite prior migration history", "install an identity-changing candidate", "blind package rollback after ambiguous schema/ownership state", "claim success without normal target Headquarters reopen"],
     "direct_copy": false
   },
   "completion_proof": [
-    "current-version/no-step plans are explicit and perform no migration write or maintenance ownership change",
-    "source-to-target steps must form one exact contiguous chain; missing, duplicate, out-of-order and downgrade plans fail before installation",
-    "prepare refuses existing runtime ownership; execution must acquire the shared profile lease as bounded maintenance ownership before creating rollback state or staging writes",
-    "after maintenance ownership, source schema, canonical identity and prior migration-history fingerprints are revalidated before execution",
-    "the exact RecoveryManager rollback snapshot is created while maintenance ownership prevents normal runtime from opening the profile and is revalidated immediately before installation",
-    "the live database is copied to a staged candidate; migration SQL runs transactionally only on that candidate before installation",
-    "candidate quick_check, foreign_key_check, exact profile identity and canonical Artist/Song/version/asset identity fingerprint must match the prepared source before installation",
-    "prior migration history is immutable across a step; successful history appends exactly one inspectable record per version edge with migration ID, step fingerprint and description",
-    "failed staged SQL, history validation or candidate validation leaves the live database unchanged",
-    "a fully validated candidate is atomically installed; post-install Headquarters reopen plus identity/schema/history validation is required for success",
-    "post-install validation failure attempts exact maintenance-owned snapshot restore; restore failure is explicit RECOVERY_REQUIRED rather than false rollback",
-    "maintenance lease release is required after success or rollback; release failure remains explicit RECOVERY_REQUIRED"
+    "the authenticated ReleaseManifest includes application_schema_version and the canonical SHA-256 of the exact migration-step program; mismatched target/program is rejected before update snapshot/quit/package mutation",
+    "safe update preparation begins from the owned RUNNING profile, creates the existing APP-01C pre-package RecoveryManager snapshot, stops the runtime, proves the stopped live database is logically identical to that snapshot, then durably binds the exact migration plan to the update-plan and manifest fingerprints",
+    "read-only update schema planning does not treat a persisted lease as proof of liveness; authoritative maintenance ownership is resolved at execution with the shared probe/lease machinery",
+    "package execution acquires the existing update profile maintenance hold; schema migration reuses and verifies that exact hold rather than acquiring a second competing owner",
+    "the updater's original pre-package rollback snapshot is preserved and revalidated throughout schema work; update-bound migration never overwrites it",
+    "source-to-target steps form one exact contiguous chain; missing, duplicate, out-of-order and downgrade plans fail closed",
+    "migration SQL executes transactionally only against an off-live staged SQLite candidate; failed staged SQL or candidate validation leaves the live database unchanged",
+    "candidate quick_check, foreign_key_check, embedded profile identity, primary/active identity and canonical Artist/Song/version/asset/version-asset fingerprint must match the prepared source before installation",
+    "prior migration history is immutable; successful version edges append exact inspectable migration ID/version/step-fingerprint/description records and installed history must equal staged history",
+    "only a fully validated candidate is atomically installed under the update hold; target Headquarters reopen/integrity/close remains required before the update can succeed",
+    "package-success plus schema failure and schema-success plus target-Headquarters failure flow through the existing package rollback plus exact original snapshot restore compensation transaction",
+    "ambiguous schema result, unreadable/lost maintenance ownership, snapshot restore failure, package rollback ambiguity or validation database-release uncertainty remains explicit RECOVERY_REQUIRED and never authorizes blind retry/rollback",
+    "the normal consumer smoke is the real update journey: running Artist profile -> authenticated package/schema plan -> stopped profile -> package install -> semantic migration -> target Headquarters validation -> exact Artist/Song/version/asset reopen"
   ],
-  "non_scope": ["OS-specific installer/update/download mechanics", "destructive Artist/profile migration policy", "provider-specific future schema invention", "schema changes outside supplied bounded migration steps", "UX", "DAW/AUDIO/OPS", "platform customer acceptance", "hosted-CI proof scaffolding"],
-  "next_selection_rule": "After APP-01E evidence, audit APP-01A-E against every APP-01 mapped requirement. If no concrete shared APP primitive remains, close APP-01 only as a construction dependency and globally reselect from newly eligible product nodes."
+  "non_scope": ["OS-specific installer/update/download implementation", "destructive Artist/profile migration policy", "provider-specific future schema invention", "schema changes outside an authenticated bounded release program", "UX", "DAW/AUDIO/OPS", "platform customer acceptance", "hosted-CI proof scaffolding"],
+  "next_selection_rule": "After APP-01E evidence is reconciled, audit APP-01A-E against every APP-01 mapped requirement. If no concrete shared APP primitive remains, close APP-01 only as a construction dependency and globally reselect from newly eligible product nodes."
 }
