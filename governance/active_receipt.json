@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-PLATFORM-00C",
+  "receipt_id": "N0TE2-PLATFORM-00D",
   "node_id": "PLATFORM-00",
-  "increment_id": "PLATFORM-00C",
-  "baseline_sha": "2c60018d6e000768336322db40e134079a7b7a6c",
-  "purpose": "Implement one shared executable support-envelope law so platform/architecture target policy, exact acceptance evidence, legacy acceptance, experimentation and named known breaks remain mechanically distinct before APP-01 packaging or customer support claims exist.",
+  "increment_id": "PLATFORM-00D",
+  "baseline_sha": "193b2cb67f0d7e41dea23752045967726634fefb",
+  "purpose": "Implement the shared release-artifact provenance and authenticated-manifest trust boundary so APP-01 can later install, update or roll back only bytes that match an exact target-bound manifest with traceable source/build/dependency/license inputs and independently verified authenticity.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,33 +14,32 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "N0TE can truthfully distinguish which macOS, Windows and Linux targets are required from which exact targets have actually earned acceptance evidence; extended reach remains visible without substituting for or blocking required core targets.",
+    "outcome": "Package/update bytes cannot become an install candidate merely because a file exists: N0TE can verify exact source/build/dependency/license provenance, exact platform target, exact bytes and an independently authenticated manifest revision before execution is even considered.",
     "journeys": ["J-CORE-LIFECYCLE", "J-TRUST"],
-    "capability": "Executable support policy, acceptance evidence and customer-mode blocker projection",
-    "increment": "PLATFORM-00C"
+    "capability": "Release manifest provenance and fail-closed artifact verification",
+    "increment": "PLATFORM-00D"
   },
   "reuse": {
-    "mode": "PURE_SUPPORT_POLICY_AND_EVIDENCE_PROJECTION_OVER_PLATFORM00A_TARGET_IDENTITY",
-    "n0te2_dependencies": ["PLATFORM-00A canonical OS/architecture identity and target tiers", "PLATFORM-00B process/lease implementation evidence", "PLATFORM_SUPPORT_MATRIX canonical policy"],
-    "legacy_rejections": ["configured target equals supported", "OS marketing version raises the floor automatically", "extended target substitutes for core", "known break without named reason/evidence", "boolean supported shortcut", "macOS chronology defines support order"],
+    "mode": "PURE_CANONICAL_RELEASE_MANIFEST_PLUS_EXTERNAL_AUTHENTICITY_EVIDENCE_AND_BYTE_VERIFICATION",
+    "n0te2_dependencies": ["PLATFORM-00A canonical platform identity", "PLATFORM-00C exact SupportTarget fingerprints", "CORE-04 trust/authority separation"],
+    "legacy_rejections": ["file exists equals trusted update", "hash without authenticated manifest", "signature/authenticity for another manifest revision", "wrong-platform package accepted", "opaque build provenance", "shared-secret test masquerading as production code signing", "version ordering inside artifact trust"],
     "direct_copy": false
   },
   "completion_proof": [
-    "default architecture policy contains exactly six CORE peer targets: macOS arm64/x86_64, Windows x86_64/arm64, Linux x86_64/arm64",
-    "extended reach remains separate: Windows x86_32 plus Linux x86_32/armv7/riscv64",
-    "all CORE targets begin UNVERIFIED and block customer-mode readiness until exact ACCEPTED or LEGACY_ACCEPTED evidence exists",
-    "accepting one target removes only its exact fingerprint blocker",
-    "LEGACY_ACCEPTED requires an explicit upstream limitation and still preserves that limitation in status",
-    "KNOWN_BREAK requires a named reason plus evidence and remains blocking for CORE",
-    "EXPERIMENTAL CORE evidence remains blocking",
-    "EXTENDED failures/findings never block or satisfy a CORE target",
-    "evidence referencing a target outside the envelope or duplicate/conflicting evidence for one target is rejected",
-    "canonical CORE targets cannot be silently downgraded to EXTENDED",
-    "runtime OS/architecture aliases reuse PLATFORM-00A normalization and converge to one exact target",
-    "scope tags create exact distro/package/hardware subtargets while tag ordering/duplicates do not change identity",
-    "OS version policy participates in exact target identity but the support layer performs no version-name heuristic",
-    "model exposes no generic supported boolean shortcut; target/status ordering is deterministic and reads are pure"
+    "ReleaseManifest requires exact release/version identity, 40-hex source commit SHA and SHA-256 build-input, dependency-inventory and license-inventory digests",
+    "ArtifactRecord requires unique artifact ID, exact PLATFORM-00C target fingerprint, normalized package kind, positive byte size and SHA-256",
+    "manifest artifact ordering is canonical and manifest fingerprint deterministic",
+    "duplicate artifact IDs and duplicate target/package routes are rejected",
+    "ManifestAuthenticityEvidence binds status, verifier identity, verification scheme and evidence ref to the exact manifest fingerprint",
+    "missing, UNKNOWN or UNTRUSTED authenticity fails closed",
+    "VERIFIED authenticity for another manifest fingerprint returns MANIFEST_MISMATCH",
+    "unknown artifact, wrong expected target, size mismatch and SHA-256 mismatch remain distinct failures",
+    "exact artifact bytes plus exact target plus VERIFIED exact-manifest authenticity return READY",
+    "multiple artifacts in one manifest verify independently",
+    "changing source/build/dependency/license provenance changes the manifest fingerprint",
+    "older release manifests may still verify READY so rollback selection remains APP-01 policy rather than artifact-trust magic",
+    "ReleaseArtifactVerifier is pure and exposes no install/update/rollback/sign/download/execute behavior"
   ],
-  "non_scope": ["platform packaging", "installer/update", "real macOS/Windows/Linux acceptance", "CI build matrix generation", "plugin discovery/hosting", "OS-specific process probes", "DAW work", "OPS-04", "UI", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After PLATFORM-00C evidence, audit remaining PLATFORM-00 foundation gaps against REQ-SCOPE-149/150/151/153. Keep AUDIO-02 plugin hosting and real PLATFORM-01/02/03 acceptance downstream; globally compare any true shared platform gap against DAW-00 and OPS-04 rather than extending support.py by adjacency."
+  "non_scope": ["package creation", "code signing/notarization implementation", "secret/key storage", "installer/updater execution", "rollback selection policy", "network download", "dependency/SBOM generation", "vulnerability scanning", "CI build automation", "DAW work", "OPS-04", "UI", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After PLATFORM-00D evidence, audit PLATFORM-00 A-D against REQ-SCOPE-149/150/151/153. Keep plugin hosting/discovery under AUDIO-02 and real macOS/Windows/Linux package/acceptance under APP-01 + PLATFORM-01/02/03. Close PLATFORM-00 as a construction dependency only if no shared semantic chassis gap remains, then globally reselect."
 }
