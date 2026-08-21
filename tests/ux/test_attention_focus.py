@@ -177,3 +177,15 @@ def test_missing_attention_integrity_hook_fails_reopen_closed(tmp_path) -> None:
 
     with pytest.raises(LineageCorruptionError):
         HeadquartersMemory.open(root, profile_id)
+
+
+def test_missing_attention_uniqueness_index_fails_reopen_closed(tmp_path) -> None:
+    root = tmp_path.resolve()
+    headquarters = HeadquartersMemory.create(root, "Index Artist")
+    profile_id = headquarters.store.profile_id
+    headquarters.store._conn.execute("DROP INDEX attention_one_active_focus_per_artist")
+    headquarters.store._conn.commit()
+    headquarters.close()
+
+    with pytest.raises(LineageCorruptionError):
+        HeadquartersMemory.open(root, profile_id)
