@@ -9,88 +9,100 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "CORE-02" or state.get("active_increment") != "CORE-02E":
+if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00B":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2.memory import HeadquartersMemory  # noqa: E402
+from n0te2.instance import (  # noqa: E402
+    InstanceLeaseManager,
+    InstanceLeaseOwnershipError,
+    ProcessIdentity,
+)
+from n0te2.platforms import PlatformEnvironment, target_tier  # noqa: E402
+
+
+class Probe:
+    def __init__(self):
+        self.values = {}
+
+    def set(self, process, status):
+        self.values[process.fingerprint] = status
+
+    def status(self, process):
+        return self.values.get(process.fingerprint, "UNKNOWN")
+
+
+def platform():
+    return PlatformEnvironment(
+        os_family="LINUX",
+        architecture="X86_64",
+        raw_os_name="LINUX",
+        raw_machine="X86_64",
+        target_tier=target_tier("LINUX", "X86_64"),
+    )
+
+
+def process(pid, token):
+    return ProcessIdentity.from_start_token(platform(), pid=pid, start_token=token)
 
 
 with tempfile.TemporaryDirectory() as temp:
-    root = Path(temp)
-    hq = HeadquartersMemory.create(root, "Artist")
-    profile_id = hq.store.profile_id
-    song = hq.store.create_song("Success Memory Song")
-    version = hq.store.create_version(song.id, label="v1")
+    manager = InstanceLeaseManager(Path(temp).resolve())
+    probe = Probe()
+    owner = process(100, "start:owner")
+    pid_reused = process(100, "start:reused-pid")
+    challenger = process(200, "start:challenger")
 
-    def episode(decision, source_ref, confidence, *, confounders=()):
-        session = hq.sessions.start_session(
-            song_id=song.id,
-            version_id=version.id,
-            objective="Evaluate a bounded vocal EQ change",
-        )
-        item = hq.learning.create_episode(
-            session_id=session.id,
-            domain="MIX",
-            subject_ref="vocal",
-            change_description="Cut 300 Hz",
-        )
-        hq.learning.append_consequence(
-            item.id,
-            observation="The vocal feels clearer",
-            source_kind="OBSERVED",
-            source_ref=source_ref,
-            confidence=confidence,
-            conditions=("same chorus", "same monitor level"),
-            confounders=confounders,
-        )
-        hq.learning.decide(
-            item.id,
-            decision=decision,
-            rationale=f"{decision} after bounded comparison",
-            confidence=confidence,
-        )
-        return item
+    first = manager.acquire("profile_x", owner, probe)
+    assert first.status == "ACQUIRED"
+    repeated = manager.acquire("profile_x", owner, probe)
+    assert repeated.status == "ALREADY_OWNED"
+    assert repeated.lease == first.lease
+    assert owner.pid == pid_reused.pid
+    assert owner.fingerprint != pid_reused.fingerprint
 
-    first = episode("KEEP", "listen:1", 0.8, confounders=("fresh ears",))
-    second = episode("KEEP", "listen:2", 0.6, confounders=("listening order",))
+    probe.set(owner, "ALIVE")
+    live_refusal = manager.acquire("profile_x", challenger, probe)
+    assert live_refusal.status == "HELD_BY_OTHER"
+    assert manager.inspect("profile_x") == first.lease
 
-    before = hq.store._conn.total_changes
-    (promising,) = hq.success.patterns_for_song(song.id)
-    assert hq.store._conn.total_changes == before
-    assert promising.humility_state == "SUCCESS_ONLY"
-    assert promising.causal_status == "ASSOCIATION_ONLY"
-    assert promising.sample_size == 2
-    assert promising.supporting_episode_ids == (first.id, second.id)
-    assert promising.counterexample_episode_ids == ()
-    assert "Absence of counterexamples" in promising.warning
-    assert {item.term for item in promising.alternative_explanations} == {
-        "fresh ears",
-        "listening order",
+    probe.set(owner, "UNKNOWN")
+    uncertain = manager.acquire("profile_x", challenger, probe)
+    assert uncertain.status == "UNCERTAIN"
+    assert manager.inspect("profile_x") == first.lease
+
+    probe.set(owner, "DEAD")
+    replacement = manager.acquire("profile_x", challenger, probe)
+    assert replacement.status == "REPLACED_STALE"
+    assert replacement.previous_lease == first.lease
+    assert manager.inspect("profile_x") == replacement.lease
+
+    try:
+        manager.release(
+            "profile_x",
+            process=owner,
+            lease_nonce=replacement.lease.lease_nonce,
+        )
+    except InstanceLeaseOwnershipError:
+        pass
+    else:
+        raise AssertionError("old process identity released a replacement lease")
+
+    manager.release(
+        "profile_x",
+        process=challenger,
+        lease_nonce=replacement.lease.lease_nonce,
+    )
+    assert manager.inspect("profile_x") is None
+
+    public = {
+        name
+        for name in dir(InstanceLeaseManager)
+        if not name.startswith("_") and callable(getattr(InstanceLeaseManager, name))
     }
-    assert promising.consequence_confidence.minimum == 0.6
-    assert promising.consequence_confidence.maximum == 0.8
-
-    third = episode("REVERT", "listen:3", 0.9, confounders=("different vocal take",))
-    (mixed,) = hq.success.patterns_for_song(song.id)
-    assert mixed.humility_state == "MIXED"
-    assert mixed.supporting_episode_ids == (first.id, second.id)
-    assert mixed.counterexample_episode_ids == (third.id,)
-    assert mixed.has_counterexamples
-    assert mixed.causal_status == "ASSOCIATION_ONLY"
-
-    # Success Memory is a lens, not another persistence owner.
-    assert hq.store._conn.execute(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name LIKE 'success%'"
-    ).fetchone()[0] == 0
-    snapshot = hq.success.patterns_for_song(song.id)
-    hq.close()
-
-    hq = HeadquartersMemory.open(root, profile_id)
-    assert hq.success.patterns_for_song(song.id) == snapshot
-    hq.close()
+    assert not ({"kill", "launch", "terminate", "signal", "connect"} & public)
 
 print(
-    "CORE-02E CONSUMER SMOKE: GREEN: two retained examples were remembered with conditions, confounders, confidence and an explicit survivorship warning rather than causal certainty; a later REVERT became visible counterevidence and changed the pattern to MIXED; Success Memory created no persistence table and restart reproduced the same synthesis"
+    "PLATFORM-00B CONSUMER SMOKE: GREEN: one process acquired the profile lease idempotently, PID reuse remained a different identity, a live foreign owner blocked takeover, UNKNOWN liveness failed closed, only verified DEAD ownership was archived/replaced with prior-lease receipt, old ownership could not release the replacement, exact ownership released cleanly, and the lease manager exposes no process-kill or launch verb"
 )
