@@ -3,106 +3,98 @@ from __future__ import annotations
 
 import json
 import sys
-import tempfile
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00B":
+if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00C":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2.instance import (  # noqa: E402
-    InstanceLeaseManager,
-    InstanceLeaseOwnershipError,
-    ProcessIdentity,
+from n0te2.support import (  # noqa: E402
+    SupportEvidence,
+    SupportTarget,
+    default_architecture_targets,
+    default_support_envelope,
 )
-from n0te2.platforms import PlatformEnvironment, target_tier  # noqa: E402
 
 
-class Probe:
-    def __init__(self):
-        self.values = {}
+targets = default_architecture_targets()
+core = tuple(target for target in targets if target.policy_tier == "CORE")
+extended = tuple(target for target in targets if target.policy_tier == "EXTENDED")
+assert len(core) == 6
+assert len(extended) == 4
 
-    def set(self, process, status):
-        self.values[process.fingerprint] = status
+initial = default_support_envelope()
+assert len(initial.customer_mode_blockers()) == 6
+assert all(blocker.state == "UNVERIFIED" for blocker in initial.customer_mode_blockers())
 
-    def status(self, process):
-        return self.values.get(process.fingerprint, "UNKNOWN")
+# Even perfect evidence for every EXTENDED target cannot substitute for any
+# required CORE platform/architecture target.
+extended_only = default_support_envelope(
+    SupportEvidence(target.fingerprint, "ACCEPTED", f"accept:extended:{index}")
+    for index, target in enumerate(extended)
+)
+assert len(extended_only.customer_mode_blockers()) == 6
 
+mac_arm = next(
+    target
+    for target in core
+    if target.os_family == "MACOS" and target.architecture == "ARM64"
+)
+windows_x64 = next(
+    target
+    for target in core
+    if target.os_family == "WINDOWS" and target.architecture == "X86_64"
+)
+linux_arm = next(
+    target
+    for target in core
+    if target.os_family == "LINUX" and target.architecture == "ARM64"
+)
 
-def platform():
-    return PlatformEnvironment(
-        os_family="LINUX",
-        architecture="X86_64",
-        raw_os_name="LINUX",
-        raw_machine="X86_64",
-        target_tier=target_tier("LINUX", "X86_64"),
-    )
+evidence = (
+    SupportEvidence(mac_arm.fingerprint, "ACCEPTED", "accept:mac-arm64"),
+    SupportEvidence(
+        windows_x64.fingerprint,
+        "LEGACY_ACCEPTED",
+        "accept:windows-x64-legacy",
+        upstream_limitation="Upstream OS servicing limitation remains visible",
+    ),
+    SupportEvidence(
+        linux_arm.fingerprint,
+        "KNOWN_BREAK",
+        "probe:linux-arm64-break",
+        known_break_reason="Required package dependency unavailable in tested environment",
+    ),
+)
+observed = default_support_envelope(evidence)
+assert len(observed.customer_mode_blockers()) == 4
+assert observed.status(mac_arm).state == "ACCEPTED"
+assert observed.status(windows_x64).state == "LEGACY_ACCEPTED"
+assert observed.status(windows_x64).upstream_limitation is not None
+linux_blocker = next(
+    blocker
+    for blocker in observed.customer_mode_blockers()
+    if blocker.target_fingerprint == linux_arm.fingerprint
+)
+assert linux_blocker.state == "KNOWN_BREAK"
+assert "Required package dependency unavailable" in linux_blocker.reason
 
+# Runtime aliases normalize through PLATFORM-00A and do not create divergent
+# support identity merely because the OS/CPU label spelling differs.
+mac_alias = SupportTarget.from_runtime_labels(os_name="Darwin", machine="aarch64")
+mac_canonical = SupportTarget.from_runtime_labels(os_name="macOS", machine="arm64")
+assert mac_alias == mac_canonical
+assert mac_alias.fingerprint == mac_canonical.fingerprint
 
-def process(pid, token):
-    return ProcessIdentity.from_start_token(platform(), pid=pid, start_token=token)
-
-
-with tempfile.TemporaryDirectory() as temp:
-    manager = InstanceLeaseManager(Path(temp).resolve())
-    probe = Probe()
-    owner = process(100, "start:owner")
-    pid_reused = process(100, "start:reused-pid")
-    challenger = process(200, "start:challenger")
-
-    first = manager.acquire("profile_x", owner, probe)
-    assert first.status == "ACQUIRED"
-    repeated = manager.acquire("profile_x", owner, probe)
-    assert repeated.status == "ALREADY_OWNED"
-    assert repeated.lease == first.lease
-    assert owner.pid == pid_reused.pid
-    assert owner.fingerprint != pid_reused.fingerprint
-
-    probe.set(owner, "ALIVE")
-    live_refusal = manager.acquire("profile_x", challenger, probe)
-    assert live_refusal.status == "HELD_BY_OTHER"
-    assert manager.inspect("profile_x") == first.lease
-
-    probe.set(owner, "UNKNOWN")
-    uncertain = manager.acquire("profile_x", challenger, probe)
-    assert uncertain.status == "UNCERTAIN"
-    assert manager.inspect("profile_x") == first.lease
-
-    probe.set(owner, "DEAD")
-    replacement = manager.acquire("profile_x", challenger, probe)
-    assert replacement.status == "REPLACED_STALE"
-    assert replacement.previous_lease == first.lease
-    assert manager.inspect("profile_x") == replacement.lease
-
-    try:
-        manager.release(
-            "profile_x",
-            process=owner,
-            lease_nonce=replacement.lease.lease_nonce,
-        )
-    except InstanceLeaseOwnershipError:
-        pass
-    else:
-        raise AssertionError("old process identity released a replacement lease")
-
-    manager.release(
-        "profile_x",
-        process=challenger,
-        lease_nonce=replacement.lease.lease_nonce,
-    )
-    assert manager.inspect("profile_x") is None
-
-    public = {
-        name
-        for name in dir(InstanceLeaseManager)
-        if not name.startswith("_") and callable(getattr(InstanceLeaseManager, name))
-    }
-    assert not ({"kill", "launch", "terminate", "signal", "connect"} & public)
+# There is no generic boolean that can flatten policy/evidence into a vague
+# "supported" claim.
+assert not hasattr(observed.status(mac_arm), "supported")
+assert not hasattr(mac_arm, "supported")
 
 print(
-    "PLATFORM-00B CONSUMER SMOKE: GREEN: one process acquired the profile lease idempotently, PID reuse remained a different identity, a live foreign owner blocked takeover, UNKNOWN liveness failed closed, only verified DEAD ownership was archived/replaced with prior-lease receipt, old ownership could not release the replacement, exact ownership released cleanly, and the lease manager exposes no process-kill or launch verb"
+    "PLATFORM-00C CONSUMER SMOKE: GREEN: six CORE macOS/Windows/Linux architecture targets began as explicit UNVERIFIED customer-mode blockers, accepting every EXTENDED target did not satisfy or hide any CORE blocker, exact acceptance removed only its target, legacy acceptance preserved its upstream limitation, a named CORE break stayed visible and blocking, runtime aliases converged through canonical platform identity, and no generic supported boolean could flatten target policy into acceptance truth"
 )
