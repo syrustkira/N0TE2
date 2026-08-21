@@ -15,9 +15,9 @@ from n0te2.artifacts import (
 from n0te2.instance import InstanceLeaseManager, ProcessIdentity
 from n0te2.memory import HeadquartersMemory
 from n0te2.platforms import PlatformEnvironment
+from n0te2.safe_update import ApplicationUpdateCoordinator
 from n0te2.support import SupportTarget
 from n0te2.update import (
-    ApplicationUpdateCoordinator,
     PackageActionReceipt,
     UpdateExecuteOnceError,
     UpdateJournalCorruptionError,
