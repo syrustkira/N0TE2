@@ -29,8 +29,8 @@ def process(pid: int, token: str) -> ProcessIdentity:
     )
 
 
-def create_profile(data_root: Path) -> str:
-    headquarters = HeadquartersMemory.create(data_root, "Runtime Test Artist")
+def create_profile(data_root: Path, artist_name: str = "Runtime Test Artist") -> str:
+    headquarters = HeadquartersMemory.create(data_root, artist_name)
     try:
         return headquarters.store.profile_id
     finally:
@@ -214,11 +214,117 @@ def test_headquarters_open_failure_does_not_strand_new_lease(tmp_path: Path) -> 
     assert InstanceLeaseManager(state_root).inspect(profile_id) is None
 
 
+def test_wrong_profile_headquarters_is_refused_and_requested_lease_is_released(
+    tmp_path: Path,
+) -> None:
+    data_root = tmp_path / "data"
+    state_root = tmp_path / "state"
+    requested_profile = create_profile(data_root, "Requested Artist")
+    wrong_profile = create_profile(data_root, "Wrong Artist")
+    proc = process(109, "wrong-profile-open")
+    probe = Probe()
+
+    def wrong_opener(root: str | Path, profile: str) -> HeadquartersMemory:
+        assert profile == requested_profile
+        return HeadquartersMemory.open(root, wrong_profile)
+
+    runtime = ApplicationRuntime(
+        data_root=data_root,
+        state_root=state_root,
+        memory_opener=wrong_opener,
+    )
+    result = runtime.launch(
+        profile_id=requested_profile,
+        process=proc,
+        probe=probe,
+    )
+    assert result.status == "START_FAILED"
+    assert "different profile" in str(result.reason)
+    assert runtime.state == "STOPPED"
+    assert InstanceLeaseManager(state_root).inspect(requested_profile) is None
+
+    reopened_wrong = HeadquartersMemory.open(data_root, wrong_profile)
+    reopened_wrong.close()
+
+
+def test_headquarters_close_failure_keeps_lease_until_retry(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    state_root = tmp_path / "state"
+    profile_id = create_profile(data_root)
+    proc = process(110, "close-retry")
+    probe = Probe()
+    opened: list[HeadquartersMemory] = []
+
+    def opener(root: str | Path, profile: str) -> HeadquartersMemory:
+        headquarters = HeadquartersMemory.open(root, profile)
+        opened.append(headquarters)
+        return headquarters
+
+    runtime = ApplicationRuntime(
+        data_root=data_root,
+        state_root=state_root,
+        memory_opener=opener,
+    )
+    assert runtime.launch(profile_id=profile_id, process=proc, probe=probe).status == "STARTED"
+    headquarters = opened[0]
+    real_close = headquarters.close
+    attempts = {"count": 0}
+
+    def fail_once() -> None:
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise RuntimeError("synthetic close failure")
+        real_close()
+
+    headquarters.close = fail_once  # type: ignore[method-assign]
+    first = runtime.quit()
+    assert first.status == "RECOVERY_REQUIRED"
+    assert runtime.state == "RECOVERY_REQUIRED"
+    assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
+
+    second = runtime.quit()
+    assert second.status == "STOPPED"
+    assert runtime.state == "STOPPED"
+    assert InstanceLeaseManager(state_root).inspect(profile_id) is None
+
+
+def test_lease_release_failure_is_retryable_after_headquarters_closed(tmp_path: Path) -> None:
+    data_root = tmp_path / "data"
+    state_root = tmp_path / "state"
+    profile_id = create_profile(data_root)
+    proc = process(111, "release-retry")
+    probe = Probe()
+    runtime = ApplicationRuntime(data_root=data_root, state_root=state_root)
+
+    assert runtime.launch(profile_id=profile_id, process=proc, probe=probe).status == "STARTED"
+    real_release = runtime._leases.release
+    attempts = {"count": 0}
+
+    def fail_once(profile: str, *, process: ProcessIdentity, lease_nonce: str) -> None:
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise RuntimeError("synthetic release failure")
+        real_release(profile, process=process, lease_nonce=lease_nonce)
+
+    runtime._leases.release = fail_once  # type: ignore[method-assign]
+    first = runtime.quit()
+    assert first.status == "RECOVERY_REQUIRED"
+    assert runtime.state == "RECOVERY_REQUIRED"
+    assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
+    with pytest.raises(ApplicationRuntimeError):
+        _ = runtime.headquarters
+
+    second = runtime.quit()
+    assert second.status == "STOPPED"
+    assert runtime.state == "STOPPED"
+    assert InstanceLeaseManager(state_root).inspect(profile_id) is None
+
+
 def test_quit_is_idempotent_after_success(tmp_path: Path) -> None:
     data_root = tmp_path / "data"
     state_root = tmp_path / "state"
     profile_id = create_profile(data_root)
-    proc = process(109, "quit-idempotent")
+    proc = process(112, "quit-idempotent")
     probe = Probe()
     runtime = ApplicationRuntime(data_root=data_root, state_root=state_root)
 
