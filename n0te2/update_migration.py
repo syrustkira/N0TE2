@@ -341,7 +341,16 @@ class UpdateBoundSchemaMigrator(ApplicationSchemaMigrator):
         rollback_snapshot_size_bytes: int,
     ):
         super().__init__(data_root, state_root)
-        self.rollback_snapshot_sha256 = str(rollback_snapshot_sha256).strip().lower()
+        snapshot_sha = str(rollback_snapshot_sha256).strip().lower()
+        if len(snapshot_sha) != 64 or any(ch not in "0123456789abcdef" for ch in snapshot_sha):
+            raise MigrationPlanError("rollback_snapshot_sha256 must be a lowercase SHA-256")
+        if (
+            isinstance(rollback_snapshot_size_bytes, bool)
+            or not isinstance(rollback_snapshot_size_bytes, int)
+            or rollback_snapshot_size_bytes <= 0
+        ):
+            raise MigrationPlanError("rollback_snapshot_size_bytes must be positive")
+        self.rollback_snapshot_sha256 = snapshot_sha
         self.rollback_snapshot_size_bytes = rollback_snapshot_size_bytes
         self._bound_snapshot: SnapshotInfo | None = None
 
@@ -405,15 +414,16 @@ class UpdateBoundSchemaMigrator(ApplicationSchemaMigrator):
             raise MigrationValidationError("exact update maintenance hold is not owned")
         current = self._inspect_path(self._db_path(plan.profile_id), plan.profile_id)
         self._require_prepared_state(plan, current)
+        snapshot = self._existing_rollback_snapshot(plan.profile_id)
         if plan.target_version == plan.source_version:
             return MigrationResult(
                 "NO_CHANGE",
                 plan,
                 plan.source_version,
-                None,
-                "update target uses current semantic schema; no migration write required",
+                snapshot.sha256,
+                "update target uses current semantic schema; rollback snapshot remains exact and no migration write is required",
             )
-        self._bound_snapshot = self._existing_rollback_snapshot(plan.profile_id)
+        self._bound_snapshot = snapshot
         try:
             return self._migrate_owned(plan, maintenance_lease)
         finally:
