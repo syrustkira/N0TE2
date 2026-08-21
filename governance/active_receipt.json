@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-DAW-00C",
+  "receipt_id": "N0TE2-DAW-00D",
   "node_id": "DAW-00",
-  "increment_id": "DAW-00C",
-  "baseline_sha": "2746c8491c33d7c070a4fcfa5814958823828024",
-  "purpose": "Implement one host-neutral read-only FocusContext bound to the current DAW-00B workspace observation so exact deictic targeting is allowed only for current OBSERVED_EXACT dimensions and stale, ambiguous, inferred or unknown focus is refused rather than guessed.",
+  "increment_id": "DAW-00D",
+  "baseline_sha": "a597ff190305a53dcc68f37a44c6f48245483aca",
+  "purpose": "Implement a bounded append-only Host Shadow over the exact current DAW-00B workspace observation so verified human/N0TE/external technical changes can be represented without silently mutating canonical Song memory, with FULL versus INCREMENTAL coverage preventing stale partial observations from masquerading as a current workspace model.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,28 +14,31 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "Artist references such as this track, these notes or this section resolve safely across peer hosts or expose uncertainty instead of targeting the wrong musical object.",
+    "outcome": "N0TE can truthfully say what verified technical state it currently knows about a workspace, including human-made changes, and can expose EMPTY or STALE instead of planning from obsolete host state.",
     "journeys": ["J-WORKSPACE", "J-TRUST"],
-    "capability": "Universal FocusContext with exact-target and stale/ambiguity gate",
-    "increment": "DAW-00C"
+    "capability": "Bounded verified Host Shadow and human-change ledger",
+    "increment": "DAW-00D"
   },
   "reuse": {
-    "mode": "PURE_VOLATILE_FOCUS_GATE_OVER_DAW00B_WORKSPACE_OBSERVATION",
-    "n0te2_dependencies": ["DAW-00A HostRuntimeIdentity", "DAW-00B WorkspaceMemory"],
-    "legacy_rejections": ["Ableton selection vocabulary as universal API", "guessing selected object", "inferred focus treated as exact", "stale focus reused after workspace change", "focus as mutation authority", "focus persisted as Song doctrine"],
+    "mode": "APPEND_ONLY_TECHNICAL_TWIN_OVER_CURRENT_WORKSPACE_OBSERVATION",
+    "n0te2_dependencies": ["CORE-01 canonical SQLite and Activity chronology", "DAW-00A host runtime fingerprint", "DAW-00B WorkspaceMemory current observation", "DAW-00C target-safety boundary"],
+    "legacy_rejections": ["mutable current-state cache as authority", "single-field refresh laundering stale workspace state", "human edits ignored because N0TE did not execute them", "actor identity used as truth ranking", "Host Shadow auto-writing Song memory", "Ableton ProjectGraph vocabulary as universal owner"],
     "direct_copy": false
   },
   "completion_proof": [
-    "TRACK, CLIP_REGION, TIME_RANGE, MIDI_NOTES, DEVICE_PLUGIN, AUTOMATION, PLAYHEAD, ACTIVE_EDITOR and SONG_SECTION are canonical focus dimensions",
-    "OBSERVED_EXACT focus can be required and returned as exact target refs",
-    "missing/UNKNOWN, OBSERVED_AMBIGUOUS and INFERRED dimensions refuse exact targeting",
-    "FocusContext is bound to exact workspace ID, Song ID, workspace observation ID and host-runtime fingerprint",
-    "workspace move/recovery or runtime-observation change invalidates prior focus as stale",
-    "cross-Song and wrong-host capture fail",
-    "dimension shape and duplicate dimension validation fail visibly",
-    "capture, current validation and exact-target reads write zero rows",
-    "FocusContextService exposes no host-specific selection or mutation verb"
+    "Host Shadow is EMPTY before any verified FULL baseline",
+    "verified FULL baseline produces CURRENT and defines the complete bounded projection for that workspace observation",
+    "INCREMENTAL changes are accepted only after a FULL baseline for the same current workspace observation",
+    "a later FULL resets omitted facts instead of carrying them forward from older baselines",
+    "workspace move/recovery or runtime observation change makes prior shadow STALE",
+    "STALE shadow refuses incremental refresh until a fresh FULL baseline is recorded",
+    "fresh FULL after a workspace/runtime observation change restores CURRENT",
+    "HUMAN, N0TE and EXTERNAL actor/evidence attribution is retained without actor priority semantics",
+    "TRACK, CLIP_REGION, DEVICE_PLUGIN, AUTOMATION, ROUTING, TEMPO, MARKER and TRANSPORT facts use SET/REMOVE canonical JSON events",
+    "workspace isolation, append-only SQL history, Activity journaling and restart validation hold",
+    "repeated projection/history/current reads write zero rows",
+    "Host Shadow writes no evidence claims, Song truth or Creative Twin state"
   ],
-  "non_scope": ["Host Shadow", "host feature registry", "host process/selection discovery", "named DAW adapter", "DAW mutation", "MIDI/OSC/control surface", "UI", "CORE-02 Success Memory", "platform packaging", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After DAW-00C evidence, reconcile and globally compare Host Shadow/reconciliation, host feature/environment evidence, Musical IR/portability and remaining PLATFORM-00/CORE-02 work. Do not select a named DAW adapter by historical maturity."
+  "non_scope": ["bidirectional Song reconciliation", "automatic update/restore choice", "host feature/capability registry", "FocusContext expansion", "process/DAW discovery", "filesystem watcher/poller", "named DAW adapter", "DAW mutation", "Musical IR", "UI", "platform packaging", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After DAW-00D evidence, reconcile and globally compare bidirectional Song↔workspace reconciliation against feature/environment evidence, Musical IR/portability, remaining PLATFORM-00 and CORE-02 Success Memory. Do not stay on Host Shadow implementation by adjacency and do not select a named DAW adapter by historical maturity."
 }
