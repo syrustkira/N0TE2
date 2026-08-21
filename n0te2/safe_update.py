@@ -9,6 +9,7 @@ from .artifacts import ReleaseManifest
 from .instance import ProcessIdentity
 from .memory import HeadquartersMemory
 from .migration import MigrationStep
+from .schema_program import migration_steps_fingerprint
 from .update import (
     ApplicationUpdateCoordinator as _BaseApplicationUpdateCoordinator,
     ApplicationUpdateError,
@@ -63,8 +64,9 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
     """Consumer-safe APP-01C/E update coordinator.
 
     The base coordinator owns package mutation, update journaling, maintenance
-    holds and package/data compensation. This guard binds one explicit semantic
-    schema plan to the prepared target release and executes it inside the same
+    holds and package/data compensation. This guard requires the authenticated
+    release manifest to declare the exact semantic schema/program, durably binds
+    that program to the prepared update, and executes it inside the same profile
     maintenance hold after package installation but before Headquarters validation.
     """
 
@@ -86,6 +88,14 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
         if not isinstance(manifest, ReleaseManifest):
             raise TypeError("prepare requires manifest=ReleaseManifest")
         steps = tuple(schema_steps)
+        if manifest.application_schema_version != schema_target_version:
+            raise UpdateRejectedError(
+                "requested semantic schema target differs from authenticated release manifest"
+            )
+        if manifest.application_schema_migrations_sha256 != migration_steps_fingerprint(steps):
+            raise UpdateRejectedError(
+                "schema migration program differs from authenticated release manifest"
+            )
         plan = super().prepare(runtime=runtime, **kwargs)
         try:
             migrator = UpdateBoundSchemaMigrator(
@@ -149,6 +159,13 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
             raise UpdateRejectedError("schema migration binding rollback size differs from update plan")
         if binding.migration_plan.profile_id != plan.profile_id:
             raise UpdateRejectedError("schema migration binding belongs to a different profile")
+        if binding.migration_plan.target_version != manifest.application_schema_version:
+            raise UpdateRejectedError("bound schema target differs from authenticated release manifest")
+        if (
+            migration_steps_fingerprint(binding.migration_plan.steps)
+            != manifest.application_schema_migrations_sha256
+        ):
+            raise UpdateRejectedError("bound schema program differs from authenticated release manifest")
         return binding
 
     def _inspect_exact_hold(self, profile_id: str, process: ProcessIdentity):
