@@ -4,8 +4,10 @@ import sqlite3
 
 import pytest
 
+from n0te2.activity import ActivityLog
 from n0te2.attention import FOCUS_MODES
-from n0te2.lineage import NotFoundError, ValidationError
+from n0te2.evidence import EvidenceMemory
+from n0te2.lineage import LineageCorruptionError, LineageStore, NotFoundError, ValidationError
 from n0te2.memory import HeadquartersMemory
 
 
@@ -68,6 +70,25 @@ def test_end_focus_is_explicit_idempotent_and_history_survives_reopen(tmp_path) 
         assert replacement.song_id is None
 
 
+def test_existing_cleanroom_profile_adds_attention_schema_without_identity_change(tmp_path) -> None:
+    root = tmp_path.resolve()
+    store = LineageStore.create(root, "Existing Artist")
+    EvidenceMemory(store)
+    ActivityLog(store)
+    profile_id = store.profile_id
+    artist_id = store.primary_artist_id
+    song = store.create_song("Existing Song")
+    store.close()
+
+    with HeadquartersMemory.open(root, profile_id) as reopened:
+        assert reopened.store.primary_artist_id == artist_id
+        assert reopened.store.active_song() is not None
+        assert reopened.store.active_song().id == song.id
+        assert reopened.attention.active_focus() is None
+        focus = reopened.attention.start_focus("MAKE", song_id=song.id)
+        assert focus.song_id == song.id
+
+
 def test_focus_cannot_bind_song_from_another_artist_profile(tmp_path) -> None:
     root = tmp_path.resolve()
     first = HeadquartersMemory.create(root, "Artist One")
@@ -128,11 +149,13 @@ def test_focus_history_rejects_update_delete_and_second_active_row(tmp_path) -> 
                 "UPDATE attention_focus_sessions SET mode='FINISH' WHERE id=?",
                 (active.id,),
             )
+        conn.rollback()
         with pytest.raises(sqlite3.DatabaseError):
             conn.execute(
                 "DELETE FROM attention_focus_sessions WHERE id=?",
                 (active.id,),
             )
+        conn.rollback()
         with pytest.raises(sqlite3.DatabaseError):
             conn.execute(
                 "INSERT INTO attention_focus_sessions("
@@ -140,4 +163,17 @@ def test_focus_history_rejects_update_delete_and_second_active_row(tmp_path) -> 
                 "VALUES('focus_tamper',?,NULL,'MANAGE','ACTIVE',NULL)",
                 (headquarters.store.primary_artist_id,),
             )
+        conn.rollback()
         assert headquarters.attention.active_focus() == active
+
+
+def test_missing_attention_integrity_hook_fails_reopen_closed(tmp_path) -> None:
+    root = tmp_path.resolve()
+    headquarters = HeadquartersMemory.create(root, "Corrupt Artist")
+    profile_id = headquarters.store.profile_id
+    headquarters.store._conn.execute("DROP TRIGGER attention_focus_delete_immutable")
+    headquarters.store._conn.commit()
+    headquarters.close()
+
+    with pytest.raises(LineageCorruptionError):
+        HeadquartersMemory.open(root, profile_id)
