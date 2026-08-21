@@ -4,7 +4,7 @@
   "node_id": "APP-01",
   "increment_id": "APP-01E",
   "baseline_sha": "215b90d177db915048da3d15ea0b274115766788",
-  "purpose": "Provide one stopped-profile, snapshot-backed semantic-schema migration transaction that stages every version step off the live canonical database, preserves profile/Artist/Song/version identity, validates SQLite integrity, installs only a fully validated candidate, and restores the exact pre-migration snapshot when installed-state validation fails.",
+  "purpose": "Provide one stopped-profile, snapshot-backed semantic-schema migration transaction that stages every version step off the live canonical database, preserves profile/Artist/Song/version identity, validates SQLite integrity, installs only a fully validated candidate, and restores the exact maintenance-owned pre-migration snapshot when installed-state validation fails.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -22,20 +22,22 @@
   "reuse": {
     "mode": "CORE_CANONICAL_SQLITE_PLUS_RECOVERY_PLUS_PLATFORM_INSTANCE_LEASE",
     "n0te2_dependencies": ["CORE-01 canonical LineageStore metadata/identity", "CORE-01 RecoveryManager exact snapshot/restore", "CORE-01 crash-consistent SQLite discipline", "PLATFORM-00B InstanceLeaseManager stopped-profile ownership truth", "APP-01A runtime lease semantics"],
-    "legacy_rejections": ["in-place live migration before candidate validation", "best-effort version jumps", "caller-asserted STOPPED without lease evidence", "silent destructive Artist-data transforms", "install an identity-changing candidate", "retry past ambiguous installed state", "claim success when post-install reopen fails"],
+    "legacy_rejections": ["in-place live migration before candidate validation", "best-effort version jumps", "caller-asserted STOPPED without lease evidence", "snapshot taken before exclusive maintenance ownership", "silent destructive Artist-data transforms", "rewrite prior migration history", "install an identity-changing candidate", "retry past ambiguous installed state", "claim success when post-install reopen fails"],
     "direct_copy": false
   },
   "completion_proof": [
-    "current-version/no-step plans are explicit and perform no migration write",
+    "current-version/no-step plans are explicit and perform no migration write or maintenance ownership change",
     "source-to-target steps must form one exact contiguous chain; missing, duplicate, out-of-order and downgrade plans fail before installation",
-    "migration refuses a profile with any active runtime lease and rechecks lease absence immediately before installation",
+    "prepare refuses existing runtime ownership; execution must acquire the shared profile lease as bounded maintenance ownership before creating rollback state or staging writes",
+    "after maintenance ownership, source schema, canonical identity and prior migration-history fingerprints are revalidated before execution",
+    "the exact RecoveryManager rollback snapshot is created while maintenance ownership prevents normal runtime from opening the profile and is revalidated immediately before installation",
     "the live database is copied to a staged candidate; migration SQL runs transactionally only on that candidate before installation",
     "candidate quick_check, foreign_key_check, exact profile identity and canonical Artist/Song/version/asset identity fingerprint must match the prepared source before installation",
-    "failed staged SQL or candidate validation leaves the live database unchanged",
-    "the exact prepared RecoveryManager snapshot is bound to the plan and revalidated before installation",
-    "a fully validated candidate is atomically installed; post-install Headquarters reopen plus identity/schema validation is required for success",
-    "post-install validation failure attempts exact snapshot restore; restore failure is explicit RECOVERY_REQUIRED rather than false rollback",
-    "successful migration history is inspectable and binds migration ID, version edges, step fingerprints and descriptions"
+    "prior migration history is immutable across a step; successful history appends exactly one inspectable record per version edge with migration ID, step fingerprint and description",
+    "failed staged SQL, history validation or candidate validation leaves the live database unchanged",
+    "a fully validated candidate is atomically installed; post-install Headquarters reopen plus identity/schema/history validation is required for success",
+    "post-install validation failure attempts exact maintenance-owned snapshot restore; restore failure is explicit RECOVERY_REQUIRED rather than false rollback",
+    "maintenance lease release is required after success or rollback; release failure remains explicit RECOVERY_REQUIRED"
   ],
   "non_scope": ["OS-specific installer/update/download mechanics", "destructive Artist/profile migration policy", "provider-specific future schema invention", "schema changes outside supplied bounded migration steps", "UX", "DAW/AUDIO/OPS", "platform customer acceptance", "hosted-CI proof scaffolding"],
   "next_selection_rule": "After APP-01E evidence, audit APP-01A-E against every APP-01 mapped requirement. If no concrete shared APP primitive remains, close APP-01 only as a construction dependency and globally reselect from newly eligible product nodes."
