@@ -14,14 +14,16 @@
     "Canonical main is 3e33277ece9d014ab37a50af3b0db40a621e81de after merged PR #46 landed UX-01A Artist Headquarters front door. Hosted execution for UX-01A remained UNOBSERVED rather than being relabeled green.",
     "UX-01 remains ACTIVE. UX-01A is landed but does not close the parent UX node.",
     "UX-01B is selected on exact baseline 3e33277ece9d014ab37a50af3b0db40a621e81de: durable Headquarters Focus Sessions.",
+    "Draft PR #47 is the integration surface for UX-01B. Its first exact hosted workflow/status observation at product head 1980858f5bb2ff3f901f09df9775a71d55ea56ab returned empty workflow runs and empty commit statuses, so hosted execution is UNOBSERVED rather than green or failed. Later governance-only reconciliation commits do not convert that absence into executed proof.",
     "UX-01B supports exactly MAKE, FINISH, MANAGE, RELEASE and PERFORM as artist-attention modes above individual tools.",
     "Headquarters Focus Session is not DAW FocusContext. n0te2/focus.py remains the read-only host-targeting evidence gate for exact DAW objects and is outside UX-01B edits.",
     "Focus state belongs to the exact canonical Artist profile and may optionally bind to a canonical Song in that profile. It must never cross profiles or fabricate a parallel Song model.",
     "Starting/switching Focus preserves history; ending Focus is explicit; navigation/relaunch must preserve the active Focus through the canonical profile database rather than browser-local state.",
     "Changing Focus must not connect providers, mutate a DAW, create business/release jobs, alter Song versions/assets/evidence, or perform consequential external actions.",
+    "AttentionMemory is an additive self-versioned service schema following existing N0TE2 service-schema patterns; APP-01E remains the release-bound staged migration/rollback contract for application semantic migrations and is not reopened by this increment.",
     "REQ-SCOPE-097 is only partially advanced by UX-01B. Durable Not Now horizons remain retained scope and are intentionally not fabricated against nonexistent attention-item/release-trigger lifecycles.",
     "Existing CORE-01 Activity chronology and CORE-02 append-only/history patterns are reusable implementation patterns; no legacy attention implementation is admitted or copied.",
-    "UX-01B must remain consumer-reachable through the landed /now Headquarters surface, use artist language, hide raw IDs/internal plumbing and preserve the accessibility/security posture from UX-01A.",
+    "UX-01B remains consumer-reachable through the landed /now Headquarters surface, uses artist language, hides raw IDs/internal plumbing and preserves the accessibility/security posture from UX-01A. Home and Song retain canonical Start Song reachability while Now owns the bounded attention choice.",
     "Authored proof is not executed proof. Hosted/local execution evidence is recorded only when actually observed."
   ]
 }
