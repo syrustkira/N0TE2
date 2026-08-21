@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -8,93 +9,167 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00C":
+if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00D":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2.support import (  # noqa: E402
-    SupportEvidence,
-    SupportTarget,
-    default_architecture_targets,
-    default_support_envelope,
+from n0te2.artifacts import (  # noqa: E402
+    ArtifactRecord,
+    ManifestAuthenticityEvidence,
+    ReleaseArtifactVerifier,
+    ReleaseManifest,
 )
+from n0te2.support import SupportTarget  # noqa: E402
 
 
-targets = default_architecture_targets()
-core = tuple(target for target in targets if target.policy_tier == "CORE")
-extended = tuple(target for target in targets if target.policy_tier == "EXTENDED")
-assert len(core) == 6
-assert len(extended) == 4
+def digest(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
 
-initial = default_support_envelope()
-assert len(initial.customer_mode_blockers()) == 6
-assert all(blocker.state == "UNVERIFIED" for blocker in initial.customer_mode_blockers())
 
-# Even perfect evidence for every EXTENDED target cannot substitute for any
-# required CORE platform/architecture target.
-extended_only = default_support_envelope(
-    SupportEvidence(target.fingerprint, "ACCEPTED", f"accept:extended:{index}")
-    for index, target in enumerate(extended)
-)
-assert len(extended_only.customer_mode_blockers()) == 6
+mac = SupportTarget.from_runtime_labels(os_name="Darwin", machine="arm64")
+windows = SupportTarget.from_runtime_labels(os_name="Windows", machine="amd64")
+mac_bytes = b"n0te-macos-arm64-release"
+windows_bytes = b"n0te-windows-x64-release"
 
-mac_arm = next(
-    target
-    for target in core
-    if target.os_family == "MACOS" and target.architecture == "ARM64"
-)
-windows_x64 = next(
-    target
-    for target in core
-    if target.os_family == "WINDOWS" and target.architecture == "X86_64"
-)
-linux_arm = next(
-    target
-    for target in core
-    if target.os_family == "LINUX" and target.architecture == "ARM64"
-)
-
-evidence = (
-    SupportEvidence(mac_arm.fingerprint, "ACCEPTED", "accept:mac-arm64"),
-    SupportEvidence(
-        windows_x64.fingerprint,
-        "LEGACY_ACCEPTED",
-        "accept:windows-x64-legacy",
-        upstream_limitation="Upstream OS servicing limitation remains visible",
-    ),
-    SupportEvidence(
-        linux_arm.fingerprint,
-        "KNOWN_BREAK",
-        "probe:linux-arm64-break",
-        known_break_reason="Required package dependency unavailable in tested environment",
+manifest = ReleaseManifest(
+    release_id="release-current",
+    version="1.2.0",
+    source_commit_sha="a" * 40,
+    build_inputs_sha256="b" * 64,
+    dependency_inventory_sha256="c" * 64,
+    license_inventory_sha256="d" * 64,
+    artifacts=(
+        ArtifactRecord(
+            "mac-arm64",
+            mac.fingerprint,
+            "pkg",
+            len(mac_bytes),
+            digest(mac_bytes),
+        ),
+        ArtifactRecord(
+            "windows-x64",
+            windows.fingerprint,
+            "msix",
+            len(windows_bytes),
+            digest(windows_bytes),
+        ),
     ),
 )
-observed = default_support_envelope(evidence)
-assert len(observed.customer_mode_blockers()) == 4
-assert observed.status(mac_arm).state == "ACCEPTED"
-assert observed.status(windows_x64).state == "LEGACY_ACCEPTED"
-assert observed.status(windows_x64).upstream_limitation is not None
-linux_blocker = next(
-    blocker
-    for blocker in observed.customer_mode_blockers()
-    if blocker.target_fingerprint == linux_arm.fingerprint
+
+missing_auth = ReleaseArtifactVerifier.verify(
+    manifest=manifest,
+    artifact_id="mac-arm64",
+    artifact_bytes=mac_bytes,
+    expected_target=mac,
+    authenticity=None,
 )
-assert linux_blocker.state == "KNOWN_BREAK"
-assert "Required package dependency unavailable" in linux_blocker.reason
+assert missing_auth.status == "MANIFEST_UNAUTHENTICATED"
 
-# Runtime aliases normalize through PLATFORM-00A and do not create divergent
-# support identity merely because the OS/CPU label spelling differs.
-mac_alias = SupportTarget.from_runtime_labels(os_name="Darwin", machine="aarch64")
-mac_canonical = SupportTarget.from_runtime_labels(os_name="macOS", machine="arm64")
-assert mac_alias == mac_canonical
-assert mac_alias.fingerprint == mac_canonical.fingerprint
+auth = ManifestAuthenticityEvidence(
+    manifest_fingerprint=manifest.fingerprint,
+    status="VERIFIED",
+    verifier_id="platform-release-verifier",
+    scheme="platform-authenticity",
+    evidence_ref="verify:release-current",
+)
+ready = ReleaseArtifactVerifier.verify(
+    manifest=manifest,
+    artifact_id="mac-arm64",
+    artifact_bytes=mac_bytes,
+    expected_target=mac,
+    authenticity=auth,
+)
+assert ready.status == "READY"
 
-# There is no generic boolean that can flatten policy/evidence into a vague
-# "supported" claim.
-assert not hasattr(observed.status(mac_arm), "supported")
-assert not hasattr(mac_arm, "supported")
+wrong_target = ReleaseArtifactVerifier.verify(
+    manifest=manifest,
+    artifact_id="mac-arm64",
+    artifact_bytes=mac_bytes,
+    expected_target=windows,
+    authenticity=auth,
+)
+assert wrong_target.status == "TARGET_MISMATCH"
+
+tampered = bytearray(mac_bytes)
+tampered[-1] ^= 1
+tampered_result = ReleaseArtifactVerifier.verify(
+    manifest=manifest,
+    artifact_id="mac-arm64",
+    artifact_bytes=tampered,
+    expected_target=mac,
+    authenticity=auth,
+)
+assert tampered_result.status == "HASH_MISMATCH"
+
+other_manifest = ReleaseManifest(
+    release_id="release-other",
+    version="1.2.1",
+    source_commit_sha="e" * 40,
+    build_inputs_sha256="b" * 64,
+    dependency_inventory_sha256="c" * 64,
+    license_inventory_sha256="d" * 64,
+    artifacts=manifest.artifacts,
+)
+wrong_manifest_auth = ManifestAuthenticityEvidence(
+    manifest_fingerprint=other_manifest.fingerprint,
+    status="VERIFIED",
+    verifier_id="platform-release-verifier",
+    scheme="platform-authenticity",
+    evidence_ref="verify:release-other",
+)
+mismatch = ReleaseArtifactVerifier.verify(
+    manifest=manifest,
+    artifact_id="mac-arm64",
+    artifact_bytes=mac_bytes,
+    expected_target=mac,
+    authenticity=wrong_manifest_auth,
+)
+assert mismatch.status == "MANIFEST_MISMATCH"
+
+# Artifact trust deliberately does not enforce release ordering. An explicitly
+# selected older/rollback release can still pass the same authenticity/byte gates.
+rollback = ReleaseManifest(
+    release_id="release-rollback",
+    version="1.1.0",
+    source_commit_sha="f" * 40,
+    build_inputs_sha256="1" * 64,
+    dependency_inventory_sha256="2" * 64,
+    license_inventory_sha256="3" * 64,
+    artifacts=(
+        ArtifactRecord(
+            "mac-arm64",
+            mac.fingerprint,
+            "pkg",
+            len(mac_bytes),
+            digest(mac_bytes),
+        ),
+    ),
+)
+rollback_auth = ManifestAuthenticityEvidence(
+    manifest_fingerprint=rollback.fingerprint,
+    status="VERIFIED",
+    verifier_id="platform-release-verifier",
+    scheme="platform-authenticity",
+    evidence_ref="verify:release-rollback",
+)
+rollback_ready = ReleaseArtifactVerifier.verify(
+    manifest=rollback,
+    artifact_id="mac-arm64",
+    artifact_bytes=mac_bytes,
+    expected_target=mac,
+    authenticity=rollback_auth,
+)
+assert rollback_ready.status == "READY"
+
+public = {
+    name
+    for name in dir(ReleaseArtifactVerifier)
+    if not name.startswith("_") and callable(getattr(ReleaseArtifactVerifier, name))
+}
+assert public == {"verify"}
+assert not ({"install", "update", "rollback", "sign", "download", "execute"} & public)
 
 print(
-    "PLATFORM-00C CONSUMER SMOKE: GREEN: six CORE macOS/Windows/Linux architecture targets began as explicit UNVERIFIED customer-mode blockers, accepting every EXTENDED target did not satisfy or hide any CORE blocker, exact acceptance removed only its target, legacy acceptance preserved its upstream limitation, a named CORE break stayed visible and blocking, runtime aliases converged through canonical platform identity, and no generic supported boolean could flatten target policy into acceptance truth"
+    "PLATFORM-00D CONSUMER SMOKE: GREEN: unauthenticated manifest bytes failed closed, exact authenticated manifest+target+bytes became READY, wrong target and byte tampering were rejected distinctly, authenticity for another manifest revision could not authorize this release, an explicitly selected rollback artifact could still pass trust verification, and the verifier exposed no signing/install/update/download/execute verb"
 )
