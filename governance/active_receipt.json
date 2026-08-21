@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-PLATFORM-00D",
+  "receipt_id": "N0TE2-PLATFORM-00E",
   "node_id": "PLATFORM-00",
-  "increment_id": "PLATFORM-00D",
-  "baseline_sha": "193b2cb67f0d7e41dea23752045967726634fefb",
-  "purpose": "Implement the shared release-artifact provenance and authenticated-manifest trust boundary so APP-01 can later install, update or roll back only bytes that match an exact target-bound manifest with traceable source/build/dependency/license inputs and independently verified authenticity.",
+  "increment_id": "PLATFORM-00E",
+  "baseline_sha": "cf00c3f32449cf1f08a41d56548815ed9a643c92",
+  "purpose": "Implement the remaining shared platform worker envelope so architecture-specific or risky downstream tool work can be routed through an explicitly identified isolated worker with exact request/result truth, without pretending the main N0TE process can load every architecture or format directly.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,32 +14,30 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "Package/update bytes cannot become an install candidate merely because a file exists: N0TE can verify exact source/build/dependency/license provenance, exact platform target, exact bytes and an independently authenticated manifest revision before execution is even considered.",
-    "journeys": ["J-CORE-LIFECYCLE", "J-TRUST"],
-    "capability": "Release manifest provenance and fail-closed artifact verification",
-    "increment": "PLATFORM-00D"
+    "outcome": "N0TE can preserve one native main-app architecture while representing native and explicit isolated foreign-architecture worker routes truthfully; wrong worker/target/capability and crashed/timed-out/unknown results cannot masquerade as success.",
+    "journeys": ["J-CORE-LIFECYCLE", "J-TRUST", "J-WORKSPACE"],
+    "capability": "Architecture-isolated worker identity, route and result envelope",
+    "increment": "PLATFORM-00E"
   },
   "reuse": {
-    "mode": "PURE_CANONICAL_RELEASE_MANIFEST_PLUS_EXTERNAL_AUTHENTICITY_EVIDENCE_AND_BYTE_VERIFICATION",
-    "n0te2_dependencies": ["PLATFORM-00A canonical platform identity", "PLATFORM-00C exact SupportTarget fingerprints", "CORE-04 trust/authority separation"],
-    "legacy_rejections": ["file exists equals trusted update", "hash without authenticated manifest", "signature/authenticity for another manifest revision", "wrong-platform package accepted", "opaque build provenance", "shared-secret test masquerading as production code signing", "version ordering inside artifact trust"],
+    "mode": "PURE_WORKER_IDENTITY_REQUEST_ROUTE_AND_RESULT_VALIDATION_OVER_PLATFORM00A_AND_SUPPORT_TARGETS",
+    "n0te2_dependencies": ["PLATFORM-00A PlatformEnvironment", "PLATFORM-00C SupportTarget identity", "CORE-04 failure/UNKNOWN truth laws"],
+    "legacy_rejections": ["main process silently changes architecture", "in-process foreign architecture assumption", "worker name implies capability", "stale result accepted for another request", "crash or timeout translated into generic failure/success", "worker envelope treated as plugin hosting"],
     "direct_copy": false
   },
   "completion_proof": [
-    "ReleaseManifest requires exact release/version identity, 40-hex source commit SHA and SHA-256 build-input, dependency-inventory and license-inventory digests",
-    "ArtifactRecord requires unique artifact ID, exact PLATFORM-00C target fingerprint, normalized package kind, positive byte size and SHA-256",
-    "manifest artifact ordering is canonical and manifest fingerprint deterministic",
-    "duplicate artifact IDs and duplicate target/package routes are rejected",
-    "ManifestAuthenticityEvidence binds status, verifier identity, verification scheme and evidence ref to the exact manifest fingerprint",
-    "missing, UNKNOWN or UNTRUSTED authenticity fails closed",
-    "VERIFIED authenticity for another manifest fingerprint returns MANIFEST_MISMATCH",
-    "unknown artifact, wrong expected target, size mismatch and SHA-256 mismatch remain distinct failures",
-    "exact artifact bytes plus exact target plus VERIFIED exact-manifest authenticity return READY",
-    "multiple artifacts in one manifest verify independently",
-    "changing source/build/dependency/license provenance changes the manifest fingerprint",
-    "older release manifests may still verify READY so rollback selection remains APP-01 policy rather than artifact-trust magic",
-    "ReleaseArtifactVerifier is pure and exposes no install/update/rollback/sign/download/execute behavior"
+    "WorkerIdentity fingerprint changes with worker kind/platform/architecture/build artifact",
+    "WorkerRequest binds exact worker fingerprint, support target fingerprint, job, format, workload architecture, payload fingerprint and positive timeout budget",
+    "request for another worker, target, OS family, job, format or undeclared workload architecture is rejected before dispatch",
+    "NATIVE_ONLY route requires worker architecture and workload architecture to match the application target",
+    "ISOLATED_FOREIGN_ARCH may represent a foreign architecture only when the worker capability explicitly declares that workload architecture and the workload matches the worker architecture on the same OS family",
+    "explicit bridge route never changes or rewrites the main application target architecture",
+    "SUCCEEDED result requires exact request/worker binding, evidence reference, result fingerprint and receipt reference",
+    "FAILED, CRASHED, TIMED_OUT and UNKNOWN remain distinct and cannot carry success receipt/result fields",
+    "result from another request or worker is rejected",
+    "request fingerprint is deterministic and capability architecture lists canonicalize",
+    "worker envelope exposes only plan and validate_result; no subprocess/spawn/IPC/load/process-audio/install/kill/execute/connect behavior exists"
   ],
-  "non_scope": ["package creation", "code signing/notarization implementation", "secret/key storage", "installer/updater execution", "rollback selection policy", "network download", "dependency/SBOM generation", "vulnerability scanning", "CI build automation", "DAW work", "OPS-04", "UI", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After PLATFORM-00D evidence, audit PLATFORM-00 A-D against REQ-SCOPE-149/150/151/153. Keep plugin hosting/discovery under AUDIO-02 and real macOS/Windows/Linux package/acceptance under APP-01 + PLATFORM-01/02/03. Close PLATFORM-00 as a construction dependency only if no shared semantic chassis gap remains, then globally reselect."
+  "non_scope": ["plugin discovery", "scan paths", "loading VST3/AU/AAX/CLAP/LV2/LADSPA", "audio processing", "parameter/state I/O", "real subprocess spawning", "IPC transport", "sandbox implementation", "package/signing", "DAW adapter", "OPS-04", "UI", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After PLATFORM-00E evidence, audit PLATFORM-00 A-E against REQ-SCOPE-149/150/151/153. Actual plugin discovery/hosting belongs to AUDIO-02, real platform packages/acceptance to APP-01 + PLATFORM-01/02/03, and signing credentials/final release proof to platform/REL nodes. Close PLATFORM-00 as construction dependency if no further shared semantic chassis gap exists, then globally reselect."
 }
