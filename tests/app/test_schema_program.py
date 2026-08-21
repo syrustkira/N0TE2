@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from n0te2.migration import MigrationPlan, MigrationPlanError, MigrationStep
+from n0te2.migration import (
+    MigrationPlan,
+    MigrationPlanError,
+    MigrationStep,
+    MigrationValidationError,
+)
 from n0te2.schema_program import (
     migration_steps_fingerprint,
     select_migration_chain,
@@ -93,7 +98,7 @@ def test_binding_rejects_selected_steps_not_derived_from_authenticated_program()
         "different schema 2 to 3",
         ("CREATE TABLE wrong_marker(value TEXT)",),
     )
-    with pytest.raises(MigrationPlanError):
+    with pytest.raises(MigrationValidationError):
         binding(program, plan(2, 3, (wrong,)))
 
 
