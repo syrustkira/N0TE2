@@ -40,6 +40,7 @@ class AttentionMemory:
         "attention_focus_started_activity",
         "attention_focus_ended_activity",
     }
+    _INDEX_NAMES = {"attention_one_active_focus_per_artist"}
 
     def __init__(self, store: LineageStore):
         if not isinstance(store, LineageStore):
@@ -205,10 +206,22 @@ class AttentionMemory:
                     "WHERE type='trigger' AND name LIKE 'attention_%'"
                 )
             }
-            missing = self._TRIGGER_NAMES - trigger_names
-            if missing:
+            missing_triggers = self._TRIGGER_NAMES - trigger_names
+            if missing_triggers:
                 raise LineageCorruptionError(
-                    f"Attention integrity hooks are incomplete: {sorted(missing)}"
+                    f"Attention integrity hooks are incomplete: {sorted(missing_triggers)}"
+                )
+            index_names = {
+                str(row["name"])
+                for row in self._conn.execute(
+                    "SELECT name FROM sqlite_master "
+                    "WHERE type='index' AND name LIKE 'attention_%'"
+                )
+            }
+            missing_indexes = self._INDEX_NAMES - index_names
+            if missing_indexes:
+                raise LineageCorruptionError(
+                    f"Attention uniqueness hooks are incomplete: {sorted(missing_indexes)}"
                 )
             active_count = 0
             for row in self._conn.execute(
