@@ -3,183 +3,142 @@ from __future__ import annotations
 
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00E":
+if state.get("active_node") != "APP-01" or state.get("active_increment") != "APP-01A":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
+from n0te2.app_runtime import ApplicationRuntime, ApplicationRuntimeError  # noqa: E402
+from n0te2.instance import InstanceLeaseManager, ProcessIdentity  # noqa: E402
+from n0te2.memory import HeadquartersMemory  # noqa: E402
 from n0te2.platforms import PlatformEnvironment  # noqa: E402
-from n0te2.support import SupportTarget  # noqa: E402
-from n0te2.worker import (  # noqa: E402
-    WorkerCapability,
-    WorkerEnvelope,
-    WorkerEnvelopeError,
-    WorkerIdentity,
-    WorkerRequest,
-    WorkerResult,
-)
 
 
-app_target = SupportTarget.from_runtime_labels(os_name="Darwin", machine="arm64")
-arm_worker = WorkerIdentity(
-    "plugin_worker",
-    PlatformEnvironment.from_runtime_labels("Darwin", "arm64"),
-    "a" * 64,
-)
-arm_capability = WorkerCapability(
-    "cap:native-vst3",
-    "tool.process",
-    "VST3",
-    "NATIVE_ONLY",
-    ("ARM64",),
-)
-arm_request = WorkerRequest(
-    "req:native",
-    arm_worker.fingerprint,
-    app_target.fingerprint,
-    "tool.process",
-    "VST3",
-    "ARM64",
-    "b" * 64,
-    1500,
-)
-native_route = WorkerEnvelope.plan(
-    worker=arm_worker,
-    capability=arm_capability,
-    request=arm_request,
-    target=app_target,
-)
-assert native_route.foreign_architecture is False
-assert native_route.execution_mode == "NATIVE_ONLY"
+class Probe:
+    def __init__(self) -> None:
+        self.values: dict[str, str] = {}
 
-# The app remains ARM64. A foreign x86_64 workload is represented only by an
-# explicitly isolated x86_64 worker route on the same OS family.
-x64_worker = WorkerIdentity(
-    "plugin_worker",
-    PlatformEnvironment.from_runtime_labels("Darwin", "amd64"),
-    "c" * 64,
-)
-x64_capability = WorkerCapability(
-    "cap:isolated-vst3-x64",
-    "tool.process",
-    "VST3",
-    "ISOLATED_FOREIGN_ARCH",
-    ("X86_64",),
-)
-x64_request = WorkerRequest(
-    "req:foreign",
-    x64_worker.fingerprint,
-    app_target.fingerprint,
-    "tool.process",
-    "VST3",
-    "X86_64",
-    "d" * 64,
-    1500,
-)
-bridge_route = WorkerEnvelope.plan(
-    worker=x64_worker,
-    capability=x64_capability,
-    request=x64_request,
-    target=app_target,
-)
-assert bridge_route.foreign_architecture is True
-assert bridge_route.execution_mode == "ISOLATED_FOREIGN_ARCH"
-assert app_target.architecture == "ARM64"
-assert x64_worker.platform.architecture == "X86_64"
+    def set(self, process: ProcessIdentity, status: str) -> None:
+        self.values[process.fingerprint] = status
 
-# The same foreign worker cannot be laundered through a native-only claim.
-try:
-    WorkerEnvelope.plan(
-        worker=x64_worker,
-        capability=WorkerCapability(
-            "cap:false-native",
-            "tool.process",
-            "VST3",
-            "NATIVE_ONLY",
-            ("X86_64",),
-        ),
-        request=x64_request,
-        target=app_target,
+    def status(self, process: ProcessIdentity) -> str:
+        return self.values.get(process.fingerprint, "UNKNOWN")
+
+
+def process(pid: int, token: str) -> ProcessIdentity:
+    return ProcessIdentity.from_start_token(
+        PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
+        pid=pid,
+        start_token=token,
     )
-except WorkerEnvelopeError:
-    pass
-else:
-    raise AssertionError("foreign architecture was accepted as NATIVE_ONLY")
 
-success = WorkerResult(
-    request_fingerprint=x64_request.fingerprint,
-    worker_fingerprint=x64_worker.fingerprint,
-    state="SUCCEEDED",
-    evidence_ref="worker:verified-result",
-    result_fingerprint="e" * 64,
-    receipt_ref="worker:receipt:1",
-)
-assert WorkerEnvelope.validate_result(
-    worker=x64_worker,
-    request=x64_request,
-    result=success,
-).state == "SUCCEEDED"
 
-for non_success in ("FAILED", "CRASHED", "TIMED_OUT", "UNKNOWN"):
-    result = WorkerResult(
-        x64_request.fingerprint,
-        x64_worker.fingerprint,
-        non_success,
-        f"worker:{non_success.lower()}",
+with tempfile.TemporaryDirectory() as temp:
+    root = Path(temp)
+    data_root = root / "data"
+    state_root = root / "state"
+
+    bootstrap = HeadquartersMemory.create(data_root, "Consumer Runtime Artist")
+    profile_id = bootstrap.store.profile_id
+    bootstrap.close()
+
+    owner_process = process(5001, "consumer-owner")
+    foreign_process = process(5002, "consumer-foreign")
+    probe = Probe()
+
+    owner = ApplicationRuntime(data_root=data_root, state_root=state_root)
+    started = owner.launch(profile_id=profile_id, process=owner_process, probe=probe)
+    assert started.status == "STARTED"
+    assert owner.state == "RUNNING"
+
+    song = owner.headquarters.store.create_song("Quit Means Quit")
+    version = owner.headquarters.store.create_version(
+        song.id,
+        label="Durable before quit",
     )
-    assert WorkerEnvelope.validate_result(
-        worker=x64_worker,
-        request=x64_request,
-        result=result,
-    ).state == non_success
+    assert owner.headquarters.store.active_song().id == song.id
+    assert owner.headquarters.store.active_song().current_version_id == version.id
 
-stale_request = WorkerRequest(
-    "req:other",
-    x64_worker.fingerprint,
-    app_target.fingerprint,
-    "tool.process",
-    "VST3",
-    "X86_64",
-    "d" * 64,
-    1500,
-)
-try:
-    WorkerEnvelope.validate_result(
-        worker=x64_worker,
-        request=stale_request,
-        result=success,
+    duplicate_same_runtime = owner.launch(
+        profile_id=profile_id,
+        process=owner_process,
+        probe=probe,
     )
-except WorkerEnvelopeError:
-    pass
-else:
-    raise AssertionError("result for another request was accepted")
+    assert duplicate_same_runtime.status == "ALREADY_RUNNING"
 
-public = {
-    name
-    for name in dir(WorkerEnvelope)
-    if not name.startswith("_") and callable(getattr(WorkerEnvelope, name))
-}
-assert public == {"plan", "validate_result"}
-assert not (
-    {
-        "spawn",
-        "subprocess",
-        "ipc",
-        "load",
-        "process_audio",
-        "kill",
-        "install",
-        "execute",
-        "connect",
+    same_process_reopen = ApplicationRuntime(data_root=data_root, state_root=state_root)
+    reopen_result = same_process_reopen.launch(
+        profile_id=profile_id,
+        process=owner_process,
+        probe=probe,
+    )
+    assert reopen_result.status == "REOPEN_EXISTING"
+    assert same_process_reopen.state == "STOPPED"
+
+    probe.set(owner_process, "ALIVE")
+    foreign = ApplicationRuntime(data_root=data_root, state_root=state_root)
+    held = foreign.launch(
+        profile_id=profile_id,
+        process=foreign_process,
+        probe=probe,
+    )
+    assert held.status == "HELD_BY_OTHER"
+    assert foreign.state == "STOPPED"
+
+    stopped = owner.quit()
+    assert stopped.status == "STOPPED"
+    assert owner.state == "STOPPED"
+    assert InstanceLeaseManager(state_root).inspect(profile_id) is None
+    try:
+        _ = owner.headquarters
+    except ApplicationRuntimeError:
+        pass
+    else:
+        raise AssertionError("Headquarters remained accessible after explicit quit")
+
+    relaunched = ApplicationRuntime(data_root=data_root, state_root=state_root)
+    restarted = relaunched.launch(
+        profile_id=profile_id,
+        process=owner_process,
+        probe=probe,
+    )
+    assert restarted.status == "STARTED"
+    resumed = relaunched.headquarters.store.active_song()
+    assert resumed is not None
+    assert resumed.id == song.id
+    assert resumed.title == "Quit Means Quit"
+    assert resumed.current_version_id == version.id
+    assert relaunched.headquarters.store.get_version(version.id) == version
+    assert relaunched.quit().status == "STOPPED"
+    assert InstanceLeaseManager(state_root).inspect(profile_id) is None
+
+    public = {
+        name
+        for name in dir(ApplicationRuntime)
+        if not name.startswith("_") and callable(getattr(ApplicationRuntime, name))
     }
-    & public
-)
+    assert public == {"launch", "quit"}
+    assert not (
+        {
+            "install",
+            "update",
+            "rollback",
+            "uninstall",
+            "kill",
+            "terminate",
+            "open_browser",
+            "launch_window",
+            "spawn_daemon",
+        }
+        & public
+    )
 
 print(
-    "PLATFORM-00E CONSUMER SMOKE: GREEN: native ARM64 work stayed native, an x86_64 workload on the ARM64 app was accepted only through an explicit isolated same-OS x86_64 worker while the app target remained ARM64, pretending that worker was native was rejected, success required exact result/receipt evidence, failure/crash/timeout/unknown stayed distinct, stale results were rejected, and the worker envelope exposed no process/plugin execution verb"
+    "APP-01A CONSUMER SMOKE: GREEN: a real profile launched through the canonical lease into real Headquarters state, created a durable Song/version, duplicate same-runtime launch stayed idempotent, same-process reopen refused a second Headquarters, a verified-live foreign owner could not steal the profile, explicit quit closed Headquarters and released the lease, relaunch restored the exact active Song/version from disk, and the runtime exposed only launch/quit rather than installer/updater/browser/kill behavior"
 )
