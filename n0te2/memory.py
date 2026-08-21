@@ -16,6 +16,7 @@ from .session import SessionMemory
 from .skills import SkillMemory
 from .transactions import TransactionCoordinator
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
+from .workspace import WorkspaceMemory
 
 
 class HeadquartersMemory:
@@ -26,6 +27,7 @@ class HeadquartersMemory:
         self.evidence = EvidenceMemory(store)
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
+        self.workspaces = WorkspaceMemory(store)
         self.operations = OperationJournal(store, self.activity)
         self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
