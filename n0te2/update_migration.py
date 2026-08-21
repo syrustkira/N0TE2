@@ -18,8 +18,9 @@ from .migration import (
     MigrationValidationError,
 )
 from .recovery import RecoveryManager, SnapshotInfo
+from .schema_program import normalize_migration_program, select_migration_chain
 
-_BINDING_SCHEMA_VERSION = 1
+_BINDING_SCHEMA_VERSION = 2
 
 
 def _canonical_json(value: object) -> str:
@@ -65,6 +66,21 @@ def _step_from_data(data: object) -> MigrationStep:
         )
     except Exception as exc:
         raise MigrationValidationError("stored update migration step is invalid") from exc
+
+
+def _steps_to_data(steps: Iterable[MigrationStep]) -> list[dict[str, object]]:
+    return [_step_to_data(step) for step in normalize_migration_program(steps)]
+
+
+def _steps_from_data(data: object) -> tuple[MigrationStep, ...]:
+    if not isinstance(data, list):
+        raise MigrationValidationError("stored schema migration program is invalid")
+    try:
+        return normalize_migration_program(_step_from_data(item) for item in data)
+    except MigrationValidationError:
+        raise
+    except Exception as exc:
+        raise MigrationValidationError("stored schema migration program is invalid") from exc
 
 
 def _plan_to_data(plan: MigrationPlan) -> dict[str, object]:
@@ -117,6 +133,7 @@ class UpdateMigrationBinding:
     target_release_id: str
     rollback_snapshot_sha256: str
     rollback_snapshot_size_bytes: int
+    schema_program: tuple[MigrationStep, ...]
     migration_plan: MigrationPlan
 
     def __post_init__(self) -> None:
@@ -124,6 +141,8 @@ class UpdateMigrationBinding:
         target_release = str(self.target_release_id).strip()
         if not update_id or not target_release:
             raise MigrationValidationError("update migration binding identity is incomplete")
+        object.__setattr__(self, "update_id", update_id)
+        object.__setattr__(self, "target_release_id", target_release)
         for field in (
             "update_plan_fingerprint",
             "manifest_fingerprint",
@@ -141,8 +160,22 @@ class UpdateMigrationBinding:
             raise MigrationValidationError("rollback snapshot size must be positive")
         if not isinstance(self.migration_plan, MigrationPlan):
             raise TypeError("migration_plan must be MigrationPlan")
+        try:
+            program = normalize_migration_program(self.schema_program)
+        except Exception as exc:
+            raise MigrationValidationError("update schema program is invalid") from exc
+        object.__setattr__(self, "schema_program", program)
         if self.migration_plan.profile_id == "":
             raise MigrationValidationError("migration plan profile identity is missing")
+        expected = select_migration_chain(
+            source_version=self.migration_plan.source_version,
+            target_version=self.migration_plan.target_version,
+            program=program,
+        )
+        if expected != self.migration_plan.steps:
+            raise MigrationValidationError(
+                "selected migration plan does not match authenticated schema program"
+            )
 
     def payload(self) -> dict[str, object]:
         return {
@@ -153,6 +186,7 @@ class UpdateMigrationBinding:
             "target_release_id": self.target_release_id,
             "rollback_snapshot_sha256": self.rollback_snapshot_sha256,
             "rollback_snapshot_size_bytes": self.rollback_snapshot_size_bytes,
+            "schema_program": _steps_to_data(self.schema_program),
             "migration_plan": _plan_to_data(self.migration_plan),
         }
 
@@ -170,6 +204,7 @@ class UpdateMigrationBinding:
             "target_release_id",
             "rollback_snapshot_sha256",
             "rollback_snapshot_size_bytes",
+            "schema_program",
             "migration_plan",
         }:
             raise MigrationValidationError("update migration binding shape is invalid")
@@ -183,6 +218,7 @@ class UpdateMigrationBinding:
                 target_release_id=str(data["target_release_id"]),
                 rollback_snapshot_sha256=str(data["rollback_snapshot_sha256"]),
                 rollback_snapshot_size_bytes=data["rollback_snapshot_size_bytes"],  # type: ignore[arg-type]
+                schema_program=_steps_from_data(data["schema_program"]),
                 migration_plan=_plan_from_data(data["migration_plan"]),
             )
         except MigrationValidationError:
@@ -288,10 +324,12 @@ class UpdateMigrationBindingStore:
 class UpdateBoundSchemaMigrator(ApplicationSchemaMigrator):
     """Schema migrator that reuses an update's existing maintenance hold/snapshot.
 
-    Read-only planning intentionally does not treat a persisted runtime lease as
-    authoritative liveness. Execution receives the already-acquired update hold,
-    verifies exact ownership, and reuses the update's pre-package snapshot rather
-    than overwriting the canonical RecoveryManager snapshot mid-transaction.
+    The authenticated release supplies a full ordered migration program. Planning
+    inspects this profile's current semantic schema and derives only the contiguous
+    subset it needs. Read-only planning intentionally does not treat a persisted
+    runtime lease as authoritative liveness. Execution receives the already-acquired
+    update hold, verifies exact ownership, and reuses the update's pre-package
+    snapshot rather than overwriting canonical recovery state mid-transaction.
     """
 
     def __init__(
@@ -319,8 +357,11 @@ class UpdateBoundSchemaMigrator(ApplicationSchemaMigrator):
         if target_version < 1:
             raise MigrationPlanError("target_version must be positive")
         source = self._inspect_path(self._db_path(profile_id), profile_id)
-        step_tuple = tuple(steps)
-        self._validate_chain(source.application_version, target_version, step_tuple)
+        selected = select_migration_chain(
+            source_version=source.application_version,
+            target_version=target_version,
+            program=steps,
+        )
         return MigrationPlan(
             migration_id=f"mig_{uuid.uuid4().hex}",
             profile_id=profile_id,
@@ -328,7 +369,7 @@ class UpdateBoundSchemaMigrator(ApplicationSchemaMigrator):
             target_version=target_version,
             source_identity_fingerprint=source.identity_fingerprint,
             source_history_fingerprint=source.history_fingerprint,
-            steps=step_tuple,
+            steps=selected,
         )
 
     def _existing_rollback_snapshot(self, profile_id: str) -> SnapshotInfo:
