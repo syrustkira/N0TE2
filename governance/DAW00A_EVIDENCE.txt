@@ -1,7 +1,0 @@
-DAW-00A exact module evidence
-
-n0te2/hosts.py Git blob: b380ac2fcb9a9e9abd697cafde03ae0e3156214b
-Local exact-byte focused suite: 15/15 GREEN
-Hosted exact-head workflow evidence: UNOBSERVED until queried after PR publication
-
-This file is intentionally not part of product completion semantics and may be removed in a later cleanup if repository evidence is centralized.
