@@ -1,4 +1,11 @@
 from .activity import ActivityEvent, ActivityLog
+from .attention import (
+    FOCUS_END_REASONS,
+    FOCUS_MODES,
+    FOCUS_STATES,
+    AttentionMemory,
+    FocusSession,
+)
 from .authority import (
     ACTION_CLASSES,
     APPROVAL_VALIDATION_STATUSES,
@@ -185,6 +192,7 @@ __all__ = [
     "ApprovalValidation",
     "Asset",
     "Artist",
+    "AttentionMemory",
     "AuthorityService",
     "AuthorityValidationError",
     "CONNECTED_TRANSITION_CHOICES",
@@ -207,6 +215,10 @@ __all__ = [
     "EvidenceClaim",
     "EvidenceMemory",
     "EvidenceResolution",
+    "FOCUS_END_REASONS",
+    "FOCUS_MODES",
+    "FOCUS_STATES",
+    "FocusSession",
     "FrictionMemory",
     "FrictionObservation",
     "FrictionPattern",
