@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-DAW-00B",
+  "receipt_id": "N0TE2-DAW-00C",
   "node_id": "DAW-00",
-  "increment_id": "DAW-00B",
-  "baseline_sha": "16e1ac9128a06ef27cfa08144fad94ab27a58f14",
-  "purpose": "Implement durable host-neutral workspace identity so project path/name/location observations never become identity and move/recovery can be distinguished explicitly from duplicate/fork without cross-Song context leakage.",
+  "increment_id": "DAW-00C",
+  "baseline_sha": "2746c8491c33d7c070a4fcfa5814958823828024",
+  "purpose": "Implement one host-neutral read-only FocusContext bound to the current DAW-00B workspace observation so exact deictic targeting is allowed only for current OBSERVED_EXACT dimensions and stale, ambiguous, inferred or unknown focus is refused rather than guessed.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,31 +14,28 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "Moving, renaming, Save-As, duplicating, forking or recovering a DAW project cannot silently attach the wrong Song/context or manufacture a new workspace identity from a filesystem path.",
+    "outcome": "Artist references such as this track, these notes or this section resolve safely across peer hosts or expose uncertainty instead of targeting the wrong musical object.",
     "journeys": ["J-WORKSPACE", "J-TRUST"],
-    "capability": "Stable workspace identity and explicit move/duplicate/fork/recovery reconciliation",
-    "increment": "DAW-00B"
+    "capability": "Universal FocusContext with exact-target and stale/ambiguity gate",
+    "increment": "DAW-00C"
   },
   "reuse": {
-    "mode": "CANONICAL_SQLITE_WORKSPACE_IDENTITY_OVER_SONG_AND_DAW00A_HOST_IDENTITY",
-    "n0te2_dependencies": ["CORE-01 Song/profile identity and durable SQLite", "CORE-01 Activity chronology", "DAW-00A peer host identity"],
-    "legacy_rejections": ["path equality as identity", "Ableton Set as universal workspace owner", "silent Save-As merge", "host process name as project identity", "cross-Song source lineage", "mutable workspace history"],
+    "mode": "PURE_VOLATILE_FOCUS_GATE_OVER_DAW00B_WORKSPACE_OBSERVATION",
+    "n0te2_dependencies": ["DAW-00A HostRuntimeIdentity", "DAW-00B WorkspaceMemory"],
+    "legacy_rejections": ["Ableton selection vocabulary as universal API", "guessing selected object", "inferred focus treated as exact", "stale focus reused after workspace change", "focus as mutation authority", "focus persisted as Song doctrine"],
     "direct_copy": false
   },
   "completion_proof": [
-    "move/rename and recovery append observations while preserving the same opaque workspace ID",
-    "duplicate and fork create distinct workspace IDs with explicit source-workspace lineage",
-    "cross-Song derivation/reconciliation is rejected",
-    "a location currently claimed by another workspace cannot silently merge identities",
-    "an old location becomes reusable after the original workspace has explicitly moved elsewhere without resurrecting the old identity",
-    "ambiguous SAVE_AS/unknown relation is rejected until caller chooses SAME_OR_MOVED, RECOVERED, DUPLICATE or FORK",
-    "an existing workspace cannot silently change host family; cross-host continuation must be an explicit fork/new workspace",
-    "runtime version changes remain observations and do not regenerate workspace identity",
-    "workspace identity and observation history are immutable/append-only and survive restart",
-    "runtime identity evidence is reproducibly fingerprint-validated on reopen and tampering fails visibly",
-    "current-location lookup returns observational candidates only; no get-by-path identity API exists",
-    "repeated reads write zero rows and workspace events enter canonical Activity chronology"
+    "TRACK, CLIP_REGION, TIME_RANGE, MIDI_NOTES, DEVICE_PLUGIN, AUTOMATION, PLAYHEAD, ACTIVE_EDITOR and SONG_SECTION are canonical focus dimensions",
+    "OBSERVED_EXACT focus can be required and returned as exact target refs",
+    "missing/UNKNOWN, OBSERVED_AMBIGUOUS and INFERRED dimensions refuse exact targeting",
+    "FocusContext is bound to exact workspace ID, Song ID, workspace observation ID and host-runtime fingerprint",
+    "workspace move/recovery or runtime-observation change invalidates prior focus as stale",
+    "cross-Song and wrong-host capture fail",
+    "dimension shape and duplicate dimension validation fail visibly",
+    "capture, current validation and exact-target reads write zero rows",
+    "FocusContextService exposes no host-specific selection or mutation verb"
   ],
-  "non_scope": ["FocusContext", "Host Shadow", "host feature registry", "process/project discovery", "filesystem watcher", "named DAW adapter", "capability scoring", "plugin hosting", "DAW mutation", "UI", "CORE-02 Success Memory", "hosted-CI proof-loop scaffolding"],
-  "next_selection_rule": "After DAW-00B evidence, reconcile and globally compare FocusContext, Host Shadow/reconciliation, feature/environment evidence and Musical IR/portability against preserved PLATFORM-00 and CORE-02. Do not select a named DAW adapter by historical maturity."
+  "non_scope": ["Host Shadow", "host feature registry", "host process/selection discovery", "named DAW adapter", "DAW mutation", "MIDI/OSC/control surface", "UI", "CORE-02 Success Memory", "platform packaging", "hosted-CI proof-loop scaffolding"],
+  "next_selection_rule": "After DAW-00C evidence, reconcile and globally compare Host Shadow/reconciliation, host feature/environment evidence, Musical IR/portability and remaining PLATFORM-00/CORE-02 work. Do not select a named DAW adapter by historical maturity."
 }
