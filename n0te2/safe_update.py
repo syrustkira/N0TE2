@@ -181,6 +181,26 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
             )
         return hold
 
+    def _release_recovery_coordination(
+        self,
+        plan: UpdatePlan,
+        process: ProcessIdentity,
+    ) -> str | None:
+        coordination_id = self._coordination_lease_id(plan.profile_id)
+        try:
+            coordination = self._leases.inspect(coordination_id)
+        except Exception as exc:
+            return f"update coordination ownership is unreadable during recovery cleanup: {exc}"
+        if coordination is None:
+            return None
+        if coordination.process.fingerprint != process.fingerprint:
+            return "update coordination ownership changed during recovery cleanup"
+        try:
+            self._release_coordination(plan.profile_id, process, coordination)
+        except Exception as exc:
+            return f"update coordination release failed during recovery cleanup: {exc}"
+        return None
+
     def _run_bound_schema_migration(self, data_root: Path, profile_id: str) -> None:
         context = self._schema_apply_context
         if context is None:
@@ -260,6 +280,28 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
         if validation_error is not None:
             raise validation_error
 
+    def _finish_guarded_recovery(
+        self,
+        *,
+        plan: UpdatePlan,
+        process: ProcessIdentity,
+        evidence: str,
+        reason: str,
+    ) -> UpdateResult:
+        coordination_problem = self._release_recovery_coordination(plan, process)
+        if coordination_problem is not None:
+            reason = f"{reason}; {coordination_problem}"
+        journal = self._read_journal(plan.update_id)
+        if journal.state == "VALIDATING":
+            journal = self._mark_recovery(
+                plan,
+                expected={"VALIDATING"},
+                evidence=evidence,
+                reason=reason,
+                install_receipt=journal.install_receipt,
+            )
+        return self._to_result(journal)
+
     def apply(self, **kwargs) -> UpdateResult:  # type: ignore[override]
         plan = kwargs.get("plan")
         manifest = kwargs.get("manifest")
@@ -282,26 +324,18 @@ class ApplicationUpdateCoordinator(_BaseApplicationUpdateCoordinator):
             try:
                 return super().apply(**guarded_kwargs)
             except _ValidationDatabaseOwnershipUncertain as exc:
-                journal = self._read_journal(plan.update_id)
-                if journal.state == "VALIDATING":
-                    journal = self._mark_recovery(
-                        plan,
-                        expected={"VALIDATING"},
-                        evidence="validation:database-release-uncertain",
-                        reason=str(exc),
-                        install_receipt=journal.install_receipt,
-                    )
-                return self._to_result(journal)
+                return self._finish_guarded_recovery(
+                    plan=plan,
+                    process=process,
+                    evidence="validation:database-release-uncertain",
+                    reason=str(exc),
+                )
             except _SchemaMigrationRecoveryRequired as exc:
-                journal = self._read_journal(plan.update_id)
-                if journal.state == "VALIDATING":
-                    journal = self._mark_recovery(
-                        plan,
-                        expected={"VALIDATING"},
-                        evidence="schema:migration-recovery-required",
-                        reason=str(exc),
-                        install_receipt=journal.install_receipt,
-                    )
-                return self._to_result(journal)
+                return self._finish_guarded_recovery(
+                    plan=plan,
+                    process=process,
+                    evidence="schema:migration-recovery-required",
+                    reason=str(exc),
+                )
         finally:
             self._schema_apply_context = None
