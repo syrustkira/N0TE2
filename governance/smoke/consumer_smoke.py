@@ -14,7 +14,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "UX-01" or state.get("active_increment") != "UX-01A":
+if state.get("active_node") != "UX-01" or state.get("active_increment") != "UX-01B":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
@@ -38,6 +38,7 @@ class NoRedirect(HTTPRedirectHandler):
 class Form:
     action: str
     values: dict[str, str]
+    text: str = ""
 
 
 class Parser(HTMLParser):
@@ -57,6 +58,10 @@ class Parser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "form":
             self.current = None
+
+    def handle_data(self, data: str) -> None:
+        if self.current is not None:
+            self.current.text += data
 
 
 def get(shell: ConsumerShell, path: str) -> tuple[int, str]:
@@ -81,10 +86,14 @@ def post(shell: ConsumerShell, path: str, values: dict[str, str]) -> tuple[int, 
         return exc.code, exc.read().decode("utf-8")
 
 
-def form(page: str, action: str) -> Form:
+def parsed_forms(page: str, action: str) -> list[Form]:
     parser = Parser()
     parser.feed(page)
-    matches = [candidate for candidate in parser.forms if candidate.action == action]
+    return [candidate for candidate in parser.forms if candidate.action == action]
+
+
+def form(page: str, action: str) -> Form:
+    matches = parsed_forms(page, action)
     assert len(matches) == 1
     return matches[0]
 
@@ -106,7 +115,7 @@ with tempfile.TemporaryDirectory() as temp:
     process = ProcessIdentity.from_start_token(
         PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
         pid=99011,
-        start_token="ux-01a-consumer-smoke",
+        start_token="ux-01b-consumer-smoke",
     )
     probe = Probe()
 
@@ -125,30 +134,40 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Artist name" in welcome
     assert "prf_" not in welcome
     create = form(welcome, "/profile/create")
-    create.values["artist_name"] = "Front Door Artist"
+    create.values["artist_name"] = "Focus Smoke Artist"
     status, _ = post(shell, "/profile/create", create.values)
     assert status == 303
-
-    status, home = get(shell, "/")
-    assert status == 200
-    assert "Front Door Artist" in home
-    assert "What are we making today?" in home
-    assert "prf_" not in home
-    profile_id = shell.runtime.profile_id
-    assert profile_id is not None
 
     status, song_page = get(shell, "/song")
     assert status == 200
     start = form(song_page, "/song/start")
-    start.values["song_title"] = "Front Door Song"
+    start.values["song_title"] = "Focus Smoke Song"
     status, _ = post(shell, "/song/start", start.values)
     assert status == 303
+    song = shell.runtime.headquarters.store.active_song()
+    assert song is not None
+    profile_id = shell.runtime.profile_id
+    assert profile_id is not None
 
-    for path in ("/song", "/now", "/settings", "/"):
+    status, now = get(shell, "/now")
+    assert status == 200
+    focus_forms = parsed_forms(now, "/focus/set")
+    assert len(focus_forms) == 5
+    make = next(candidate for candidate in focus_forms if "Make" in candidate.text)
+    status, _ = post(shell, "/focus/set", make.values)
+    assert status == 303
+    focus = shell.runtime.headquarters.attention.active_focus()
+    assert focus is not None
+    assert focus.mode == "MAKE"
+    assert focus.song_id == song.id
+
+    for path in ("/", "/song", "/now", "/settings"):
         status, page = get(shell, path)
         assert status == 200
-        assert "Front Door Artist" in page
-        assert "Front Door Song" in page
+        assert "Focus Smoke Artist" in page
+        assert "Focus Smoke Song" in page
+        assert "Make Focus" in page
+        assert "focus_" not in page
         assert "prf_" not in page
 
     assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
@@ -163,13 +182,21 @@ with tempfile.TemporaryDirectory() as temp:
         probe=probe,
     )
     relaunched.start()
-    status, resumed = get(relaunched, "/")
+    status, resumed = get(relaunched, "/now")
     assert status == 200
-    assert "Pick up where you left off" in resumed
-    assert "Front Door Artist" in resumed
-    assert "Front Door Song" in resumed
+    assert "Make Focus active" in resumed
+    assert "Focus Smoke Song" in resumed
+    focus = relaunched.runtime.headquarters.attention.active_focus()
+    assert focus is not None and focus.mode == "MAKE" and focus.song_id == song.id
+
+    end = form(resumed, "/focus/end")
+    status, _ = post(relaunched, "/focus/end", end.values)
+    assert status == 303
+    assert relaunched.runtime.headquarters.attention.active_focus() is None
+    status, open_now = get(relaunched, "/now")
+    assert "No Focus Session active" in open_now
     quit_shell(relaunched)
 
 print(
-    "UX-01A CONSUMER SMOKE: GREEN: a fresh local consumer entered N0TE through loopback-only Artist Headquarters, created an isolated Artist workspace without DAW/AI/provider setup, started a canonical Song, preserved Artist/Song context across Home/Song/Now/Settings, explicitly quit with runtime ownership released, and relaunched to the same durable Artist/Song state"
+    "UX-01B CONSUMER SMOKE: GREEN: a fresh local artist entered Headquarters, started a canonical Song, chose MAKE Focus through the real Now UI, preserved exact Artist/Song/Focus context across navigation and explicit Quit/relaunch, then explicitly ended Focus without DAW/provider/business mutation"
 )
