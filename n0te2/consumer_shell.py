@@ -701,7 +701,7 @@ class ConsumerShell:
             return
         ended = self.runtime.headquarters.attention.end_focus()
         self._consumer_notice = (
-            "Focus is already open."
+            "No Focus Session is active."
             if ended is None
             else f"{ended.mode} Focus ended. Headquarters is open again."
         )
