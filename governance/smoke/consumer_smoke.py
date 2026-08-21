@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import hashlib
 import json
 import sys
 from pathlib import Path
@@ -9,167 +8,178 @@ from pathlib import Path
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00D":
+if state.get("active_node") != "PLATFORM-00" or state.get("active_increment") != "PLATFORM-00E":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
 
-from n0te2.artifacts import (  # noqa: E402
-    ArtifactRecord,
-    ManifestAuthenticityEvidence,
-    ReleaseArtifactVerifier,
-    ReleaseManifest,
-)
+from n0te2.platforms import PlatformEnvironment  # noqa: E402
 from n0te2.support import SupportTarget  # noqa: E402
+from n0te2.worker import (  # noqa: E402
+    WorkerCapability,
+    WorkerEnvelope,
+    WorkerEnvelopeError,
+    WorkerIdentity,
+    WorkerRequest,
+    WorkerResult,
+)
 
 
-def digest(payload: bytes) -> str:
-    return hashlib.sha256(payload).hexdigest()
+app_target = SupportTarget.from_runtime_labels(os_name="Darwin", machine="arm64")
+arm_worker = WorkerIdentity(
+    "plugin_worker",
+    PlatformEnvironment.from_runtime_labels("Darwin", "arm64"),
+    "a" * 64,
+)
+arm_capability = WorkerCapability(
+    "cap:native-vst3",
+    "tool.process",
+    "VST3",
+    "NATIVE_ONLY",
+    ("ARM64",),
+)
+arm_request = WorkerRequest(
+    "req:native",
+    arm_worker.fingerprint,
+    app_target.fingerprint,
+    "tool.process",
+    "VST3",
+    "ARM64",
+    "b" * 64,
+    1500,
+)
+native_route = WorkerEnvelope.plan(
+    worker=arm_worker,
+    capability=arm_capability,
+    request=arm_request,
+    target=app_target,
+)
+assert native_route.foreign_architecture is False
+assert native_route.execution_mode == "NATIVE_ONLY"
 
+# The app remains ARM64. A foreign x86_64 workload is represented only by an
+# explicitly isolated x86_64 worker route on the same OS family.
+x64_worker = WorkerIdentity(
+    "plugin_worker",
+    PlatformEnvironment.from_runtime_labels("Darwin", "amd64"),
+    "c" * 64,
+)
+x64_capability = WorkerCapability(
+    "cap:isolated-vst3-x64",
+    "tool.process",
+    "VST3",
+    "ISOLATED_FOREIGN_ARCH",
+    ("X86_64",),
+)
+x64_request = WorkerRequest(
+    "req:foreign",
+    x64_worker.fingerprint,
+    app_target.fingerprint,
+    "tool.process",
+    "VST3",
+    "X86_64",
+    "d" * 64,
+    1500,
+)
+bridge_route = WorkerEnvelope.plan(
+    worker=x64_worker,
+    capability=x64_capability,
+    request=x64_request,
+    target=app_target,
+)
+assert bridge_route.foreign_architecture is True
+assert bridge_route.execution_mode == "ISOLATED_FOREIGN_ARCH"
+assert app_target.architecture == "ARM64"
+assert x64_worker.platform.architecture == "X86_64"
 
-mac = SupportTarget.from_runtime_labels(os_name="Darwin", machine="arm64")
-windows = SupportTarget.from_runtime_labels(os_name="Windows", machine="amd64")
-mac_bytes = b"n0te-macos-arm64-release"
-windows_bytes = b"n0te-windows-x64-release"
-
-manifest = ReleaseManifest(
-    release_id="release-current",
-    version="1.2.0",
-    source_commit_sha="a" * 40,
-    build_inputs_sha256="b" * 64,
-    dependency_inventory_sha256="c" * 64,
-    license_inventory_sha256="d" * 64,
-    artifacts=(
-        ArtifactRecord(
-            "mac-arm64",
-            mac.fingerprint,
-            "pkg",
-            len(mac_bytes),
-            digest(mac_bytes),
+# The same foreign worker cannot be laundered through a native-only claim.
+try:
+    WorkerEnvelope.plan(
+        worker=x64_worker,
+        capability=WorkerCapability(
+            "cap:false-native",
+            "tool.process",
+            "VST3",
+            "NATIVE_ONLY",
+            ("X86_64",),
         ),
-        ArtifactRecord(
-            "windows-x64",
-            windows.fingerprint,
-            "msix",
-            len(windows_bytes),
-            digest(windows_bytes),
-        ),
-    ),
-)
+        request=x64_request,
+        target=app_target,
+    )
+except WorkerEnvelopeError:
+    pass
+else:
+    raise AssertionError("foreign architecture was accepted as NATIVE_ONLY")
 
-missing_auth = ReleaseArtifactVerifier.verify(
-    manifest=manifest,
-    artifact_id="mac-arm64",
-    artifact_bytes=mac_bytes,
-    expected_target=mac,
-    authenticity=None,
+success = WorkerResult(
+    request_fingerprint=x64_request.fingerprint,
+    worker_fingerprint=x64_worker.fingerprint,
+    state="SUCCEEDED",
+    evidence_ref="worker:verified-result",
+    result_fingerprint="e" * 64,
+    receipt_ref="worker:receipt:1",
 )
-assert missing_auth.status == "MANIFEST_UNAUTHENTICATED"
+assert WorkerEnvelope.validate_result(
+    worker=x64_worker,
+    request=x64_request,
+    result=success,
+).state == "SUCCEEDED"
 
-auth = ManifestAuthenticityEvidence(
-    manifest_fingerprint=manifest.fingerprint,
-    status="VERIFIED",
-    verifier_id="platform-release-verifier",
-    scheme="platform-authenticity",
-    evidence_ref="verify:release-current",
-)
-ready = ReleaseArtifactVerifier.verify(
-    manifest=manifest,
-    artifact_id="mac-arm64",
-    artifact_bytes=mac_bytes,
-    expected_target=mac,
-    authenticity=auth,
-)
-assert ready.status == "READY"
+for non_success in ("FAILED", "CRASHED", "TIMED_OUT", "UNKNOWN"):
+    result = WorkerResult(
+        x64_request.fingerprint,
+        x64_worker.fingerprint,
+        non_success,
+        f"worker:{non_success.lower()}",
+    )
+    assert WorkerEnvelope.validate_result(
+        worker=x64_worker,
+        request=x64_request,
+        result=result,
+    ).state == non_success
 
-wrong_target = ReleaseArtifactVerifier.verify(
-    manifest=manifest,
-    artifact_id="mac-arm64",
-    artifact_bytes=mac_bytes,
-    expected_target=windows,
-    authenticity=auth,
+stale_request = WorkerRequest(
+    "req:other",
+    x64_worker.fingerprint,
+    app_target.fingerprint,
+    "tool.process",
+    "VST3",
+    "X86_64",
+    "d" * 64,
+    1500,
 )
-assert wrong_target.status == "TARGET_MISMATCH"
-
-tampered = bytearray(mac_bytes)
-tampered[-1] ^= 1
-tampered_result = ReleaseArtifactVerifier.verify(
-    manifest=manifest,
-    artifact_id="mac-arm64",
-    artifact_bytes=tampered,
-    expected_target=mac,
-    authenticity=auth,
-)
-assert tampered_result.status == "HASH_MISMATCH"
-
-other_manifest = ReleaseManifest(
-    release_id="release-other",
-    version="1.2.1",
-    source_commit_sha="e" * 40,
-    build_inputs_sha256="b" * 64,
-    dependency_inventory_sha256="c" * 64,
-    license_inventory_sha256="d" * 64,
-    artifacts=manifest.artifacts,
-)
-wrong_manifest_auth = ManifestAuthenticityEvidence(
-    manifest_fingerprint=other_manifest.fingerprint,
-    status="VERIFIED",
-    verifier_id="platform-release-verifier",
-    scheme="platform-authenticity",
-    evidence_ref="verify:release-other",
-)
-mismatch = ReleaseArtifactVerifier.verify(
-    manifest=manifest,
-    artifact_id="mac-arm64",
-    artifact_bytes=mac_bytes,
-    expected_target=mac,
-    authenticity=wrong_manifest_auth,
-)
-assert mismatch.status == "MANIFEST_MISMATCH"
-
-# Artifact trust deliberately does not enforce release ordering. An explicitly
-# selected older/rollback release can still pass the same authenticity/byte gates.
-rollback = ReleaseManifest(
-    release_id="release-rollback",
-    version="1.1.0",
-    source_commit_sha="f" * 40,
-    build_inputs_sha256="1" * 64,
-    dependency_inventory_sha256="2" * 64,
-    license_inventory_sha256="3" * 64,
-    artifacts=(
-        ArtifactRecord(
-            "mac-arm64",
-            mac.fingerprint,
-            "pkg",
-            len(mac_bytes),
-            digest(mac_bytes),
-        ),
-    ),
-)
-rollback_auth = ManifestAuthenticityEvidence(
-    manifest_fingerprint=rollback.fingerprint,
-    status="VERIFIED",
-    verifier_id="platform-release-verifier",
-    scheme="platform-authenticity",
-    evidence_ref="verify:release-rollback",
-)
-rollback_ready = ReleaseArtifactVerifier.verify(
-    manifest=rollback,
-    artifact_id="mac-arm64",
-    artifact_bytes=mac_bytes,
-    expected_target=mac,
-    authenticity=rollback_auth,
-)
-assert rollback_ready.status == "READY"
+try:
+    WorkerEnvelope.validate_result(
+        worker=x64_worker,
+        request=stale_request,
+        result=success,
+    )
+except WorkerEnvelopeError:
+    pass
+else:
+    raise AssertionError("result for another request was accepted")
 
 public = {
     name
-    for name in dir(ReleaseArtifactVerifier)
-    if not name.startswith("_") and callable(getattr(ReleaseArtifactVerifier, name))
+    for name in dir(WorkerEnvelope)
+    if not name.startswith("_") and callable(getattr(WorkerEnvelope, name))
 }
-assert public == {"verify"}
-assert not ({"install", "update", "rollback", "sign", "download", "execute"} & public)
+assert public == {"plan", "validate_result"}
+assert not (
+    {
+        "spawn",
+        "subprocess",
+        "ipc",
+        "load",
+        "process_audio",
+        "kill",
+        "install",
+        "execute",
+        "connect",
+    }
+    & public
+)
 
 print(
-    "PLATFORM-00D CONSUMER SMOKE: GREEN: unauthenticated manifest bytes failed closed, exact authenticated manifest+target+bytes became READY, wrong target and byte tampering were rejected distinctly, authenticity for another manifest revision could not authorize this release, an explicitly selected rollback artifact could still pass trust verification, and the verifier exposed no signing/install/update/download/execute verb"
+    "PLATFORM-00E CONSUMER SMOKE: GREEN: native ARM64 work stayed native, an x86_64 workload on the ARM64 app was accepted only through an explicit isolated same-OS x86_64 worker while the app target remained ARM64, pretending that worker was native was rejected, success required exact result/receipt evidence, failure/crash/timeout/unknown stayed distinct, stale results were rejected, and the worker envelope exposed no process/plugin execution verb"
 )
