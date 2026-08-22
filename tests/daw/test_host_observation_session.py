@@ -193,6 +193,24 @@ class HostObservationSessionTests(unittest.TestCase):
         self.assertIsNone(result.recorded_shadow_batch_id)
         self.assertEqual(len(result.studio.candidates), 1)
 
+    def test_current_shadow_without_capability_truth_is_truthfully_partial(self):
+        workspace, runtime = self.workspace()
+        binding = self.hq.host_observation.begin(
+            workspace.id, song_id=self.song.id, runtime=runtime
+        )
+        result = self.hq.host_observation.observe(
+            binding,
+            capabilities=(),
+            focus_dimensions=self.focus_dimensions(),
+            focus_evidence_ref="evidence:focus",
+            shadow=self.full_shadow(),
+            now_epoch_seconds=101,
+        )
+        self.assertEqual(result.status, "PARTIAL")
+        self.assertEqual(result.shadow.status, "CURRENT")
+        self.assertEqual(result.capability_environment.current, ())
+        self.assertEqual(result.studio.candidates, ())
+
     def test_stale_binding_rejects_before_new_observation_writes(self):
         workspace, runtime = self.workspace()
         binding = self.hq.host_observation.begin(
