@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .activity import ActivityLog
 from .attention import AttentionMemory
+from .capability_evidence import CapabilityEvidenceMemory
 from .context import ContextIsolationService
 from .evidence import EvidenceMemory
 from .focus import FocusContextService
@@ -34,6 +35,7 @@ class HeadquartersMemory:
         self.activity = ActivityLog(store)
         self.attention = AttentionMemory(store)
         self.workspaces = WorkspaceMemory(store)
+        self.capability_evidence = CapabilityEvidenceMemory(store, self.workspaces)
         self.shadow = HostShadow(store, self.workspaces)
         self.reconciliation = ReconciliationService(store, self.twins, self.shadow)
         self.focus = FocusContextService(self.workspaces)
