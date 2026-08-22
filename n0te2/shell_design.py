@@ -246,7 +246,7 @@ h1 {
 .stack { display: grid; gap: .75rem; }
 .row { min-width: 0; display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
 label { display: block; margin-bottom: .4rem; font-weight: 650; }
-input[type="text"] {
+input[type="text"], textarea {
   width: 100%;
   min-height: 46px;
   padding: .72rem .8rem;
@@ -256,6 +256,7 @@ input[type="text"] {
   border-radius: var(--radius-control);
   font: inherit;
 }
+textarea { resize: vertical; line-height: 1.5; }
 button, .button {
   min-width: 0;
   max-width: 100%;
@@ -282,7 +283,7 @@ button.primary, .button.primary, button[aria-pressed="true"] {
 }
 button.danger { color: var(--color-danger); }
 button:hover, .button:hover { filter: brightness(1.08); }
-button:focus-visible, a:focus-visible, input:focus-visible {
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
   outline: 3px solid var(--color-accent);
   outline-offset: 3px;
 }
@@ -345,7 +346,7 @@ footer { padding: 2rem 0 0; color: var(--color-muted); font-size: .85rem; overfl
     --color-muted: #d5dbe2;
     --color-border: #7e8996;
   }
-  .hero, .card, .brand-mark, input[type="text"], button, .button, .nav a[aria-current="page"] {
+  .hero, .card, .brand-mark, input[type="text"], textarea, button, .button, .nav a[aria-current="page"] {
     border-width: 2px;
   }
 }
@@ -372,7 +373,7 @@ footer { padding: 2rem 0 0; color: var(--color-muted); font-size: .85rem; overfl
     border-color: Highlight;
     forced-color-adjust: none;
   }
-  button:focus-visible, a:focus-visible, input:focus-visible { outline-color: Highlight; }
+  button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible { outline-color: Highlight; }
   .local-badge::before, .status::before { background: CanvasText; }
 }
 """.strip()
