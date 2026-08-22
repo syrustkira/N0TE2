@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-DAW-00F",
+  "receipt_id": "N0TE2-DAW-00G",
   "node_id": "DAW-00",
-  "increment_id": "DAW-00F",
-  "baseline_sha": "85041c82b3b2b0def3c540f1036b01930f12f024",
-  "purpose": "Complete the missing host-neutral truth seam between exact DAW workspace/runtime identity and the already-built capability resolver: persist append-only verified capability observations bound to the exact current workspace observation and host-runtime fingerprint, derive the current capability-by-environment state without letting stale observations survive a runtime/workspace change, and build StudioCapabilityProfile candidates only from explicit current evidence rather than caller-invented verification flags.",
+  "increment_id": "DAW-00G",
+  "baseline_sha": "950398b795934b5d9e260194aebe8d6061bfafd6",
+  "purpose": "Assemble the already-landed peer-host observation primitives into one host-neutral adapter read contract: a future DAW adapter starts from an exact current WorkspaceMemory observation, submits one bounded observation session containing explicit capability facts, FocusContext facts and Host Shadow facts, and receives one coherent current workspace/studio observation view without every adapter inventing different binding, staleness or truth semantics.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,32 +14,38 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "N0TE can truthfully distinguish what an exact DAW/runtime environment has verified, lacks, or has not yet proven, so later adapters and creative jobs do not advertise capability from a DAW name, historical maturity or caller assertion alone.",
+    "outcome": "Every supported DAW adapter reports observed workspace truth through one peer-neutral contract, so exact workspace/runtime, capability evidence, focus and Host Shadow cannot drift into host-specific parallel models.",
     "journeys": ["J-SONG-START-RESUME", "J-TRUST"],
-    "capability": "Verified capability x host x exact environment evidence feeding the peer-neutral StudioCapabilityProfile and CapabilityResolver",
-    "increment": "DAW-00F"
+    "capability": "Universal bound host-observation session over WorkspaceMemory + CapabilityEvidenceMemory + FocusContext + HostShadow",
+    "increment": "DAW-00G"
   },
+  "why_now": "DAW-00A-F are landed on canonical main. A/B/C establish host/workspace/focus identity; D/E establish Host Shadow/reconciliation; F establishes verified capability x exact-environment evidence. The remaining immediate shared blocker is that no canonical adapter-side observation session binds those primitives together before DAW-01 through DAW-06 can implement peer deep adapters.",
+  "instead_of": [
+    "Workspaces/Health capability UI is not selected because no real adapter observation lifecycle yet populates the truthful F substrate; a UI now would be mostly empty or manual-first.",
+    "Song version/asset continuity UI is not selected because write semantics exist but normal consumer ingestion still does not consistently create meaningful version/asset material; the current increment unlocks actual making paths more broadly.",
+    "Suggestion/template/randomize is not selected because persisted catalog, distance, lock and suppression state is still absent.",
+    "OPS-04 is READY but does not unblock the currently blocked Song production journeys or the six peer DAW adapters.",
+    "No host-specific adapter is selected because shared observation semantics must exist before one host can define them by accident."
+  ],
   "reuse": {
-    "mode": "BIND_NEW_APPEND_ONLY_CAPABILITY_EVIDENCE_TO_EXISTING_WORKSPACE_RUNTIME_IDENTITY_AND_EXISTING_CAPABILITY_RESOLUTION",
-    "n0te2_dependencies": ["DAW-00A HostRuntimeIdentity", "DAW-00B WorkspaceMemory/current observation", "DAW-00D HostShadow stale-on-workspace-observation semantics", "CORE-03A CapabilityCandidate/CapabilityResolver", "StudioCapabilityProfile pure truth surface", "CORE-01 canonical SQLite/Activity chronology"],
-    "legacy_rejections": ["Ableton-first feature registry", "whole-DAW green/support badge", "capability inferred from DAW family/name alone", "caller-provided verified=True treated as evidence", "adapter-provided artist preference masquerading as environment evidence", "stale capability truth surviving runtime/workspace observation changes", "automatic capability claims from installed plugin names", "provider entitlement inference", "host mutation or adapter execution", "real-host support claims without observed evidence"],
+    "mode": "ASSEMBLE_EXISTING_PEER_HOST_OBSERVATION_PRIMITIVES_WITHOUT_DUPLICATING_THEIR_STATE",
+    "n0te2_dependencies": ["DAW-00A HostRuntimeIdentity", "DAW-00B WorkspaceMemory", "DAW-00C FocusContextService", "DAW-00D HostShadow", "DAW-00E ReconciliationService", "DAW-00F CapabilityEvidenceMemory", "StudioCapabilityProfile/CapabilityResolver", "CORE-01 Activity chronology"],
+    "legacy_rejections": ["Ableton-specific session model", "adapter-owned Song/workspace identity", "whole-DAW support badge", "host name inferred capability", "manual-first adapter doctrine", "host-specific FocusContext schema", "unbound shadow/capability facts", "silently accepting a stale observation after workspace/runtime changes", "mutation execution disguised as observation"],
     "direct_copy": false
   },
   "completion_proof": [
-    "a capability observation is append-only and bound to one canonical workspace, its exact current workspace observation ID and exact host-runtime fingerprint",
-    "the observation records capability, stable route identity/kind, availability truth, evidence reference and environment-derived scoring attributes needed by CapabilityCandidate without using host family/brand as a score bonus",
-    "artist user_preference is not persisted as environment evidence; derived candidates remain neutral until a separately owned artist-preference contract exists",
-    "verified AVAILABLE and verified UNAVAILABLE truth require explicit evidence; UNKNOWN remains representable and unverified rather than disappearing",
-    "a workspace/runtime observation change makes prior capability observations stale for current resolution instead of silently carrying them forward",
-    "current capability state is derived deterministically from append-only history; an older late probe cannot supersede newer evidence and SQLite enforces non-regressing observation time",
-    "one stable route ID cannot silently switch route kind inside one exact environment; the database and reopen validation fail closed on route-kind drift",
-    "StudioCapabilityProfile can be built from the current evidence state so CapabilityResolver no longer needs callers to invent verified/compatible flags for host-native candidates",
-    "peer-host behavior is identical for Ableton Live, FL Studio, Logic Pro, Pro Tools, Studio One, REAPER and GENERIC_OTHER; no host gets scheduling, scoring or truth priority",
-    "workspace/Song/profile isolation is preserved and capability evidence cannot cross workspace observation or host-runtime boundaries",
-    "capability evidence writes create inspectable canonical Activity history but do not mutate Song/version/assets, Session history, Host Shadow, FocusContext, Operations, DAWs or providers",
-    "corrupt/tampered persisted capability evidence or missing schema hooks fail closed on reopen",
-    "authored unit/integration proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
+    "one immutable host-observation binding identifies the canonical workspace ID, exact current workspace-observation ID and exact host-runtime fingerprint before adapter facts are accepted",
+    "adapter input uses peer-neutral capability/focus/shadow observation values and never supplies a second Song/workspace identity model",
+    "all submitted facts are validated against the same expected observation binding before any observation-layer writes begin; a workspace/runtime change invalidates the session before new capability or shadow evidence is accepted",
+    "capability facts are persisted only through CapabilityEvidenceMemory and therefore preserve F availability/evidence/preference-separation rules",
+    "focus is produced only through FocusContextService for the exact current workspace observation and remains read-only/stale-safe rather than becoming a second persistent selection model",
+    "Host Shadow facts are persisted only through HostShadow and bind the exact same workspace observation/runtime evidence",
+    "the resulting observation view exposes WorkspaceState + current CapabilityEnvironment/StudioCapabilityProfile + FocusContext + HostShadowState with one shared binding so downstream Recipes and adapters can reason over one environment",
+    "partial/failed observation layers are never reported as one successful coherent session; any independently persisted append-only observation remains truthful and inspectable rather than being silently rewritten",
+    "all six core DAWs plus GENERIC_OTHER use the identical observation-session contract; no host-specific field, rank or special-case routing is admitted",
+    "no observation session mutates a DAW, Song/version/assets, Session memory, EvidenceMemory doctrine, approval, provider or external service",
+    "authored tests cover stale binding, cross-workspace facts, capability/shadow/focus mismatch, same-host and peer-host cases, no-mutation invariants and reopen continuity; executed evidence remains separate and UNOBSERVED unless actually seen"
   ],
-  "non_scope": ["real DAW probing/adapters", "host-specific mutation", "full installed plugin/content inventory", "licensing/entitlement truth", "hardware inventory", "provider plans/quotas", "artist preference storage", "consumer Workspaces/Health UI", "whole-DAW support badges", "portability execution", "DAW adapter acceptance", "audio analysis", "Song creative suggestions/templates/randomize", "OPS communications", "Gate-B customer acceptance"],
-  "next_selection_rule": "After DAW-00F lands, globally re-audit DAW-00 remaining requirements and all eligible nodes. Do not automatically continue to a host adapter: compare consumer Workspaces/Health reachability, environment fingerprint expansion, portability/integration chassis, remaining Song outcomes and OPS-04 by customer value and truthful substrate."
+  "non_scope": ["host-specific probes/adapters", "host mutation/command execution", "Musical IR compiler", "transaction execution integration", "portability intent capsules", "ARA", "Ableton Link/Link Audio", "plugin/content/hardware inventory", "entitlements/licenses", "consumer Workspaces/Health UI", "whole-DAW support claims", "Song creative generation", "OPS communications", "Gate-B acceptance"],
+  "next_selection_rule": "After DAW-00G lands or blocks, return to the whole graph. Compare remaining DAW-00 mutation/IR/portability/interchange chassis against consumer Workspaces/Health reachability, remaining SONG-01 outcomes, UX and OPS-04. Do not automatically select DAW-00H or any named host adapter."
 }
