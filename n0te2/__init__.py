@@ -29,6 +29,14 @@ from .capabilities import (
     ResolutionConstraints,
     ScoreContribution,
 )
+from .capability_evidence import (
+    CAPABILITY_AVAILABILITY,
+    CAPABILITY_EVIDENCE_KINDS,
+    CapabilityEnvironmentState,
+    CapabilityEvidenceError,
+    CapabilityEvidenceMemory,
+    CapabilityObservation,
+)
 from .context import (
     CONTEXT_IMPORT_AUTHORITY,
     CONTEXT_IMPORT_SCOPES,
@@ -195,6 +203,8 @@ __all__ = [
     "AttentionMemory",
     "AuthorityService",
     "AuthorityValidationError",
+    "CAPABILITY_AVAILABILITY",
+    "CAPABILITY_EVIDENCE_KINDS",
     "CONNECTED_TRANSITION_CHOICES",
     "CONTEXT_IMPORT_AUTHORITY",
     "CONTEXT_IMPORT_SCOPES",
@@ -202,6 +212,10 @@ __all__ = [
     "CandidateAssessment",
     "CandidateRejection",
     "CapabilityCandidate",
+    "CapabilityEnvironmentState",
+    "CapabilityEvidenceError",
+    "CapabilityEvidenceMemory",
+    "CapabilityObservation",
     "CapabilityResolution",
     "CapabilityResolutionError",
     "CapabilityResolver",
