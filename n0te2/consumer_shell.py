@@ -932,7 +932,7 @@ class ConsumerShell:
                 "running-settings",
                 "Your N0TE",
                 "Settings",
-                "This shell is local. DAWs, AI, and external services are set up only when a specific job needs them.",
+                "This shell is local. DAWs, AI, and external services are set up only when a job needs them.",
                 artist_name=artist.display_name,
                 song_title=None if song is None else song.title,
             )
