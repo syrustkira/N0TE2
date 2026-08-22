@@ -14,7 +14,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "UX-01" or state.get("active_increment") != "UX-01B":
+if state.get("active_node") != "UX-01" or state.get("active_increment") != "UX-01C":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
@@ -22,6 +22,7 @@ if state.get("active_node") != "UX-01" or state.get("active_increment") != "UX-0
 from n0te2.consumer_shell import ConsumerShell  # noqa: E402
 from n0te2.instance import InstanceLeaseManager, ProcessIdentity  # noqa: E402
 from n0te2.platforms import PlatformEnvironment  # noqa: E402
+from n0te2.shell_design import SHELL_CSS  # noqa: E402
 
 
 class Probe:
@@ -115,7 +116,7 @@ with tempfile.TemporaryDirectory() as temp:
     process = ProcessIdentity.from_start_token(
         PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
         pid=99011,
-        start_token="ux-01b-consumer-smoke",
+        start_token="ux-01c-consumer-smoke",
     )
     probe = Probe()
 
@@ -133,15 +134,24 @@ with tempfile.TemporaryDirectory() as temp:
     assert "Welcome to your Headquarters" in welcome
     assert "Artist name" in welcome
     assert "prf_" not in welcome
+
+    status, css = get(shell, "/assets/shell.css")
+    assert status == 200
+    assert css == SHELL_CSS
+    assert "@media (prefers-reduced-motion: reduce)" in css
+    assert "@media (prefers-contrast: more)" in css
+    assert "@media (forced-colors: active)" in css
+    assert "grid-auto-columns: minmax(5.5rem, 1fr)" in css
+
     create = form(welcome, "/profile/create")
-    create.values["artist_name"] = "Focus Smoke Artist"
+    create.values["artist_name"] = "Accessible Focus Smoke Artist"
     status, _ = post(shell, "/profile/create", create.values)
     assert status == 303
 
     status, song_page = get(shell, "/song")
     assert status == 200
     start = form(song_page, "/song/start")
-    start.values["song_title"] = "Focus Smoke Song"
+    start.values["song_title"] = "Accessible Focus Smoke Song"
     status, _ = post(shell, "/song/start", start.values)
     assert status == 303
     song = shell.runtime.headquarters.store.active_song()
@@ -153,6 +163,8 @@ with tempfile.TemporaryDirectory() as temp:
     assert status == 200
     focus_forms = parsed_forms(now, "/focus/set")
     assert len(focus_forms) == 5
+    assert now.count('aria-pressed="false"') == 5
+    assert 'aria-pressed="true"' not in now
     make = next(candidate for candidate in focus_forms if "Make" in candidate.text)
     status, _ = post(shell, "/focus/set", make.values)
     assert status == 303
@@ -161,14 +173,22 @@ with tempfile.TemporaryDirectory() as temp:
     assert focus.mode == "MAKE"
     assert focus.song_id == song.id
 
+    status, focused_now = get(shell, "/now")
+    assert status == 200
+    assert focused_now.count('aria-pressed="true"') == 1
+    assert focused_now.count('aria-pressed="false"') == 4
+    assert "Make Focus active" in focused_now
+
     for path in ("/", "/song", "/now", "/settings"):
         status, page = get(shell, path)
         assert status == 200
-        assert "Focus Smoke Artist" in page
-        assert "Focus Smoke Song" in page
+        assert "Accessible Focus Smoke Artist" in page
+        assert "Accessible Focus Smoke Song" in page
         assert "Make Focus" in page
         assert "focus_" not in page
         assert "prf_" not in page
+        assert "sqlite" not in page.lower()
+        assert "traceback" not in page.lower()
 
     assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
     closed = quit_shell(shell)
@@ -185,7 +205,8 @@ with tempfile.TemporaryDirectory() as temp:
     status, resumed = get(relaunched, "/now")
     assert status == 200
     assert "Make Focus active" in resumed
-    assert "Focus Smoke Song" in resumed
+    assert 'aria-pressed="true"' in resumed
+    assert "Accessible Focus Smoke Song" in resumed
     focus = relaunched.runtime.headquarters.attention.active_focus()
     assert focus is not None and focus.mode == "MAKE" and focus.song_id == song.id
 
@@ -195,8 +216,9 @@ with tempfile.TemporaryDirectory() as temp:
     assert relaunched.runtime.headquarters.attention.active_focus() is None
     status, open_now = get(relaunched, "/now")
     assert "No Focus Session active" in open_now
+    assert open_now.count('aria-pressed="false"') == 5
     quit_shell(relaunched)
 
 print(
-    "UX-01B CONSUMER SMOKE: GREEN: a fresh local artist entered Headquarters, started a canonical Song, chose MAKE Focus through the real Now UI, preserved exact Artist/Song/Focus context across navigation and explicit Quit/relaunch, then explicitly ended Focus without DAW/provider/business mutation"
+    "UX-01C CONSUMER SMOKE: GREEN: the real local Headquarters serves its canonical accessibility/design CSS, exposes semantic Focus selection, preserves Artist/Song/Focus context across navigation and explicit Quit/relaunch, hides internal plumbing, and keeps existing lifecycle authority intact"
 )
