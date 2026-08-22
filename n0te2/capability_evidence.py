@@ -77,8 +77,10 @@ def _bool(value: bool, field: str) -> bool:
     return value
 
 
-def _candidate_id(route_id: str, capability: str) -> str:
-    payload = f"n0te-capability-route/v1\x00{route_id}\x00{capability}".encode("utf-8")
+def _candidate_id(route_kind: str, route_id: str, capability: str) -> str:
+    payload = (
+        f"n0te-capability-route/v1\x00{route_kind}\x00{route_id}\x00{capability}"
+    ).encode("utf-8")
     return "caproute_" + hashlib.sha256(payload).hexdigest()
 
 
@@ -106,12 +108,11 @@ class CapabilityObservation:
     reversibility: float
     cost_efficiency: float
     portability: float
-    user_preference: float
     paid: bool
 
     @property
     def candidate_id(self) -> str:
-        return _candidate_id(self.route_id, self.capability)
+        return _candidate_id(self.route_kind, self.route_id, self.capability)
 
     @property
     def verified(self) -> bool:
@@ -145,7 +146,7 @@ class CapabilityObservation:
             reversibility=self.reversibility,
             cost_efficiency=self.cost_efficiency,
             portability=self.portability,
-            user_preference=self.user_preference,
+            user_preference=0.5,
             paid=self.paid,
         )
 
@@ -171,16 +172,18 @@ class CapabilityEnvironmentState:
 class CapabilityEvidenceMemory:
     """Append-only capability truth bound to one exact current DAW environment.
 
-    This layer does not probe a DAW, infer support from a host name, rank routes or
-    execute anything. It accepts explicit probe/test/fact results only when they are
-    still bound to the exact current WorkspaceObservation, preserves their history,
-    and derives the existing CapabilityCandidate/StudioCapabilityProfile view.
+    This layer does not probe a DAW, infer support from a host name, store artist
+    preference, rank routes or execute anything. It accepts explicit probe/test/fact
+    results only while they still match the current WorkspaceObservation, preserves
+    history, and derives the existing CapabilityCandidate/StudioCapabilityProfile view.
     """
 
     _TRIGGER_NAMES = {
         "capability_observations_immutable_update",
         "capability_observations_immutable_delete",
         "capability_observation_matches_current_workspace",
+        "capability_observation_time_nonregressing",
+        "capability_route_kind_stable",
         "activity_capability_observation",
     }
 
@@ -235,6 +238,29 @@ class CapabilityEvidenceMemory:
             )
             BEGIN
                 SELECT RAISE(ABORT, 'capability evidence is not bound to the current workspace observation');
+            END""",
+            """CREATE TRIGGER capability_observation_time_nonregressing
+            BEFORE INSERT ON capability_observations
+            WHEN EXISTS (
+                SELECT 1 FROM capability_observations prior
+                WHERE prior.workspace_observation_id=NEW.workspace_observation_id
+                  AND prior.capability=NEW.capability
+                  AND prior.route_id=NEW.route_id
+                  AND prior.observed_at_epoch_seconds>NEW.observed_at_epoch_seconds
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'capability evidence observation time regressed');
+            END""",
+            """CREATE TRIGGER capability_route_kind_stable
+            BEFORE INSERT ON capability_observations
+            WHEN EXISTS (
+                SELECT 1 FROM capability_observations prior
+                WHERE prior.workspace_observation_id=NEW.workspace_observation_id
+                  AND prior.route_id=NEW.route_id
+                  AND prior.route_kind<>NEW.route_kind
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'capability route kind changed within one environment');
             END""",
             """CREATE TRIGGER activity_capability_observation
             AFTER INSERT ON capability_observations
@@ -313,7 +339,6 @@ class CapabilityEvidenceMemory:
                         reversibility REAL NOT NULL CHECK(reversibility >= 0.0 AND reversibility <= 1.0),
                         cost_efficiency REAL NOT NULL CHECK(cost_efficiency >= 0.0 AND cost_efficiency <= 1.0),
                         portability REAL NOT NULL CHECK(portability >= 0.0 AND portability <= 1.0),
-                        user_preference REAL NOT NULL CHECK(user_preference >= 0.0 AND user_preference <= 1.0),
                         paid INTEGER NOT NULL CHECK(paid IN (0,1)),
                         CHECK(
                             availability='UNKNOWN'
@@ -341,6 +366,15 @@ class CapabilityEvidenceMemory:
             ) from exc
 
     @staticmethod
+    def _select_columns() -> str:
+        return (
+            "seq,id,workspace_id,workspace_observation_id,host_runtime_fingerprint,"
+            "route_id,route_kind,capability,display_name,brand,availability,"
+            "evidence_kind,evidence_ref,observed_at_epoch_seconds,task_fit,editability,"
+            "locality,privacy,latency,reversibility,cost_efficiency,portability,paid"
+        )
+
+    @staticmethod
     def _observation(row: sqlite3.Row) -> CapabilityObservation:
         return CapabilityObservation(
             sequence=int(row["seq"]),
@@ -365,18 +399,7 @@ class CapabilityEvidenceMemory:
             reversibility=float(row["reversibility"]),
             cost_efficiency=float(row["cost_efficiency"]),
             portability=float(row["portability"]),
-            user_preference=float(row["user_preference"]),
             paid=bool(row["paid"]),
-        )
-
-    @staticmethod
-    def _select_columns() -> str:
-        return (
-            "seq,id,workspace_id,workspace_observation_id,host_runtime_fingerprint,"
-            "route_id,route_kind,capability,display_name,brand,availability,"
-            "evidence_kind,evidence_ref,observed_at_epoch_seconds,task_fit,editability,"
-            "locality,privacy,latency,reversibility,cost_efficiency,portability,"
-            "user_preference,paid"
         )
 
     def _rows_for_workspace(self, workspace_id: str) -> tuple[CapabilityObservation, ...]:
@@ -396,6 +419,7 @@ class CapabilityEvidenceMemory:
                 for row in self._conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='trigger' "
                     "AND (name LIKE 'capability_observation%' "
+                    "OR name LIKE 'capability_route_kind%' "
                     "OR name='activity_capability_observation')"
                 )
             }
@@ -404,7 +428,9 @@ class CapabilityEvidenceMemory:
                 raise LineageCorruptionError(
                     f"capability evidence hooks are incomplete: {sorted(missing)}"
                 )
+
             last_time: dict[tuple[str, str, str], int] = {}
+            route_kinds: dict[tuple[str, str], str] = {}
             for row in self._conn.execute(
                 f"SELECT {self._select_columns()} FROM capability_observations ORDER BY seq"
             ):
@@ -420,8 +446,13 @@ class CapabilityEvidenceMemory:
                         "verified capability evidence is missing its evidence reference"
                     )
                 for field_name in (
-                    "id", "workspace_id", "workspace_observation_id",
-                    "host_runtime_fingerprint", "route_id", "capability", "display_name",
+                    "id",
+                    "workspace_id",
+                    "workspace_observation_id",
+                    "host_runtime_fingerprint",
+                    "route_id",
+                    "capability",
+                    "display_name",
                 ):
                     value = str(getattr(item, field_name))
                     if not value.strip() or value != value.strip():
@@ -448,7 +479,6 @@ class CapabilityEvidenceMemory:
                     (item.reversibility, "reversibility"),
                     (item.cost_efficiency, "cost_efficiency"),
                     (item.portability, "portability"),
-                    (item.user_preference, "user_preference"),
                 ):
                     if not 0.0 <= value <= 1.0:
                         raise LineageCorruptionError(
@@ -468,15 +498,33 @@ class CapabilityEvidenceMemory:
                     raise LineageCorruptionError(
                         "capability evidence crosses a workspace/runtime boundary"
                     )
-                key = (item.workspace_observation_id, item.capability, item.route_id)
-                prior_time = last_time.get(key)
+
+                time_key = (item.workspace_observation_id, item.capability, item.route_id)
+                prior_time = last_time.get(time_key)
                 if prior_time is not None and item.observed_at_epoch_seconds < prior_time:
                     raise LineageCorruptionError(
                         "capability evidence observation time regressed"
                     )
-                last_time[key] = item.observed_at_epoch_seconds
+                last_time[time_key] = item.observed_at_epoch_seconds
+
+                route_key = (item.workspace_observation_id, item.route_id)
+                prior_kind = route_kinds.get(route_key)
+                if prior_kind is not None and prior_kind != item.route_kind:
+                    raise LineageCorruptionError(
+                        "capability route kind changed within one environment"
+                    )
+                route_kinds[route_key] = item.route_kind
+
                 try:
-                    item.to_candidate(now_epoch_seconds=item.observed_at_epoch_seconds)
+                    candidate = item.to_candidate(
+                        now_epoch_seconds=item.observed_at_epoch_seconds
+                    )
+                    if candidate.user_preference != 0.5:
+                        raise LineageCorruptionError(
+                            "capability evidence leaked artist preference"
+                        )
+                except LineageCorruptionError:
+                    raise
                 except Exception as exc:
                     raise LineageCorruptionError(
                         "capability evidence cannot reconstruct its candidate fact"
@@ -554,7 +602,6 @@ class CapabilityEvidenceMemory:
         reversibility: float = 0.5,
         cost_efficiency: float = 0.5,
         portability: float = 0.5,
-        user_preference: float = 0.5,
         paid: bool = False,
     ) -> CapabilityObservation:
         state = self.workspaces.state(workspace_id)
@@ -596,7 +643,6 @@ class CapabilityEvidenceMemory:
             "reversibility": _score(reversibility, "reversibility"),
             "cost_efficiency": _score(cost_efficiency, "cost_efficiency"),
             "portability": _score(portability, "portability"),
-            "user_preference": _score(user_preference, "user_preference"),
         }
         verified = availability != "UNKNOWN"
         compatible = availability != "UNAVAILABLE"
@@ -606,7 +652,7 @@ class CapabilityEvidenceMemory:
             )
         try:
             CapabilityCandidate(
-                candidate_id=_candidate_id(route_id, capability),
+                candidate_id=_candidate_id(route_kind, route_id, capability),
                 route_kind=route_kind,
                 capability=capability,
                 display_name=display_name,
@@ -615,6 +661,7 @@ class CapabilityEvidenceMemory:
                 compatible=compatible,
                 evidence_ref=evidence_ref,
                 evidence_age_seconds=0,
+                user_preference=0.5,
                 paid=paid,
                 **scores,
             )
@@ -623,15 +670,27 @@ class CapabilityEvidenceMemory:
                 "capability evidence cannot form a valid candidate fact"
             ) from exc
 
-        prior = self._conn.execute(
+        prior_time = self._conn.execute(
             "SELECT observed_at_epoch_seconds FROM capability_observations "
             "WHERE workspace_observation_id=? AND capability=? AND route_id=? "
             "ORDER BY seq DESC LIMIT 1",
             (current.id, capability, route_id),
         ).fetchone()
-        if prior is not None and observed_at < int(prior["observed_at_epoch_seconds"]):
+        if (
+            prior_time is not None
+            and observed_at < int(prior_time["observed_at_epoch_seconds"])
+        ):
             raise CapabilityEvidenceError(
                 "capability evidence observation time regressed for current route/capability"
+            )
+        prior_kind = self._conn.execute(
+            "SELECT route_kind FROM capability_observations "
+            "WHERE workspace_observation_id=? AND route_id=? ORDER BY seq DESC LIMIT 1",
+            (current.id, route_id),
+        ).fetchone()
+        if prior_kind is not None and str(prior_kind["route_kind"]) != route_kind:
+            raise CapabilityEvidenceError(
+                "capability route kind changed within one environment"
             )
 
         observation_id = _new_id("capev")
@@ -643,16 +702,30 @@ class CapabilityEvidenceMemory:
                     "route_id,route_kind,capability,display_name,brand,availability,"
                     "evidence_kind,evidence_ref,observed_at_epoch_seconds,task_fit,"
                     "editability,locality,privacy,latency,reversibility,cost_efficiency,"
-                    "portability,user_preference,paid) "
-                    "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    "portability,paid) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
-                        observation_id, state.workspace.id, current.id,
-                        current.host_runtime_fingerprint, route_id, route_kind,
-                        capability, display_name, brand, availability, evidence_kind,
-                        evidence_ref, observed_at, scores["task_fit"], scores["editability"],
-                        scores["locality"], scores["privacy"], scores["latency"],
-                        scores["reversibility"], scores["cost_efficiency"],
-                        scores["portability"], scores["user_preference"], int(paid),
+                        observation_id,
+                        state.workspace.id,
+                        current.id,
+                        current.host_runtime_fingerprint,
+                        route_id,
+                        route_kind,
+                        capability,
+                        display_name,
+                        brand,
+                        availability,
+                        evidence_kind,
+                        evidence_ref,
+                        observed_at,
+                        scores["task_fit"],
+                        scores["editability"],
+                        scores["locality"],
+                        scores["privacy"],
+                        scores["latency"],
+                        scores["reversibility"],
+                        scores["cost_efficiency"],
+                        scores["portability"],
+                        int(paid),
                     ),
                 )
         except sqlite3.DatabaseError as exc:
