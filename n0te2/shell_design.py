@@ -227,6 +227,7 @@ h1 {
   padding: 1.25rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-panel);
+  background: var(--color-surface);
   background: color-mix(in srgb, var(--color-surface) 94%, transparent);
 }
 .card h2 { margin: 0 0 .45rem; font-size: 1.05rem; overflow-wrap: anywhere; }
@@ -255,6 +256,7 @@ input[type="text"] {
 }
 button, .button {
   min-width: 0;
+  max-width: 100%;
   min-height: var(--target-min);
   display: inline-flex;
   align-items: center;
@@ -326,7 +328,6 @@ footer { padding: 2rem 0 0; color: var(--color-muted); font-size: .85rem; overfl
 @media (max-width: 420px) {
   .topbar { align-items: flex-start; flex-direction: column; }
   .topbar > .row { width: 100%; justify-content: flex-start; }
-  button, .button { max-width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
