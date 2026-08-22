@@ -15,7 +15,7 @@ from .profiles import ApplicationProfile, ApplicationProfiles, ProfileResolution
 from .shell_design import SHELL_CSS
 
 _LOOPBACK_HOST = "127.0.0.1"
-_MAX_FORM_BYTES = 16384
+_MAX_FORM_BYTES = 32768
 _MAX_ARTIST_NAME = 120
 _MAX_SONG_TITLE = 200
 _MAX_SESSION_OBJECTIVE = 500
