@@ -245,9 +245,11 @@ class HostObservationResult:
             raise TypeError("focus must be FocusContext")
         if not isinstance(self.shadow, HostShadowState):
             raise TypeError("shadow must be HostShadowState")
-        if status == "COMPLETE" and self.shadow.status != "CURRENT":
+        if status == "COMPLETE" and (
+            self.shadow.status != "CURRENT" or not self.capability_environment.current
+        ):
             raise HostObservationError(
-                "COMPLETE host observation requires a CURRENT Host Shadow"
+                "COMPLETE host observation requires CURRENT shadow and capability truth"
             )
         object.__setattr__(self, "status", status)
         object.__setattr__(
@@ -525,7 +527,11 @@ class HostObservationCoordinator:
                 "observation layers no longer share the same workspace binding"
             )
 
-        status = "COMPLETE" if shadow_state.status == "CURRENT" else "PARTIAL"
+        status = (
+            "COMPLETE"
+            if shadow_state.status == "CURRENT" and capability_environment.current
+            else "PARTIAL"
+        )
         return HostObservationResult(
             status=status,
             binding=binding,
