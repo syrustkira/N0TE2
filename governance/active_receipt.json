@@ -30,21 +30,23 @@
   "reuse": {
     "mode": "ASSEMBLE_EXISTING_PEER_HOST_OBSERVATION_PRIMITIVES_WITHOUT_DUPLICATING_THEIR_STATE",
     "n0te2_dependencies": ["DAW-00A HostRuntimeIdentity", "DAW-00B WorkspaceMemory", "DAW-00C FocusContextService", "DAW-00D HostShadow", "DAW-00E ReconciliationService", "DAW-00F CapabilityEvidenceMemory", "StudioCapabilityProfile/CapabilityResolver", "CORE-01 Activity chronology"],
-    "legacy_rejections": ["Ableton-specific session model", "adapter-owned Song/workspace identity", "whole-DAW support badge", "host name inferred capability", "manual-first adapter doctrine", "host-specific FocusContext schema", "unbound shadow/capability facts", "silently accepting a stale observation after workspace/runtime changes", "mutation execution disguised as observation"],
+    "legacy_rejections": ["Ableton-specific session model", "adapter-owned Song/workspace identity", "whole-DAW support badge", "host name inferred capability", "manual-first adapter doctrine", "host-specific FocusContext schema", "unbound shadow/capability facts", "silently accepting a stale observation after workspace/runtime changes", "mutation execution disguised as observation", "CURRENT Host Shadow treated as complete environment truth when capability evidence is empty"],
     "direct_copy": false
   },
   "completion_proof": [
     "one immutable host-observation binding identifies the canonical workspace ID, exact current workspace-observation ID and exact host-runtime fingerprint before adapter facts are accepted",
     "adapter input uses peer-neutral capability/focus/shadow observation values and never supplies a second Song/workspace identity model",
     "all submitted facts are validated against the same expected observation binding before any observation-layer writes begin; a workspace/runtime change invalidates the session before new capability or shadow evidence is accepted",
+    "the session clock may not predate submitted or already-current capability evidence; those cases fail preflight before new observation writes",
     "capability facts are persisted only through CapabilityEvidenceMemory and therefore preserve F availability/evidence/preference-separation rules",
     "focus is produced only through FocusContextService for the exact current workspace observation and remains read-only/stale-safe rather than becoming a second persistent selection model",
     "Host Shadow facts are persisted only through HostShadow and bind the exact same workspace observation/runtime evidence",
     "the resulting observation view exposes WorkspaceState + current CapabilityEnvironment/StudioCapabilityProfile + FocusContext + HostShadowState with one shared binding so downstream Recipes and adapters can reason over one environment",
+    "COMPLETE requires both a CURRENT Host Shadow and at least one current capability observation; empty capability truth remains PARTIAL rather than implying a green environment",
     "partial/failed observation layers are never reported as one successful coherent session; any independently persisted append-only observation remains truthful and inspectable rather than being silently rewritten",
     "all six core DAWs plus GENERIC_OTHER use the identical observation-session contract; no host-specific field, rank or special-case routing is admitted",
     "no observation session mutates a DAW, Song/version/assets, Session memory, EvidenceMemory doctrine, approval, provider or external service",
-    "authored tests cover stale binding, cross-workspace facts, capability/shadow/focus mismatch, same-host and peer-host cases, no-mutation invariants and reopen continuity; executed evidence remains separate and UNOBSERVED unless actually seen"
+    "authored tests cover coherent complete/partial states, stale binding, wrong Song/runtime, route conflicts, Shadow baseline safety, session-clock safety, later-layer failure semantics, peer hosts, no-mutation invariants and reopen continuity; executed evidence remains separate and UNOBSERVED unless actually seen"
   ],
   "non_scope": ["host-specific probes/adapters", "host mutation/command execution", "Musical IR compiler", "transaction execution integration", "portability intent capsules", "ARA", "Ableton Link/Link Audio", "plugin/content/hardware inventory", "entitlements/licenses", "consumer Workspaces/Health UI", "whole-DAW support claims", "Song creative generation", "OPS communications", "Gate-B acceptance"],
   "next_selection_rule": "After DAW-00G lands or blocks, return to the whole graph. Compare remaining DAW-00 mutation/IR/portability/interchange chassis against consumer Workspaces/Health reachability, remaining SONG-01 outcomes, UX and OPS-04. Do not automatically select DAW-00H or any named host adapter."
