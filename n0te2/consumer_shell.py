@@ -15,9 +15,12 @@ from .profiles import ApplicationProfile, ApplicationProfiles, ProfileResolution
 from .shell_design import SHELL_CSS
 
 _LOOPBACK_HOST = "127.0.0.1"
-_MAX_FORM_BYTES = 4096
+_MAX_FORM_BYTES = 8192
 _MAX_ARTIST_NAME = 120
 _MAX_SONG_TITLE = 200
+_MAX_SESSION_OBJECTIVE = 500
+_MAX_SESSION_DEBRIEF = 1600
+_MAX_SESSION_NEXT_ACTION = 500
 _NAV_ROUTES = {"/": "Home", "/song": "Song", "/now": "Now", "/settings": "Settings"}
 _FOCUS_MODE_ORDER = ("MAKE", "FINISH", "MANAGE", "RELEASE", "PERFORM")
 _FOCUS_SONG_DEFAULT_MODES = {"MAKE", "FINISH"}
@@ -31,7 +34,7 @@ _FOCUS_HINTS = {
 
 
 class ConsumerShellError(RuntimeError):
-    """Invalid or unsafe UX-01A/B/C consumer-shell operation."""
+    """Invalid or unsafe consumer-shell operation."""
 
 
 class ConsumerShellRecoveryRequired(ConsumerShellError):
@@ -79,7 +82,7 @@ def _clean_human_text(value: str, field: str, *, maximum: int) -> str:
 
 
 class ConsumerShell:
-    """Local-first UX-01A/B/C Artist Headquarters front door.
+    """Local-first Artist Headquarters and bounded Song journey front door.
 
     Product semantics remain in ApplicationProfiles/ApplicationRuntime/Headquarters.
     This shell owns only bounded presentation, browser-session action authority and
@@ -360,6 +363,8 @@ class ConsumerShell:
             "/profile/create",
             "/profile/select",
             "/song/start",
+            "/session/start",
+            "/session/finish",
             "/focus/set",
             "/focus/end",
             "/quit",
@@ -381,6 +386,10 @@ class ConsumerShell:
                 self._post_select_profile(handler, form)
             elif path == "/song/start":
                 self._post_start_song(handler, form)
+            elif path == "/session/start":
+                self._post_session_start(handler, form)
+            elif path == "/session/finish":
+                self._post_session_finish(handler, form)
             elif path == "/focus/set":
                 self._post_focus_set(handler, form)
             elif path == "/focus/end":
@@ -389,7 +398,7 @@ class ConsumerShell:
                 self._post_quit(handler, form)
         except ConsumerShellError as exc:
             self._consumer_notice = str(exc)
-            self._redirect(handler, "/")
+            self._redirect(handler, "/song" if path.startswith("/session/") else "/")
         except Exception:
             self._send_html(
                 handler,
@@ -570,6 +579,116 @@ class ConsumerShell:
         self._consumer_notice = f"{song.title} is now your active Song."
         self._redirect(handler, "/song")
 
+    def _post_session_start(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before starting a work Session."),
+            )
+            return
+        action = self._consume_action(form.get("action", ""), "session-start")
+        if action is None or action.value is None:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That work Session action was already handled or expired."),
+            )
+            return
+        store = self.runtime.headquarters.store
+        song = store.active_song()
+        if song is None or song.id != action.value:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("The active Song changed. Reload the Song before starting this Session."),
+            )
+            return
+        latest = self.runtime.headquarters.sessions.latest_for_song(song.id)
+        if latest is not None and latest.state == "OPEN":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("This Song already has an open work Session."),
+            )
+            return
+        objective = _clean_human_text(
+            form.get("objective", ""),
+            "Session objective",
+            maximum=_MAX_SESSION_OBJECTIVE,
+        )
+        session = self.runtime.headquarters.sessions.start_session(
+            song_id=song.id,
+            objective=objective,
+        )
+        self._consumer_notice = f"Work Session started: {session.objective}"
+        self._redirect(handler, "/song")
+
+    def _post_session_finish(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before finishing a work Session."),
+            )
+            return
+        action = self._consume_action(form.get("action", ""), "session-finish")
+        if action is None or action.value is None:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That finish action was already handled or expired."),
+            )
+            return
+        store = self.runtime.headquarters.store
+        song = store.active_song()
+        session = self.runtime.headquarters.sessions.get_session(action.value)
+        if (
+            song is None
+            or session is None
+            or session.song_id != song.id
+            or session.state != "OPEN"
+        ):
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That work Session is no longer the open Session for this Song."),
+            )
+            return
+        latest = self.runtime.headquarters.sessions.latest_for_song(song.id)
+        if latest is None or latest.id != session.id or latest.state != "OPEN":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("The Song Session changed. Reload the Song before finishing it."),
+            )
+            return
+        debrief = _clean_human_text(
+            form.get("debrief", ""),
+            "Session debrief",
+            maximum=_MAX_SESSION_DEBRIEF,
+        )
+        next_action = _clean_human_text(
+            form.get("next_action", ""),
+            "Next action",
+            maximum=_MAX_SESSION_NEXT_ACTION,
+        )
+        closed = self.runtime.headquarters.sessions.close_session(
+            session.id,
+            debrief_summary=debrief,
+            next_action=next_action,
+        )
+        self._consumer_notice = f"Work Session finished. Next: {closed.next_action}"
+        self._redirect(handler, "/song")
+
     def _post_focus_set(
         self,
         handler: BaseHTTPRequestHandler,
@@ -713,7 +832,7 @@ class ConsumerShell:
                 "running-song",
                 song.title,
                 "Active Song",
-                "This Song stays selected while you move around Headquarters. Production depth arrives through the Song journey, not a second UI-only project model.",
+                "Set a clear objective for this work Session, finish with what happened and what comes next, and N0TE will preserve that continuity with the Song.",
                 artist_name=artist.display_name,
                 song_title=song.title,
             )
@@ -833,6 +952,66 @@ class ConsumerShell:
 <div class="row"><button class="primary" type="submit">Start this Song</button></div>
 </form>"""
 
+    def _start_session_form(self, song_id: str) -> str:
+        token = self._new_action("session-start", song_id)
+        return f"""<form class="stack" method="post" action="/session/start">
+{self._hidden(token)}
+<div><label for="session-objective">What are you trying to accomplish?</label><textarea id="session-objective" name="objective" maxlength="{_MAX_SESSION_OBJECTIVE}" rows="3" required></textarea></div>
+<div class="row"><button class="primary" type="submit">Start work Session</button></div>
+</form>"""
+
+    def _finish_session_form(self, session_id: str) -> str:
+        token = self._new_action("session-finish", session_id)
+        return f"""<form class="stack" method="post" action="/session/finish">
+{self._hidden(token)}
+<div><label for="session-debrief">What changed or became clear?</label><textarea id="session-debrief" name="debrief" maxlength="{_MAX_SESSION_DEBRIEF}" rows="5" required></textarea></div>
+<div><label for="session-next-action">What should you do next?</label><input id="session-next-action" name="next_action" type="text" maxlength="{_MAX_SESSION_NEXT_ACTION}" autocomplete="off" required></div>
+<div class="row"><button class="primary" type="submit">Finish Session</button></div>
+</form>"""
+
+    def _song_content(self, state: _PageState) -> str:
+        assert state.song_title is not None
+        store = self.runtime.headquarters.store
+        song = store.active_song()
+        if song is None or song.title != state.song_title:
+            raise ConsumerShellError("active Song changed while preparing the Song page")
+        latest = self.runtime.headquarters.sessions.latest_for_song(song.id)
+        song_card = (
+            '<div class="card"><h2>Your active Song</h2>'
+            f'<p class="song-name">{html.escape(song.title)}</p>'
+            '<p class="status good">Song context active</p></div>'
+        )
+        if latest is None:
+            session_card = (
+                '<div class="card"><h2>Start this work Session</h2>'
+                '<p>Give this stretch of work one clear objective. N0TE keeps it with the Song so you can leave and come back without reconstructing your intent.</p>'
+                f'{self._start_session_form(song.id)}</div>'
+            )
+        elif latest.state == "OPEN":
+            session_card = (
+                '<div class="card"><h2>Current work Session</h2>'
+                '<p class="status good">Session open</p>'
+                '<p>Objective</p>'
+                f'<p class="song-name">{html.escape(latest.objective)}</p>'
+                '<p>When you finish this stretch, record what changed and the next concrete action. That closes the Session without turning session scratch into permanent Artist doctrine.</p>'
+                f'{self._finish_session_form(latest.id)}</div>'
+            )
+        else:
+            assert latest.debrief_summary is not None and latest.next_action is not None
+            session_card = (
+                '<div class="card"><h2>Pick up the thread</h2>'
+                '<p class="status good">Last Session closed</p>'
+                '<p>Last objective</p>'
+                f'<p><strong>{html.escape(latest.objective)}</strong></p>'
+                '<p>What happened</p>'
+                f'<p>{html.escape(latest.debrief_summary)}</p>'
+                '<p>Next action</p>'
+                f'<p class="song-name">{html.escape(latest.next_action)}</p>'
+                '<p>That next action belongs to this Song Session history. Start a new Session when you are ready to work it.</p>'
+                f'{self._start_session_form(song.id)}</div>'
+            )
+        return f'<section class="grid">{song_card}{session_card}</section>'
+
     def _focus_content(self, state: _PageState) -> str:
         focus = self.runtime.headquarters.attention.active_focus()
         store = self.runtime.headquarters.store
@@ -916,9 +1095,11 @@ class ConsumerShell:
             return f"""<section class="grid"><div class="card"><h2>Session</h2><p>{song_line}</p><p class="status good">Local shell active</p></div><div class="card"><h2>Connections</h2><p>DAWs, AI and services stay out of the way until a specific job needs them.</p></div><div class="card"><h2>Quit N0TE</h2><p>Quit closes Headquarters and releases this Artist workspace. Closing only the browser tab does not count as quitting.</p><form method="post" action="/quit">{self._hidden(quit_token)}<button class="danger" type="submit">Quit N0TE</button></form></div></section>"""
         if state.kind == "running-no-song":
             return f'<section class="grid"><div class="card"><h2>Start a Song</h2><p>Create the durable Song you want N0TE to keep in context.</p>{self._start_song_form()}</div><div class="card"><h2>Nothing else required</h2><p>Production tools and connections can be added when this Song actually needs them.</p><p class="status good">Ready locally</p></div></section>'
-        if state.kind in {"running-home", "running-song"}:
+        if state.kind == "running-home":
             assert state.song_title is not None
             return f'<section class="grid"><div class="card"><h2>Your active Song</h2><p class="song-name">{html.escape(state.song_title)}</p><a class="button primary" href="/song">Resume Song</a></div><div class="card"><h2>Context stays with you</h2><p>Move through Headquarters and come back. This Artist and Song remain the active creative context.</p><p class="status good">Song context active</p></div></section>'
+        if state.kind == "running-song":
+            return self._song_content(state)
         if state.kind == "running-now":
             return self._focus_content(state)
         raise ConsumerShellError(f"unsupported page state: {state.kind}")
