@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-01A",
+  "receipt_id": "N0TE2-SONG-01B",
   "node_id": "SONG-01",
-  "increment_id": "SONG-01A",
-  "baseline_sha": "5ff71ad3914d7bbb18971273cf1e1c097bfef9b1",
-  "purpose": "Turn the already-implemented canonical Song Session foundation into a normal consumer journey: from the active Song, state the bounded objective for this work session, keep one durable open Session for that Song, finish with an explicit debrief and concrete next action, quit/relaunch, and resume from that meaningful next action without promoting session scratch into global Artist doctrine or requiring a DAW, AI provider, audio engine or external service.",
+  "increment_id": "SONG-01B",
+  "baseline_sha": "4400654e7cdee8830b4bf2d9d4d75d017baba189",
+  "purpose": "Make the already-canonical CORE-02A work-session memory useful during actual creative work: while the active Song has an open Session, let the artist append durable observations, decisions, rejected ideas, unresolved questions and MARKs through the normal /song surface, preserve them in exact chronological Session history across navigation and Quit/relaunch, and keep them explicitly separate from durable Song doctrine unless a later bounded promotion contract is selected.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,31 +14,31 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "An artist can begin a real work session on the canonical Song with a clear objective, finish with what happened and what to do next, leave N0TE, and return directly to meaningful work instead of reconstructing session context.",
+    "outcome": "An artist can capture the meaningful things that happen during a Song work Session without interrupting the work, lose none of them when leaving N0TE, and return to the exact Session history without those notes silently becoming permanent Artist/Song truth.",
     "journeys": ["J-SONG-START-RESUME", "J-WHAT-NEXT", "J-TRUST"],
-    "capability": "Consumer-reachable Song Session objective, debrief and meaningful resume",
-    "increment": "SONG-01A"
+    "capability": "Consumer-reachable append-only Session observations, decisions, rejected ideas, unresolved questions and MARKs",
+    "increment": "SONG-01B"
   },
   "reuse": {
-    "mode": "EXPOSE_EXISTING_CORE_02A_SESSION_MEMORY_THROUGH_THE_LANDED_HEADQUARTERS_SONG_SURFACE",
-    "n0te2_dependencies": ["CORE-01 canonical Artist/Song lineage and Activity chronology", "CORE-02A durable SessionMemory objective/debrief/next-action foundation", "APP-01 durable profile reopen/quit semantics", "UX-01A landed Song consumer surface", "UX-01C landed shell accessibility/design contract"],
-    "legacy_rejections": ["parallel UI-only session model", "session state stored only in browser memory", "automatic DAW/project mutation when a Session starts", "automatic AI/provider call from a Session objective", "promote debrief or scratch into durable Artist doctrine without explicit evidence semantics", "multiple simultaneous open Sessions for one Song", "claim all REQ-SCOPE-060 scratch/promotion UX complete from objective/debrief reachability", "claim all SONG-01 suggestion/template/capture scope complete"],
+    "mode": "EXPOSE_EXISTING_CORE_02A_APPEND_ONLY_SESSION_ITEMS_THROUGH_THE_LANDED_SONG_WORK_SESSION_SURFACE",
+    "n0te2_dependencies": ["SONG-01A landed objective/debrief/next-action consumer Session flow", "CORE-02A SessionMemory append_scratch/items_for_session", "CORE-01 Activity chronology", "APP-01 durable profile reopen/quit semantics", "UX-01C shell accessibility/security contract"],
+    "legacy_rejections": ["browser-only notes", "parallel notebook/session database", "raw evidence-key input", "automatic EvidenceMemory promotion", "automatic DAW/project mutation from a MARK or decision", "freeform scratch kinds outside the canonical enum", "editing/deleting append-only Session history", "writing scratch after Session close", "claiming suggestion/template/capture systems implemented from Session notes"],
     "direct_copy": false
   },
   "completion_proof": [
-    "the normal /song consumer path shows a clear start-work-session action when the active Song has no open Session",
-    "starting a work Session requires a nonblank human objective and persists through canonical SessionMemory for the active Song rather than browser-local state",
-    "one open Session per Song remains enforced by the existing canonical SessionMemory contract; duplicate/replayed consumer actions do not create parallel open Sessions",
-    "while a Session is open, /song shows the objective in artist language and offers an explicit finish action without exposing raw Session/Profile IDs",
-    "finishing requires both a nonblank debrief and concrete next action and closes the canonical Session without rewriting its objective or deleting history",
-    "after close, /song shows the latest debrief and next action as session-level continuity and offers a new work Session without promoting that text into global Artist/product doctrine",
-    "explicit Quit and full relaunch preserve open-Session objective or latest closed-Session next action for the same Artist/Song",
-    "multiple Artist profiles and Songs cannot see or act on another profile/Song Session; all actions derive the target from the currently running canonical Song plus server-bound one-shot action authority",
-    "foreign Origin, stale/replayed actions and blank/oversized objective/debrief/next-action inputs fail without corrupting Session history",
-    "starting/finishing a Session does not connect providers, mutate DAWs, create audio, publish, spend money or alter Song version/assets merely because the artist described an objective",
-    "the landed UX-01C shell accessibility/security contract remains intact on the expanded /song path",
-    "authored model/HTTP/smoke proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
+    "the normal /song path shows a bounded capture control only while the active canonical Song has an open work Session",
+    "the artist can append exactly the canonical OBSERVATION, DECISION, REJECTED_IDEA, UNRESOLVED and MARK kinds using artist-readable labels without submitting a trusted raw Session ID or arbitrary scratch kind",
+    "each capture action is one-shot and server-bound to the exact open Session rendered by N0TE; stale Song/Session context, foreign Origin and replay fail closed",
+    "blank and oversized capture text is rejected without adding Session history; valid text is normalized consistently with the consumer shell's human-text contract",
+    "captured items render in exact chronological order on the open Session and remain visible after navigation and explicit Quit/relaunch",
+    "captured history remains visible when the Session is later closed so the debrief and next action retain the context of what happened during the work",
+    "raw Session item IDs, profile IDs and internal evidence keys are not exposed in the primary consumer UI",
+    "capturing an item creates only canonical Session scratch/Activity history and does not automatically create EvidenceMemory claims, modify Song/version/assets, alter Headquarters Focus, create operations, connect providers or mutate a DAW",
+    "closed Sessions cannot receive new capture items and a stale pre-close action cannot append after close",
+    "multiple Artist profiles and Songs remain isolated; a server-bound action from one Song cannot append to another Song's Session",
+    "existing SONG-01A objective/debrief/next-action and UX-01C accessibility/security behavior remain intact",
+    "authored HTTP/invariant/stage-smoke proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
-  "non_scope": ["Session scratch/OBSERVATION/DECISION/REJECTED_IDEA/UNRESOLVED/MARK authoring UI", "Session-item promotion UI", "AI creative suggestions", "templates or controlled randomize", "Never Lose the Moment retrospective capture", "DAW workspace connection or mutation", "audio analysis/recording", "full Creative Studio timeline", "version compare/approval UI", "Not Now", "Job/Approval Center", "final brand direction", "performance acceptance", "Gate-B customer acceptance"],
-  "next_selection_rule": "After SONG-01A is implemented, red-teamed and landed, re-audit the remaining SONG-01 journey by consumer outcome. Prefer the next truthful Song substrate such as controlled blank-state/suggestion/template semantics only when its required product objects exist; do not expand SONG-01A by adjacency into DAW, audio, capture, scratch promotion or AI work."
+  "non_scope": ["Session-item promotion UI or raw evidence-key editing", "editing/deleting/reordering Session history", "AI suggestions", "Familiar/Adjacent/Wildcard controls", "template catalog persistence/apply UI", "controlled randomize", "Never Lose the Moment retrospective capture", "DAW workspace connection or mutation", "audio recording/analysis", "version compare/approval UI", "Not Now", "Job/Approval Center", "final brand direction", "performance acceptance", "Gate-B customer acceptance"],
+  "next_selection_rule": "After SONG-01B lands, globally reselect. Do not automatically continue into Session promotion: first compare explicit durable-memory semantics, version/asset continuity, template/suggestion product-model work, DAW-00, OPS-04 and other ready outcomes by customer value and truthful substrate."
 }
