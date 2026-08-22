@@ -14,7 +14,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "UX-01" or state.get("active_increment") != "UX-01C":
+if state.get("active_node") != "SONG-01" or state.get("active_increment") != "SONG-01A":
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
     )
@@ -116,7 +116,7 @@ with tempfile.TemporaryDirectory() as temp:
     process = ProcessIdentity.from_start_token(
         PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
         pid=99011,
-        start_token="ux-01c-consumer-smoke",
+        start_token="song-01a-consumer-smoke",
     )
     probe = Probe()
 
@@ -132,67 +132,52 @@ with tempfile.TemporaryDirectory() as temp:
     status, welcome = get(shell, "/")
     assert status == 200
     assert "Welcome to your Headquarters" in welcome
-    assert "Artist name" in welcome
-    assert "prf_" not in welcome
+    create = form(welcome, "/profile/create")
+    create.values["artist_name"] = "Song Session Smoke Artist"
+    status, _ = post(shell, "/profile/create", create.values)
+    assert status == 303
 
     status, css = get(shell, "/assets/shell.css")
     assert status == 200
     assert css == SHELL_CSS
-    assert "@media (prefers-reduced-motion: reduce)" in css
-    assert "@media (prefers-contrast: more)" in css
-    assert "@media (forced-colors: active)" in css
-    assert "grid-auto-columns: minmax(5.5rem, 1fr)" in css
-
-    create = form(welcome, "/profile/create")
-    create.values["artist_name"] = "Accessible Focus Smoke Artist"
-    status, _ = post(shell, "/profile/create", create.values)
-    assert status == 303
+    assert "textarea:focus-visible" in css
 
     status, song_page = get(shell, "/song")
-    assert status == 200
-    start = form(song_page, "/song/start")
-    start.values["song_title"] = "Accessible Focus Smoke Song"
-    status, _ = post(shell, "/song/start", start.values)
+    start_song = form(song_page, "/song/start")
+    start_song.values["song_title"] = "Song Session Smoke Song"
+    status, _ = post(shell, "/song/start", start_song.values)
     assert status == 303
     song = shell.runtime.headquarters.store.active_song()
-    assert song is not None
     profile_id = shell.runtime.profile_id
-    assert profile_id is not None
+    assert song is not None and profile_id is not None
 
-    status, now = get(shell, "/now")
+    status, session_page = get(shell, "/song")
     assert status == 200
-    focus_forms = parsed_forms(now, "/focus/set")
-    assert len(focus_forms) == 5
-    assert now.count('aria-pressed="false"') == 5
-    assert 'aria-pressed="true"' not in now
-    make = next(candidate for candidate in focus_forms if "Make" in candidate.text)
-    status, _ = post(shell, "/focus/set", make.values)
+    assert "Start this work Session" in session_page
+    start_session = form(session_page, "/session/start")
+    start_session.values["objective"] = "Finish the chorus arrangement before mixing"
+    status, _ = post(shell, "/session/start", start_session.values)
     assert status == 303
-    focus = shell.runtime.headquarters.attention.active_focus()
-    assert focus is not None
-    assert focus.mode == "MAKE"
-    assert focus.song_id == song.id
-
-    status, focused_now = get(shell, "/now")
-    assert status == 200
-    assert focused_now.count('aria-pressed="true"') == 1
-    assert focused_now.count('aria-pressed="false"') == 4
-    assert "Make Focus active" in focused_now
+    opened = shell.runtime.headquarters.sessions.latest_for_song(song.id)
+    assert opened is not None and opened.state == "OPEN"
+    assert opened.objective == "Finish the chorus arrangement before mixing"
 
     for path in ("/", "/song", "/now", "/settings"):
         status, page = get(shell, path)
         assert status == 200
-        assert "Accessible Focus Smoke Artist" in page
-        assert "Accessible Focus Smoke Song" in page
-        assert "Make Focus" in page
-        assert "focus_" not in page
+        assert "Song Session Smoke Artist" in page
+        assert "Song Session Smoke Song" in page
+        assert "sess_" not in page
         assert "prf_" not in page
         assert "sqlite" not in page.lower()
         assert "traceback" not in page.lower()
+    status, open_song_page = get(shell, "/song")
+    assert "Current work Session" in open_song_page
+    assert "Finish the chorus arrangement before mixing" in open_song_page
 
     assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
-    closed = quit_shell(shell)
-    assert "N0TE closed safely." in closed
+    closed_shell = quit_shell(shell)
+    assert "N0TE closed safely." in closed_shell
     assert InstanceLeaseManager(state_root).inspect(profile_id) is None
 
     relaunched = ConsumerShell(
@@ -202,23 +187,48 @@ with tempfile.TemporaryDirectory() as temp:
         probe=probe,
     )
     relaunched.start()
-    status, resumed = get(relaunched, "/now")
+    status, resumed_open = get(relaunched, "/song")
     assert status == 200
-    assert "Make Focus active" in resumed
-    assert 'aria-pressed="true"' in resumed
-    assert "Accessible Focus Smoke Song" in resumed
-    focus = relaunched.runtime.headquarters.attention.active_focus()
-    assert focus is not None and focus.mode == "MAKE" and focus.song_id == song.id
-
-    end = form(resumed, "/focus/end")
-    status, _ = post(relaunched, "/focus/end", end.values)
+    assert "Current work Session" in resumed_open
+    assert "Finish the chorus arrangement before mixing" in resumed_open
+    finish = form(resumed_open, "/session/finish")
+    finish.values.update(
+        {
+            "debrief": "The chorus is arranged; a counterline would overcrowd the vocal.",
+            "next_action": "Record the lead vocal before touching the mix",
+        }
+    )
+    status, _ = post(relaunched, "/session/finish", finish.values)
     assert status == 303
-    assert relaunched.runtime.headquarters.attention.active_focus() is None
-    status, open_now = get(relaunched, "/now")
-    assert "No Focus Session active" in open_now
-    assert open_now.count('aria-pressed="false"') == 5
+    latest = relaunched.runtime.headquarters.sessions.latest_for_song(song.id)
+    assert latest is not None and latest.state == "CLOSED"
+    assert latest.next_action == "Record the lead vocal before touching the mix"
+    evidence_count = relaunched.runtime.headquarters.store._conn.execute(
+        "SELECT COUNT(*) FROM evidence_claims WHERE key='next.action'"
+    ).fetchone()[0]
+    assert evidence_count == 0
+
+    status, closed_session_page = get(relaunched, "/song")
+    assert status == 200
+    assert "Pick up the thread" in closed_session_page
+    assert "The chorus is arranged; a counterline would overcrowd the vocal." in closed_session_page
+    assert "Record the lead vocal before touching the mix" in closed_session_page
+    assert "sess_" not in closed_session_page
     quit_shell(relaunched)
 
+    resumed_again = ConsumerShell(
+        data_root=data_root,
+        state_root=state_root,
+        process=process,
+        probe=probe,
+    )
+    resumed_again.start()
+    status, final_resume = get(resumed_again, "/song")
+    assert status == 200
+    assert "Pick up the thread" in final_resume
+    assert "Record the lead vocal before touching the mix" in final_resume
+    quit_shell(resumed_again)
+
 print(
-    "UX-01C CONSUMER SMOKE: GREEN: the real local Headquarters serves its canonical accessibility/design CSS, exposes semantic Focus selection, preserves Artist/Song/Focus context across navigation and explicit Quit/relaunch, hides internal plumbing, and keeps existing lifecycle authority intact"
+    "SONG-01A CONSUMER SMOKE: GREEN: a fresh artist started a canonical Song work Session with an objective, navigated and explicitly quit, relaunched to the same open Session, finished with a debrief and concrete next action, relaunched again to meaningful Song-level continuity, kept raw IDs hidden, and did not silently promote the Session next action into global evidence"
 )
