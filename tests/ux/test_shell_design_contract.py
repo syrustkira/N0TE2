@@ -140,6 +140,12 @@ def contract(key: str) -> ShellStateContract:
 
 def assert_contract(key: str, page: str) -> None:
     item = contract(key)
+    assert 'class="skip-link"' in page
+    assert '<main id="main" tabindex="-1">' in page
+    assert 'aria-labelledby="page-title"' in page
+    if item.state_kind.startswith("running-"):
+        assert 'aria-label="Headquarters"' in page
+        assert 'aria-current="page"' in page
     for text in item.required_text:
         assert text in page
     for action in item.required_actions:
@@ -178,13 +184,16 @@ def test_representative_contract_contains_only_current_truthful_states() -> None
 
 def test_shell_css_has_explicit_accessibility_and_narrow_layout_contract() -> None:
     assert "--target-min: 44px" in SHELL_CSS
+    assert "min-height: 44px" in SHELL_CSS
     assert "@media (prefers-reduced-motion: reduce)" in SHELL_CSS
     assert "@media (prefers-contrast: more)" in SHELL_CSS
     assert "@media (forced-colors: active)" in SHELL_CSS
     assert "grid-auto-columns: minmax(5.5rem, 1fr)" in SHELL_CSS
     assert "overflow-x: auto" in SHELL_CSS
     assert "overflow-wrap: anywhere" in SHELL_CSS
+    assert "max-width: 100%" in SHELL_CSS
     assert 'button[aria-pressed="true"]' in SHELL_CSS
+    assert "background: var(--color-surface);" in SHELL_CSS
     assert "background-image: none" in SHELL_CSS
 
 
@@ -267,11 +276,12 @@ def test_real_http_representative_shell_states_follow_contract(tmp_path: Path) -
 
     make_forms = forms(no_focus, "/focus/set")
     assert len(make_forms) == 5
+    make = next(candidate for candidate in make_forms if "Make" in candidate.text)
     status, _ = request(
         running,
         "/focus/set",
         method="POST",
-        fields=make_forms[0].values,
+        fields=make.values,
         origin=running.address.origin,
     )
     assert status == 303
