@@ -1,5 +1,6 @@
 import hashlib
 import io
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
@@ -135,6 +136,32 @@ class SongMaterialMemoryTests(unittest.TestCase):
         )
         blob = self.hq.materials._blob_path(digest)
         self.assertEqual(blob.read_bytes(), payload)
+
+    def test_sql_failure_after_asset_insert_rolls_back_asset_and_version_together(self):
+        payload = b"transaction-boundary"
+        digest = hashlib.sha256(payload).hexdigest()
+        self.hq.store._conn.execute(
+            """CREATE TRIGGER test_reject_material_version
+            BEFORE INSERT ON versions
+            BEGIN SELECT RAISE(ABORT, 'simulated version failure'); END"""
+        )
+        self.hq.store._conn.commit()
+        try:
+            with self.assertRaises(sqlite3.IntegrityError):
+                self.ingest(payload, "transaction.wav")
+        finally:
+            self.hq.store._conn.execute("DROP TRIGGER test_reject_material_version")
+            self.hq.store._conn.commit()
+        self.assertEqual(
+            int(self.hq.store._conn.execute("SELECT COUNT(*) AS n FROM assets").fetchone()["n"]),
+            0,
+        )
+        self.assertEqual(
+            int(self.hq.store._conn.execute("SELECT COUNT(*) AS n FROM versions").fetchone()["n"]),
+            0,
+        )
+        self.assertIsNone(self.hq.store.get_song(self.song.id).current_version_id)
+        self.assertEqual(self.hq.materials._blob_path(digest).read_bytes(), payload)
 
     def test_tampered_blob_is_reported_and_never_silently_replaced(self):
         first = self.ingest(b"original", "mix.wav")
