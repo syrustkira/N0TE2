@@ -21,6 +21,7 @@ _MAX_SONG_TITLE = 200
 _MAX_SESSION_OBJECTIVE = 500
 _MAX_SESSION_DEBRIEF = 1600
 _MAX_SESSION_NEXT_ACTION = 500
+_MAX_SESSION_CAPTURE = 1200
 _NAV_ROUTES = {"/": "Home", "/song": "Song", "/now": "Now", "/settings": "Settings"}
 _FOCUS_MODE_ORDER = ("MAKE", "FINISH", "MANAGE", "RELEASE", "PERFORM")
 _FOCUS_SONG_DEFAULT_MODES = {"MAKE", "FINISH"}
@@ -30,6 +31,20 @@ _FOCUS_HINTS = {
     "MANAGE": "Protect planning and Artist Headquarters work.",
     "RELEASE": "Protect release work without dragging it into a creative session.",
     "PERFORM": "Protect rehearsal and live-performance attention.",
+}
+_SESSION_CAPTURE_ORDER = (
+    "OBSERVATION",
+    "DECISION",
+    "REJECTED_IDEA",
+    "UNRESOLVED",
+    "MARK",
+)
+_SESSION_CAPTURE_LABELS = {
+    "OBSERVATION": "Observation",
+    "DECISION": "Decision",
+    "REJECTED_IDEA": "Rejected idea",
+    "UNRESOLVED": "Unresolved",
+    "MARK": "MARK",
 }
 
 
@@ -364,6 +379,7 @@ class ConsumerShell:
             "/profile/select",
             "/song/start",
             "/session/start",
+            "/session/capture",
             "/session/finish",
             "/focus/set",
             "/focus/end",
@@ -388,6 +404,8 @@ class ConsumerShell:
                 self._post_start_song(handler, form)
             elif path == "/session/start":
                 self._post_session_start(handler, form)
+            elif path == "/session/capture":
+                self._post_session_capture(handler, form)
             elif path == "/session/finish":
                 self._post_session_finish(handler, form)
             elif path == "/focus/set":
@@ -628,6 +646,70 @@ class ConsumerShell:
         self._consumer_notice = f"Work Session started: {session.objective}"
         self._redirect(handler, "/song")
 
+    def _post_session_capture(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before capturing Session history."),
+            )
+            return
+        action = self._consume_action(form.get("action", ""), "session-capture")
+        if action is None or action.value is None:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That capture action was already handled or expired."),
+            )
+            return
+        session_id, separator, item_kind = action.value.partition("|")
+        if not separator or item_kind not in _SESSION_CAPTURE_ORDER:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That capture action is no longer valid."),
+            )
+            return
+        store = self.runtime.headquarters.store
+        song = store.active_song()
+        session = self.runtime.headquarters.sessions.get_session(session_id)
+        if (
+            song is None
+            or session is None
+            or session.song_id != song.id
+            or session.state != "OPEN"
+        ):
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That work Session is no longer open for this Song."),
+            )
+            return
+        latest = self.runtime.headquarters.sessions.latest_for_song(song.id)
+        if latest is None or latest.id != session.id or latest.state != "OPEN":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("The Song Session changed. Reload the Song before capturing this note."),
+            )
+            return
+        body = _clean_human_text(
+            form.get("body", ""),
+            "Session capture",
+            maximum=_MAX_SESSION_CAPTURE,
+        )
+        self.runtime.headquarters.sessions.append_scratch(
+            session.id,
+            kind=item_kind,
+            body=body,
+        )
+        self._consumer_notice = f"{_SESSION_CAPTURE_LABELS[item_kind]} captured."
+        self._redirect(handler, "/song")
+
     def _post_session_finish(
         self,
         handler: BaseHTTPRequestHandler,
@@ -832,7 +914,7 @@ class ConsumerShell:
                 "running-song",
                 song.title,
                 "Active Song",
-                "Set a clear objective for this work Session, finish with what happened and what comes next, and N0TE will preserve that continuity with the Song.",
+                "Set a clear objective for this work Session, capture what matters while you work, then finish with what happened and what comes next.",
                 artist_name=artist.display_name,
                 song_title=song.title,
             )
@@ -850,7 +932,7 @@ class ConsumerShell:
                 "running-settings",
                 "Your N0TE",
                 "Settings",
-                "This shell is local. DAWs, AI, and external services are set up only when a job needs them.",
+                "This shell is local. DAWs, AI, and external services are set up only when a specific job needs them.",
                 artist_name=artist.display_name,
                 song_title=None if song is None else song.title,
             )
@@ -944,6 +1026,9 @@ class ConsumerShell:
             f'<input type="hidden" name="action" value="{html.escape(action_token, quote=True)}">'
         )
 
+    def _csrf_hidden(self) -> str:
+        return f'<input type="hidden" name="csrf" value="{html.escape(self._csrf, quote=True)}">'
+
     def _start_song_form(self) -> str:
         token = self._new_action("song-start")
         return f"""<form class="stack" method="post" action="/song/start">
@@ -959,6 +1044,36 @@ class ConsumerShell:
 <div><label for="session-objective">What are you trying to accomplish?</label><textarea id="session-objective" name="objective" maxlength="{_MAX_SESSION_OBJECTIVE}" rows="3" required></textarea></div>
 <div class="row"><button class="primary" type="submit">Start work Session</button></div>
 </form>"""
+
+    def _capture_session_form(self, session_id: str) -> str:
+        buttons = []
+        for item_kind in _SESSION_CAPTURE_ORDER:
+            token = self._new_action("session-capture", f"{session_id}|{item_kind}")
+            buttons.append(
+                '<button type="submit" name="action" '
+                f'value="{html.escape(token, quote=True)}">'
+                f'{html.escape(_SESSION_CAPTURE_LABELS[item_kind])}</button>'
+            )
+        return f"""<form class="stack" method="post" action="/session/capture">
+{self._csrf_hidden()}
+<div><label for="session-capture">Capture what matters</label><textarea id="session-capture" name="body" maxlength="{_MAX_SESSION_CAPTURE}" rows="3" required></textarea></div>
+<div class="row">{"".join(buttons)}</div>
+<p class="muted">Choose what this is. N0TE keeps it in this work Session; it does not silently turn the note into permanent Song doctrine.</p>
+</form>"""
+
+    def _session_history(self, session_id: str) -> str:
+        items = self.runtime.headquarters.sessions.items_for_session(session_id)
+        if not items:
+            return '<p class="muted">Nothing captured in this Session yet.</p>'
+        rows = "".join(
+            '<li><strong>'
+            f'{html.escape(_SESSION_CAPTURE_LABELS[item.kind])}'
+            '</strong><p>'
+            f'{html.escape(item.body)}'
+            '</p></li>'
+            for item in items
+        )
+        return f'<ol class="stack" aria-label="Work Session history">{rows}</ol>'
 
     def _finish_session_form(self, session_id: str) -> str:
         token = self._new_action("session-finish", session_id)
@@ -987,14 +1102,20 @@ class ConsumerShell:
                 '<p>Give this stretch of work one clear objective. N0TE keeps it with the Song so you can leave and come back without reconstructing your intent.</p>'
                 f'{self._start_session_form(song.id)}</div>'
             )
+            history_card = ""
         elif latest.state == "OPEN":
             session_card = (
                 '<div class="card"><h2>Current work Session</h2>'
                 '<p class="status good">Session open</p>'
                 '<p>Objective</p>'
                 f'<p class="song-name">{html.escape(latest.objective)}</p>'
-                '<p>When you finish this stretch, record what changed and the next concrete action. That closes the Session without turning session scratch into permanent Artist doctrine.</p>'
+                '<p>Capture useful decisions and loose ends while you work. When the stretch is done, finish with what changed and the next concrete action.</p>'
+                f'{self._capture_session_form(latest.id)}'
                 f'{self._finish_session_form(latest.id)}</div>'
+            )
+            history_card = (
+                '<div class="card"><h2>What happened in this Session</h2>'
+                f'{self._session_history(latest.id)}</div>'
             )
         else:
             assert latest.debrief_summary is not None and latest.next_action is not None
@@ -1010,7 +1131,11 @@ class ConsumerShell:
                 '<p>That next action belongs to this Song Session history. Start a new Session when you are ready to work it.</p>'
                 f'{self._start_session_form(song.id)}</div>'
             )
-        return f'<section class="grid">{song_card}{session_card}</section>'
+            history_card = (
+                '<div class="card"><h2>Last Session history</h2>'
+                f'{self._session_history(latest.id)}</div>'
+            )
+        return f'<section class="grid">{song_card}{session_card}{history_card}</section>'
 
     def _focus_content(self, state: _PageState) -> str:
         focus = self.runtime.headquarters.attention.active_focus()
