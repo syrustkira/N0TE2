@@ -49,6 +49,7 @@ class NoRedirect(HTTPRedirectHandler):
 class Form:
     action: str
     values: dict[str, str]
+    text: str = ""
 
 
 class FormParser(HTMLParser):
@@ -68,6 +69,10 @@ class FormParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "form":
             self.current = None
+
+    def handle_data(self, data: str) -> None:
+        if self.current is not None:
+            self.current.text += data
 
 
 def request(
@@ -184,7 +189,7 @@ def test_shell_css_has_explicit_accessibility_and_narrow_layout_contract() -> No
 
 
 def test_real_http_representative_shell_states_follow_contract(tmp_path: Path) -> None:
-    # First profile.
+    # First profile plus the real canonical CSS endpoint.
     first_data = (tmp_path / "first-data").resolve()
     first_state = (tmp_path / "first-state").resolve()
     first = ConsumerShell(
@@ -197,6 +202,9 @@ def test_real_http_representative_shell_states_follow_contract(tmp_path: Path) -
     status, page = request(first, "/")
     assert status == 200
     assert_contract("first-profile", page)
+    status, css = request(first, "/assets/shell.css")
+    assert status == 200
+    assert css == SHELL_CSS
     first.stop()
 
     # Profile selection.
@@ -306,10 +314,7 @@ def test_real_http_representative_shell_states_follow_contract(tmp_path: Path) -
     assert status == 200
     choices = forms(selection, "/profile/select")
     assert len(choices) == 2
-    busy = next(candidate for candidate in choices if "Busy Artist" in selection)
-    # Selection actions contain no profile id in rendered fields; choose the second
-    # generated action, matching creation order in the stable profile catalog.
-    busy = choices[1]
+    busy = next(candidate for candidate in choices if "Busy Artist" in candidate.text)
     status, _ = request(
         blocked_shell,
         "/profile/select",
