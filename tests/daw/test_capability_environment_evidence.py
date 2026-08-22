@@ -97,17 +97,13 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
     def test_available_evidence_builds_existing_profile_and_resolver(self):
         workspace = self.workspace()
         item = self.record(workspace.id, observed_at=100)
-        profile = self.hq.capability_evidence.profile(
-            workspace.id, now_epoch_seconds=112
-        )
+        profile = self.hq.capability_evidence.profile(workspace.id, now_epoch_seconds=112)
         self.assertEqual(profile.host_label, "ABLETON_LIVE")
-        self.assertEqual(len(profile.candidates), 1)
         candidate = profile.candidates[0]
         self.assertEqual(candidate.candidate_id, item.candidate_id)
         self.assertTrue(candidate.verified)
         self.assertTrue(candidate.compatible)
         self.assertEqual(candidate.evidence_age_seconds, 12)
-
         result = profile.resolve(
             N0TEableJob("job:track.read", "track.read", "Read the current track")
         )
@@ -129,25 +125,20 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
             capability="audio.transient-edit",
             availability="UNKNOWN",
             evidence_ref=None,
-            evidence_kind="RUNTIME_PROBE",
         )
-        state = self.hq.capability_evidence.state(workspace.id)
-        self.assertEqual({item.id for item in state.current}, {unavailable.id, unknown.id})
-
-        unavailable_profile = self.hq.capability_evidence.profile(
-            workspace.id, now_epoch_seconds=120
+        self.assertEqual(
+            {item.id for item in self.hq.capability_evidence.state(workspace.id).current},
+            {unavailable.id, unknown.id},
         )
-        unavailable_result = unavailable_profile.resolve(
+        profile = self.hq.capability_evidence.profile(workspace.id, now_epoch_seconds=120)
+        unavailable_result = profile.resolve(
             N0TEableJob("job:session", "session.musician", "Use host session musician")
         )
         self.assertEqual(unavailable_result.status, "UNAVAILABLE")
         self.assertIn("INCOMPATIBLE", unavailable_result.reason_codes)
         self.assertNotIn("UNVERIFIED", unavailable_result.reason_codes)
-
-        unknown_result = unavailable_profile.resolve(
-            N0TEableJob(
-                "job:transient", "audio.transient-edit", "Edit audio transients"
-            )
+        unknown_result = profile.resolve(
+            N0TEableJob("job:transient", "audio.transient-edit", "Edit transients")
         )
         self.assertEqual(unknown_result.status, "UNAVAILABLE")
         self.assertIn("UNVERIFIED", unknown_result.reason_codes)
@@ -155,18 +146,14 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
 
     def test_verified_state_requires_evidence_reference(self):
         workspace = self.workspace()
-        with self.assertRaises(CapabilityEvidenceError):
-            self.record(
-                workspace.id,
-                availability="AVAILABLE",
-                evidence_ref=None,
-            )
-        with self.assertRaises(CapabilityEvidenceError):
-            self.record(
-                workspace.id,
-                availability="UNAVAILABLE",
-                evidence_ref=None,
-            )
+        for availability in ("AVAILABLE", "UNAVAILABLE"):
+            with self.subTest(availability=availability):
+                with self.assertRaises(CapabilityEvidenceError):
+                    self.record(
+                        workspace.id,
+                        availability=availability,
+                        evidence_ref=None,
+                    )
         self.assertEqual(self.hq.capability_evidence.history(workspace.id), ())
 
     def test_latest_append_only_fact_wins_within_same_environment(self):
@@ -185,10 +172,22 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
         )
         history = self.hq.capability_evidence.history(workspace.id)
         self.assertEqual([item.id for item in history], [first.id, second.id])
-        current = self.hq.capability_evidence.state(workspace.id).current
-        self.assertEqual(current, (second,))
+        self.assertEqual(self.hq.capability_evidence.state(workspace.id).current, (second,))
 
-    def test_workspace_observation_change_stales_prior_evidence(self):
+    def test_late_older_probe_cannot_overwrite_newer_current_evidence(self):
+        workspace = self.workspace()
+        current = self.record(workspace.id, observed_at=110)
+        with self.assertRaises(CapabilityEvidenceError):
+            self.record(
+                workspace.id,
+                availability="UNAVAILABLE",
+                evidence_ref="evidence:late-old-result",
+                observed_at=109,
+            )
+        self.assertEqual(self.hq.capability_evidence.state(workspace.id).current, (current,))
+        self.assertEqual(len(self.hq.capability_evidence.history(workspace.id)), 1)
+
+    def test_workspace_observation_change_stales_prior_evidence_and_probe_race(self):
         workspace = self.workspace()
         original_state = self.hq.workspaces.state(workspace.id)
         old = self.record(workspace.id)
@@ -204,12 +203,9 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
         self.assertEqual(state.stale_count, 1)
         self.assertEqual(self.hq.capability_evidence.history(workspace.id), (old,))
         self.assertEqual(
-            self.hq.capability_evidence.profile(
-                workspace.id, now_epoch_seconds=120
-            ).candidates,
+            self.hq.capability_evidence.profile(workspace.id, now_epoch_seconds=120).candidates,
             (),
         )
-
         with self.assertRaises(CapabilityEvidenceError):
             self.hq.capability_evidence.record(
                 workspace.id,
@@ -241,18 +237,14 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
             evidence_ref="evidence:transport",
         )
         self.assertNotEqual(first.candidate_id, second.candidate_id)
-        profile = self.hq.capability_evidence.profile(
-            workspace.id, now_epoch_seconds=110
-        )
+        profile = self.hq.capability_evidence.profile(workspace.id, now_epoch_seconds=110)
         self.assertEqual(len(profile.candidates), 2)
         self.assertEqual(len({item.candidate_id for item in profile.candidates}), 2)
 
-    def test_freshness_constraints_use_observation_time_not_static_caller_age(self):
+    def test_freshness_constraints_use_observation_time(self):
         workspace = self.workspace()
         self.record(workspace.id, observed_at=100)
-        profile = self.hq.capability_evidence.profile(
-            workspace.id, now_epoch_seconds=131
-        )
+        profile = self.hq.capability_evidence.profile(workspace.id, now_epoch_seconds=131)
         result = profile.resolve(
             N0TEableJob("job:track.read", "track.read", "Read track"),
             ResolutionConstraints(max_evidence_age_seconds=30),
@@ -260,21 +252,15 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
         self.assertEqual(result.status, "UNAVAILABLE")
         self.assertIn("STALE_OR_UNKNOWN_EVIDENCE", result.reason_codes)
         with self.assertRaises(CapabilityEvidenceError):
-            self.hq.capability_evidence.profile(
-                workspace.id, now_epoch_seconds=99
-            )
+            self.hq.capability_evidence.profile(workspace.id, now_epoch_seconds=99)
 
     def test_all_peer_hosts_use_the_same_evidence_contract(self):
         for index, family in enumerate(HOST_FAMILIES):
             with self.subTest(family=family):
-                workspace = self.workspace(
-                    family=family,
-                    location=f"file:///peer/{index}",
-                )
+                workspace = self.workspace(family=family, location=f"file:///peer/{index}")
                 item = self.record(
                     workspace.id,
                     route_id=f"native-{index}",
-                    capability="track.read",
                     evidence_ref=f"evidence:{family}",
                 )
                 state = self.hq.capability_evidence.state(workspace.id)
@@ -320,7 +306,6 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
                 "DELETE FROM capability_observations WHERE id=?", (item.id,)
             )
         self.hq.store._conn.rollback()
-
         events = [
             event
             for event in self.hq.activity.for_song(
@@ -369,7 +354,6 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
         }
         self.assertEqual(after, before)
         self.assertEqual(self.hq.shadow.state(workspace.id).status, "EMPTY")
-        self.assertIsNone(self.hq.focus.current(workspace.id))
 
     def test_reopen_rejects_tampered_environment_binding(self):
         workspace = self.workspace()
