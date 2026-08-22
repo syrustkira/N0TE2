@@ -20,7 +20,6 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
         self.hq = HeadquartersMemory.create(self.root, "Artist")
         self.profile_id = self.hq.store.profile_id
         self.song = self.hq.store.create_song("Capability Song")
-        self.other_song = self.hq.store.create_song("Other Song")
 
     def tearDown(self):
         try:
@@ -88,7 +87,6 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
             reversibility=1.0,
             cost_efficiency=1.0,
             portability=0.6,
-            user_preference=0.5,
             paid=False,
         )
         values.update(overrides)
@@ -109,6 +107,21 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
         )
         self.assertEqual(result.status, "RESOLVED")
         self.assertEqual(result.recommended.candidate.candidate_id, item.candidate_id)
+
+    def test_environment_evidence_cannot_supply_artist_preference(self):
+        workspace = self.workspace()
+        self.record(workspace.id)
+        columns = {
+            str(row["name"])
+            for row in self.hq.store._conn.execute(
+                "PRAGMA table_info(capability_observations)"
+            )
+        }
+        self.assertNotIn("user_preference", columns)
+        candidate = self.hq.capability_evidence.profile(
+            workspace.id, now_epoch_seconds=101
+        ).candidates[0]
+        self.assertEqual(candidate.user_preference, 0.5)
 
     def test_verified_unavailable_and_unknown_are_preserved_truthfully(self):
         workspace = self.workspace()
@@ -186,6 +199,40 @@ class CapabilityEnvironmentEvidenceTests(unittest.TestCase):
             )
         self.assertEqual(self.hq.capability_evidence.state(workspace.id).current, (current,))
         self.assertEqual(len(self.hq.capability_evidence.history(workspace.id)), 1)
+
+    def test_sql_trigger_also_rejects_regressing_probe_time(self):
+        workspace = self.workspace()
+        item = self.record(workspace.id, observed_at=110)
+        columns = (
+            "id,workspace_id,workspace_observation_id,host_runtime_fingerprint,route_id,"
+            "route_kind,capability,display_name,brand,availability,evidence_kind,evidence_ref,"
+            "observed_at_epoch_seconds,task_fit,editability,locality,privacy,latency,"
+            "reversibility,cost_efficiency,portability,paid"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.hq.store._conn.execute(
+                f"INSERT INTO capability_observations({columns}) "
+                f"SELECT ?,workspace_id,workspace_observation_id,host_runtime_fingerprint,"
+                f"route_id,route_kind,capability,display_name,brand,availability,evidence_kind,"
+                f"evidence_ref,109,task_fit,editability,locality,privacy,latency,reversibility,"
+                f"cost_efficiency,portability,paid FROM capability_observations WHERE id=?",
+                ("capev_direct_old", item.id),
+            )
+        self.hq.store._conn.rollback()
+        self.assertEqual(len(self.hq.capability_evidence.history(workspace.id)), 1)
+
+    def test_route_kind_is_stable_within_one_exact_environment(self):
+        workspace = self.workspace()
+        first = self.record(workspace.id, route_id="shared-route")
+        with self.assertRaises(CapabilityEvidenceError):
+            self.record(
+                workspace.id,
+                route_id="shared-route",
+                route_kind="PROVIDER",
+                capability="transport.read",
+                evidence_ref="evidence:wrong-kind",
+            )
+        self.assertEqual(self.hq.capability_evidence.history(workspace.id), (first,))
 
     def test_workspace_observation_change_stales_prior_evidence_and_probe_race(self):
         workspace = self.workspace()
