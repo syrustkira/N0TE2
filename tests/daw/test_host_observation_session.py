@@ -159,6 +159,10 @@ class HostObservationSessionTests(unittest.TestCase):
             result.shadow.current_workspace_observation_id,
             binding.workspace_observation_id,
         )
+        self.assertEqual(
+            result.studio.environment_id,
+            result.capability_environment.environment_id,
+        )
         self.assertEqual(result.shadow.status, "CURRENT")
         self.assertEqual(len(result.recorded_capability_ids), 1)
         self.assertIsNotNone(result.recorded_shadow_batch_id)
@@ -300,6 +304,39 @@ class HostObservationSessionTests(unittest.TestCase):
                 now_epoch_seconds=109,
             )
         self.assertEqual(self.hq.capability_evidence.history(workspace.id), ())
+        self.assertEqual(self.hq.shadow.history(workspace.id), ())
+
+    def test_now_before_existing_current_evidence_fails_before_shadow_write(self):
+        workspace, runtime = self.workspace()
+        workspace_state = self.hq.workspaces.state(workspace.id)
+        self.hq.capability_evidence.record(
+            workspace.id,
+            expected_workspace_observation_id=workspace_state.current_observation.id,
+            expected_host_runtime_fingerprint=(
+                workspace_state.current_observation.host_runtime_fingerprint
+            ),
+            route_id="native-api",
+            route_kind="HOST_NATIVE",
+            capability="track.read",
+            display_name="Native API",
+            availability="AVAILABLE",
+            evidence_kind="RUNTIME_PROBE",
+            evidence_ref="evidence:future-current",
+            observed_at_epoch_seconds=110,
+        )
+        binding = self.hq.host_observation.begin(
+            workspace.id, song_id=self.song.id, runtime=runtime
+        )
+        with self.assertRaises(HostObservationError):
+            self.hq.host_observation.observe(
+                binding,
+                capabilities=(),
+                focus_dimensions=self.focus_dimensions(),
+                focus_evidence_ref="evidence:focus",
+                shadow=self.full_shadow(),
+                now_epoch_seconds=109,
+            )
+        self.assertEqual(len(self.hq.capability_evidence.history(workspace.id)), 1)
         self.assertEqual(self.hq.shadow.history(workspace.id), ())
 
     def test_later_layer_failure_returns_no_session_but_preserves_truthful_prior_fact(self):
