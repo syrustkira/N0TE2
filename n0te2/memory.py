@@ -10,6 +10,7 @@ from .evidence import EvidenceMemory
 from .focus import FocusContextService
 from .friction import FrictionMemory
 from .graph import SongKnowledgeMapService
+from .host_observation import HostObservationCoordinator
 from .learning import LearningMemory
 from .lineage import LineageStore
 from .operations import OperationJournal
@@ -39,6 +40,12 @@ class HeadquartersMemory:
         self.shadow = HostShadow(store, self.workspaces)
         self.reconciliation = ReconciliationService(store, self.twins, self.shadow)
         self.focus = FocusContextService(self.workspaces)
+        self.host_observation = HostObservationCoordinator(
+            self.workspaces,
+            self.capability_evidence,
+            self.focus,
+            self.shadow,
+        )
         self.operations = OperationJournal(store, self.activity)
         self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
