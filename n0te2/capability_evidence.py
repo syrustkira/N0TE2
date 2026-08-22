@@ -369,16 +369,22 @@ class CapabilityEvidenceMemory:
             paid=bool(row["paid"]),
         )
 
+    @staticmethod
+    def _select_columns() -> str:
+        return (
+            "seq,id,workspace_id,workspace_observation_id,host_runtime_fingerprint,"
+            "route_id,route_kind,capability,display_name,brand,availability,"
+            "evidence_kind,evidence_ref,observed_at_epoch_seconds,task_fit,editability,"
+            "locality,privacy,latency,reversibility,cost_efficiency,portability,"
+            "user_preference,paid"
+        )
+
     def _rows_for_workspace(self, workspace_id: str) -> tuple[CapabilityObservation, ...]:
         return tuple(
             self._observation(row)
             for row in self._conn.execute(
-                "SELECT seq,id,workspace_id,workspace_observation_id,"
-                "host_runtime_fingerprint,route_id,route_kind,capability,display_name,"
-                "brand,availability,evidence_kind,evidence_ref,observed_at_epoch_seconds,"
-                "task_fit,editability,locality,privacy,latency,reversibility,"
-                "cost_efficiency,portability,user_preference,paid "
-                "FROM capability_observations WHERE workspace_id=? ORDER BY seq",
+                f"SELECT {self._select_columns()} FROM capability_observations "
+                "WHERE workspace_id=? ORDER BY seq",
                 (workspace_id,),
             )
         )
@@ -398,46 +404,41 @@ class CapabilityEvidenceMemory:
                 raise LineageCorruptionError(
                     f"capability evidence hooks are incomplete: {sorted(missing)}"
                 )
-
+            last_time: dict[tuple[str, str, str], int] = {}
             for row in self._conn.execute(
-                "SELECT seq,id,workspace_id,workspace_observation_id,"
-                "host_runtime_fingerprint,route_id,route_kind,capability,display_name,"
-                "brand,availability,evidence_kind,evidence_ref,observed_at_epoch_seconds,"
-                "task_fit,editability,locality,privacy,latency,reversibility,"
-                "cost_efficiency,portability,user_preference,paid "
-                "FROM capability_observations ORDER BY seq"
+                f"SELECT {self._select_columns()} FROM capability_observations ORDER BY seq"
             ):
                 item = self._observation(row)
                 if item.route_kind not in ROUTE_KINDS:
-                    raise LineageCorruptionError(
-                        "capability evidence route kind is invalid"
-                    )
+                    raise LineageCorruptionError("capability evidence route kind is invalid")
                 if item.availability not in CAPABILITY_AVAILABILITY:
-                    raise LineageCorruptionError(
-                        "capability evidence availability is invalid"
-                    )
+                    raise LineageCorruptionError("capability evidence availability is invalid")
                 if item.evidence_kind not in CAPABILITY_EVIDENCE_KINDS:
-                    raise LineageCorruptionError(
-                        "capability evidence kind is invalid"
-                    )
+                    raise LineageCorruptionError("capability evidence kind is invalid")
                 if item.availability != "UNKNOWN" and not item.evidence_ref:
                     raise LineageCorruptionError(
                         "verified capability evidence is missing its evidence reference"
                     )
                 for field_name in (
-                    "id",
-                    "workspace_id",
-                    "workspace_observation_id",
-                    "host_runtime_fingerprint",
-                    "route_id",
-                    "capability",
-                    "display_name",
+                    "id", "workspace_id", "workspace_observation_id",
+                    "host_runtime_fingerprint", "route_id", "capability", "display_name",
                 ):
                     value = str(getattr(item, field_name))
                     if not value.strip() or value != value.strip():
                         raise LineageCorruptionError(
                             f"capability evidence {field_name} is not canonical"
                         )
+                if item.brand is not None and (
+                    not item.brand.strip() or item.brand != item.brand.strip()
+                ):
+                    raise LineageCorruptionError("capability evidence brand is not canonical")
+                if item.evidence_ref is not None and (
+                    not item.evidence_ref.strip()
+                    or item.evidence_ref != item.evidence_ref.strip()
+                ):
+                    raise LineageCorruptionError(
+                        "capability evidence reference is not canonical"
+                    )
                 for value, field_name in (
                     (item.task_fit, "task_fit"),
                     (item.editability, "editability"),
@@ -467,10 +468,15 @@ class CapabilityEvidenceMemory:
                     raise LineageCorruptionError(
                         "capability evidence crosses a workspace/runtime boundary"
                     )
-                try:
-                    item.to_candidate(
-                        now_epoch_seconds=item.observed_at_epoch_seconds
+                key = (item.workspace_observation_id, item.capability, item.route_id)
+                prior_time = last_time.get(key)
+                if prior_time is not None and item.observed_at_epoch_seconds < prior_time:
+                    raise LineageCorruptionError(
+                        "capability evidence observation time regressed"
                     )
+                last_time[key] = item.observed_at_epoch_seconds
+                try:
+                    item.to_candidate(now_epoch_seconds=item.observed_at_epoch_seconds)
                 except Exception as exc:
                     raise LineageCorruptionError(
                         "capability evidence cannot reconstruct its candidate fact"
@@ -495,19 +501,17 @@ class CapabilityEvidenceMemory:
             item
             for item in history
             if item.workspace_observation_id == current_observation.id
-            and item.host_runtime_fingerprint
-            == current_observation.host_runtime_fingerprint
+            and item.host_runtime_fingerprint == current_observation.host_runtime_fingerprint
         )
         latest: dict[tuple[str, str], CapabilityObservation] = {}
         for item in current_history:
             latest[(item.capability, item.route_id)] = item
-        current = tuple(latest[key] for key in sorted(latest))
         return CapabilityEnvironmentState(
             workspace_id=workspace_state.workspace.id,
             workspace_observation_id=current_observation.id,
             host_runtime_fingerprint=current_observation.host_runtime_fingerprint,
             host_family=workspace_state.workspace.host_family,
-            current=current,
+            current=tuple(latest[key] for key in sorted(latest)),
             stale_count=len(history) - len(current_history),
         )
 
@@ -518,14 +522,13 @@ class CapabilityEvidenceMemory:
         now_epoch_seconds: int,
     ) -> StudioCapabilityProfile:
         state = self.state(workspace_id)
-        candidates = tuple(
-            item.to_candidate(now_epoch_seconds=now_epoch_seconds)
-            for item in state.current
-        )
         return StudioCapabilityProfile.build(
             environment_id=state.environment_id,
             host_label=state.host_family,
-            candidates=candidates,
+            candidates=tuple(
+                item.to_candidate(now_epoch_seconds=now_epoch_seconds)
+                for item in state.current
+            ),
         )
 
     def record(
@@ -557,12 +560,10 @@ class CapabilityEvidenceMemory:
         state = self.workspaces.state(workspace_id)
         current = state.current_observation
         expected_observation = _text(
-            expected_workspace_observation_id,
-            "expected_workspace_observation_id",
+            expected_workspace_observation_id, "expected_workspace_observation_id"
         )
         expected_runtime = _text(
-            expected_host_runtime_fingerprint,
-            "expected_host_runtime_fingerprint",
+            expected_host_runtime_fingerprint, "expected_host_runtime_fingerprint"
         )
         if (
             current.id != expected_observation
@@ -577,9 +578,7 @@ class CapabilityEvidenceMemory:
         capability = _text(capability, "capability")
         display_name = _text(display_name, "display_name")
         brand = _optional_text(brand, "brand")
-        availability = _enum(
-            availability, "availability", CAPABILITY_AVAILABILITY
-        )
+        availability = _enum(availability, "availability", CAPABILITY_AVAILABILITY)
         evidence_kind = _enum(
             evidence_kind, "evidence_kind", CAPABILITY_EVIDENCE_KINDS
         )
@@ -624,6 +623,17 @@ class CapabilityEvidenceMemory:
                 "capability evidence cannot form a valid candidate fact"
             ) from exc
 
+        prior = self._conn.execute(
+            "SELECT observed_at_epoch_seconds FROM capability_observations "
+            "WHERE workspace_observation_id=? AND capability=? AND route_id=? "
+            "ORDER BY seq DESC LIMIT 1",
+            (current.id, capability, route_id),
+        ).fetchone()
+        if prior is not None and observed_at < int(prior["observed_at_epoch_seconds"]):
+            raise CapabilityEvidenceError(
+                "capability evidence observation time regressed for current route/capability"
+            )
+
         observation_id = _new_id("capev")
         try:
             with self.store._tx():
@@ -636,29 +646,13 @@ class CapabilityEvidenceMemory:
                     "portability,user_preference,paid) "
                     "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                     (
-                        observation_id,
-                        state.workspace.id,
-                        current.id,
-                        current.host_runtime_fingerprint,
-                        route_id,
-                        route_kind,
-                        capability,
-                        display_name,
-                        brand,
-                        availability,
-                        evidence_kind,
-                        evidence_ref,
-                        observed_at,
-                        scores["task_fit"],
-                        scores["editability"],
-                        scores["locality"],
-                        scores["privacy"],
-                        scores["latency"],
-                        scores["reversibility"],
-                        scores["cost_efficiency"],
-                        scores["portability"],
-                        scores["user_preference"],
-                        int(paid),
+                        observation_id, state.workspace.id, current.id,
+                        current.host_runtime_fingerprint, route_id, route_kind,
+                        capability, display_name, brand, availability, evidence_kind,
+                        evidence_ref, observed_at, scores["task_fit"], scores["editability"],
+                        scores["locality"], scores["privacy"], scores["latency"],
+                        scores["reversibility"], scores["cost_efficiency"],
+                        scores["portability"], scores["user_preference"], int(paid),
                     ),
                 )
         except sqlite3.DatabaseError as exc:
@@ -667,12 +661,7 @@ class CapabilityEvidenceMemory:
             ) from exc
 
         row = self._conn.execute(
-            "SELECT seq,id,workspace_id,workspace_observation_id,"
-            "host_runtime_fingerprint,route_id,route_kind,capability,display_name,"
-            "brand,availability,evidence_kind,evidence_ref,observed_at_epoch_seconds,"
-            "task_fit,editability,locality,privacy,latency,reversibility,"
-            "cost_efficiency,portability,user_preference,paid "
-            "FROM capability_observations WHERE id=?",
+            f"SELECT {self._select_columns()} FROM capability_observations WHERE id=?",
             (observation_id,),
         ).fetchone()
         if row is None:
