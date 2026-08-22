@@ -117,12 +117,15 @@ body {
   background: radial-gradient(circle at 12% 0%, #18202a 0, var(--color-bg) 38rem);
 }
 a { color: inherit; }
+.skip-link, .nav a, button, .button {
+  min-height: 44px;
+  min-height: var(--target-min);
+}
 .skip-link {
   position: absolute;
   left: 1rem;
   top: -4rem;
   z-index: 10;
-  min-height: var(--target-min);
   padding: .75rem 1rem;
   background: var(--color-accent);
   color: var(--color-accent-ink);
@@ -181,7 +184,6 @@ a { color: inherit; }
 .nav { position: sticky; top: 1rem; display: grid; gap: .35rem; }
 .nav a {
   min-width: 0;
-  min-height: var(--target-min);
   display: flex;
   align-items: center;
   padding: .7rem .85rem;
@@ -257,7 +259,6 @@ input[type="text"] {
 button, .button {
   min-width: 0;
   max-width: 100%;
-  min-height: var(--target-min);
   display: inline-flex;
   align-items: center;
   justify-content: center;
