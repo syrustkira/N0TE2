@@ -13,6 +13,7 @@ from .graph import SongKnowledgeMapService
 from .host_observation import HostObservationCoordinator
 from .learning import LearningMemory
 from .lineage import LineageStore
+from .material import SongMaterialMemory
 from .operations import OperationJournal
 from .provenance import ProvenanceLedger
 from .reconcile import ReconciliationService
@@ -46,6 +47,7 @@ class HeadquartersMemory:
             self.focus,
             self.shadow,
         )
+        self.materials = SongMaterialMemory(store)
         self.operations = OperationJournal(store, self.activity)
         self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
