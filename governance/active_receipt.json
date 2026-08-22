@@ -22,15 +22,17 @@
   "reuse": {
     "mode": "BIND_NEW_APPEND_ONLY_CAPABILITY_EVIDENCE_TO_EXISTING_WORKSPACE_RUNTIME_IDENTITY_AND_EXISTING_CAPABILITY_RESOLUTION",
     "n0te2_dependencies": ["DAW-00A HostRuntimeIdentity", "DAW-00B WorkspaceMemory/current observation", "DAW-00D HostShadow stale-on-workspace-observation semantics", "CORE-03A CapabilityCandidate/CapabilityResolver", "StudioCapabilityProfile pure truth surface", "CORE-01 canonical SQLite/Activity chronology"],
-    "legacy_rejections": ["Ableton-first feature registry", "whole-DAW green/support badge", "capability inferred from DAW family/name alone", "caller-provided verified=True treated as evidence", "stale capability truth surviving runtime/workspace observation changes", "automatic capability claims from installed plugin names", "provider entitlement inference", "host mutation or adapter execution", "real-host support claims without observed evidence"],
+    "legacy_rejections": ["Ableton-first feature registry", "whole-DAW green/support badge", "capability inferred from DAW family/name alone", "caller-provided verified=True treated as evidence", "adapter-provided artist preference masquerading as environment evidence", "stale capability truth surviving runtime/workspace observation changes", "automatic capability claims from installed plugin names", "provider entitlement inference", "host mutation or adapter execution", "real-host support claims without observed evidence"],
     "direct_copy": false
   },
   "completion_proof": [
     "a capability observation is append-only and bound to one canonical workspace, its exact current workspace observation ID and exact host-runtime fingerprint",
-    "the observation records capability, route identity, compatibility/availability truth, evidence reference and the explicit scoring attributes required by CapabilityCandidate without using host family/brand as a score bonus",
-    "verified/available capability truth requires explicit evidence; unverified or unavailable observations remain representable as truthful negative/unknown state rather than disappearing",
+    "the observation records capability, stable route identity/kind, availability truth, evidence reference and environment-derived scoring attributes needed by CapabilityCandidate without using host family/brand as a score bonus",
+    "artist user_preference is not persisted as environment evidence; derived candidates remain neutral until a separately owned artist-preference contract exists",
+    "verified AVAILABLE and verified UNAVAILABLE truth require explicit evidence; UNKNOWN remains representable and unverified rather than disappearing",
     "a workspace/runtime observation change makes prior capability observations stale for current resolution instead of silently carrying them forward",
-    "current capability state is derived deterministically from append-only history; duplicate/current contradictory facts are rejected or resolved by explicit latest-observation semantics rather than unordered caller input",
+    "current capability state is derived deterministically from append-only history; an older late probe cannot supersede newer evidence and SQLite enforces non-regressing observation time",
+    "one stable route ID cannot silently switch route kind inside one exact environment; the database and reopen validation fail closed on route-kind drift",
     "StudioCapabilityProfile can be built from the current evidence state so CapabilityResolver no longer needs callers to invent verified/compatible flags for host-native candidates",
     "peer-host behavior is identical for Ableton Live, FL Studio, Logic Pro, Pro Tools, Studio One, REAPER and GENERIC_OTHER; no host gets scheduling, scoring or truth priority",
     "workspace/Song/profile isolation is preserved and capability evidence cannot cross workspace observation or host-runtime boundaries",
@@ -38,6 +40,6 @@
     "corrupt/tampered persisted capability evidence or missing schema hooks fail closed on reopen",
     "authored unit/integration proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
-  "non_scope": ["real DAW probing/adapters", "host-specific mutation", "full installed plugin/content inventory", "licensing/entitlement truth", "hardware inventory", "provider plans/quotas", "consumer Workspaces/Health UI", "whole-DAW support badges", "portability execution", "DAW adapter acceptance", "audio analysis", "Song creative suggestions/templates/randomize", "OPS communications", "Gate-B customer acceptance"],
+  "non_scope": ["real DAW probing/adapters", "host-specific mutation", "full installed plugin/content inventory", "licensing/entitlement truth", "hardware inventory", "provider plans/quotas", "artist preference storage", "consumer Workspaces/Health UI", "whole-DAW support badges", "portability execution", "DAW adapter acceptance", "audio analysis", "Song creative suggestions/templates/randomize", "OPS communications", "Gate-B customer acceptance"],
   "next_selection_rule": "After DAW-00F lands, globally re-audit DAW-00 remaining requirements and all eligible nodes. Do not automatically continue to a host adapter: compare consumer Workspaces/Health reachability, environment fingerprint expansion, portability/integration chassis, remaining Song outcomes and OPS-04 by customer value and truthful substrate."
 }
