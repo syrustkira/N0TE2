@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, urlsplit
 from .app_runtime import ApplicationRuntime
 from .instance import ProcessIdentity, ProcessProbe
 from .profiles import ApplicationProfile, ApplicationProfiles, ProfileResolution
+from .shell_design import SHELL_CSS
 
 _LOOPBACK_HOST = "127.0.0.1"
 _MAX_FORM_BYTES = 4096
@@ -30,7 +31,7 @@ _FOCUS_HINTS = {
 
 
 class ConsumerShellError(RuntimeError):
-    """Invalid or unsafe UX-01A/B consumer-shell operation."""
+    """Invalid or unsafe UX-01A/B/C consumer-shell operation."""
 
 
 class ConsumerShellRecoveryRequired(ConsumerShellError):
@@ -68,77 +69,6 @@ class _LoopbackHTTPServer(HTTPServer):
     allow_reuse_address = False
 
 
-_CSS = r"""
-:root {
-  color-scheme: dark;
-  --bg: #0b0d10;
-  --panel: #13171c;
-  --panel-2: #191f26;
-  --text: #f3f5f7;
-  --muted: #a9b2bd;
-  --line: #2a323c;
-  --accent: #d9ff63;
-  --accent-ink: #11150a;
-  --danger: #ffb4aa;
-  --radius: 18px;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-* { box-sizing: border-box; }
-html { background: var(--bg); font-size: 16px; }
-body { margin: 0; min-height: 100vh; color: var(--text); background: radial-gradient(circle at 12% 0%, #18202a 0, var(--bg) 38rem); }
-a { color: inherit; }
-.skip-link { position: absolute; left: 1rem; top: -4rem; z-index: 10; padding: .75rem 1rem; background: var(--accent); color: var(--accent-ink); border-radius: .75rem; }
-.skip-link:focus { top: 1rem; }
-.shell { width: min(1180px, calc(100% - 2rem)); margin: 0 auto; padding: 1.25rem 0 3rem; }
-.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem 0 1.25rem; }
-.brand { display: flex; gap: .7rem; align-items: center; font-weight: 760; letter-spacing: -.02em; text-decoration: none; }
-.brand-mark { width: 2.1rem; height: 2.1rem; display: grid; place-items: center; border: 1px solid var(--line); border-radius: .7rem; background: var(--panel); }
-.local-badge { display: inline-flex; align-items: center; gap: .45rem; color: var(--muted); font-size: .88rem; }
-.local-badge::before { content: ""; width: .55rem; height: .55rem; border-radius: 999px; background: var(--accent); }
-.layout { display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 1.25rem; align-items: start; }
-.nav { position: sticky; top: 1rem; display: grid; gap: .35rem; }
-.nav a { min-height: 44px; display: flex; align-items: center; padding: .7rem .85rem; color: var(--muted); text-decoration: none; border: 1px solid transparent; border-radius: .8rem; }
-.nav a:hover, .nav a[aria-current="page"] { color: var(--text); background: var(--panel); border-color: var(--line); }
-main { min-width: 0; }
-.hero { padding: clamp(1.35rem, 4vw, 3rem); border: 1px solid var(--line); border-radius: calc(var(--radius) + 4px); background: linear-gradient(150deg, var(--panel-2), var(--panel)); box-shadow: 0 24px 70px rgba(0,0,0,.22); }
-.eyebrow { margin: 0 0 .55rem; color: var(--accent); font-size: .78rem; font-weight: 760; letter-spacing: .11em; text-transform: uppercase; }
-h1 { margin: 0; max-width: 18ch; font-size: clamp(2rem, 6vw, 4.6rem); line-height: .98; letter-spacing: -.055em; }
-.lede { max-width: 62ch; margin: 1rem 0 0; color: var(--muted); font-size: 1.05rem; line-height: 1.65; }
-.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-top: 1rem; }
-.card { min-width: 0; padding: 1.25rem; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(19,23,28,.94); }
-.card h2 { margin: 0 0 .45rem; font-size: 1.05rem; }
-.card p { margin: .35rem 0; color: var(--muted); line-height: 1.55; }
-.song-name { margin-top: .5rem !important; color: var(--text) !important; font-size: clamp(1.35rem, 4vw, 2rem); font-weight: 760; letter-spacing: -.035em; overflow-wrap: anywhere; }
-.stack { display: grid; gap: .75rem; }
-.row { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
-label { display: block; margin-bottom: .4rem; font-weight: 650; }
-input[type="text"] { width: 100%; min-height: 46px; padding: .72rem .8rem; color: var(--text); background: #0e1216; border: 1px solid var(--line); border-radius: .75rem; font: inherit; }
-button, .button { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: .4rem; padding: .72rem 1rem; border: 1px solid var(--line); border-radius: .75rem; background: var(--panel-2); color: var(--text); font: inherit; font-weight: 720; text-decoration: none; cursor: pointer; }
-button.primary, .button.primary { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
-button.danger { color: var(--danger); }
-button:hover, .button:hover { filter: brightness(1.08); }
-button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
-.status { display: inline-flex; align-items: center; gap: .55rem; color: var(--muted); }
-.status::before { content: ""; width: .65rem; height: .65rem; border-radius: 999px; background: currentColor; }
-.status.good { color: #c8f77d; }
-.status.caution { color: #ffd38b; }
-.notice { margin-top: 1rem; padding: 1rem; border-left: 3px solid var(--accent); background: #11161b; color: var(--muted); border-radius: .6rem; }
-.muted { color: var(--muted); }
-footer { padding: 2rem 0 0; color: var(--muted); font-size: .85rem; }
-@media (max-width: 760px) {
-  .shell { width: min(100% - 1rem, 1180px); }
-  .layout { grid-template-columns: 1fr; }
-  .nav { position: static; grid-template-columns: repeat(4, minmax(0, 1fr)); overflow-x: auto; }
-  .nav a { justify-content: center; padding-inline: .45rem; }
-  .grid { grid-template-columns: 1fr; }
-  .hero { padding: 1.25rem; }
-}
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; }
-}
-""".strip()
-
-
 def _clean_human_text(value: str, field: str, *, maximum: int) -> str:
     text = " ".join(str(value).split())
     if not text:
@@ -149,7 +79,7 @@ def _clean_human_text(value: str, field: str, *, maximum: int) -> str:
 
 
 class ConsumerShell:
-    """Local-first UX-01A/B Artist Headquarters front door.
+    """Local-first UX-01A/B/C Artist Headquarters front door.
 
     Product semantics remain in ApplicationProfiles/ApplicationRuntime/Headquarters.
     This shell owns only bounded presentation, browser-session action authority and
@@ -394,7 +324,7 @@ class ConsumerShell:
             self._send_bytes(
                 handler,
                 200,
-                _CSS.encode("utf-8"),
+                SHELL_CSS.encode("utf-8"),
                 content_type="text/css; charset=utf-8",
             )
             return
@@ -911,9 +841,11 @@ class ConsumerShell:
             token = self._new_action("focus-set", mode)
             current = focus is not None and focus.mode == mode
             button_class = "primary" if current else ""
+            pressed = "true" if current else "false"
             mode_forms.append(
                 f'<form method="post" action="/focus/set">{self._hidden(token)}'
-                f'<button class="{button_class}" type="submit">{html.escape(mode.title())}</button></form>'
+                f'<button class="{button_class}" type="submit" aria-pressed="{pressed}">'
+                f'{html.escape(mode.title())}</button></form>'
             )
         mode_buttons = "".join(mode_forms)
 
