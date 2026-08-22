@@ -14,15 +14,16 @@
     "Canonical main is 347dec8eb883ca58bf107d14bb8ff79d105843b3 after merged PR #47 landed UX-01B on top of UX-01A. Hosted execution for UX-01A/B remained UNOBSERVED rather than being relabeled green.",
     "UX-01 remains ACTIVE. UX-01A Artist Headquarters entry/navigation and UX-01B durable Headquarters Focus Sessions are landed but do not close the parent UX node.",
     "UX-01C is selected on exact baseline 347dec8eb883ca58bf107d14bb8ff79d105843b3: canonical Headquarters shell design and accessibility contract.",
+    "Draft PR #48 is the integration surface for UX-01C. Exact product/test head 562d9e2c3d551c653242475e3f5d259df1dba91f is 10 commits ahead / 0 behind the baseline, mergeable, and changes only six receipt-authorized paths. Exact-head workflow runs [] and commit statuses [] mean hosted execution is UNOBSERVED, not green and not failed. Later governance-only reconciliation commits do not convert that absence into executed proof.",
     "UX-01C extracts semantic shell presentation/accessibility rules into one clean-room module used by the real consumer shell rather than declaring incidental CSS to be the design system.",
     "The representative-state fixture is executable scope truth for states already reachable in clean-room N0TE2: first profile, profile selection, no Song, active Song, no Focus, active Focus, settings, blocked ownership and recovery.",
     "Provider-offline/loading/release-job/approval-center fixtures are intentionally not fabricated before those product substrates become truthfully reachable.",
-    "Focus mode controls must expose aria-pressed state in addition to visual selection. Keyboard focus, textual status meaning, labels and landmarks remain required.",
-    "The shell must explicitly support reduced-motion, increased-contrast and forced-colors environments, preserve comfortable controls on narrow screens and wrap long Artist/Song labels without widening the viewport contract.",
+    "Focus mode controls expose aria-pressed state in addition to visual selection. Keyboard focus, textual status meaning, labels and landmarks remain required across representative states.",
+    "The canonical CSS supplies semantic design tokens, literal 44px target fallback, reduced-motion, increased-contrast and forced-colors handling, narrow-screen route scrolling/reflow, long-label wrapping and a compatible surface-color fallback before optional color-mix enhancement.",
     "UX-01C does not select final brand palette/art direction, screenshots as immutable doctrine, producer shortcut design, performance claims, Not Now, Job/Approval Center or future Creative Studio media accessibility.",
     "Not Now remains retained REQ-SCOPE-097 scope but cannot truthfully bind to AuthorityService or OperationJournal because those are exact action-authority/execution-history objects rather than artist-facing attention items.",
     "Headquarters Focus remains distinct from DAW FocusContext; UX-01C does not edit DAW targeting or any provider/audio/business execution path.",
-    "Existing Artist/Song/Focus persistence, security headers, exact Host/Origin/CSRF/one-shot write authority, explicit Quit and recovery semantics must remain behaviorally unchanged.",
+    "Existing Artist/Song/Focus persistence, security headers, exact Host/Origin/CSRF/one-shot write authority, explicit Quit and recovery semantics remain behaviorally unchanged by the PR patch.",
     "Authored fixture/regression/smoke proof is not executed proof. Local GitHub resolution is unavailable in this runtime; hosted/local execution evidence is recorded only when actually observed."
   ]
 }
