@@ -253,7 +253,10 @@ class HostObservationResult:
         object.__setattr__(
             self,
             "recorded_capability_ids",
-            tuple(_text(value, "recorded_capability_id") for value in self.recorded_capability_ids),
+            tuple(
+                _text(value, "recorded_capability_id")
+                for value in self.recorded_capability_ids
+            ),
         )
         object.__setattr__(
             self,
@@ -339,7 +342,10 @@ class HostObservationCoordinator:
         self,
         binding: HostObservationBinding,
         capabilities: tuple[CapabilityFactInput, ...],
+        *,
+        now_epoch_seconds: int,
     ) -> None:
+        now = _nonnegative_int(now_epoch_seconds, "now_epoch_seconds")
         if not all(isinstance(item, CapabilityFactInput) for item in capabilities):
             raise TypeError("capabilities must contain CapabilityFactInput values")
         keys = [(item.capability, item.route_id) for item in capabilities]
@@ -349,6 +355,10 @@ class HostObservationCoordinator:
             )
         route_kinds: dict[str, str] = {}
         for item in capabilities:
+            if item.observed_at_epoch_seconds > now:
+                raise HostObservationError(
+                    "session time predates submitted capability evidence"
+                )
             prior = route_kinds.get(item.route_id)
             if prior is not None and prior != item.route_kind:
                 raise HostObservationError(
@@ -366,6 +376,10 @@ class HostObservationCoordinator:
         latest_time: dict[tuple[str, str], int] = {}
         existing_kind: dict[str, str] = {}
         for item in current_history:
+            if item.observed_at_epoch_seconds > now:
+                raise HostObservationError(
+                    "session time predates current capability evidence"
+                )
             latest_time[(item.capability, item.route_id)] = max(
                 latest_time.get((item.capability, item.route_id), 0),
                 item.observed_at_epoch_seconds,
@@ -419,14 +433,18 @@ class HostObservationCoordinator:
         shadow: ShadowObservationInput | None = None,
         now_epoch_seconds: int,
     ) -> HostObservationResult:
-        workspace_state = self._validate_binding(binding)
+        self._validate_binding(binding)
         capabilities = tuple(capabilities)
         focus_dimensions = tuple(focus_dimensions)
         if not all(isinstance(item, FocusDimension) for item in focus_dimensions):
             raise TypeError("focus_dimensions must contain FocusDimension values")
         focus_evidence = _text(focus_evidence_ref, "focus_evidence_ref")
         now = _nonnegative_int(now_epoch_seconds, "now_epoch_seconds")
-        self._preflight_capabilities(binding, capabilities)
+        self._preflight_capabilities(
+            binding,
+            capabilities,
+            now_epoch_seconds=now,
+        )
         self._preflight_shadow(binding, shadow)
 
         # Capture focus before writes. This is pure and revalidates the exact runtime.
@@ -501,6 +519,7 @@ class HostObservationCoordinator:
             != binding.host_runtime_fingerprint
             or shadow_state.current_workspace_observation_id
             != binding.workspace_observation_id
+            or studio.environment_id != capability_environment.environment_id
         ):
             raise HostObservationError(
                 "observation layers no longer share the same workspace binding"
