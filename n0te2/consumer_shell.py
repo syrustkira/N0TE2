@@ -22,6 +22,12 @@ from .instance import ProcessIdentity, ProcessProbe
 from .material import SongMaterialError
 from .profiles import ApplicationProfile, ApplicationProfiles, ProfileResolution
 from .shell_design import SHELL_CSS
+from .version_approval import (
+    StaleVersionApprovalError,
+    VersionApprovalBinding,
+    VersionApprovalError,
+    VersionApprovalService,
+)
 
 _LOOPBACK_HOST = "127.0.0.1"
 _MAX_FORM_BYTES = 32768
@@ -502,6 +508,7 @@ class ConsumerShell:
             "/song/start",
             "/song/material",
             "/song/version/resume",
+            "/song/version/approve",
             "/session/start",
             "/session/capture",
             "/session/finish",
@@ -531,6 +538,8 @@ class ConsumerShell:
                 self._post_start_song(handler, form)
             elif path == "/song/version/resume":
                 self._post_resume_version(handler, form)
+            elif path == "/song/version/approve":
+                self._post_approve_version(handler, form)
             elif path == "/session/start":
                 self._post_session_start(handler, form)
             elif path == "/session/capture":
@@ -850,6 +859,52 @@ class ConsumerShell:
         self._consumer_notice = f"Resumed {target.label} as the current Version. Approval was not changed."
         self._redirect(handler, "/song")
 
+    def _post_approve_version(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before approving a Song Version."),
+            )
+            return
+        action = self._consume_action(form.get("action", ""), "song-version-approve")
+        if action is None or action.value is None:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That approval action was already handled or expired."),
+            )
+            return
+        parts = action.value.split("|", 3)
+        if len(parts) != 4:
+            self._send_html(handler, 409, self._simple_error("That approval action is no longer valid."))
+            return
+        song_id, target_version_id, current_marker, approved_marker = parts
+        binding = VersionApprovalBinding(
+            song_id=song_id,
+            target_version_id=target_version_id,
+            expected_current_version_id=None if current_marker == "~" else current_marker,
+            expected_approved_version_id=None if approved_marker == "~" else approved_marker,
+        )
+        try:
+            result = VersionApprovalService(self.runtime.headquarters.store).approve(binding)
+        except (StaleVersionApprovalError, VersionApprovalError):
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("The Song Version state changed. Reload the Song before approving a Version."),
+            )
+            return
+        self._consumer_notice = (
+            f"Approved {result.approved_version.label}. The current Version was not changed. "
+            "This approval does not publish or release anything."
+        )
+        self._redirect(handler, "/song")
+
     def _post_session_start(
         self,
         handler: BaseHTTPRequestHandler,
@@ -1167,7 +1222,7 @@ class ConsumerShell:
                 "running-song",
                 song.title,
                 "Active Song",
-                "Hear preserved local audio Versions, understand their lineage, set a clear work objective, capture what matters, then finish with what happened and what comes next.",
+                "Hear preserved local audio Versions, understand their lineage, approve the exact Version you mean, and keep work Session continuity around that decision.",
                 artist_name=artist.display_name,
                 song_title=song.title,
             )
@@ -1429,16 +1484,32 @@ class ConsumerShell:
                     f'{self._hidden(token)}'
                     '<button type="submit">Resume from this Version</button></form>'
                 )
+            approve = ""
+            if version.id != song.approved_version_id:
+                current_marker = song.current_version_id or "~"
+                approved_marker = song.approved_version_id or "~"
+                token = self._new_action(
+                    "song-version-approve",
+                    f"{song.id}|{version.id}|{current_marker}|{approved_marker}",
+                )
+                exact_label = html.escape(f"Approve Version {version.ordinal}: {version.label}")
+                approve = (
+                    '<form class="stack" method="post" action="/song/version/approve">'
+                    f'{self._hidden(token)}'
+                    f'<button type="submit">{exact_label}</button>'
+                    '<p class="muted">Marks this exact Version approved in N0TE. It does not make it current or publish, release, send, or purchase anything.</p>'
+                    '</form>'
+                )
             rows.append(
                 '<li class="stack">'
                 f'<p><strong>Version {version.ordinal}: {html.escape(version.label)}</strong></p>'
                 f'<div class="row">{"".join(states)}</div>'
-                f'{parent_html}{self._material_status(version.id)}{resume}'
+                f'{parent_html}{self._material_status(version.id)}{resume}{approve}'
                 '</li>'
             )
         return (
             '<div class="card"><h2>Version history</h2>'
-            '<p>Hear preserved local audio, then choose which Version is current without deleting later work or changing which Version is approved.</p>'
+            '<p>Hear preserved local audio, choose which Version is current, and explicitly approve the exact Version you mean. Current and approved remain separate.</p>'
             f'<ol class="stack" aria-label="Song Version history">{"".join(rows)}</ol></div>'
         )
 
