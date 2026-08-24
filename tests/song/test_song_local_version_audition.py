@@ -71,11 +71,18 @@ def get_bytes(
         return exc.code, exc.read(), dict(exc.headers.items())
 
 
-def wav_bytes(payload: bytes = b"N0TE-audition-payload") -> bytes:
-    # The bounded audition primitive identifies the RIFF/WAVE container from bytes,
-    # not from the browser filename. The payload need not be decoded by the test.
-    size = (4 + len(payload)).to_bytes(4, "little")
-    return b"RIFF" + size + b"WAVE" + payload
+def wav_bytes(payload: bytes = b"\x80\x90\x70\x80\x88\x78\x80\x82") -> bytes:
+    fmt = (
+        (1).to_bytes(2, "little")
+        + (1).to_bytes(2, "little")
+        + (8000).to_bytes(4, "little")
+        + (8000).to_bytes(4, "little")
+        + (1).to_bytes(2, "little")
+        + (8).to_bytes(2, "little")
+    )
+    body = b"WAVEfmt " + (16).to_bytes(4, "little") + fmt
+    body += b"data" + len(payload).to_bytes(4, "little") + payload
+    return b"RIFF" + len(body).to_bytes(4, "little") + body
 
 
 def seed_audition_history(data_root: Path) -> tuple[str, str, str, bytes]:
@@ -204,14 +211,11 @@ def test_media_route_streams_ranges_and_fails_closed_when_binding_changes(tmp_pa
     assert status == 416
     assert headers["Content-Range"] == f"bytes */{len(audio)}"
 
-    # Any rendered navigation invalidates opaque media grants rather than making
-    # them durable bearer URLs.
     status, _, _ = get_text(shell, "/now")
     assert status == 200
     expired, _, _ = get_bytes(shell, media_path)
     assert expired == 409
 
-    # Refresh the Song to get a new grant, then move the canonical active Song.
     status, page, _ = get_text(shell, "/song")
     assert status == 200
     parser = AudioParser()
@@ -226,8 +230,6 @@ def test_media_route_streams_ranges_and_fails_closed_when_binding_changes(tmp_pa
     stale_song, _, _ = get_bytes(shell, rebound_path)
     assert stale_song == 409
 
-    # Put the original Song back, render a fresh grant, then corrupt the managed
-    # bytes. The request must not stream material that no longer matches lineage.
     changer = HeadquartersMemory.open(data_root, profile_id)
     try:
         changer.store.select_song(song_id)
