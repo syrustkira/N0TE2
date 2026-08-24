@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-VERSION-APPROVAL-01",
+  "receipt_id": "N0TE2-SONG-ACTIVITY-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-VERSION-APPROVAL-01",
-  "baseline_sha": "ce8ec53675d07ebe9d1d8d0054ae3c844d1f68bd",
-  "purpose": "Let the artist explicitly mark one exact canonical Song Version as approved from the normal /song Version history now that Versions are visible and owned local audio can be heard, using stale-safe server authority that binds the rendered active Song, current Version and prior approved Version while preserving current/history/material state.",
+  "increment_id": "SONG-ACTIVITY-01",
+  "baseline_sha": "54bac9b8fed5031328959380117c4adf8278eceb",
+  "purpose": "Expose the canonical append-only Song Activity chronology through the normal /song surface as an artist-readable newest-first 'What changed?' timeline, resolving known Song/Version/material/session/learning/focus events into human language, preserving canonical order without inventing timestamps, and degrading unknown future event types without leaking internal IDs or payloads.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,36 +14,36 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can hear and inspect Song Versions, then deliberately approve one exact Version without making it current, deleting alternatives, or confusing approval with release/publication authority.",
-    "journeys": ["J-COMPARE-DECIDE", "J-IDEA-SONG", "J-TRUST"],
-    "capability": "Exact stale-safe canonical Song Version approval through normal Version history",
-    "increment": "SONG-VERSION-APPROVAL-01"
+    "outcome": "The artist can answer what changed in this Song without reconstructing history from separate Version, Session and memory panels.",
+    "journeys": ["J-SONG-START-RESUME", "J-WHAT-NEXT", "J-TRUST"],
+    "capability": "Consumer-readable canonical Song Activity timeline / What changed?",
+    "increment": "SONG-ACTIVITY-01"
   },
-  "why_now": "PR #55 landed verified local Version audition, completing the first honest see→hear prerequisite for a bounded decision. Canonical LineageStore already has approve_version and ActivityLog already emits VERSION_APPROVED when approved_version_id changes. REQ-SCOPE-013 requires latest-versus-approved truth and REQ-SCOPE-041 requires exact-revision approval with stale invalidation. This is therefore a construction-ready consumer seam rather than a new decision model.",
+  "why_now": "REQ-SCOPE-104 requires a universal chronological Artist activity timeline. CORE-01 Activity is already canonical and downstream Session/Learning/Focus layers already project Song-bound events into it. Recent SONG-01 work also adds meaningful Version/current/approval chronology. The missing seam is consumer reachability, not another event store.",
   "instead_of": [
-    "A new decision ledger is not selected because canonical Version approval and Activity chronology already exist; LearningMemory is a separate Session change→consequence→decision substrate and should not be repurposed as approval state.",
-    "Full loudness-aware A/B is not selected because no clean-room loudness analysis/normalization substrate exists yet.",
-    "First-class reference objects are not selected because approval of owned Version alternatives is now a smaller direct completion of the active Try→Hear→Compare→Decide loop.",
-    "Musical derivation is not selected because the clean-room destination still lacks a truthful audio-analysis engine.",
-    "Another DAW chassis increment is not selected because exact Version approval is host-independent and directly advances owned Song decision continuity."
+    "Another Version control is not selected because visible/history/audition/current/approval now cover the basic owned-Version loop and additional adjacency has diminishing leverage.",
+    "Full loudness-aware A/B remains unselected because the clean-room destination lacks a truthful loudness-analysis/normalization substrate.",
+    "First-class reference objects remain important but require a new persistent evidence model; Activity can expose already-owned cross-domain truth immediately.",
+    "Musical derivation remains unselected because no clean-room audio-analysis engine exists.",
+    "Another DAW chassis increment is not selected because Song operating-memory reachability is host-independent and already construction-ready."
   ],
   "reuse": {
-    "mode": "EXPOSE_EXISTING_APPROVE_VERSION_WITH_EXACT_RENDERED_STATE_AUTHORITY_AND_ACTIVITY_RECEIPT",
-    "n0te2_dependencies": ["CORE-01 LineageStore.approve_version", "CORE-01 ActivityLog VERSION_APPROVED trigger", "SONG-VERSION-HISTORY-01 consumer Version history", "SONG-AUDITION-01 local audition", "ConsumerShell one-shot CSRF/exact-Origin action authority", "APP-01 Quit/relaunch continuity"],
-    "legacy_rejections": ["automatic approval on import/resume/audition", "client-submitted raw Version authority", "approval implies current", "approval implies publish/release/send", "generic unbound confirmation", "parallel decision database", "LearningMemory repurposed as approval state"],
+    "mode": "EXPOSE_EXISTING_ACTIVITY_CHRONOLOGY_WITH_A_BOUNDED_READ_MODEL_AND_NORMAL_SONG_SURFACE",
+    "n0te2_dependencies": ["CORE-01 ActivityLog append-only chronology", "Song/Asset/Version Activity triggers", "CORE-02 Session Activity events", "CORE-02 Learning Activity events", "Attention Song-bound Focus Activity events", "SONG-VERSION-HISTORY/AUDITION/APPROVAL consumer Song surface"],
+    "legacy_rejections": ["new timeline database", "invented timestamps", "raw event IDs/object IDs", "raw JSON payload display", "dropping unknown future events silently", "duplicating Session or Version storage", "claiming universal cross-provider population before those domains exist"],
     "direct_copy": false
   },
   "completion_proof": [
-    "each non-approved Version in the exact active Song history has a precise artist-facing approval action that names the Version being approved and does not imply publication or release",
-    "server-owned one-shot approval authority binds active Song, target Version, rendered current Version and rendered approved Version including no-approved state",
-    "foreign Origin, bad CSRF, replay, active-Song change, current-Version change, prior-approved change and cross-Song target fail closed before approved_version_id changes",
-    "approving any exact Version changes only approved_version_id; current_version_id, immutable Version/Asset lineage and managed material bytes remain unchanged",
-    "approval may intentionally differ from current and the Song surface shows that truth independently",
-    "the canonical Activity chronology gains one VERSION_APPROVED event bound to the approved Version without a parallel approval log",
-    "navigation and Quit/relaunch preserve the approved Version and regenerate action authority",
-    "Sessions, Learning/Evidence, Focus, Operations, DAWs, providers and external state remain unchanged",
-    "authored HTTP/security/invariant/restart tests remain separate from executed evidence; absent hosted execution is UNOBSERVED"
+    "the normal /song surface shows a bounded newest-first What changed? timeline for the exact active Song using canonical Activity sequence ordering",
+    "known Song, material, Version, current, approval, Session, Learning, Evidence and Song-bound Focus event types render artist-readable labels without raw event/object/profile IDs",
+    "Version and Asset events resolve canonical labels/names from current immutable lineage rather than trusting event object IDs as presentation text",
+    "Session/Learning/Focus payloads expose only bounded artist-language fields and do not dump raw JSON",
+    "unknown future Song event types remain visibly represented by a safe generic history item instead of being silently discarded or exposing internal event_type text",
+    "no wall-clock date/time is displayed because Activity currently owns sequence order but no canonical timestamp",
+    "timeline reads are pure and do not mutate Song, Version, approval, Session, Learning, Evidence, Focus, Operations, DAWs or providers",
+    "multiple Songs/profiles remain isolated and Quit/relaunch preserves the same chronology",
+    "authored read-model/HTTP/restart proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
-  "non_scope": ["Keep/Reject/Revert Learning episodes", "approval rationale/comment model", "release/publication/provider approval", "downstream derivative fingerprint binding", "Version deletion/rename/reorder", "loudness matching or synchronized A/B", "reference objects", "analysis/derivation", "generation", "DAW mutation", "provider/cloud work", "sharing/release", "Gate-B acceptance"],
-  "next_selection_rule": "After this increment lands or blocks, globally reselect. Compare fuller Try→Hear→Compare→Decide, reference objects, Creative Studio, Learning decision reachability, audio-analysis substrate, DAW/OPS and other portfolio outcomes. Do not continue by label adjacency."
+  "non_scope": ["global cross-Song Activity page", "universal search", "timeline filtering/search", "timestamps", "provider/message/release domains not yet populated", "editing/deleting Activity", "notifications", "full Compare/A-B", "reference objects", "analysis", "DAW/provider mutation", "Gate-B acceptance"],
+  "next_selection_rule": "After this increment lands or blocks, globally reselect from the whole graph. Compare references, fuller Compare/A-B, Learning/Skill consumer reachability, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
 }
