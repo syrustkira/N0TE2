@@ -9,7 +9,7 @@ class AuditionError(RuntimeError):
 
 
 class UnsupportedAuditionMedia(AuditionError):
-    """The verified material is not a browser-auditionable format in this increment."""
+    """The verified material is not browser-auditionable under this bounded contract."""
 
 
 class InvalidByteRange(AuditionError):
@@ -42,6 +42,114 @@ class ByteRange:
         return f"bytes {self.start}-{self.end}/{self.total}"
 
 
+def _little_u32(value: bytes) -> int:
+    if len(value) != 4:
+        raise ValueError("expected four bytes")
+    return int.from_bytes(value, "little", signed=False)
+
+
+def _valid_wave(path: Path, *, size_bytes: int) -> bool:
+    if size_bytes < 44:
+        return False
+    with path.open("rb") as handle:
+        header = handle.read(12)
+        if len(header) != 12 or header[:4] != b"RIFF" or header[8:12] != b"WAVE":
+            return False
+        riff_payload_size = _little_u32(header[4:8])
+        if riff_payload_size + 8 > size_bytes:
+            return False
+        have_fmt = False
+        have_data = False
+        while handle.tell() + 8 <= size_bytes:
+            chunk_header = handle.read(8)
+            if len(chunk_header) != 8:
+                return False
+            kind = chunk_header[:4]
+            chunk_size = _little_u32(chunk_header[4:])
+            chunk_start = handle.tell()
+            chunk_end = chunk_start + chunk_size
+            padded_end = chunk_end + (chunk_size & 1)
+            if chunk_end > size_bytes or padded_end > size_bytes:
+                return False
+            if kind == b"fmt ":
+                if chunk_size < 16:
+                    return False
+                fmt = handle.read(16)
+                if len(fmt) != 16:
+                    return False
+                audio_format = int.from_bytes(fmt[0:2], "little")
+                channels = int.from_bytes(fmt[2:4], "little")
+                sample_rate = _little_u32(fmt[4:8])
+                byte_rate = _little_u32(fmt[8:12])
+                block_align = int.from_bytes(fmt[12:14], "little")
+                bits_per_sample = int.from_bytes(fmt[14:16], "little")
+                if (
+                    audio_format not in {1, 3}
+                    or channels <= 0
+                    or sample_rate <= 0
+                    or byte_rate <= 0
+                    or block_align <= 0
+                    or bits_per_sample <= 0
+                ):
+                    return False
+                have_fmt = True
+            elif kind == b"data":
+                if chunk_size <= 0:
+                    return False
+                have_data = True
+            handle.seek(padded_end)
+        return have_fmt and have_data
+
+
+def _synchsafe_u32(value: bytes) -> int | None:
+    if len(value) != 4 or any(byte & 0x80 for byte in value):
+        return None
+    result = 0
+    for byte in value:
+        result = (result << 7) | byte
+    return result
+
+
+def _valid_mpeg_audio_header(header: bytes) -> bool:
+    if len(header) < 4 or header[0] != 0xFF or (header[1] & 0xE0) != 0xE0:
+        return False
+    version_bits = (header[1] >> 3) & 0x03
+    layer_bits = (header[1] >> 1) & 0x03
+    bitrate_index = (header[2] >> 4) & 0x0F
+    sample_rate_index = (header[2] >> 2) & 0x03
+    return (
+        version_bits != 0x01
+        and layer_bits != 0x00
+        and bitrate_index not in {0x00, 0x0F}
+        and sample_rate_index != 0x03
+    )
+
+
+def _valid_mp3(path: Path, *, size_bytes: int) -> bool:
+    if size_bytes < 4:
+        return False
+    with path.open("rb") as handle:
+        prefix = handle.read(10)
+        offset = 0
+        if prefix.startswith(b"ID3"):
+            if len(prefix) != 10 or prefix[3] == 0xFF or prefix[4] == 0xFF:
+                return False
+            tag_size = _synchsafe_u32(prefix[6:10])
+            if tag_size is None:
+                return False
+            offset = 10 + tag_size
+            if prefix[5] & 0x10:
+                offset += 10
+            if offset + 4 > size_bytes:
+                return False
+        handle.seek(offset)
+        scan = handle.read(min(4096, size_bytes - offset))
+    for index in range(max(0, len(scan) - 3)):
+        if _valid_mpeg_audio_header(scan[index : index + 4]):
+            return True
+    return False
+
+
 def inspect_audition_media(path: str | Path) -> AuditionMedia:
     media_path = Path(path)
     if not media_path.is_file():
@@ -49,20 +157,13 @@ def inspect_audition_media(path: str | Path) -> AuditionMedia:
     size = media_path.stat().st_size
     if size <= 0:
         raise UnsupportedAuditionMedia("empty material is not auditionable")
-    with media_path.open("rb") as handle:
-        prefix = handle.read(12)
-    if len(prefix) >= 12 and prefix[:4] == b"RIFF" and prefix[8:12] == b"WAVE":
+    if _valid_wave(media_path, size_bytes=size):
         content_type = "audio/wav"
-    elif prefix.startswith(b"ID3") or (
-        len(prefix) >= 2
-        and prefix[0] == 0xFF
-        and (prefix[1] & 0xE0) == 0xE0
-        and (prefix[1] & 0x06) != 0
-    ):
+    elif _valid_mp3(media_path, size_bytes=size):
         content_type = "audio/mpeg"
     else:
         raise UnsupportedAuditionMedia(
-            "only signature-verified WAV and MP3 material is auditionable here"
+            "only structurally verified WAV and MP3 material is auditionable here"
         )
     return AuditionMedia(path=media_path, content_type=content_type, size_bytes=size)
 
