@@ -10,6 +10,13 @@ from typing import Mapping
 from urllib.parse import parse_qs, urlsplit
 
 from .app_runtime import ApplicationRuntime
+from .audition import (
+    InvalidByteRange,
+    UnsupportedAuditionMedia,
+    UnsatisfiableByteRange,
+    inspect_audition_media,
+    parse_byte_range,
+)
 from .consumer_upload import MaterialUploadParseError, parse_material_upload
 from .instance import ProcessIdentity, ProcessProbe
 from .material import SongMaterialError
@@ -75,6 +82,14 @@ class _Action:
 
 
 @dataclass(frozen=True)
+class _MediaGrant:
+    song_id: str
+    version_id: str
+    asset_id: str
+    sha256: str
+
+
+@dataclass(frozen=True)
 class _PageState:
     kind: str
     title: str
@@ -137,6 +152,7 @@ class ConsumerShell:
 
         self._csrf = secrets.token_urlsafe(32)
         self._actions: dict[str, _Action] = {}
+        self._media_grants: dict[str, _MediaGrant] = {}
         self._server: _LoopbackHTTPServer | None = None
         self._thread: threading.Thread | None = None
         self._ready = threading.Event()
@@ -172,6 +188,9 @@ class ConsumerShell:
 
             def do_GET(self) -> None:  # noqa: N802
                 shell._handle_get(self)
+
+            def do_HEAD(self) -> None:  # noqa: N802
+                shell._handle_head(self)
 
             def do_POST(self) -> None:  # noqa: N802
                 shell._handle_post(self)
@@ -252,11 +271,12 @@ class ConsumerShell:
     def _security_headers(self, handler: BaseHTTPRequestHandler) -> None:
         handler.send_header(
             "Content-Security-Policy",
-            "default-src 'none'; style-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+            "default-src 'none'; style-src 'self'; media-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
         )
         handler.send_header("Referrer-Policy", "no-referrer")
         handler.send_header("X-Content-Type-Options", "nosniff")
         handler.send_header("X-Frame-Options", "DENY")
+        handler.send_header("Cross-Origin-Resource-Policy", "same-origin")
         handler.send_header("Cache-Control", "no-store")
 
     def _send_bytes(
@@ -300,8 +320,14 @@ class ConsumerShell:
             return None
         return action
 
+    def _new_media_grant(self, grant: _MediaGrant) -> str:
+        token = secrets.token_urlsafe(24)
+        self._media_grants[token] = grant
+        return token
+
     def _reset_actions(self) -> None:
         self._actions.clear()
+        self._media_grants.clear()
 
     def _read_form(self, handler: BaseHTTPRequestHandler) -> Mapping[str, str] | None:
         content_type = handler.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
@@ -331,6 +357,96 @@ class ConsumerShell:
     def _form_authorized(self, form: Mapping[str, str]) -> bool:
         return secrets.compare_digest(form.get("csrf", ""), self._csrf)
 
+    def _media_token(self, path: str) -> str | None:
+        prefix = "/media/song-version/"
+        if not path.startswith(prefix):
+            return None
+        token = path[len(prefix):]
+        if not token or "/" in token:
+            return None
+        return token
+
+    def _resolve_media_grant(self, token: str):
+        if self.runtime.state != "RUNNING":
+            raise ConsumerShellError("Artist Headquarters is not open for audition")
+        grant = self._media_grants.get(token)
+        if grant is None:
+            raise ConsumerShellError("That audition link expired. Reload the Song and try again.")
+        store = self.runtime.headquarters.store
+        song = store.active_song()
+        if song is None or song.id != grant.song_id:
+            raise ConsumerShellError("The active Song changed. Reload the Song before auditioning a Version.")
+        version = store.get_version(grant.version_id)
+        if version is None or version.song_id != song.id:
+            raise ConsumerShellError("That Version no longer belongs to the active Song.")
+        if grant.asset_id not in store.version_asset_ids(version.id):
+            raise ConsumerShellError("That material no longer belongs to this Version.")
+        asset = store.get_asset(grant.asset_id)
+        if asset is None or asset.song_id != song.id or asset.sha256 != grant.sha256:
+            raise ConsumerShellError("That material no longer matches the rendered Version.")
+        material = self.runtime.headquarters.materials.resolve_asset(asset)
+        media = inspect_audition_media(material.path)
+        if media.size_bytes != material.size_bytes:
+            raise ConsumerShellError("That material changed after it was verified.")
+        return media
+
+    def _serve_media(self, handler: BaseHTTPRequestHandler, token: str, *, head_only: bool) -> None:
+        try:
+            media = self._resolve_media_grant(token)
+        except UnsupportedAuditionMedia:
+            self._send_html(handler, 415, self._simple_error("That local material format is not auditionable here."))
+            return
+        except (SongMaterialError, ConsumerShellError):
+            self._send_html(handler, 409, self._simple_error("That audition is no longer safely available. Reload the Song."))
+            return
+        try:
+            byte_range = parse_byte_range(handler.headers.get("Range"), size_bytes=media.size_bytes)
+        except InvalidByteRange:
+            self._send_html(handler, 400, self._simple_error("That media range request is not supported."))
+            return
+        except UnsatisfiableByteRange:
+            handler.send_response(416)
+            self._security_headers(handler)
+            handler.send_header("Content-Range", f"bytes */{media.size_bytes}")
+            handler.send_header("Accept-Ranges", "bytes")
+            handler.send_header("Content-Length", "0")
+            handler.end_headers()
+            return
+
+        start = 0 if byte_range is None else byte_range.start
+        end = media.size_bytes - 1 if byte_range is None else byte_range.end
+        length = end - start + 1
+        handler.send_response(200 if byte_range is None else 206)
+        self._security_headers(handler)
+        handler.send_header("Content-Type", media.content_type)
+        handler.send_header("Accept-Ranges", "bytes")
+        handler.send_header("Content-Length", str(length))
+        if byte_range is not None:
+            handler.send_header("Content-Range", byte_range.content_range)
+        handler.end_headers()
+        if head_only:
+            return
+        with media.path.open("rb") as source:
+            source.seek(start)
+            remaining = length
+            while remaining:
+                chunk = source.read(min(1024 * 1024, remaining))
+                if not chunk:
+                    raise ConsumerShellError("audition material ended before its verified size")
+                handler.wfile.write(chunk)
+                remaining -= len(chunk)
+
+    def _handle_head(self, handler: BaseHTTPRequestHandler) -> None:
+        if not self._request_host_is_exact(handler):
+            self._send_html(handler, 421, self._simple_error("This N0TE window is available only from its exact local address."))
+            return
+        path = self._path(handler)
+        token = self._media_token(path)
+        if token is None:
+            self._send_html(handler, 405, self._simple_error("HEAD is available only for local audition media."))
+            return
+        self._serve_media(handler, token, head_only=True)
+
     def _handle_get(self, handler: BaseHTTPRequestHandler) -> None:
         if not self._request_host_is_exact(handler):
             self._send_html(
@@ -340,6 +456,10 @@ class ConsumerShell:
             )
             return
         path = self._path(handler)
+        token = self._media_token(path)
+        if token is not None:
+            self._serve_media(handler, token, head_only=False)
+            return
         if path == "/assets/shell.css":
             self._send_bytes(
                 handler,
@@ -1047,7 +1167,7 @@ class ConsumerShell:
                 "running-song",
                 song.title,
                 "Active Song",
-                "Keep the actual Song material with its Version history, set a clear work objective, capture what matters, then finish with what happened and what comes next.",
+                "Hear preserved local audio Versions, understand their lineage, set a clear work objective, capture what matters, then finish with what happened and what comes next.",
                 artist_name=artist.display_name,
                 song_title=song.title,
             )
@@ -1179,7 +1299,35 @@ class ConsumerShell:
 <p class="muted">N0TE preserves a verified local copy and creates a new current Version. Importing never approves the Version.</p>
 </form>"""
 
+    def _audition_control(self, song_id: str, version_id: str, view) -> str:
+        if view.status != "VERIFIED_MANAGED":
+            return ""
+        try:
+            material = self.runtime.headquarters.materials.resolve_asset(view.asset)
+            inspect_audition_media(material.path)
+        except UnsupportedAuditionMedia:
+            return '<p class="muted">Local audition is not available for this material format.</p>'
+        except SongMaterialError:
+            return ""
+        token = self._new_media_grant(
+            _MediaGrant(
+                song_id=song_id,
+                version_id=version_id,
+                asset_id=view.asset.id,
+                sha256=view.asset.sha256,
+            )
+        )
+        name = html.escape(view.asset.name)
+        src = html.escape(f"/media/song-version/{token}", quote=True)
+        return (
+            f'<audio controls preload="metadata" src="{src}" aria-label="Audition {name}">'
+            'Your browser cannot play this local audio Version.'</n            '</audio><p class="muted">Local playback only. No loudness matching or A/B processing is applied.</p>'
+        )
+
     def _material_status(self, version_id: str) -> str:
+        version = self.runtime.headquarters.store.get_version(version_id)
+        if version is None:
+            raise ConsumerShellError("Song Version is missing")
         views = self.runtime.headquarters.materials.version_materials(version_id)
         if not views:
             return '<p class="muted">No material attached to this Version.</p>'
@@ -1194,14 +1342,17 @@ class ConsumerShell:
             else:
                 status = "External reference"
                 status_class = "caution"
+            audition = self._audition_control(version.song_id, version.id, view)
             rows.append(
-                '<li><strong>'
+                '<li class="stack"><strong>'
                 + html.escape(view.asset.name)
                 + '</strong><p class="status '
                 + status_class
                 + '">'
                 + html.escape(status)
-                + '</p></li>'
+                + '</p>'
+                + audition
+                + '</li>'
             )
         return '<ul class="stack" aria-label="Song Version material">' + "".join(rows) + "</ul>"
 
@@ -1286,7 +1437,7 @@ class ConsumerShell:
             )
         return (
             '<div class="card"><h2>Version history</h2>'
-            '<p>Choose which preserved Version is current without deleting later work or changing which Version is approved.</p>'
+            '<p>Hear preserved local audio, then choose which Version is current without deleting later work or changing which Version is approved.</p>'
             f'<ol class="stack" aria-label="Song Version history">{"".join(rows)}</ol></div>'
         )
 
