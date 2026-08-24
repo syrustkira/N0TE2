@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-VERSION-HISTORY-01",
+  "receipt_id": "N0TE2-SONG-AUDITION-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-VERSION-HISTORY-01",
-  "baseline_sha": "1ae8a38be3a6facae19693124c63d1fccd3d9e16",
-  "purpose": "Make canonical Song Version lineage visible and usable through the normal Song surface: show every Version in order with current and approved truth, let the artist explicitly resume a prior Version as current through a bounded reversible action, preserve approved state, and survive navigation and Quit/relaunch without exposing internal IDs or inventing analysis/audition capability.",
+  "increment_id": "SONG-AUDITION-01",
+  "baseline_sha": "0d08f36cad8786513b30ed06cc305da37d40450b",
+  "purpose": "Let the artist hear verified local managed audio attached to canonical Song Versions from the normal /song Version history, using opaque local read authority and bounded byte-range delivery, while degrading external, unsupported or integrity-failed material truthfully and without changing current/approved/history state.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,37 +14,35 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can understand which Song Versions exist, which is current, which is approved, and deliberately return to an earlier Version without erasing history or silently changing approval.",
+    "outcome": "The artist can hear a preserved local audio Version before deciding what to resume or later approve, without leaving Song context or depending on a DAW/provider.",
     "journeys": ["J-COMPARE-DECIDE", "J-IDEA-SONG", "J-TRUST"],
-    "capability": "Consumer-visible canonical Version history and reversible resume-current selection",
-    "increment": "SONG-VERSION-HISTORY-01"
+    "capability": "Verified local managed Version audio audition",
+    "increment": "SONG-AUDITION-01"
   },
-  "why_now": "SONG-01C landed real managed material and canonical Version creation on main. Whole-graph reselection now finds REQ-SCOPE-059 VERSION/HISTORY and REQ-SCOPE-013 ASSET/CATALOG as the strongest newly unlocked customer seam: lineage exists and contains real material, but the artist still cannot inspect the full history or intentionally resume an earlier Version. Live N0TE2 has no musical-analysis engine, so derivation would require inventing a larger subsystem rather than integrating an existing construction-ready seam.",
+  "why_now": "PR #54 landed consumer-visible Version history and reversible resume. The canonical SCOPE_LEDGER marks REQ-SCOPE-010 Try→Hear→Compare→Decide as a required signature loop and says the immediate musical interaction loop remains incomplete. Approval/decision UI would now be premature because the artist still cannot hear the owned alternatives. Live N0TE2 search finds no clean-room audition implementation, so the smallest honest next bridge is local verified audio playback rather than pretending analysis, loudness-aware A/B or provider generation already exists.",
   "instead_of": [
-    "Musical derivation is not selected because the clean-room repository currently has no tempo/waveform/audio-analysis implementation despite historical Product DB foundations; selecting it now would silently create a new engine rather than integrate a ready seam.",
-    "Full Song-first Creative Studio timeline is not selected because its richer canvas depends on addressable musical objects, audition/analysis and deeper interaction; Version history provides meaningful Song structure using truth already present today.",
-    "Provider-backed generation is not selected because it depends on provenance, provider execution and a judgeable audition/decision loop that Version history helps establish first.",
-    "Another DAW chassis increment is not selected because the immediate customer gap is now how the artist understands and resumes owned Song work, independent of host.",
-    "Approval UI is not selected in this increment: approved truth is displayed and preserved, but changing approval is a distinct consequential decision contract."
+    "Approval/keep/reject UI is not selected because a consequential decision should not be made from filenames and labels when owned audio can be made hearable first.",
+    "Full loudness-aware A/B is not selected because no loudness-analysis/normalization substrate exists in clean-room N0TE2 yet.",
+    "Musical derivation is not selected because tempo/chord/section/audio-analysis engines are still absent from the live clean-room destination.",
+    "Full Song-first Creative Studio is not selected because transport/timeline/direct-manipulation is a larger convergence slice; local Version audition is a smaller prerequisite that gives the existing history immediate musical meaning.",
+    "Another DAW chassis increment is not selected because hearing N0TE-owned Song material is host-independent and directly closes the current Try→Hear gap."
   ],
   "reuse": {
-    "mode": "EXPOSE_EXISTING_IMMUTABLE_VERSION_LINEAGE_AND_SET_CURRENT_VERSION_THROUGH_THE_NORMAL_SONG_SURFACE",
-    "n0te2_dependencies": ["CORE-01 LineageStore Version/current/approved semantics", "SONG-01C managed material + Version creation", "ConsumerShell one-shot CSRF/exact-Origin authority", "APP-01 Quit/relaunch continuity", "SongMaterialMemory integrity views"],
-    "legacy_rejections": ["parallel browser-only history model", "latest equals approved", "destructive rollback deleting later Versions", "client-submitted raw Version authority", "automatic approval when resuming", "audio analysis or waveform claims", "provider/DAW dependency"],
+    "mode": "SERVE_ONLY_VERIFIED_MANAGED_AUDIO_FROM_EXISTING_SONG_MATERIAL_AND_VERSION_LINEAGE",
+    "n0te2_dependencies": ["SONG-01C SongMaterialMemory managed immutable blobs and integrity verification", "SONG-VERSION-HISTORY-01 consumer Version history", "ConsumerShell exact loopback Host/CSP authority", "CORE-01 Version/Asset lineage", "APP-01 Quit/relaunch continuity"],
+    "legacy_rejections": ["raw filesystem URL exposure", "client-submitted Asset/Version/path authority", "automatic external-file reading", "unverified/tampered blob playback", "format transcoding", "waveform/analysis claims", "automatic approval/current changes", "DAW/provider dependency"],
     "direct_copy": false
   },
   "completion_proof": [
-    "the normal /song surface lists every Version for the exact active Song in deterministic lineage order with artist-readable labels",
-    "current and approved state are independently visible for each Version; newest/current never implies approved",
-    "each non-current Version can be explicitly resumed as current through a server-owned one-shot action bound to exact active Song, target Version and the current Version seen when rendered",
-    "foreign Origin, bad CSRF, replay, cross-Song Version and stale-current actions fail closed before current_version_id changes",
-    "resuming a Version only changes the Song current pointer; immutable Version/Asset history and approved_version_id remain unchanged",
-    "a resumed Version becomes the basis for the next imported Version because later ingest parents the exact current Version",
-    "Version material names and integrity state remain inspectable without raw Version/Asset/profile IDs, managed URIs or filesystem paths",
-    "navigation and Quit/relaunch preserve the selected current Version and complete Version history",
-    "multiple Songs/profiles remain isolated and history for one cannot be selected through another",
-    "authored consumer/invariant/restart tests remain separate from executed evidence; absent hosted execution is UNOBSERVED"
+    "each browser-auditionable verified managed audio Asset in the active Song's Version history receives an artist-facing audio control through an opaque server-owned local URL",
+    "the media URL carries no raw Song/Version/Asset/profile ID, managed URI or filesystem path and is valid only for the currently rendered local shell authority",
+    "media reads revalidate active Song, Version-to-Asset membership, managed-material integrity and supported audio signature before bytes are served",
+    "external references, unsupported formats, missing/tampered managed blobs and cross-Song/stale authority never return creative bytes and render truthful unavailable/protected state",
+    "full GET plus valid single byte-range GET return correct content type, length and Content-Range semantics; malformed/unsatisfiable/multiple ranges fail closed",
+    "audition GETs are read-only: Song current/approved pointers, Version/Asset lineage, Sessions, Focus and Operations remain unchanged",
+    "navigation and Quit/relaunch regenerate opaque audition authority while the same managed Version remains hearable",
+    "authored HTTP/security/invariant/restart tests remain separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
-  "non_scope": ["changing approved Version", "deleting/reordering/renaming Versions", "audio playback or A/B audition", "waveform/timeline editing", "audio/MIDI analysis or derivation", "branch creation beyond existing parent lineage", "generation", "DAW mutation", "provider/cloud work", "sharing", "release/delivery", "Gate-B acceptance"],
-  "next_selection_rule": "After this increment lands or blocks, globally reselect from the whole graph. Compare Song-first Creative Studio, approval/decision reachability, suggestion/template continuity, musical derivation only if a truthful analysis substrate exists, and DAW/OPS lanes. Do not continue by label adjacency."
+  "non_scope": ["approval/keep/reject decision mutation", "automatic current-Version change", "loudness matching", "simultaneous A/B synchronization", "waveform/timeline UI", "transcoding", "external-file mounting", "audio analysis/tempo/chords/sections/stems", "generation", "DAW mutation", "provider/cloud work", "sharing/release", "Gate-B listening acceptance"],
+  "next_selection_rule": "After this increment lands or blocks, globally reselect. Compare consequential decision/approval reachability, fuller Try→Hear→Compare loop, Song-first Creative Studio, truthful audio-analysis substrate, suggestions/templates, DAW/OPS and other portfolio outcomes. Do not continue by label adjacency."
 }
