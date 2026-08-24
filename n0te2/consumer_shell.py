@@ -10,7 +10,9 @@ from typing import Mapping
 from urllib.parse import parse_qs, urlsplit
 
 from .app_runtime import ApplicationRuntime
+from .consumer_upload import MaterialUploadParseError, parse_material_upload
 from .instance import ProcessIdentity, ProcessProbe
+from .material import SongMaterialError
 from .profiles import ApplicationProfile, ApplicationProfiles, ProfileResolution
 from .shell_design import SHELL_CSS
 
@@ -378,6 +380,7 @@ class ConsumerShell:
             "/profile/create",
             "/profile/select",
             "/song/start",
+            "/song/material",
             "/session/start",
             "/session/capture",
             "/session/finish",
@@ -386,6 +389,9 @@ class ConsumerShell:
             "/quit",
         }:
             self._send_html(handler, 404, self._simple_error("That N0TE action is not available."))
+            return
+        if path == "/song/material":
+            self._post_song_material(handler)
             return
         form = self._read_form(handler)
         if form is None or not self._form_authorized(form):
@@ -416,7 +422,10 @@ class ConsumerShell:
                 self._post_quit(handler, form)
         except ConsumerShellError as exc:
             self._consumer_notice = str(exc)
-            self._redirect(handler, "/song" if path.startswith("/session/") else "/")
+            self._redirect(
+                handler,
+                "/song" if path.startswith("/session/") or path.startswith("/song/") else "/",
+            )
         except Exception:
             self._send_html(
                 handler,
@@ -595,6 +604,67 @@ class ConsumerShell:
         )
         song = self.runtime.headquarters.store.create_song(title)
         self._consumer_notice = f"{song.title} is now your active Song."
+        self._redirect(handler, "/song")
+
+    def _post_song_material(self, handler: BaseHTTPRequestHandler) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before adding Song material."),
+            )
+            return
+        try:
+            length = int(handler.headers.get("Content-Length", "0"))
+        except ValueError:
+            length = 0
+        try:
+            with parse_material_upload(
+                handler.rfile,
+                content_type=handler.headers.get("Content-Type", ""),
+                content_length=length,
+            ) as upload:
+                if not secrets.compare_digest(upload.csrf, self._csrf):
+                    self._send_html(
+                        handler,
+                        403,
+                        self._simple_error("That material action expired. Reload the Song and try again."),
+                    )
+                    return
+                action = self._consume_action(upload.action, "song-material")
+                if action is None or action.value is None:
+                    self._send_html(
+                        handler,
+                        409,
+                        self._simple_error("That material action was already handled or expired."),
+                    )
+                    return
+                song = self.runtime.headquarters.store.active_song()
+                if song is None or song.id != action.value:
+                    self._send_html(
+                        handler,
+                        409,
+                        self._simple_error("The active Song changed. Reload the Song before adding this material."),
+                    )
+                    return
+                imported = self.runtime.headquarters.materials.ingest_stream(
+                    song.id,
+                    filename=upload.filename,
+                    stream=upload.file_stream(),
+                    declared_size=upload.size_bytes,
+                )
+        except MaterialUploadParseError:
+            self._send_html(
+                handler,
+                400,
+                self._simple_error("That local file upload was malformed or outside N0TE's safe ingest bounds."),
+            )
+            return
+        except SongMaterialError:
+            self._consumer_notice = "N0TE could not preserve that local file safely, so the Song lineage was not advanced."
+            self._redirect(handler, "/song")
+            return
+        self._consumer_notice = f"{imported.asset.name} is preserved locally as the current Song version. Approval was not changed."
         self._redirect(handler, "/song")
 
     def _post_session_start(
@@ -914,7 +984,7 @@ class ConsumerShell:
                 "running-song",
                 song.title,
                 "Active Song",
-                "Set a clear objective for this work Session, capture what matters while you work, then finish with what happened and what comes next.",
+                "Keep the actual Song material with its version history, set a clear work objective, capture what matters, then finish with what happened and what comes next.",
                 artist_name=artist.display_name,
                 song_title=song.title,
             )
@@ -1037,6 +1107,71 @@ class ConsumerShell:
 <div class="row"><button class="primary" type="submit">Start this Song</button></div>
 </form>"""
 
+    def _material_upload_form(self, song_id: str) -> str:
+        token = self._new_action("song-material", song_id)
+        return f"""<form class="stack" method="post" action="/song/material" enctype="multipart/form-data">
+{self._hidden(token)}
+<div><label for="song-material">Add a local demo, mix, MIDI file, or other Song material</label><input id="song-material" name="material" type="file" required></div>
+<div class="row"><button class="primary" type="submit">Add to this Song</button></div>
+<p class="muted">N0TE preserves a verified local copy and creates a new current Version. Importing never approves the Version.</p>
+</form>"""
+
+    def _material_card(self, song) -> str:
+        store = self.runtime.headquarters.store
+        current = None if song.current_version_id is None else store.get_version(song.current_version_id)
+        if song.current_version_id is not None and current is None:
+            raise ConsumerShellError("current Song Version is missing")
+        if current is None:
+            current_html = '<p class="status caution">No material Version yet</p><p>Add the actual file you are working from so N0TE can preserve the Song, not only its title and notes.</p>'
+        else:
+            views = self.runtime.headquarters.materials.version_materials(current.id)
+            if not views:
+                material_html = '<p class="muted">This current Version has no attached material.</p>'
+            else:
+                rows = []
+                for view in views:
+                    if view.status == "VERIFIED_MANAGED":
+                        status = "Verified local copy"
+                        status_class = "good"
+                    elif view.status == "INTEGRITY_ERROR":
+                        status = "Protected integrity problem"
+                        status_class = "caution"
+                    else:
+                        status = "External reference"
+                        status_class = "caution"
+                    rows.append(
+                        '<li><strong>'
+                        + html.escape(view.asset.name)
+                        + '</strong><p class="status '
+                        + status_class
+                        + '">'
+                        + html.escape(status)
+                        + '</p></li>'
+                    )
+                material_html = '<ul class="stack" aria-label="Current Song material">' + "".join(rows) + "</ul>"
+            current_html = (
+                '<p>Current Version</p>'
+                f'<p class="song-name">{html.escape(current.label)}</p>'
+                f'{material_html}'
+            )
+        if song.approved_version_id is None:
+            approval = '<p class="status caution">No approved Version yet</p><p>Current and approved stay separate. Adding material does not approve it.</p>'
+        elif song.approved_version_id == song.current_version_id:
+            approval = '<p class="status good">Current Version is approved</p>'
+        else:
+            approved = store.get_version(song.approved_version_id)
+            if approved is None:
+                raise ConsumerShellError("approved Song Version is missing")
+            approval = (
+                '<p>Approved Version</p>'
+                f'<p><strong>{html.escape(approved.label)}</strong></p>'
+                '<p class="status caution">Approved remains different from current</p>'
+            )
+        return (
+            '<div class="card"><h2>Your Song material</h2>'
+            f'{current_html}{approval}{self._material_upload_form(song.id)}</div>'
+        )
+
     def _start_session_form(self, song_id: str) -> str:
         token = self._new_action("session-start", song_id)
         return f"""<form class="stack" method="post" action="/session/start">
@@ -1096,6 +1231,7 @@ class ConsumerShell:
             f'<p class="song-name">{html.escape(song.title)}</p>'
             '<p class="status good">Song context active</p></div>'
         )
+        material_card = self._material_card(song)
         if latest is None:
             session_card = (
                 '<div class="card"><h2>Start this work Session</h2>'
@@ -1135,7 +1271,7 @@ class ConsumerShell:
                 '<div class="card"><h2>Last Session history</h2>'
                 f'{self._session_history(latest.id)}</div>'
             )
-        return f'<section class="grid">{song_card}{session_card}{history_card}</section>'
+        return f'<section class="grid">{song_card}{material_card}{session_card}{history_card}</section>'
 
     def _focus_content(self, state: _PageState) -> str:
         focus = self.runtime.headquarters.attention.active_focus()
