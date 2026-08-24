@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
   "active_node": "SONG-01",
-  "active_increment": "SONG-AUDITION-01",
+  "active_increment": "SONG-VERSION-APPROVAL-01",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -11,16 +11,13 @@
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "Canonical main is 0d08f36cad8786513b30ed06cc305da37d40450b after merged PR #54 landed consumer-visible Song Version history and reversible resume. PR #54 exact-head hosted workflows/statuses were empty and local checkout was blocked by sandbox DNS, so execution remains UNOBSERVED rather than green.",
-    "Whole-graph reselection selected SONG-AUDITION-01 from REQ-SCOPE-010 Try→Hear→Compare→Decide because Version/history and local managed material are landed while the normal Song surface still could not let the artist hear owned alternatives.",
-    "PR #55 now adds a bounded local audition primitive plus normal /song controls for structurally verified managed WAV/MP3 material. Browser MIME is derived from inspected bytes rather than filename extension; external references, unsupported material and integrity failures do not receive fabricated playback.",
-    "Red-team review found the first media-admission rule was too weak: RIFF/WAVE magic alone and a bare ID3 header could masquerade as playable audio. The branch was repaired so WAV requires coherent RIFF chunk bounds plus valid fmt/data structure and MP3 requires a plausible MPEG audio frame, including after a bounded ID3v2 tag.",
-    "Audition authority is opaque and render-scoped. Consumer media URLs contain no raw Song/Version/Asset/profile ID, managed URI, hash or filesystem path. Every media read revalidates active Song, Version→Asset membership, Asset hash, managed-material integrity and supported audio structure before serving bytes.",
-    "HTTP delivery supports whole-file GET, HEAD and one bounded byte-range request for browser seeking; invalid ranges fail explicitly and unsatisfiable ranges return 416 with representation size. Delivery is streamed rather than loading the managed file into memory.",
-    "The shell CSP remains default-deny while adding media-src 'self'; Cross-Origin-Resource-Policy is same-origin. Opaque media grants expire on the next rendered page and fail closed if the active Song changes or managed bytes are tampered.",
-    "Audition remains read-only and explicitly does not implement loudness matching, instantaneous A/B, waveform/timeline, analysis, transcoding, Keep/Reject/Approve, generation, DAW/provider mutation, sharing/release or Gate-B listening acceptance.",
-    "Authored proof covers structural WAV/MP3 admission, fake RIFF/bare-ID3 rejection, range semantics, consumer controls, CSP/internal-path hiding, GET/HEAD/range delivery, grant expiry, stale-Song binding and tamper rejection. The reviewed product/test head is 96dbe54c74e03196bcb7e03fb44f5748b8afa22c.",
-    "PR #55 is mergeable against exact baseline 0d08f36cad8786513b30ed06cc305da37d40450b. Exact reviewed-head commit statuses are [], pull-request workflow runs are [], reviews are [] and review threads are []; execution/review therefore remains UNOBSERVED rather than green or failed.",
-    "After SONG-AUDITION-01 lands or blocks, globally reselect from the whole graph. Compare the next honest Try→Hear→Compare→Decide seam, Creative Studio, references, approval/decision memory, musical derivation substrate, DAW and other portfolio outcomes rather than continuing by label adjacency."
+    "Canonical main is ce8ec53675d07ebe9d1d8d0054ae3c844d1f68bd after merged PR #55 landed structurally verified local Song Version audition. PR #55 exact-head statuses/workflows/reviews/threads were empty, so authored proof remains UNOBSERVED rather than green.",
+    "Whole-graph reselection chose SONG-VERSION-APPROVAL-01 because owned Version lineage is visible, local supported audio is hearable, canonical approve_version already exists, and Activity already records VERSION_APPROVED. This makes exact Version approval a bounded consumer integration rather than a new storage subsystem.",
+    "REQ-SCOPE-013 requires latest-versus-approved truth and REQ-SCOPE-041 requires exact-revision approval with stale invalidation. Approval is distinct from current selection, release/publication authority, and LearningMemory change→consequence→decision episodes.",
+    "The selected approval action must bind exact active Song, target Version, rendered current Version and rendered approved Version. Any intervening Song/current/approval change invalidates the rendered action instead of silently approving against stale context.",
+    "Approving a Version may intentionally make approved differ from current. Approval changes only approved_version_id; immutable Versions/Assets, current pointer, managed material, Session/Learning/Evidence/Focus/Operations and external systems remain unchanged.",
+    "Existing ActivityLog trigger activity_version_approved is the canonical chronology receipt; this increment must not create a parallel approval log.",
+    "No automatic approval is allowed on import, resume or audition. No approval action is release, publication, send, payment or provider authority.",
+    "After this increment lands or blocks, globally reselect from the whole graph rather than continuing by adjacency."
   ]
 }
