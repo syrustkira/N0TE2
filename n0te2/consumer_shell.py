@@ -1321,7 +1321,8 @@ class ConsumerShell:
         src = html.escape(f"/media/song-version/{token}", quote=True)
         return (
             f'<audio controls preload="metadata" src="{src}" aria-label="Audition {name}">'
-            'Your browser cannot play this local audio Version.'</n            '</audio><p class="muted">Local playback only. No loudness matching or A/B processing is applied.</p>'
+            'Your browser cannot play this local audio Version.'
+            '</audio><p class="muted">Local playback only. No loudness matching or A/B processing is applied.</p>'
         )
 
     def _material_status(self, version_id: str) -> str:
