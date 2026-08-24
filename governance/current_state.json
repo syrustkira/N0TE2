@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
   "active_node": "SONG-01",
-  "active_increment": "SONG-VERSION-HISTORY-01",
+  "active_increment": "SONG-AUDITION-01",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -11,17 +11,13 @@
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "Canonical main is 1ae8a38be3a6facae19693124c63d1fccd3d9e16 after merged PR #53 landed SONG-01C Local Song Material Ingest + Version Resume. PR #53 hosted workflows/statuses were empty, so its authored tests remain UNOBSERVED rather than green.",
-    "Whole-graph reselection selected SONG-VERSION-HISTORY-01 from REQ-SCOPE-059 Version/History plus REQ-SCOPE-013 Asset/Catalog because SONG-01C made real Version lineage available while the artist still could not inspect or deliberately resume it through the normal Song surface.",
-    "Live N0TE2 source still has no tempo/waveform/audio-analysis engine; n0te2/studio.py is a capability truth profile rather than a musical canvas or analysis implementation. Musical derivation remains important but was not smuggled into this bounded increment.",
-    "The branch adds one canonical deterministic versions_for_song read and exposes immutable Version history through /song. Artist-visible history uses ordinal, label, parent narrative, material name/integrity, and independent Current/Approved state without raw Version/Asset/profile IDs, managed URIs or filesystem paths.",
-    "Resume Version authority is server-owned and one-shot. It binds exact active Song, exact target Version and the current Version seen when the page rendered; foreign Origin, bad CSRF, replay, stale-current and active-Song-change cases are authored to fail closed before current_version_id changes.",
-    "Resuming a Version uses the existing validated set_current_version semantic. It changes only the current pointer; immutable Version/Asset history and approved_version_id remain untouched. A later material ingest then parents the exact resumed current Version, preserving a recoverable branch of history rather than destructive rollback.",
-    "Authored consumer proof covers deterministic full-history rendering, current/approved independence, actual HTTP resume, Origin rejection, explicit bad-CSRF rejection, replay rejection, stale-current rejection, active-Song-change rejection, later-history retention, next-import-parent continuity, Quit/relaunch persistence, Song/profile isolation and raw-internal hiding.",
-    "Static PR review found and repaired one unrelated three-line transaction-rationale comment deletion caused by an earlier whole-file lineage write. The final lineage patch is limited to versions_for_song; the consumer-shell patch is additive around Version history/resume and preserves existing Session/Focus behavior.",
-    "The core create_version API permits make_current=False, but live repository search found no current call site using it. The consumer history path expects normal product-created Version histories to have a current pointer. That defensive null-current state is explicitly not claimed as completed behavior in this increment and should be revisited only if a real producer or recovery path makes it reachable.",
-    "Reviewed product/test head for PR #54 is 18d3f9df99eb98c13a0f77ffe2478f1ffd88f29b. PR #54 is mergeable against exact baseline main. Exact-head commit statuses and pull-request workflow runs are both empty, and a local execution attempt failed before checkout because the sandbox could not resolve github.com. Execution therefore remains UNOBSERVED, not green and not failed.",
-    "No approval mutation, Version delete/rename/reorder, playback/A-B audition, waveform/timeline editing, audio/MIDI derivation, generation, DAW mutation, provider/cloud work, sharing/release or Gate-B acceptance is implemented or claimed here.",
-    "After this increment lands or blocks, globally reselect from the whole graph. Compare Song-first Creative Studio, approval/decision reachability, suggestion/template continuity, truthful musical derivation substrate, DAW/OPS and other portfolio outcomes rather than following label adjacency."
+    "Canonical main is 0d08f36cad8786513b30ed06cc305da37d40450b after merged PR #54 landed consumer-visible Song Version history and reversible resume. PR #54 exact-head hosted workflows/statuses were empty and local checkout was blocked by sandbox DNS, so execution remains UNOBSERVED rather than green.",
+    "Whole-graph reselection now selects SONG-AUDITION-01 from REQ-SCOPE-010 Try→Hear→Compare→Decide. Version/history and local managed material are landed, but the normal Song surface still cannot let the artist hear those owned alternatives.",
+    "Approval/decision mutation is not selected yet because consequential keep/approve/reject choices should not be driven only by filenames and labels when the owned audio can first become hearable.",
+    "Live clean-room N0TE2 still has no audition, loudness-analysis, waveform or musical-derivation engine. This increment therefore adds only verified local managed audio delivery and browser audition controls; it must not claim loudness-aware A/B, analysis, transcoding, external-file playback or Gate-B listening acceptance.",
+    "Audition authority must remain opaque and server-owned. No raw Song/Version/Asset/profile ID, managed URI or filesystem path may be placed in consumer media URLs or trusted from the browser.",
+    "Every media read must revalidate active Song, Version→Asset membership, managed-material integrity and a supported audio signature before serving bytes. External references, unsupported files, tampered blobs and stale/cross-Song authority fail closed.",
+    "Audition is read-only. It must not change current_version_id, approved_version_id, immutable Version/Asset lineage, Session memory, Focus, Operations or provider/DAW state.",
+    "HTTP media delivery must support bounded whole-file and single byte-range reads needed by browser audio controls without reading entire large managed files into memory."
   ]
 }
