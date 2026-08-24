@@ -5,6 +5,8 @@ import pytest
 from n0te2.memory import HeadquartersMemory
 from n0te2.version_approval import (
     StaleVersionApprovalError,
+    VersionApprovalBinding,
+    VersionApprovalError,
     VersionApprovalService,
 )
 
@@ -85,6 +87,43 @@ def test_approval_binding_rejects_stale_current_approved_and_song(tmp_path: Path
             service.approve(stale_song)
         assert headquarters.store.get_song(song.id).approved_version_id == versions[1].id
         assert headquarters.store.get_song(other.id).approved_version_id is None
+    finally:
+        headquarters.close()
+
+
+def test_approval_rejects_cross_song_target_inside_atomic_boundary(tmp_path: Path) -> None:
+    headquarters, song, versions = seed_versions(tmp_path / "data")
+    try:
+        service = VersionApprovalService(headquarters.store)
+        original = headquarters.store.get_song(song.id)
+        assert original is not None
+        other = headquarters.store.create_song("Other Song")
+        other_asset = headquarters.store.attach_asset(
+            other.id,
+            name="other.wav",
+            sha256="d" * 64,
+        )
+        other_version = headquarters.store.create_version(
+            other.id,
+            label="Other Version",
+            asset_ids=(other_asset.id,),
+        )
+        headquarters.store.select_song(song.id)
+
+        forged = VersionApprovalBinding(
+            song_id=song.id,
+            target_version_id=other_version.id,
+            expected_current_version_id=original.current_version_id,
+            expected_approved_version_id=original.approved_version_id,
+        )
+        with pytest.raises(VersionApprovalError):
+            service.approve(forged)
+
+        unchanged = headquarters.store.get_song(song.id)
+        assert unchanged is not None
+        assert unchanged.approved_version_id is None
+        assert headquarters.store.get_song(other.id).approved_version_id is None
+        assert headquarters.store.get_version(versions[0].id) is not None
     finally:
         headquarters.close()
 
