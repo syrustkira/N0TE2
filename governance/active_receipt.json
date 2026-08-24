@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-01C",
+  "receipt_id": "N0TE2-SONG-VERSION-HISTORY-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-01C",
-  "baseline_sha": "76e4ca6ff34d20d2b3471f1a0db7a32e15e4ba66",
-  "purpose": "Make the active Song contain real durable material instead of title/session metadata only: let the artist add one local file through the normal Song surface, preserve an immutable verified local copy inside the active Artist profile, attach it to canonical Asset lineage, create a new current Version parented to the prior current Version, and show current/approved/material continuity after navigation and Quit/relaunch.",
+  "increment_id": "SONG-VERSION-HISTORY-01",
+  "baseline_sha": "1ae8a38be3a6facae19693124c63d1fccd3d9e16",
+  "purpose": "Make canonical Song Version lineage visible and usable through the normal Song surface: show every Version in order with current and approved truth, let the artist explicitly resume a prior Version as current through a bounded reversible action, preserve approved state, and survive navigation and Quit/relaunch without exposing internal IDs or inventing analysis/audition capability.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,40 +14,37 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "An artist can bring an actual local demo, mix, MIDI file or other Song material into the active Song and return later to the same verified bytes and current Version without N0TE confusing imported/current with approved.",
-    "journeys": ["J-SONG-START-RESUME", "J-TRUST"],
-    "capability": "Local immutable Song material ingest plus canonical Asset/Version continuity on the normal Song surface",
-    "increment": "SONG-01C"
+    "outcome": "The artist can understand which Song Versions exist, which is current, which is approved, and deliberately return to an earlier Version without erasing history or silently changing approval.",
+    "journeys": ["J-COMPARE-DECIDE", "J-IDEA-SONG", "J-TRUST"],
+    "capability": "Consumer-visible canonical Version history and reversible resume-current selection",
+    "increment": "SONG-VERSION-HISTORY-01"
   },
-  "why_now": "DAW-00A-G now provide enough shared workspace truth that continuing the chassis by adjacency would underweight the customer journey. The live Song surface still contains only Song/session text even though CORE-01 already has immutable Asset identity and current/approved Version lineage. The concrete missing seam is safe local byte ownership plus consumer ingestion into that existing lineage.",
+  "why_now": "SONG-01C landed real managed material and canonical Version creation on main. Whole-graph reselection now finds REQ-SCOPE-059 VERSION/HISTORY and REQ-SCOPE-013 ASSET/CATALOG as the strongest newly unlocked customer seam: lineage exists and contains real material, but the artist still cannot inspect the full history or intentionally resume an earlier Version. Live N0TE2 has no musical-analysis engine, so derivation would require inventing a larger subsystem rather than integrating an existing construction-ready seam.",
   "instead_of": [
-    "Another DAW-00 chassis increment is not selected because A-G now provide host/workspace/focus/shadow/reconciliation/capability/observation foundations and this customer-visible Song gap is construction-ready without host-specific work.",
-    "Workspaces/Health UI is not selected because it still depends on real adapter observations for meaningful environment content; Song material ingest provides immediate value with no connected DAW.",
-    "Template/suggestion/randomize is not selected because its persisted catalog/distance/lock/suppression model remains absent.",
-    "OPS-04 communications is dependency-ready but does not improve the immediate make/resume Song outcome as directly as preserving the actual work itself.",
-    "Audio analysis/derivation is not selected because N0TE must first possess and lineage the source material truthfully before deriving musical claims from it."
+    "Musical derivation is not selected because the clean-room repository currently has no tempo/waveform/audio-analysis implementation despite historical Product DB foundations; selecting it now would silently create a new engine rather than integrate a ready seam.",
+    "Full Song-first Creative Studio timeline is not selected because its richer canvas depends on addressable musical objects, audition/analysis and deeper interaction; Version history provides meaningful Song structure using truth already present today.",
+    "Provider-backed generation is not selected because it depends on provenance, provider execution and a judgeable audition/decision loop that Version history helps establish first.",
+    "Another DAW chassis increment is not selected because the immediate customer gap is now how the artist understands and resumes owned Song work, independent of host.",
+    "Approval UI is not selected in this increment: approved truth is displayed and preserved, but changing approval is a distinct consequential decision contract."
   ],
   "reuse": {
-    "mode": "ADD_MINIMAL_PROFILE_SCOPED_IMMUTABLE_BYTE_STORAGE_AND_EXPOSE_EXISTING_ASSET_VERSION_LINEAGE_THROUGH_THE_NORMAL_SONG_SURFACE",
-    "n0te2_dependencies": ["CORE-01 LineageStore Asset identity", "CORE-01 current/approved Version lineage", "SongResumeService read model", "APP-01 profile-scoped durable root", "UX/SONG consumer shell one-shot CSRF/local-only action contract", "RecoveryManager staged-write/hash/fsync/atomic-replace durability pattern"],
-    "legacy_rejections": ["external path reference treated as durable ownership", "upload form that records metadata without preserving bytes", "browser-selected filename trusted as filesystem path", "import automatically approved", "latest/current silently equated with approved", "provider/cloud upload", "DAW project mutation", "audio analysis presented as part of ingest", "duplicate Dropbox-style storage model"],
+    "mode": "EXPOSE_EXISTING_IMMUTABLE_VERSION_LINEAGE_AND_SET_CURRENT_VERSION_THROUGH_THE_NORMAL_SONG_SURFACE",
+    "n0te2_dependencies": ["CORE-01 LineageStore Version/current/approved semantics", "SONG-01C managed material + Version creation", "ConsumerShell one-shot CSRF/exact-Origin authority", "APP-01 Quit/relaunch continuity", "SongMaterialMemory integrity views"],
+    "legacy_rejections": ["parallel browser-only history model", "latest equals approved", "destructive rollback deleting later Versions", "client-submitted raw Version authority", "automatic approval when resuming", "audio analysis or waveform claims", "provider/DAW dependency"],
     "direct_copy": false
   },
   "completion_proof": [
-    "the normal /song path lets the artist add one local file to the exact active Song without connecting a DAW, AI model, provider or account",
-    "upload authority is bound to one server-side one-shot action and exact active Song; foreign Origin, wrong CSRF, replay and active-Song change fail closed before lineage creation",
-    "input size is explicitly bounded and empty, malformed or oversized material is rejected without creating an Asset or Version",
-    "the browser filename is reduced to a safe display basename and never controls a destination path",
-    "bytes are streamed to a profile-scoped staging file while SHA-256 is computed, fsynced, installed under a content-addressed immutable managed-material path and verified before canonical lineage references them",
-    "existing identical bytes may reuse one managed blob without changing its content; Song Asset identity/history remains explicit rather than silently merging unrelated Song lineage",
-    "the canonical Asset stores the verified digest and a managed local source URI; current Version is created with the prior current Version as parent and the imported Asset attached",
-    "importing material never changes approved_version_id; current and approved remain visibly distinct",
-    "the Song surface shows the current Version and its material names using artist-readable copy without raw asset/version/profile IDs or filesystem paths",
-    "Quit/relaunch preserves the active Song, current Version, material lineage and managed bytes; a missing or tampered managed blob is reported as a protected integrity problem rather than silently trusted",
-    "multiple Artist profiles and Songs remain isolated; one profile/Song cannot resolve another profile's managed material",
-    "ingest performs no audio analysis, generation, provider egress, DAW mutation, publication, approval or paid action",
-    "authored HTTP/invariant/restart proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
+    "the normal /song surface lists every Version for the exact active Song in deterministic lineage order with artist-readable labels",
+    "current and approved state are independently visible for each Version; newest/current never implies approved",
+    "each non-current Version can be explicitly resumed as current through a server-owned one-shot action bound to exact active Song, target Version and the current Version seen when rendered",
+    "foreign Origin, bad CSRF, replay, cross-Song Version and stale-current actions fail closed before current_version_id changes",
+    "resuming a Version only changes the Song current pointer; immutable Version/Asset history and approved_version_id remain unchanged",
+    "a resumed Version becomes the basis for the next imported Version because later ingest parents the exact current Version",
+    "Version material names and integrity state remain inspectable without raw Version/Asset/profile IDs, managed URIs or filesystem paths",
+    "navigation and Quit/relaunch preserve the selected current Version and complete Version history",
+    "multiple Songs/profiles remain isolated and history for one cannot be selected through another",
+    "authored consumer/invariant/restart tests remain separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
-  "non_scope": ["waveform/timeline editing", "audio/MIDI musical analysis", "stem separation", "reference comparison", "version approval UI", "branch/compare UI", "DAW project import/mutation", "host adapters", "provider/cloud storage", "sharing", "search/tags", "large asset catalog browser", "bulk/folder ingest", "drag-and-drop polish", "mobile/web companion", "Gate-B acceptance"],
-  "next_selection_rule": "After SONG-01C lands or blocks, globally reselect. Compare version/asset history/approval reachability, remaining SONG-01 creative continuity, Workspaces/Health, DAW mutation/IR/portability chassis, AUDIO and OPS-04. Do not automatically continue to SONG-01D or audio analysis."
+  "non_scope": ["changing approved Version", "deleting/reordering/renaming Versions", "audio playback or A/B audition", "waveform/timeline editing", "audio/MIDI analysis or derivation", "branch creation beyond existing parent lineage", "generation", "DAW mutation", "provider/cloud work", "sharing", "release/delivery", "Gate-B acceptance"],
+  "next_selection_rule": "After this increment lands or blocks, globally reselect from the whole graph. Compare Song-first Creative Studio, approval/decision reachability, suggestion/template continuity, musical derivation only if a truthful analysis substrate exists, and DAW/OPS lanes. Do not continue by label adjacency."
 }
