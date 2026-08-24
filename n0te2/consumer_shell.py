@@ -381,6 +381,7 @@ class ConsumerShell:
             "/profile/select",
             "/song/start",
             "/song/material",
+            "/song/version/resume",
             "/session/start",
             "/session/capture",
             "/session/finish",
@@ -408,6 +409,8 @@ class ConsumerShell:
                 self._post_select_profile(handler, form)
             elif path == "/song/start":
                 self._post_start_song(handler, form)
+            elif path == "/song/version/resume":
+                self._post_resume_version(handler, form)
             elif path == "/session/start":
                 self._post_session_start(handler, form)
             elif path == "/session/capture":
@@ -665,6 +668,66 @@ class ConsumerShell:
             self._redirect(handler, "/song")
             return
         self._consumer_notice = f"{imported.asset.name} is preserved locally as the current Song version. Approval was not changed."
+        self._redirect(handler, "/song")
+
+    def _post_resume_version(
+        self,
+        handler: BaseHTTPRequestHandler,
+        form: Mapping[str, str],
+    ) -> None:
+        if self.runtime.state != "RUNNING":
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("Open an Artist workspace before resuming a Song Version."),
+            )
+            return
+        action = self._consume_action(form.get("action", ""), "song-version-resume")
+        if action is None or action.value is None:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That Version action was already handled or expired."),
+            )
+            return
+        parts = action.value.split("|", 2)
+        if len(parts) != 3:
+            self._send_html(handler, 409, self._simple_error("That Version action is no longer valid."))
+            return
+        song_id, target_version_id, expected_current_id = parts
+        store = self.runtime.headquarters.store
+        song = store.active_song()
+        if song is None or song.id != song_id:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("The active Song changed. Reload the Song before resuming a Version."),
+            )
+            return
+        if song.current_version_id != expected_current_id:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("The current Version changed. Reload the Song before choosing what to resume."),
+            )
+            return
+        target = store.get_version(target_version_id)
+        if target is None or target.song_id != song.id:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That Version does not belong to the active Song."),
+            )
+            return
+        if target.id == song.current_version_id:
+            self._send_html(
+                handler,
+                409,
+                self._simple_error("That Version is already current."),
+            )
+            return
+        store.set_current_version(song.id, target.id)
+        self._consumer_notice = f"Resumed {target.label} as the current Version. Approval was not changed."
         self._redirect(handler, "/song")
 
     def _post_session_start(
@@ -984,7 +1047,7 @@ class ConsumerShell:
                 "running-song",
                 song.title,
                 "Active Song",
-                "Keep the actual Song material with its version history, set a clear work objective, capture what matters, then finish with what happened and what comes next.",
+                "Keep the actual Song material with its Version history, set a clear work objective, capture what matters, then finish with what happened and what comes next.",
                 artist_name=artist.display_name,
                 song_title=song.title,
             )
@@ -1116,6 +1179,32 @@ class ConsumerShell:
 <p class="muted">N0TE preserves a verified local copy and creates a new current Version. Importing never approves the Version.</p>
 </form>"""
 
+    def _material_status(self, version_id: str) -> str:
+        views = self.runtime.headquarters.materials.version_materials(version_id)
+        if not views:
+            return '<p class="muted">No material attached to this Version.</p>'
+        rows = []
+        for view in views:
+            if view.status == "VERIFIED_MANAGED":
+                status = "Verified local copy"
+                status_class = "good"
+            elif view.status == "INTEGRITY_ERROR":
+                status = "Protected integrity problem"
+                status_class = "caution"
+            else:
+                status = "External reference"
+                status_class = "caution"
+            rows.append(
+                '<li><strong>'
+                + html.escape(view.asset.name)
+                + '</strong><p class="status '
+                + status_class
+                + '">'
+                + html.escape(status)
+                + '</p></li>'
+            )
+        return '<ul class="stack" aria-label="Song Version material">' + "".join(rows) + "</ul>"
+
     def _material_card(self, song) -> str:
         store = self.runtime.headquarters.store
         current = None if song.current_version_id is None else store.get_version(song.current_version_id)
@@ -1124,35 +1213,10 @@ class ConsumerShell:
         if current is None:
             current_html = '<p class="status caution">No material Version yet</p><p>Add the actual file you are working from so N0TE can preserve the Song, not only its title and notes.</p>'
         else:
-            views = self.runtime.headquarters.materials.version_materials(current.id)
-            if not views:
-                material_html = '<p class="muted">This current Version has no attached material.</p>'
-            else:
-                rows = []
-                for view in views:
-                    if view.status == "VERIFIED_MANAGED":
-                        status = "Verified local copy"
-                        status_class = "good"
-                    elif view.status == "INTEGRITY_ERROR":
-                        status = "Protected integrity problem"
-                        status_class = "caution"
-                    else:
-                        status = "External reference"
-                        status_class = "caution"
-                    rows.append(
-                        '<li><strong>'
-                        + html.escape(view.asset.name)
-                        + '</strong><p class="status '
-                        + status_class
-                        + '">'
-                        + html.escape(status)
-                        + '</p></li>'
-                    )
-                material_html = '<ul class="stack" aria-label="Current Song material">' + "".join(rows) + "</ul>"
             current_html = (
                 '<p>Current Version</p>'
                 f'<p class="song-name">{html.escape(current.label)}</p>'
-                f'{material_html}'
+                f'{self._material_status(current.id)}'
             )
         if song.approved_version_id is None:
             approval = '<p class="status caution">No approved Version yet</p><p>Current and approved stay separate. Adding material does not approve it.</p>'
@@ -1170,6 +1234,60 @@ class ConsumerShell:
         return (
             '<div class="card"><h2>Your Song material</h2>'
             f'{current_html}{approval}{self._material_upload_form(song.id)}</div>'
+        )
+
+    def _version_history_card(self, song) -> str:
+        store = self.runtime.headquarters.store
+        versions = store.versions_for_song(song.id)
+        if not versions:
+            return (
+                '<div class="card"><h2>Version history</h2>'
+                '<p class="muted">Your Version history starts when you add Song material.</p></div>'
+            )
+        by_id = {version.id: version for version in versions}
+        rows: list[str] = []
+        for version in reversed(versions):
+            states: list[str] = []
+            if version.id == song.current_version_id:
+                states.append('<span class="status good">Current</span>')
+            if version.id == song.approved_version_id:
+                states.append('<span class="status good">Approved</span>')
+            if not states:
+                states.append('<span class="status">History</span>')
+            parent = by_id.get(version.parent_version_id) if version.parent_version_id else None
+            parent_html = (
+                '<p class="muted">First preserved Version</p>'
+                if version.parent_version_id is None
+                else (
+                    f'<p class="muted">Based on Version {parent.ordinal}: {html.escape(parent.label)}</p>'
+                    if parent is not None
+                    else '<p class="status caution">Parent lineage could not be read safely</p>'
+                )
+            )
+            resume = ""
+            if version.id != song.current_version_id:
+                if song.current_version_id is None:
+                    raise ConsumerShellError("Version history exists without a current Version")
+                token = self._new_action(
+                    "song-version-resume",
+                    f"{song.id}|{version.id}|{song.current_version_id}",
+                )
+                resume = (
+                    '<form method="post" action="/song/version/resume">'
+                    f'{self._hidden(token)}'
+                    '<button type="submit">Resume from this Version</button></form>'
+                )
+            rows.append(
+                '<li class="stack">'
+                f'<p><strong>Version {version.ordinal}: {html.escape(version.label)}</strong></p>'
+                f'<div class="row">{"".join(states)}</div>'
+                f'{parent_html}{self._material_status(version.id)}{resume}'
+                '</li>'
+            )
+        return (
+            '<div class="card"><h2>Version history</h2>'
+            '<p>Choose which preserved Version is current without deleting later work or changing which Version is approved.</p>'
+            f'<ol class="stack" aria-label="Song Version history">{"".join(rows)}</ol></div>'
         )
 
     def _start_session_form(self, song_id: str) -> str:
@@ -1232,6 +1350,7 @@ class ConsumerShell:
             '<p class="status good">Song context active</p></div>'
         )
         material_card = self._material_card(song)
+        version_history_card = self._version_history_card(song)
         if latest is None:
             session_card = (
                 '<div class="card"><h2>Start this work Session</h2>'
@@ -1271,7 +1390,7 @@ class ConsumerShell:
                 '<div class="card"><h2>Last Session history</h2>'
                 f'{self._session_history(latest.id)}</div>'
             )
-        return f'<section class="grid">{song_card}{material_card}{session_card}{history_card}</section>'
+        return f'<section class="grid">{song_card}{material_card}{version_history_card}{session_card}{history_card}</section>'
 
     def _focus_content(self, state: _PageState) -> str:
         focus = self.runtime.headquarters.attention.active_focus()
