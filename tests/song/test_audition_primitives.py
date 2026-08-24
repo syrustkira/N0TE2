@@ -11,22 +11,41 @@ from n0te2.audition import (
 )
 
 
-def test_audition_media_uses_file_signature_not_extension(tmp_path: Path) -> None:
+def valid_wav(payload: bytes = b"\x80" * 8) -> bytes:
+    fmt = (
+        (1).to_bytes(2, "little")
+        + (1).to_bytes(2, "little")
+        + (8000).to_bytes(4, "little")
+        + (8000).to_bytes(4, "little")
+        + (1).to_bytes(2, "little")
+        + (8).to_bytes(2, "little")
+    )
+    body = b"WAVEfmt " + (16).to_bytes(4, "little") + fmt
+    body += b"data" + len(payload).to_bytes(4, "little") + payload
+    return b"RIFF" + len(body).to_bytes(4, "little") + body
+
+
+def test_audition_media_requires_coherent_audio_structure_not_extension(tmp_path: Path) -> None:
     wav = tmp_path / "not-audio.txt"
-    wav.write_bytes(b"RIFF" + (32).to_bytes(4, "little") + b"WAVEfmt " + b"\x00" * 24)
+    wav.write_bytes(valid_wav())
     media = inspect_audition_media(wav)
     assert media.content_type == "audio/wav"
     assert media.size_bytes == wav.stat().st_size
 
     mp3 = tmp_path / "also-not-audio.bin"
-    mp3.write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x00" + b"music")
+    mp3.write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x00" + b"\xff\xfb\x90\x64" + b"\x00" * 32)
     media = inspect_audition_media(mp3)
     assert media.content_type == "audio/mpeg"
 
-    fake = tmp_path / "fake.wav"
-    fake.write_bytes(b"this is not wave audio")
+    bare_id3 = tmp_path / "bare-id3.mp3"
+    bare_id3.write_bytes(b"ID3\x04\x00\x00\x00\x00\x00\x00" + b"not audio")
     with pytest.raises(UnsupportedAuditionMedia):
-        inspect_audition_media(fake)
+        inspect_audition_media(bare_id3)
+
+    fake_riff = tmp_path / "fake.wav"
+    fake_riff.write_bytes(b"RIFF" + (32).to_bytes(4, "little") + b"WAVE" + b"not real wave audio")
+    with pytest.raises(UnsupportedAuditionMedia):
+        inspect_audition_media(fake_riff)
 
 
 def test_single_byte_ranges_are_bounded_and_deterministic() -> None:
