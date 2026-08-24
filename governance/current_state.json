@@ -3,7 +3,7 @@
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
   "active_node": "SONG-01",
-  "active_increment": "SONG-01C",
+  "active_increment": "SONG-VERSION-HISTORY-01",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -11,17 +11,17 @@
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
   "truth": [
     "N0TE2 is the clean-room destination.",
-    "Canonical main remains 76e4ca6ff34d20d2b3471f1a0db7a32e15e4ba66 after merged PR #52 landed DAW-00G. DAW-00F/G authored tests were not observed executing; their hosted workflow/status surfaces were empty/UNOBSERVED.",
-    "DAW-00A-G are landed foundations: peer runtime identity, durable workspace identity, exact FocusContext, append-only Host Shadow, reconciliation, capability x exact-environment evidence, and one universal peer-neutral host observation session. DAW-00 remains incomplete for mutation/IR, portability/interchange, environment expansion, consumer Health and real host adapters, but it is not the selected lane.",
-    "Whole-graph reselection chose SONG-01C on exact baseline 76e4ca6ff34d20d2b3471f1a0db7a32e15e4ba66 because after DAW-00A-G the strongest construction-ready customer gap was preserving the actual Song material, not another host chassis seam.",
-    "SONG-01C now authors a profile-scoped immutable managed-material store: bounded local bytes are staged, SHA-256 hashed, fsynced, installed under a content-addressed managed path and verified before canonical lineage references them. Browser filenames are display metadata only and never control the destination path.",
-    "The normal /song consumer surface now authors one-file local material ingest without a DAW, provider or account. The multipart action is exact-Origin checked, CSRF checked, one-shot and bound to the exact active Song before lineage creation.",
-    "Successful ingest authors a canonical Asset plus a new current Version parented to the prior current Version in the existing CORE-01 lineage transaction. Import does not mutate approved_version_id, and /song visibly distinguishes current from approved.",
-    "The Song surface authors artist-readable material continuity without raw Asset/Version/profile IDs, managed URIs or filesystem paths. Managed bytes are re-verified when rendered; missing or tampered bytes become a protected integrity state rather than trusted material.",
-    "HeadquartersMemory wires SongMaterialMemory into the canonical profile runtime. Existing identical bytes may reuse one immutable managed blob while each Song import retains explicit Asset/Version lineage.",
-    "Authored proof includes bounded multipart parser tests, material-memory durability/isolation/lineage tests, and real ConsumerShell HTTP tests for import, safe basename, current-versus-approved separation, Quit/relaunch continuity, Origin rejection, one-shot replay rejection, active-Song binding and tamper visibility.",
-    "Reviewed product/test head for PR #53 is 04cbc0372ab5fb79cc3cd4fee6a60249b13fbbbd. PR #53 is mergeable against exact baseline main. Exact-head commit statuses and pull-request workflow runs were both empty, so execution remains UNOBSERVED rather than green or failed.",
-    "SONG-01C remains local-only and non-executing with respect to creative/external systems: no provider egress, DAW mutation, audio analysis, generation, publication, approval action or paid action is authorized or implemented in this increment.",
-    "After SONG-01C lands or blocks, globally reselect from the whole graph. Do not continue automatically to SONG-01D, audio analysis or another DAW chassis seam by adjacency."
+    "Canonical main is 1ae8a38be3a6facae19693124c63d1fccd3d9e16 after merged PR #53 landed SONG-01C Local Song Material Ingest + Version Resume. PR #53 hosted workflows/statuses were empty, so its authored tests remain UNOBSERVED rather than green.",
+    "Whole-graph reselection selected SONG-VERSION-HISTORY-01 from REQ-SCOPE-059 Version/History plus REQ-SCOPE-013 Asset/Catalog because SONG-01C made real Version lineage available while the artist still could not inspect or deliberately resume it through the normal Song surface.",
+    "Live N0TE2 source still has no tempo/waveform/audio-analysis engine; n0te2/studio.py is a capability truth profile rather than a musical canvas or analysis implementation. Musical derivation remains important but was not smuggled into this bounded increment.",
+    "The branch adds one canonical deterministic versions_for_song read and exposes immutable Version history through /song. Artist-visible history uses ordinal, label, parent narrative, material name/integrity, and independent Current/Approved state without raw Version/Asset/profile IDs, managed URIs or filesystem paths.",
+    "Resume Version authority is server-owned and one-shot. It binds exact active Song, exact target Version and the current Version seen when the page rendered; foreign Origin, bad CSRF, replay, stale-current and active-Song-change cases are authored to fail closed before current_version_id changes.",
+    "Resuming a Version uses the existing validated set_current_version semantic. It changes only the current pointer; immutable Version/Asset history and approved_version_id remain untouched. A later material ingest then parents the exact resumed current Version, preserving a recoverable branch of history rather than destructive rollback.",
+    "Authored consumer proof covers deterministic full-history rendering, current/approved independence, actual HTTP resume, Origin rejection, explicit bad-CSRF rejection, replay rejection, stale-current rejection, active-Song-change rejection, later-history retention, next-import-parent continuity, Quit/relaunch persistence, Song/profile isolation and raw-internal hiding.",
+    "Static PR review found and repaired one unrelated three-line transaction-rationale comment deletion caused by an earlier whole-file lineage write. The final lineage patch is limited to versions_for_song; the consumer-shell patch is additive around Version history/resume and preserves existing Session/Focus behavior.",
+    "The core create_version API permits make_current=False, but live repository search found no current call site using it. The consumer history path expects normal product-created Version histories to have a current pointer. That defensive null-current state is explicitly not claimed as completed behavior in this increment and should be revisited only if a real producer or recovery path makes it reachable.",
+    "Reviewed product/test head for PR #54 is 18d3f9df99eb98c13a0f77ffe2478f1ffd88f29b. PR #54 is mergeable against exact baseline main. Exact-head commit statuses and pull-request workflow runs are both empty, and a local execution attempt failed before checkout because the sandbox could not resolve github.com. Execution therefore remains UNOBSERVED, not green and not failed.",
+    "No approval mutation, Version delete/rename/reorder, playback/A-B audition, waveform/timeline editing, audio/MIDI derivation, generation, DAW mutation, provider/cloud work, sharing/release or Gate-B acceptance is implemented or claimed here.",
+    "After this increment lands or blocks, globally reselect from the whole graph. Compare Song-first Creative Studio, approval/decision reachability, suggestion/template continuity, truthful musical derivation substrate, DAW/OPS and other portfolio outcomes rather than following label adjacency."
   ]
 }

@@ -523,6 +523,24 @@ class LineageStore:
             parent_version_id=row["parent_version_id"],
         )
 
+    def versions_for_song(self, song_id: str) -> tuple[Version, ...]:
+        self._require_song(song_id)
+        rows = self._conn.execute(
+            "SELECT id, song_id, ordinal, label, parent_version_id "
+            "FROM versions WHERE song_id = ? ORDER BY ordinal ASC",
+            (song_id,),
+        ).fetchall()
+        return tuple(
+            Version(
+                id=row["id"],
+                song_id=row["song_id"],
+                ordinal=int(row["ordinal"]),
+                label=row["label"],
+                parent_version_id=row["parent_version_id"],
+            )
+            for row in rows
+        )
+
     def set_current_version(self, song_id: str, version_id: str) -> Song:
         self._require_song(song_id)
         version = self.get_version(version_id)
