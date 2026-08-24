@@ -260,6 +260,9 @@ class LineageStore:
         END;
         """
         try:
+            # executescript() may commit a transaction that was opened before the
+            # call. BEGIN therefore belongs inside the script so schema DDL and
+            # seed rows share one all-or-nothing transaction until conn.commit().
             conn.executescript(schema)
             conn.executemany(
                 "INSERT INTO metadata(key, value) VALUES(?, ?)",
