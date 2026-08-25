@@ -98,7 +98,7 @@ def _skill_card(shell: ConsumerShell) -> str:
         rows.append(
             '<li class="stack">'
             f'<p><strong>{html.escape(view.skill_id)}</strong></p>'
-            f'<p class="status good">{html.escape(_LEVEL_LABELS[view.level])}</p>'
+            f'<p class="status">{html.escape(_LEVEL_LABELS[view.level])}</p>'
             f'<p>{html.escape(view.source_label)} · {html.escape(view.assistance_label)} · '
             f'{html.escape(confidence)} · {html.escape(evidence)}</p>'
             f'{correction_note}'
@@ -109,6 +109,7 @@ def _skill_card(shell: ConsumerShell) -> str:
             f'{_options(_CORRECTION_LEVELS, selected=view.level)}</select></label></div>'
             '<div><label>Assistance for this corrected assessment<select name="assistance" required>'
             f'{_assistance_options(view.assistance_level)}</select></label></div>'
+            '<p class="muted">If you correct the level to Unknown, assistance is treated as not established.</p>'
             '<div><label>How confident are you in this correction?<select name="confidence" required>'
             f'{_confidence_options(view.confidence)}</select></label></div>'
             '<div><label>Why are you correcting this?<textarea name="reason" maxlength="500" rows="2" required></textarea></label></div>'
