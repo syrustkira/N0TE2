@@ -10,15 +10,18 @@
   "direct_legacy_test_text_copy_authorized": false,
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
   "truth": [
-    "Canonical main is a40a7b151164fbebc14692934bcde6eaaa05decd after merged PR #58 landed the visible artist-correctable Skill Model. Hosted execution for that increment remained UNOBSERVED.",
-    "Whole-graph reselection chose SONG-LEARNING-01 because REQ-SCOPE-126 is a required minimum whose CORE-02C/E foundation is already implemented while consumer workflows remain downstream.",
-    "LearningMemory already owns immutable Song/Session-bound episodes, append-only observed consequences with source/confidence/conditions/confounders, one terminal KEEP/REVERT/REVISE/INCONCLUSIVE decision, and canonical Activity events.",
-    "The missing customer seam is using that model during real Song work: record a concrete change, record what was observed afterward, then decide what to do without claiming the change caused the observation.",
-    "New Learning episodes in this increment must bind the exact active Song and exact open work Session. Existing undecided episodes may remain inspectable and completable across navigation/relaunch even after their Session closes.",
-    "Consumer consequence authority is USER_DECLARED only; source_ref and internal IDs remain server-owned. No browser path may manufacture measured/provider evidence or causal certainty.",
-    "A terminal decision requires at least one consequence, explicit rationale and confidence. Decision authority must bind the exact rendered consequence state so an older page cannot decide without seeing a newer observation.",
-    "Learning history remains append-only. A decided episode cannot receive another consequence or another decision.",
-    "REQ-SCOPE-124 collaboration-depth modes, REQ-SCOPE-115 References, loudness-aware A/B, derivation and DAW adjacency remain preserved candidates but are not selected because this Learning journey is a bounded consumer seam over an already-complete foundation.",
-    "Selection receipt and current state are committed on branch codex/song-learning-decisions from exact main a40a7b151164fbebc14692934bcde6eaaa05decd before product edits."
+    "Canonical main baseline for this increment is a40a7b151164fbebc14692934bcde6eaaa05decd after PR #58 landed the visible artist-correctable Skill Model.",
+    "SONG-LEARNING-01 exposes canonical LearningMemory through /song rather than creating another experiment ledger.",
+    "A new Learning experiment binds the exact active Song and exact latest open work Session. Existing undecided experiments remain inspectable and decidable after Session close and quit/relaunch.",
+    "Consumer observations are USER_DECLARED only with server-owned source references. Canonical non-user evidence remains distinguishable in the UI as observed, measured, provider-verified, remembered or inferred rather than being flattened.",
+    "Terminal decision authority binds the exact ordered consequence set rendered to the artist inside the same BEGIN IMMEDIATE transaction as the decision write, so unseen newer evidence invalidates stale authority.",
+    "The consumer card now uses neutral heading 'What happened after that change?' and explicitly states that sequence and judgment do not prove the change caused the outcome.",
+    "A decision closes the Learning experiment but does not close or mutate the bound work Session. Decided episodes cannot receive more consequences or a second decision.",
+    "Authored core proof covers canonical storage, Activity receipts, stale Session start, stale decision after unseen evidence, terminal closure, and decision after Session close/reopen.",
+    "Authored HTTP proof covers causal-humility copy, source posture, internal-ID/source-ref hiding, pure GET, full start-observe-decide flow, Origin/CSRF/replay, stale Session, stale decision, and quit/relaunch continuity.",
+    "Reviewed product/test head is 2e3b9fe43e385fee52c5877cdc31198f86170eca. Commit statuses, pull-request workflow runs, reviews and review threads were all empty; execution remains UNOBSERVED.",
+    "A local checkout/test attempt could not begin because the model runtime could not resolve github.com. That environment failure is neither a test pass nor a test failure.",
+    "Commits after the reviewed product/test head are governance evidence-freeze commits only and do not change reviewed product behavior.",
+    "After landing or blockage, globally reselect rather than following Learning adjacency."
   ]
 }
