@@ -9,6 +9,7 @@ from .skills import SKILL_LEVELS, SkillAssessment, SkillMemory
 
 _ARTIST_DECLARATION_LEVELS = {"INTRODUCED", "PRACTICED", "APPLIED", "INDEPENDENT"}
 _ASSISTANCE_LEVELS = {"NONE": 0.0, "SOME": 0.5, "HIGH": 1.0}
+_CONFIDENCE_LEVELS = {"LOW": 0.4, "MEDIUM": 0.7, "HIGH": 1.0}
 _SOURCE_LABELS = {
     "ARTIST_DECLARED": "You told N0TE",
     "ARTIST_CORRECTION": "You corrected N0TE",
@@ -89,15 +90,19 @@ class SkillModelService:
         return assistance
 
     @staticmethod
+    def _confidence(value: str) -> float:
+        key = str(value).strip().upper()
+        if key not in _CONFIDENCE_LEVELS:
+            raise ValidationError("unsupported confidence level")
+        return _CONFIDENCE_LEVELS[key]
+
+    @staticmethod
     def _assistance_label(value: float) -> str:
         if value == 0.0:
             return "No assistance"
         if value <= 0.5:
             return "Some assistance"
         return "High assistance"
-
-    def _assessment_from_row(self, row: sqlite3.Row) -> SkillAssessment:
-        return self.skills._assessment(row)
 
     def _latest_row(self, skill_id: str) -> sqlite3.Row | None:
         return self.store._conn.execute(
@@ -141,10 +146,18 @@ class SkillModelService:
             raise SkillModelError("Skill has no recorded assessment to correct")
         return SkillModelBinding(skill_id, state.latest_assessment.id)
 
-    def declare(self, *, skill_id: str, level: str, assistance: str) -> SkillAssessment:
+    def declare(
+        self,
+        *,
+        skill_id: str,
+        level: str,
+        assistance: str,
+        confidence: str = "HIGH",
+    ) -> SkillAssessment:
         skill_id = self._skill_name(skill_id)
         level = self._level(level, correction=False)
         assistance_level = self._assistance(assistance, level)
+        confidence_value = self._confidence(confidence)
         assessment_id = f"skillassess_{uuid.uuid4().hex}"
         source_ref = f"consumer-skill-declaration:{uuid.uuid4().hex}"
 
@@ -157,13 +170,14 @@ class SkillModelService:
                 self.store._conn.execute(
                     "INSERT INTO skill_assessments("
                     "id,skill_id,level,source_kind,source_ref,confidence,assistance_level,"
-                    "session_id,song_id,note) VALUES(?,?,?,?,?,1.0,?,NULL,NULL,NULL)",
+                    "session_id,song_id,note) VALUES(?,?,?,?,?,?,?,NULL,NULL,NULL)",
                     (
                         assessment_id,
                         skill_id,
                         level,
                         "ARTIST_DECLARED",
                         source_ref,
+                        confidence_value,
                         assistance_level,
                     ),
                 )
@@ -184,12 +198,14 @@ class SkillModelService:
         level: str,
         assistance: str,
         reason: str,
+        confidence: str = "HIGH",
     ) -> SkillAssessment:
         if not isinstance(binding, SkillModelBinding):
             raise TypeError("binding must be SkillModelBinding")
         skill_id = self._skill_name(binding.skill_id)
         level = self._level(level, correction=True)
         assistance_level = self._assistance(assistance, level)
+        confidence_value = self._confidence(confidence)
         reason = " ".join(str(reason).split())
         if not reason:
             raise ValidationError("Skill correction reason must not be empty")
@@ -208,13 +224,14 @@ class SkillModelService:
                 self.store._conn.execute(
                     "INSERT INTO skill_assessments("
                     "id,skill_id,level,source_kind,source_ref,confidence,assistance_level,"
-                    "session_id,song_id,note) VALUES(?,?,?,?,?,1.0,?,NULL,NULL,?)",
+                    "session_id,song_id,note) VALUES(?,?,?,?,?,?,?,NULL,NULL,?)",
                     (
                         assessment_id,
                         skill_id,
                         level,
                         "ARTIST_CORRECTION",
                         source_ref,
+                        confidence_value,
                         assistance_level,
                         reason,
                     ),
