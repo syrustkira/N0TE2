@@ -10,14 +10,18 @@
   "direct_legacy_test_text_copy_authorized": false,
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
   "truth": [
-    "Canonical main is 9e1e0356ebc383a04e82d4b93470c361f01e31c1 after squash-merged PR #59 landed consumer Change→Consequence→Decision Learning memory. Hosted execution remained UNOBSERVED.",
-    "Whole-graph reselection chose SONG-SUCCESS-01 because REQ-SCOPE-139 is a required minimum with a live pure-read SuccessMemory foundation and the just-landed Learning consumer loop can now populate it through normal artist work.",
-    "SuccessMemory groups exact domain + subject + change patterns only; it does not infer similarity or persist a score/rank/rule.",
-    "Canonical SuccessPattern preserves completed sample size, pending episodes, KEEP support, REVERT/REVISE counterexamples, INCONCLUSIVE evidence, conditions, confounders/alternative explanations, source posture and confidence summaries.",
-    "SuccessMemory causal_status is ASSOCIATION_ONLY and its humility states explicitly distinguish no completed evidence, single observation, success-only, mixed, no-keep and inconclusive-only evidence.",
-    "The consumer seam must expose those warnings and counterexamples rather than turning prior retained examples into a recipe or recommendation.",
-    "Friction Memory remains preserved but is not selected first because the normal artist still lacks bounded explicit friction-observation capture; displaying recurring patterns without that write seam would often be empty.",
-    "Interaction-depth modes, References, A/B analysis and derivation remain preserved candidates but require new product/substrate work rather than this already-ready pure-read seam.",
-    "Selection receipt and current state are committed on branch codex/song-success-patterns from exact main 9e1e0356ebc383a04e82d4b93470c361f01e31c1 before product edits."
+    "Canonical main baseline is 9e1e0356ebc383a04e82d4b93470c361f01e31c1 after PR #59 landed consumer Learning memory.",
+    "SONG-SUCCESS-01 exposes a pure-read Song-scoped projection over canonical SuccessMemory; no Success score, rank, rule, recommendation or persistence was added.",
+    "The consumer view preserves exact domain + subject + change grouping, completed and pending sample posture, KEEP support, REVERT/REVISE counterexamples, INCONCLUSIVE evidence, conditions, confounders, source posture and confidence summaries.",
+    "All six canonical humility states remain visible and the canonical warning is presented as primary product truth.",
+    "The projection carries canonical causal_status and refuses to render if semantics move away from ASSOCIATION_ONLY.",
+    "Unknown future evidence-source kinds also fail closed rather than flattening provenance into a generic label.",
+    "The card is Song-scoped rather than Artist-wide so unrelated career patterns are not dumped into the active creative workspace; broader Context/History recall remains downstream.",
+    "The extension is read-only, adds no routes, installs exactly once and recomputes from canonical LearningMemory across relaunch.",
+    "Authored core proof covers all humility states, semantic-drift failure, source/confidence/condition/confounder preservation, ID stripping, Song scope and pure reads.",
+    "Authored consumer proof covers mixed support/counterexample/pending evidence, association-only warnings, source posture, internal-ID/source-ref hiding, cross-Song isolation, pure GET, idempotent install and relaunch stability.",
+    "Reviewed product/test head is c9aca65f57edeb3d6365e40be38a779afa1a5762. Commit statuses, PR workflow runs, reviews and review threads were all empty; execution remains UNOBSERVED.",
+    "Commits after the reviewed product/test head are governance evidence-freeze only.",
+    "After landing or blockage, globally reselect rather than continuing by Success adjacency."
   ]
 }
