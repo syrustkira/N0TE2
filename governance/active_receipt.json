@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-LEARNING-01",
+  "receipt_id": "N0TE2-SONG-SUCCESS-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-LEARNING-01",
-  "baseline_sha": "a40a7b151164fbebc14692934bcde6eaaa05decd",
-  "purpose": "Expose canonical LearningMemory change→observed consequence→decision through /song so the artist can preserve a concrete change tried in a real Session, what was observed afterward, and one explicit decision without manufacturing causality.",
+  "increment_id": "SONG-SUCCESS-01",
+  "baseline_sha": "9e1e0356ebc383a04e82d4b93470c361f01e31c1",
+  "purpose": "Expose the existing pure-read SuccessMemory synthesis through the Song experience so the artist can see when an exact change has prior supporting, counterexample, inconclusive or pending Learning evidence, together with sample size, conditions, alternative explanations and confidence, without turning association into a success rule.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,43 +14,37 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can preserve what changed, what was observed afterward, and what they decided, while keeping source posture and causal uncertainty visible.",
-    "journeys": ["J-SONG-START-RESUME", "J-WHAT-NEXT", "J-TRUST", "J-COMPARE-DECIDE"],
-    "capability": "Consumer-reachable Change → Consequence → Decision → Memory",
-    "increment": "SONG-LEARNING-01"
+    "outcome": "The artist can recognize what comparable past work suggests, including counterexamples and uncertainty, instead of relying on vague memory or a fake universal recipe.",
+    "journeys": ["J-WHAT-NEXT", "J-TRUST", "J-COMPARE-DECIDE", "J-SONG-START-RESUME"],
+    "capability": "Consumer-readable Success Memory with association-only humility",
+    "increment": "SONG-SUCCESS-01"
   },
-  "why_now": "REQ-SCOPE-126 is required minimum. CORE-02C/E already owns the append-only Learning foundation; consumer reachability was the missing seam.",
+  "why_now": "REQ-SCOPE-139 is a required minimum whose CORE-02E SuccessMemory foundation is already implemented. SONG-LEARNING-01 now gives the normal artist a consumer path that can populate those patterns, making read-only pattern recall immediately useful rather than an empty backend projection.",
+  "instead_of": [
+    "Friction Memory consumer UX is not selected first because normal artist authority to record explicit friction observations is still missing; recurring-pattern display alone would often be empty.",
+    "DO IT/WITH ME/SHOW ME modes still require a distinct collaboration-depth product model.",
+    "First-class References still require a new persistent Reference subsystem.",
+    "Full A/B and derivation remain blocked on truthful analysis substrate.",
+    "More Learning write controls are not selected because the just-landed change→observation→decision loop is already consumer-reachable and Success recall is a separate read outcome."
+  ],
   "reuse": {
-    "mode": "EXPOSE_CANONICAL_LEARNING_MEMORY_WITH_BOUNDED_ARTIST_AUTHORITY_AND_CAUSAL_HUMILITY",
-    "n0te2_dependencies": ["CORE-02C LearningMemory", "CORE-02A SessionMemory", "CORE-01 ActivityLog", "SONG work Session flow", "SONG Activity timeline", "APP quit/relaunch continuity"],
+    "mode": "EXPOSE_PURE_READ_SUCCESS_MEMORY_WITH_ASSOCIATION_ONLY_HUMILITY",
+    "n0te2_dependencies": ["CORE-02E SuccessMemory", "CORE-02C LearningMemory", "SONG-LEARNING-01 consumer Learning loop", "existing /song consumer shell", "APP quit/relaunch continuity"],
+    "legacy_rejections": ["persisted success scores", "ranking changes as universally best", "hiding counterexamples", "single-example rules", "claiming causality", "dropping pending/inconclusive evidence", "client-side pattern recomputation"],
     "direct_copy": false
   },
   "completion_proof": [
-    "new episode authority binds exact active Song and exact latest open work Session",
-    "consumer observations are USER_DECLARED with explicit confidence and optional conditions/confounders while source_ref and internal identities remain server-owned",
-    "consumer wording says observed after the change and explicitly rejects causal proof",
-    "terminal KEEP/REVERT/REVISE/INCONCLUSIVE decision requires evidence, rationale and confidence and binds the exact ordered rendered consequence set",
-    "new unseen evidence invalidates stale decision authority atomically",
-    "decided episodes reject further consequences and second decisions without closing or mutating the work Session",
-    "existing undecided Learning history survives Session close and quit/relaunch and can still be decided later",
-    "Origin, CSRF and one-shot replay protections are preserved",
-    "Song surface preserves canonical evidence source posture without exposing IDs or source_ref",
-    "authored core/HTTP/restart proof remains separate from executed evidence"
+    "the normal /song surface can show exact-pattern Learning synthesis for the active Song without creating or mutating Success state",
+    "each pattern shows the concrete domain, subject and change plus completed sample size and pending evidence count",
+    "KEEP support, REVERT/REVISE counterexamples and INCONCLUSIVE evidence remain visibly distinct",
+    "the canonical humility warning is visible and no UI language claims causation, universal success or guaranteed future performance",
+    "conditions and alternative explanations/confounders remain visible with recurrence counts instead of being stripped from the pattern",
+    "observation and decision confidence are summarized without exposing episode IDs or source references",
+    "patterns with one retained example, success-only evidence, mixed evidence, no keep evidence, inconclusive-only evidence and no completed evidence degrade truthfully",
+    "GET reads are pure; Song, Session, Learning, Skill, Focus, Operations, DAWs and providers remain unchanged",
+    "quit/relaunch preserves the same derived result because the view is recomputed from canonical LearningMemory",
+    "authored proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
-  "review_repairs": [
-    "the first consumer projection flattened all consequence source kinds; red-team review repaired this by rendering artist-language provenance for USER_DECLARED, OBSERVED, MEASURED, PROVIDER_VERIFIED, REMEMBERED and INFERRED evidence",
-    "the first card heading 'What did that change teach you?' subtly pre-assigned causality; it was replaced with neutral 'What happened after that change?' while retaining explicit no-causality copy",
-    "consumer proof was tightened to assert both user-reported and measured source posture while ensuring raw source references remain hidden"
-  ],
-  "reviewed_product_test_head": "2e3b9fe43e385fee52c5877cdc31198f86170eca",
-  "evidence_classification": "UNOBSERVED",
-  "evidence_snapshot": {
-    "commit_statuses": [],
-    "pull_request_workflow_runs": [],
-    "reviews": [],
-    "review_threads": [],
-    "local_execution_note": "checkout/test attempt could not begin because the model runtime could not resolve github.com; this is neither pass nor fail"
-  },
-  "non_scope": ["automatic experiment generation", "causal inference", "statistical significance", "Success/Friction ranking rules", "AI teaching plans", "DO IT/WITH ME/SHOW ME modes", "reference objects", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
-  "next_selection_rule": "After landing or blockage, globally reselect across interaction/teaching modes, Success/Friction reachability, references, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
+  "non_scope": ["Success ranking/recommendations", "automatic next-action generation", "causal inference", "statistical significance", "cross-pattern similarity", "Friction write UX", "interaction modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
+  "next_selection_rule": "After landing or blockage, globally reselect across Friction capture/reachability, interaction/teaching modes, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
 }
