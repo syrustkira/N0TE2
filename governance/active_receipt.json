@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-SKILL-01",
+  "receipt_id": "N0TE2-SONG-LEARNING-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-SKILL-01",
-  "baseline_sha": "59d510809f892fd8c43f9b4c6abaf26b0beef656",
-  "purpose": "Make the existing canonical SkillMemory model consumer-visible and artist-correctable through the normal Song/learning experience: show what N0TE currently believes about named skills, the evidence/source posture behind each latest assessment, allow bounded artist-declared skill state and explicit correction without deleting history, and preserve the rule that N0TE-assessed real-work mastery must be backed by actual closed-Session evidence.",
+  "increment_id": "SONG-LEARNING-01",
+  "baseline_sha": "a40a7b151164fbebc14692934bcde6eaaa05decd",
+  "purpose": "Expose the existing canonical LearningMemory change→observed consequence→decision model through the normal Song work experience so the artist can record one concrete change tried in a real work Session, append what they actually observed with conditions/confounders/confidence, and make a KEEP/REVERT/REVISE/INCONCLUSIVE decision without claiming that the change caused the outcome.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,52 +14,38 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can see and correct N0TE's model of what they can do, so teaching and assistance can become grounded in durable real-work evidence instead of a hidden backend ledger.",
-    "journeys": ["J-SONG-START-RESUME", "J-WHAT-NEXT", "J-TRUST"],
-    "capability": "Consumer-visible and artist-correctable Skill Model",
-    "increment": "SONG-SKILL-01"
+    "outcome": "The artist can preserve what they changed, what they observed afterward, and what they decided, so N0TE learns from real work without turning correlation into fake causality.",
+    "journeys": ["J-SONG-START-RESUME", "J-WHAT-NEXT", "J-TRUST", "J-COMPARE-DECIDE"],
+    "capability": "Consumer-reachable Change → Consequence → Decision → Memory",
+    "increment": "SONG-LEARNING-01"
   },
-  "why_now": "REQ-SCOPE-123 explicitly records the Skill Model foundation as implemented while contextual teaching presentation and consumer acceptance remain downstream. SkillMemory already enforces append-only assessment history, real-work Session evidence, assistance tracking, zero-assistance INDEPENDENT state and artist correction. The highest-leverage missing seam is therefore consumer reachability and authority, not another Skill store.",
+  "why_now": "REQ-SCOPE-126 is a required minimum and explicitly records CORE-02C/E as foundation implemented while cross-domain consumer workflows remain downstream. LearningMemory already owns append-only Song/Session-bound episodes, observed consequences, conditions, confounders, source evidence, confidence, terminal decisions and Activity events. The missing seam is consumer use, not another experiment ledger.",
   "instead_of": [
-    "First-class reference objects are not selected because live N0TE2 has no persistent Reference model; that would require a new subsystem rather than exposing an existing required foundation.",
-    "Full loudness-aware A/B remains unselected because there is still no truthful loudness-analysis/normalization substrate.",
-    "Musical derivation remains unselected because the clean-room destination lacks an audio-analysis engine.",
-    "Another Activity/Version adjacency increment is not selected because the recent Song continuity loop is already consumer-reachable and marginal leverage is lower.",
-    "Another DAW chassis increment is not selected because the Skill Model is host-independent and directly advances N0TE's required expert-teacher role."
+    "DO IT/WITH ME/SHOW ME interaction modes are not selected because REQ-SCOPE-124 still needs a distinct collaboration-depth product model rather than a simple reachability seam.",
+    "First-class reference objects are not selected because live N0TE2 still lacks the persistent Reference model required by REQ-SCOPE-115.",
+    "Full loudness-aware A/B and musical derivation remain unselected because there is no truthful clean-room loudness/audio-analysis substrate.",
+    "More Skill adjacency is not selected because the Skill Model is now consumer-visible and correctable; Learning decision memory is the next separate already-built foundation with high cross-product leverage.",
+    "Another DAW chassis increment is not selected because this learning loop is host-independent and can capture decisions made around any DAW or manual creative work."
   ],
   "reuse": {
-    "mode": "EXPOSE_CANONICAL_SKILL_MEMORY_WITH_ARTIST_AUTHORITY_AND_NO_PARALLEL_TEACHER_STATE",
-    "n0te2_dependencies": ["CORE-02B SkillMemory", "CORE-02A SessionMemory", "CORE-01 EvidenceMemory", "CORE-01 ActivityLog", "existing /song consumer shell", "SONG-ACTIVITY-01 chronology", "APP-01 quit/relaunch continuity"],
-    "legacy_rejections": ["hidden AI-only skill scoring", "automatic mastery promotion from chat or scratch", "rewriting assessment history", "INDEPENDENT with assistance", "raw internal skill assessment IDs in browser authority", "parallel learner profile database", "fabricated evidence"],
+    "mode": "EXPOSE_CANONICAL_LEARNING_MEMORY_WITH_BOUNDED_ARTIST_AUTHORITY_AND_CAUSAL_HUMILITY",
+    "n0te2_dependencies": ["CORE-02C LearningMemory", "CORE-02A SessionMemory", "CORE-01 ActivityLog", "SONG-01 work Session consumer flow", "SONG-ACTIVITY-01 What changed? timeline", "APP-01 quit/relaunch continuity"],
+    "legacy_rejections": ["new experiment database", "automatic causal attribution", "fabricated provider or measurement evidence", "editing/deleting prior episodes", "decision before any consequence", "client-submitted internal episode IDs as authority", "global rule creation from one episode"],
     "direct_copy": false
   },
   "completion_proof": [
-    "the normal consumer Song/learning surface can list the current state of every recorded skill with artist-facing level, source/evidence posture, assistance and confidence truth without exposing internal assessment IDs or evidence IDs",
-    "an artist can explicitly declare a named skill state through bounded one-shot authority; UNKNOWN is not available as a declaration because canonical SkillMemory reserves UNKNOWN for correction",
-    "an artist can explicitly correct an existing named skill to any canonical level including UNKNOWN, with a required human reason, without deleting or rewriting prior assessments",
-    "correction authority binds the exact skill and rendered latest assessment state so a stale page cannot overwrite a newer assessment silently",
-    "INDEPENDENT can be artist-declared/corrected only with zero assistance, and UI copy explains the meaning rather than laundering assisted work into independence",
-    "N0TE-assessed/observed PRACTICED/APPLIED/INDEPENDENT remains unavailable from this consumer action path and still requires canonical closed-Session real-work evidence",
-    "each new assessment creates canonical SKILL_ASSESSED Activity without mutating Song Version/approval/material, Session history, Learning episodes, Focus, Operations, DAWs or providers",
-    "quit/relaunch preserves assessment history and current state",
+    "from the exact active Song and exact open work Session, the artist can start a bounded Learning episode naming domain, subject and the concrete change tried",
+    "the artist can append one or more USER_DECLARED observations with explicit confidence and optional conditions/confounders; server owns source_ref and internal episode/consequence identity",
+    "consumer copy and data model say observed after the change rather than caused by the change; no causal claim or success rule is manufactured",
+    "a terminal KEEP/REVERT/REVISE/INCONCLUSIVE decision requires at least one observed consequence, explicit rationale and confidence",
+    "decision authority binds the exact episode and exact rendered consequence state so a stale page cannot decide without seeing a newer observation",
+    "once decided, no further consequence or second decision can be appended; history remains immutable and inspectable",
+    "new-episode authority binds exact active Song + exact open Session; stale Song/Session state, replay, foreign Origin and bad CSRF fail closed",
+    "the Song surface shows prior episodes, observations, conditions/confounders and decisions in artist language without exposing internal IDs/source refs",
+    "canonical Activity gains Learning episode/consequence/decision events while Song Version/material/approval, Skill state, Session scratch, Focus, Operations, DAWs and providers remain unchanged",
+    "quit/relaunch preserves the Learning history and any open undecided episode",
     "authored HTTP/security/stale-state/invariant/restart proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
-  "review_repairs": [
-    "correction binding moved from a delimiter-concatenated server payload to JSON because a legitimate Skill name may contain the delimiter",
-    "artist declaration/correction confidence became an explicit bounded user choice; the consumer form defaults visibly to Medium rather than inheriting HTML order or silently storing 100 percent confidence",
-    "UNKNOWN projection now says assistance is not established instead of rendering the schema fallback as High assistance",
-    "Skill level presentation no longer uses positive/good styling that could visually turn a recorded state into a mastery endorsement",
-    "Song-bound SKILL_ASSESSED Activity now renders as Skill assessment recorded in the landed What changed? timeline rather than generic Activity recorded",
-    "consumer correction tests target explicit aria-labels instead of DOM order or nearby-text heuristics"
-  ],
-  "reviewed_product_test_head": "670af7118be38f676111dc0ce42a8191e1bf9f98",
-  "evidence_classification": "UNOBSERVED",
-  "evidence_snapshot": {
-    "commit_statuses": [],
-    "pull_request_workflow_runs": [],
-    "reviews": [],
-    "review_threads": []
-  },
-  "non_scope": ["AI-generated teaching plans", "automatic skill assessment", "lesson generation", "DO IT/WITH ME/SHOW ME interaction modes", "skill recommendations", "reference objects", "audio analysis", "DAW/provider mutation", "global Skill dashboard outside the bounded Song learning surface", "Gate-B acceptance"],
-  "next_selection_rule": "After this increment lands or blocks, globally reselect. Compare contextual teaching modes, Learning change-consequence-decision reachability, references, fuller Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
+  "non_scope": ["automatic experiment generation", "causal inference", "statistical significance engine", "Success Memory ranking/rules", "AI teaching plans", "DO IT/WITH ME/SHOW ME modes", "reference objects", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
+  "next_selection_rule": "After this increment lands or blocks, globally reselect. Compare interaction/teaching modes, Success/Friction consumer reachability, references, fuller Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
 }
