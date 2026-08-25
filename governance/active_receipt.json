@@ -46,7 +46,8 @@
   ],
   "review_repairs": [
     "consumer integration avoided a 75 KB whole-file ConsumerShell rewrite by using one bounded read-only presentation extension installed through normal package initialization",
-    "the first extension draft used a module-local idempotence flag; red-team review found module reload could reset that flag and duplicate-wrap the Song renderer, so the guard now lives on ConsumerShell itself"
+    "the first extension draft used a module-local idempotence flag; red-team review found module reload could reset that flag and duplicate-wrap the Song renderer, so the guard now lives on ConsumerShell itself",
+    "an unrelated README write during evidence freeze was detected by branch comparison and restored byte-for-byte to baseline before readiness; README has no net diff"
   ],
   "reviewed_product_test_head": "d13544e2c0def793cac78161b7356172497b3ebd",
   "evidence_classification": "UNOBSERVED",
