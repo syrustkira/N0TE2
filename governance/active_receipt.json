@@ -4,7 +4,7 @@
   "node_id": "SONG-01",
   "increment_id": "SONG-SUCCESS-01",
   "baseline_sha": "9e1e0356ebc383a04e82d4b93470c361f01e31c1",
-  "purpose": "Expose the existing pure-read SuccessMemory synthesis through the Song experience so the artist can see when an exact change has prior supporting, counterexample, inconclusive or pending Learning evidence, together with sample size, conditions, alternative explanations and confidence, without turning association into a success rule.",
+  "purpose": "Expose pure-read SuccessMemory through /song so the artist can inspect exact prior Learning patterns with support, counterexamples, pending/inconclusive evidence, conditions, alternative explanations and confidence without manufacturing a success rule.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,37 +14,42 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can recognize what comparable past work suggests, including counterexamples and uncertainty, instead of relying on vague memory or a fake universal recipe.",
+    "outcome": "The artist can recognize what exact comparable past work suggests, including counterexamples and uncertainty, instead of relying on vague memory or a fake universal recipe.",
     "journeys": ["J-WHAT-NEXT", "J-TRUST", "J-COMPARE-DECIDE", "J-SONG-START-RESUME"],
     "capability": "Consumer-readable Success Memory with association-only humility",
     "increment": "SONG-SUCCESS-01"
   },
-  "why_now": "REQ-SCOPE-139 is a required minimum whose CORE-02E SuccessMemory foundation is already implemented. SONG-LEARNING-01 now gives the normal artist a consumer path that can populate those patterns, making read-only pattern recall immediately useful rather than an empty backend projection.",
-  "instead_of": [
-    "Friction Memory consumer UX is not selected first because normal artist authority to record explicit friction observations is still missing; recurring-pattern display alone would often be empty.",
-    "DO IT/WITH ME/SHOW ME modes still require a distinct collaboration-depth product model.",
-    "First-class References still require a new persistent Reference subsystem.",
-    "Full A/B and derivation remain blocked on truthful analysis substrate.",
-    "More Learning write controls are not selected because the just-landed change→observation→decision loop is already consumer-reachable and Success recall is a separate read outcome."
-  ],
+  "why_now": "REQ-SCOPE-139 is required minimum and its CORE-02E foundation is implemented; SONG-LEARNING-01 now populates it through normal consumer work.",
   "reuse": {
     "mode": "EXPOSE_PURE_READ_SUCCESS_MEMORY_WITH_ASSOCIATION_ONLY_HUMILITY",
-    "n0te2_dependencies": ["CORE-02E SuccessMemory", "CORE-02C LearningMemory", "SONG-LEARNING-01 consumer Learning loop", "existing /song consumer shell", "APP quit/relaunch continuity"],
-    "legacy_rejections": ["persisted success scores", "ranking changes as universally best", "hiding counterexamples", "single-example rules", "claiming causality", "dropping pending/inconclusive evidence", "client-side pattern recomputation"],
+    "n0te2_dependencies": ["CORE-02E SuccessMemory", "CORE-02C LearningMemory", "SONG-LEARNING-01", "existing /song shell", "APP relaunch continuity"],
     "direct_copy": false
   },
   "completion_proof": [
-    "the normal /song surface can show exact-pattern Learning synthesis for the active Song without creating or mutating Success state",
-    "each pattern shows the concrete domain, subject and change plus completed sample size and pending evidence count",
-    "KEEP support, REVERT/REVISE counterexamples and INCONCLUSIVE evidence remain visibly distinct",
-    "the canonical humility warning is visible and no UI language claims causation, universal success or guaranteed future performance",
-    "conditions and alternative explanations/confounders remain visible with recurrence counts instead of being stripped from the pattern",
-    "observation and decision confidence are summarized without exposing episode IDs or source references",
-    "patterns with one retained example, success-only evidence, mixed evidence, no keep evidence, inconclusive-only evidence and no completed evidence degrade truthfully",
-    "GET reads are pure; Song, Session, Learning, Skill, Focus, Operations, DAWs and providers remain unchanged",
-    "quit/relaunch preserves the same derived result because the view is recomputed from canonical LearningMemory",
-    "authored proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
+    "Song-scoped exact-pattern synthesis is consumer-visible without persistent Success state",
+    "all six canonical humility states remain distinguishable",
+    "KEEP support, REVERT/REVISE counterexamples, INCONCLUSIVE and pending evidence remain separate",
+    "canonical warning, conditions, alternative explanations, evidence source posture and confidence summaries remain visible",
+    "internal pattern/episode IDs and source references are absent from the artist projection",
+    "canonical causal status must remain ASSOCIATION_ONLY or the projection fails closed",
+    "unknown future evidence-source semantics fail closed rather than degrading to generic provenance",
+    "GET is pure, Song-scoped and relaunch-stable",
+    "authored core/consumer proof remains separate from executed evidence"
   ],
-  "non_scope": ["Success ranking/recommendations", "automatic next-action generation", "causal inference", "statistical significance", "cross-pattern similarity", "Friction write UX", "interaction modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
+  "review_repairs": [
+    "consumer copy originally said exact repeated Learning patterns even though single and pending patterns are intentionally displayable; 'repeated' was removed",
+    "the first UI hardcoded Association only instead of binding canonical causal_status; the projection now carries and validates canonical ASSOCIATION_ONLY semantics and fails closed on drift",
+    "unknown future evidence source kinds originally degraded to generic recorded evidence; the projection now fails closed so provenance changes require deliberate consumer handling",
+    "consumer observation copy now says Recorded N times rather than Seen N times because the canonical count is observation-record count, not necessarily distinct episodes"
+  ],
+  "reviewed_product_test_head": "c9aca65f57edeb3d6365e40be38a779afa1a5762",
+  "evidence_classification": "UNOBSERVED",
+  "evidence_snapshot": {
+    "commit_statuses": [],
+    "pull_request_workflow_runs": [],
+    "reviews": [],
+    "review_threads": []
+  },
+  "non_scope": ["Success ranking/recommendations", "automatic next actions", "causal inference", "statistical significance", "cross-pattern similarity", "Friction write UX", "interaction modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
   "next_selection_rule": "After landing or blockage, globally reselect across Friction capture/reachability, interaction/teaching modes, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
 }
