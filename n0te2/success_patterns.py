@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .lineage import LineageStore, NotFoundError
-from .success import SuccessMemory, SuccessPattern
+from .success import CAUSAL_STATUS, SuccessMemory, SuccessPattern
 
 _SOURCE_LABELS = {
     "USER_DECLARED": "artist-reported",
@@ -34,6 +34,7 @@ class SuccessPatternView:
     domain: str
     subject: str
     change: str
+    causal_status: str
     humility_state: str
     warning: str
     completed_count: int
@@ -54,8 +55,8 @@ class SongSuccessPatterns:
 
     This class owns no persistence and does not rank or recommend changes. Internal
     pattern/episode/source-reference identities are intentionally absent. The
-    canonical SuccessPattern warning is preserved verbatim because uncertainty and
-    counterevidence are part of the product truth, not implementation clutter.
+    canonical SuccessPattern warning is preserved because uncertainty and
+    counterevidence are product truth, not implementation clutter.
     """
 
     def __init__(self, store: LineageStore, success: SuccessMemory):
@@ -75,10 +76,13 @@ class SongSuccessPatterns:
 
     @classmethod
     def _view(cls, pattern: SuccessPattern) -> SuccessPatternView:
+        if pattern.causal_status != CAUSAL_STATUS or pattern.causal_status != "ASSOCIATION_ONLY":
+            raise RuntimeError("Success pattern causal semantics changed; consumer projection stopped safely")
         return SuccessPatternView(
             domain=pattern.domain,
             subject=pattern.subject_ref,
             change=pattern.change_description,
+            causal_status=pattern.causal_status,
             humility_state=pattern.humility_state,
             warning=pattern.warning,
             completed_count=pattern.sample_size,
