@@ -113,6 +113,8 @@ class SongActivityTimeline:
                 "INCONCLUSIVE": "Inconclusive",
             }.get(decision)
             return SongActivityItem(event.sequence, "Learning decision recorded", label)
+        if kind == "SKILL_ASSESSED":
+            return SongActivityItem(event.sequence, "Skill assessment recorded", version)
         if kind == "FOCUS_SESSION_STARTED":
             mode = self._payload_text(event, "mode")
             return SongActivityItem(event.sequence, "Focus started", None if mode is None else mode.title())
