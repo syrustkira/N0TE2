@@ -19,7 +19,8 @@
     "Red-team review rejected a module-local idempotence flag because reloading that module could duplicate the card. The guard was repaired to live on ConsumerShell, preserving exactly one timeline extension per process.",
     "Authored core proof covers newest-first canonical ordering, label resolution, unknown-event degradation, internal-field hiding, pure reads, restart stability, Song isolation and the no-timestamp contract.",
     "Authored consumer proof covers direct ConsumerShell import/bootstrap, one-card idempotence, artist-readable /song history, newest-first event order, Activity-ID/payload hiding, GET non-mutation, cross-Song isolation and quit/relaunch persistence.",
-    "Reviewed product/test head is d13544e2c0def793cac78161b7356172497b3ebd. PR #57 is mergeable against exact baseline 54bac9b8fed5031328959380117c4adf8278eceb. Exact-head commit statuses are [] and pull-request workflow runs are []; authored execution remains UNOBSERVED rather than green or failed.",
+    "Reviewed product/test head is d13544e2c0def793cac78161b7356172497b3ebd. Exact-head commit statuses are [] and pull-request workflow runs are []; authored execution remains UNOBSERVED rather than green or failed.",
+    "Later commits 84835e3127f38eba8ba1c85698e1c657c8a405ef and 233ddc662bdfda747af2c992ec9ca1ddf8f72f5b are governance-only evidence freezes and do not change product/test behavior.",
     "This increment does not claim a global cross-Song Activity page, timestamps, filtering/search, provider/message/release event population, editing Activity, notifications, reference objects, loudness A/B, analysis, DAW/provider mutation or Gate-B acceptance.",
     "After this increment lands or blocks, globally reselect from the whole graph rather than continuing by adjacency."
   ]
