@@ -44,6 +44,12 @@
     "multiple Songs/profiles remain isolated and Quit/relaunch preserves the same chronology",
     "authored read-model/HTTP/restart proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
+  "review_repairs": [
+    "consumer integration avoided a 75 KB whole-file ConsumerShell rewrite by using one bounded read-only presentation extension installed through normal package initialization",
+    "the first extension draft used a module-local idempotence flag; red-team review found module reload could reset that flag and duplicate-wrap the Song renderer, so the guard now lives on ConsumerShell itself"
+  ],
+  "reviewed_product_test_head": "d13544e2c0def793cac78161b7356172497b3ebd",
+  "evidence_classification": "UNOBSERVED",
   "non_scope": ["global cross-Song Activity page", "universal search", "timeline filtering/search", "timestamps", "provider/message/release domains not yet populated", "editing/deleting Activity", "notifications", "full Compare/A-B", "reference objects", "analysis", "DAW/provider mutation", "Gate-B acceptance"],
   "next_selection_rule": "After this increment lands or blocks, globally reselect from the whole graph. Compare references, fuller Compare/A-B, Learning/Skill consumer reachability, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
 }
