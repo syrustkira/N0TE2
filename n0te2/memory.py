@@ -21,6 +21,7 @@ from .recovery import RecoveryManager
 from .session import SessionMemory
 from .shadow import HostShadow
 from .skills import SkillMemory
+from .structure import SongStructureMemory
 from .success import SuccessMemory
 from .transactions import TransactionCoordinator
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
@@ -35,6 +36,7 @@ class HeadquartersMemory:
         self.evidence = EvidenceMemory(store)
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
+        self.structure = SongStructureMemory(store)
         self.attention = AttentionMemory(store)
         self.workspaces = WorkspaceMemory(store)
         self.capability_evidence = CapabilityEvidenceMemory(store, self.workspaces)
