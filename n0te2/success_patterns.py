@@ -69,15 +69,19 @@ class SongSuccessPatterns:
 
     @staticmethod
     def _source_labels(source_kinds: tuple[str, ...]) -> tuple[str, ...]:
-        return tuple(
-            _SOURCE_LABELS.get(kind, "recorded evidence")
-            for kind in source_kinds
-        )
+        unknown = tuple(kind for kind in source_kinds if kind not in _SOURCE_LABELS)
+        if unknown:
+            raise RuntimeError(
+                "Success evidence source semantics changed; consumer projection stopped safely"
+            )
+        return tuple(_SOURCE_LABELS[kind] for kind in source_kinds)
 
     @classmethod
     def _view(cls, pattern: SuccessPattern) -> SuccessPatternView:
         if pattern.causal_status != CAUSAL_STATUS or pattern.causal_status != "ASSOCIATION_ONLY":
-            raise RuntimeError("Success pattern causal semantics changed; consumer projection stopped safely")
+            raise RuntimeError(
+                "Success pattern causal semantics changed; consumer projection stopped safely"
+            )
         return SuccessPatternView(
             domain=pattern.domain,
             subject=pattern.subject_ref,
@@ -115,7 +119,9 @@ class SongSuccessPatterns:
         song = self.store.get_song(song_id)
         if song is None:
             raise NotFoundError(f"Song not found in profile {self.store.profile_id}: {song_id}")
-        return tuple(self._view(pattern) for pattern in self.success.patterns_for_song(song.id))
+        return tuple(
+            self._view(pattern) for pattern in self.success.patterns_for_song(song.id)
+        )
 
     def for_active_song(self) -> tuple[SuccessPatternView, ...]:
         song = self.store.active_song()
