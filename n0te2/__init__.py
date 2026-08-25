@@ -359,3 +359,14 @@ from .skill_model_shell import install_song_skill_model
 install_song_skill_model()
 
 __all__ += ["SkillModelBinding", "SkillModelService", "SkillModelView"]
+
+from .learning_experiment import (
+    LearningDecisionBinding,
+    LearningExperimentService,
+    LearningStartBinding,
+)
+from .learning_experiment_shell import install_song_learning_experiments
+
+install_song_learning_experiments()
+
+__all__ += ["LearningDecisionBinding", "LearningExperimentService", "LearningStartBinding"]
