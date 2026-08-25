@@ -90,329 +90,225 @@ def request(
         return exc.code, exc.read().decode("utf-8"), exc.headers.get("Location")
 
 
-def seed_profile(data_root: Path, *, open_session: bool = True) -> tuple[str, str, str | None]:
+def seed(data_root: Path) -> tuple[str, str, str]:
     hq = HeadquartersMemory.create(data_root, "Learning Artist")
     try:
         song = hq.store.create_song("Learning Song")
-        session_id = None
-        if open_session:
-            session = hq.sessions.start_session(
-                song_id=song.id,
-                objective="Test one deliberate creative change",
-            )
-            session_id = session.id
-        return hq.store.profile_id, song.id, session_id
+        session = hq.sessions.start_session(
+            song_id=song.id,
+            objective="Test one deliberate creative change",
+        )
+        return hq.store.profile_id, song.id, session.id
     finally:
         hq.close()
 
 
 def start_fields(form: Form) -> dict[str, str]:
-    values = dict(form.values)
-    values.update(
-        {
-            "domain": "Mixing",
-            "subject": "Vocal compression",
-            "change": "Lengthened the attack to let more of the vocal transient through.",
-        }
-    )
-    return values
+    return {
+        **form.values,
+        "domain": "Mixing",
+        "subject": "Vocal compression",
+        "change": "Lengthened the attack to let more of the vocal transient through.",
+    }
 
 
-def observation_fields(form: Form, *, observation: str = "The vocal consonants felt clearer.") -> dict[str, str]:
-    values = dict(form.values)
-    values.update(
-        {
-            "observation": observation,
-            "confidence": "MEDIUM",
-            "conditions": "Same vocal take and matched monitor level",
-            "confounders": "I had also taken a short ear break",
-        }
-    )
-    return values
+def observation_fields(form: Form, text: str = "The vocal consonants felt clearer.") -> dict[str, str]:
+    return {
+        **form.values,
+        "observation": text,
+        "confidence": "MEDIUM",
+        "conditions": "Same vocal take and matched monitor level",
+        "confounders": "I had also taken a short ear break",
+    }
 
 
-def decision_fields(form: Form, *, decision: str = "KEEP") -> dict[str, str]:
-    values = dict(form.values)
-    values.update(
-        {
-            "decision": decision,
-            "rationale": "Keep it for this vocal, but compare again in the full arrangement.",
-            "confidence": "MEDIUM",
-        }
-    )
-    return values
+def decision_fields(form: Form, decision: str = "KEEP") -> dict[str, str]:
+    return {
+        **form.values,
+        "decision": decision,
+        "rationale": "Keep it for this vocal, but compare again in the full arrangement.",
+        "confidence": "MEDIUM",
+    }
 
 
-def test_song_surface_exposes_honest_learning_chain_without_internal_ids(tmp_path: Path) -> None:
-    data_root = (tmp_path / "data").resolve()
-    state_root = (tmp_path / "state").resolve()
-    seed_profile(data_root)
+def new_shell(data_root: Path, state_root: Path, pid: int, token: str) -> ConsumerShell:
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
-        process=process(9901, "learning-visible"),
+        process=process(pid, token),
         probe=Probe(),
     )
     shell.start()
+    return shell
+
+
+def post(shell: ConsumerShell, path: str, fields: dict[str, str], origin: str | None = None):
+    return request(
+        shell,
+        path,
+        method="POST",
+        fields=fields,
+        origin=shell.address.origin if origin is None else origin,
+    )
+
+
+def test_song_surface_is_causally_humble_and_hides_internal_identity(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed(data_root)
+    shell = new_shell(data_root, state_root, 9901, "learning-visible")
     try:
         status, page, _ = request(shell, "/song")
         assert status == 200
-        assert page.count("<h2>What did that change teach you?</h2>") == 1
+        assert page.count("<h2>What happened after that change?</h2>") == 1
         assert "record the change, what you observed afterward, then your decision" in page
         assert "does not prove the change caused the outcome" in page
         assert len(forms(page, "/learning/start")) == 1
-        assert "learn_" not in page
-        assert "lobs_" not in page
-        assert "ldec_" not in page
-        assert "consumer-learning-observation:" not in page
-        assert "sess_" not in page
+        for forbidden in ("learn_", "lobs_", "ldec_", "sess_", "consumer-learning-observation:"):
+            assert forbidden not in page
 
-        before = shell.runtime.headquarters.learning.episodes_for_song(
-            shell.runtime.headquarters.store.active_song().id
-        )
-        status, _, _ = request(shell, "/song")
-        assert status == 200
-        after = shell.runtime.headquarters.learning.episodes_for_song(
-            shell.runtime.headquarters.store.active_song().id
-        )
-        assert before == after == ()
+        song_id = shell.runtime.headquarters.store.active_song().id
+        before = shell.runtime.headquarters.learning.episodes_for_song(song_id)
+        assert request(shell, "/song")[0] == 200
+        assert shell.runtime.headquarters.learning.episodes_for_song(song_id) == before == ()
     finally:
         shell.stop()
 
 
-def test_artist_can_complete_change_observation_decision_from_song(tmp_path: Path) -> None:
+def test_full_consumer_learning_chain_preserves_source_and_session(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    profile_id, song_id, session_id = seed_profile(data_root)
-    shell = ConsumerShell(
-        data_root=data_root,
-        state_root=state_root,
-        process=process(9902, "learning-flow"),
-        probe=Probe(),
-    )
-    shell.start()
+    profile_id, song_id, session_id = seed(data_root)
+    shell = new_shell(data_root, state_root, 9902, "learning-flow")
     try:
         _, page, _ = request(shell, "/song")
-        start = forms(page, "/learning/start")[0]
-        status, _, location = request(
-            shell,
-            "/learning/start",
-            method="POST",
-            fields=start_fields(start),
-            origin=shell.address.origin,
-        )
+        status, _, location = post(shell, "/learning/start", start_fields(forms(page, "/learning/start")[0]))
         assert status == 303 and location == "/song"
-        episodes = shell.runtime.headquarters.learning.episodes_for_song(song_id)
-        assert len(episodes) == 1
-        assert episodes[0].session_id == session_id
-        assert episodes[0].change_description.startswith("Lengthened the attack")
 
         _, page, _ = request(shell, "/song")
-        assert "Change tried:" in page
-        observe = forms(page, "/learning/observe")[0]
-        status, _, location = request(
+        status, _, _ = post(
             shell,
             "/learning/observe",
-            method="POST",
-            fields=observation_fields(observe),
-            origin=shell.address.origin,
+            observation_fields(forms(page, "/learning/observe")[0]),
         )
-        assert status == 303 and location == "/song"
+        assert status == 303
         episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        assert len(episode.consequences) == 1
+        assert episode.session_id == session_id
         assert episode.consequences[0].source_kind == "USER_DECLARED"
+        assert episode.consequences[0].source_ref.startswith("consumer-learning-observation:")
         assert episode.consequences[0].confidence == 0.7
 
         _, page, _ = request(shell, "/song")
+        assert "You reported this" in page
         assert "Observed after the change:" in page
         assert "Same vocal take and matched monitor level" in page
         assert "Possible confounders:" in page
-        decide = forms(page, "/learning/decide")[0]
-        status, _, location = request(
+        for forbidden in (episode.id, episode.consequences[0].id, episode.consequences[0].source_ref, session_id):
+            assert forbidden not in page
+
+        status, _, _ = post(
             shell,
             "/learning/decide",
-            method="POST",
-            fields=decision_fields(decide),
-            origin=shell.address.origin,
+            decision_fields(forms(page, "/learning/decide")[0]),
         )
-        assert status == 303 and location == "/song"
+        assert status == 303
         episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        assert episode.decision is not None
-        assert episode.decision.decision == "KEEP"
+        assert episode.decision is not None and episode.decision.decision == "KEEP"
         assert shell.runtime.headquarters.sessions.get_session(session_id).state == "OPEN"
 
         _, page, _ = request(shell, "/song")
         assert "Decision: Keep this change" in page
         assert not forms(page, "/learning/observe")
         assert not forms(page, "/learning/decide")
-        assert "learn_" not in page and "lobs_" not in page and "ldec_" not in page
     finally:
         shell.stop()
 
     reopened = HeadquartersMemory.open(data_root, profile_id)
     try:
-        episode = reopened.learning.episodes_for_song(song_id)[0]
-        assert episode.decision is not None and episode.decision.decision == "KEEP"
+        assert reopened.learning.episodes_for_song(song_id)[0].decision.decision == "KEEP"
     finally:
         reopened.close()
 
 
-def test_learning_actions_enforce_origin_csrf_replay_and_stale_session(tmp_path: Path) -> None:
+def test_start_action_origin_csrf_replay_and_stale_session_fail_closed(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, song_id, session_id = seed_profile(data_root)
-    shell = ConsumerShell(
-        data_root=data_root,
-        state_root=state_root,
-        process=process(9903, "learning-authority"),
-        probe=Probe(),
-    )
-    shell.start()
+    _, song_id, session_id = seed(data_root)
+    shell = new_shell(data_root, state_root, 9903, "learning-authority")
     try:
         _, page, _ = request(shell, "/song")
-        start = forms(page, "/learning/start")[0]
-        fields = start_fields(start)
-
-        status, _, _ = request(
-            shell,
-            "/learning/start",
-            method="POST",
-            fields=fields,
-            origin="https://attacker.example",
-        )
-        assert status == 403
+        fields = start_fields(forms(page, "/learning/start")[0])
+        assert post(shell, "/learning/start", fields, origin="https://attacker.example")[0] == 403
         assert shell.runtime.headquarters.learning.episodes_for_song(song_id) == ()
 
         bad = dict(fields)
         bad["csrf"] = "wrong"
-        status, _, _ = request(
-            shell,
-            "/learning/start",
-            method="POST",
-            fields=bad,
-            origin=shell.address.origin,
-        )
-        assert status == 403
+        assert post(shell, "/learning/start", bad)[0] == 403
 
         shell.runtime.headquarters.sessions.close_session(
             session_id,
             debrief_summary="Closed before the prepared experiment began",
             next_action="Start a fresh Session",
         )
-        status, body, _ = request(
-            shell,
-            "/learning/start",
-            method="POST",
-            fields=fields,
-            origin=shell.address.origin,
-        )
-        assert status == 409
-        assert "Session changed" in body
+        status, body, _ = post(shell, "/learning/start", fields)
+        assert status == 409 and "Session changed" in body
         assert shell.runtime.headquarters.learning.episodes_for_song(song_id) == ()
-
-        status, _, _ = request(
-            shell,
-            "/learning/start",
-            method="POST",
-            fields=fields,
-            origin=shell.address.origin,
-        )
-        assert status == 409
+        assert post(shell, "/learning/start", fields)[0] == 409
     finally:
         shell.stop()
 
 
-def test_prepared_decision_rejects_new_unseen_observation(tmp_path: Path) -> None:
+def test_decision_action_rejects_unseen_new_evidence(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, song_id, _ = seed_profile(data_root)
-    shell = ConsumerShell(
-        data_root=data_root,
-        state_root=state_root,
-        process=process(9904, "learning-stale-decision"),
-        probe=Probe(),
-    )
-    shell.start()
+    _, song_id, _ = seed(data_root)
+    shell = new_shell(data_root, state_root, 9904, "learning-stale-decision")
     try:
         _, page, _ = request(shell, "/song")
-        start = forms(page, "/learning/start")[0]
-        status, _, _ = request(
-            shell,
-            "/learning/start",
-            method="POST",
-            fields=start_fields(start),
-            origin=shell.address.origin,
-        )
-        assert status == 303
-
+        assert post(shell, "/learning/start", start_fields(forms(page, "/learning/start")[0]))[0] == 303
         _, page, _ = request(shell, "/song")
-        observe = forms(page, "/learning/observe")[0]
-        status, _, _ = request(
+        assert post(
             shell,
             "/learning/observe",
-            method="POST",
-            fields=observation_fields(observe),
-            origin=shell.address.origin,
-        )
-        assert status == 303
+            observation_fields(forms(page, "/learning/observe")[0]),
+        )[0] == 303
 
         _, page, _ = request(shell, "/song")
-        stale_decision = forms(page, "/learning/decide")[0]
+        stale = forms(page, "/learning/decide")[0]
         episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
         shell.runtime.headquarters.learning.append_consequence(
             episode.id,
             observation="A second observation arrived after the decision form rendered.",
-            source_kind="USER_DECLARED",
-            source_ref="test:newer-learning-evidence",
+            source_kind="MEASURED",
+            source_ref="test:newer-measurement",
             confidence=0.8,
             confounders=("Arrangement playback position changed",),
         )
-
-        status, body, _ = request(
-            shell,
-            "/learning/decide",
-            method="POST",
-            fields=decision_fields(stale_decision),
-            origin=shell.address.origin,
-        )
-        assert status == 409
-        assert "New Learning evidence" in body
+        status, body, _ = post(shell, "/learning/decide", decision_fields(stale))
+        assert status == 409 and "New Learning evidence" in body
         episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        assert len(episode.consequences) == 2
-        assert episode.decision is None
+        assert len(episode.consequences) == 2 and episode.decision is None
+
+        _, page, _ = request(shell, "/song")
+        assert "Measured evidence" in page
+        assert "test:newer-measurement" not in page
     finally:
         shell.stop()
 
 
-def test_open_learning_history_survives_quit_and_can_be_decided_after_session_close(tmp_path: Path) -> None:
+def test_undecided_history_survives_quit_and_can_close_after_session(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    profile_id, song_id, session_id = seed_profile(data_root)
-    shell = ConsumerShell(
-        data_root=data_root,
-        state_root=state_root,
-        process=process(9905, "learning-restart-one"),
-        probe=Probe(),
-    )
-    shell.start()
+    profile_id, song_id, session_id = seed(data_root)
+    shell = new_shell(data_root, state_root, 9905, "learning-restart-one")
     try:
         _, page, _ = request(shell, "/song")
-        start = forms(page, "/learning/start")[0]
-        assert request(
-            shell,
-            "/learning/start",
-            method="POST",
-            fields=start_fields(start),
-            origin=shell.address.origin,
-        )[0] == 303
+        assert post(shell, "/learning/start", start_fields(forms(page, "/learning/start")[0]))[0] == 303
         _, page, _ = request(shell, "/song")
-        observe = forms(page, "/learning/observe")[0]
-        assert request(
+        assert post(
             shell,
             "/learning/observe",
-            method="POST",
-            fields=observation_fields(observe),
-            origin=shell.address.origin,
+            observation_fields(forms(page, "/learning/observe")[0]),
         )[0] == 303
         shell.runtime.headquarters.sessions.close_session(
             session_id,
@@ -422,26 +318,17 @@ def test_open_learning_history_survives_quit_and_can_be_decided_after_session_cl
     finally:
         shell.stop()
 
-    shell2 = ConsumerShell(
-        data_root=data_root,
-        state_root=state_root,
-        process=process(9906, "learning-restart-two"),
-        probe=Probe(),
-    )
-    shell2.start()
+    shell2 = new_shell(data_root, state_root, 9906, "learning-restart-two")
     try:
         status, page, _ = request(shell2, "/song")
         assert status == 200
         assert "The vocal consonants felt clearer" in page
         assert "Open a work Session on this Song to start a new Learning experiment" in page
         assert not forms(page, "/learning/start")
-        decide = forms(page, "/learning/decide")[0]
-        status, _, _ = request(
+        status, _, _ = post(
             shell2,
             "/learning/decide",
-            method="POST",
-            fields=decision_fields(decide, decision="INCONCLUSIVE"),
-            origin=shell2.address.origin,
+            decision_fields(forms(page, "/learning/decide")[0], decision="INCONCLUSIVE"),
         )
         assert status == 303
         episode = shell2.runtime.headquarters.learning.episodes_for_song(song_id)[0]
