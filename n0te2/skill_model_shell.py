@@ -28,6 +28,11 @@ _ASSISTANCE_CHOICES = (
     ("SOME", "I used some guidance"),
     ("NONE", "I did this without guidance"),
 )
+_CONFIDENCE_CHOICES = (
+    ("LOW", "Low confidence"),
+    ("MEDIUM", "Medium confidence"),
+    ("HIGH", "High confidence"),
+)
 
 
 def _options(values: tuple[str, ...], *, selected: str | None = None) -> str:
@@ -49,6 +54,17 @@ def _assistance_options(selected_value: float | None = None) -> str:
         f'<option value="{key}"{" selected" if key == selected_key else ""}>'
         f'{html.escape(label)}</option>'
         for key, label in _ASSISTANCE_CHOICES
+    )
+
+
+def _confidence_options(selected_value: float | None = None) -> str:
+    selected_key = None
+    if selected_value is not None:
+        selected_key = "LOW" if selected_value <= 0.4 else "MEDIUM" if selected_value < 1.0 else "HIGH"
+    return "".join(
+        f'<option value="{key}"{" selected" if key == selected_key else ""}>'
+        f'{html.escape(label)}</option>'
+        for key, label in _CONFIDENCE_CHOICES
     )
 
 
@@ -91,6 +107,8 @@ def _skill_card(shell: ConsumerShell) -> str:
             f'{_options(_CORRECTION_LEVELS, selected=view.level)}</select></label></div>'
             '<div><label>Assistance for this corrected assessment<select name="assistance" required>'
             f'{_assistance_options(view.assistance_level)}</select></label></div>'
+            '<div><label>How confident are you in this correction?<select name="confidence" required>'
+            f'{_confidence_options(view.confidence)}</select></label></div>'
             '<div><label>Why are you correcting this?<textarea name="reason" maxlength="500" rows="2" required></textarea></label></div>'
             '<button type="submit">Correct this Skill</button>'
             '<p class="muted">Correction appends a new assessment. It does not erase the earlier history.</p>'
@@ -109,6 +127,8 @@ def _skill_card(shell: ConsumerShell) -> str:
         f'{_options(_DECLARATION_LEVELS)}</select></div>'
         '<div><label for="skill-assistance">How much guidance did this assessment involve?</label><select id="skill-assistance" name="assistance" required>'
         f'{_assistance_options()}</select></div>'
+        '<div><label for="skill-confidence">How confident are you in this self-assessment?</label><select id="skill-confidence" name="confidence" required>'
+        f'{_confidence_options()}</select></div>'
         '<button type="submit">Add this Skill</button>'
         '<p class="muted">Independent means you can do it without guidance. N0TE will not mark itself as having observed or assessed mastery from this form.</p>'
         '</form>'
@@ -132,6 +152,7 @@ def _post_declare(shell: ConsumerShell, handler: BaseHTTPRequestHandler, form: M
             skill_id=form.get("skill_name", ""),
             level=form.get("level", ""),
             assistance=form.get("assistance", ""),
+            confidence=form.get("confidence", ""),
         )
     except (ValidationError, SkillModelError) as exc:
         shell._consumer_notice = str(exc)
@@ -165,6 +186,7 @@ def _post_correct(shell: ConsumerShell, handler: BaseHTTPRequestHandler, form: M
             SkillModelBinding(skill_id, expected_id),
             level=form.get("level", ""),
             assistance=form.get("assistance", ""),
+            confidence=form.get("confidence", ""),
             reason=form.get("reason", ""),
         )
     except StaleSkillModelError:
