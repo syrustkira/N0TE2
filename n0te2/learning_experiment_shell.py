@@ -26,6 +26,14 @@ _DECISION_LABELS = {
     "REVISE": "Revise and try again",
     "INCONCLUSIVE": "Inconclusive for now",
 }
+_SOURCE_LABELS = {
+    "USER_DECLARED": "You reported this",
+    "OBSERVED": "Observed in real work",
+    "MEASURED": "Measured evidence",
+    "PROVIDER_VERIFIED": "Provider-verified evidence",
+    "REMEMBERED": "Remembered context",
+    "INFERRED": "Inferred, not directly observed",
+}
 
 
 def _confidence_options(*, selected: str = "MEDIUM") -> str:
@@ -64,7 +72,10 @@ def _decision_action(shell: ConsumerShell, binding: LearningDecisionBinding) -> 
 def _episode_markup(shell: ConsumerShell, service: LearningExperimentService, episode) -> str:
     observations: list[str] = []
     for item in episode.consequences:
-        details: list[str] = [_confidence_text(item.confidence)]
+        details: list[str] = [
+            _SOURCE_LABELS.get(item.source_kind, "Recorded evidence"),
+            _confidence_text(item.confidence),
+        ]
         if item.conditions:
             details.append("Conditions: " + "; ".join(item.conditions))
         if item.confounders:
@@ -171,7 +182,7 @@ def _learning_card(shell: ConsumerShell) -> str:
             '</form>'
         )
     return (
-        '<div class="card"><h2>What did that change teach you?</h2>'
+        '<div class="card"><h2>What happened after that change?</h2>'
         '<p>Keep the chain honest: record the change, what you observed afterward, then your decision. '
         'This preserves sequence and judgment; it does not prove the change caused the outcome.</p>'
         f'{history}<h3>Try one change deliberately</h3>{start}</div>'
