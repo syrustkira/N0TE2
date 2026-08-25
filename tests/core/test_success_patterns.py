@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
+
+import pytest
 
 from n0te2 import HeadquartersMemory
 from n0te2.success_patterns import SongSuccessPatterns
@@ -50,7 +53,6 @@ def test_projection_preserves_all_humility_states_and_strips_internal_identity(t
     hq = HeadquartersMemory.create(tmp_path / "data", "Pattern Artist")
     try:
         song = hq.store.create_song("Pattern Song")
-        # Pending only -> NO_COMPLETED_EVIDENCE.
         pending = add_episode(
             hq,
             song.id,
@@ -59,7 +61,6 @@ def test_projection_preserves_all_humility_states_and_strips_internal_identity(t
             decision=None,
             observation="Early observation",
         )
-        # One KEEP -> SINGLE_OBSERVATION.
         single = add_episode(
             hq,
             song.id,
@@ -71,15 +72,11 @@ def test_projection_preserves_all_humility_states_and_strips_internal_identity(t
             conditions=("matched level",),
             confounders=("different listening position",),
         )
-        # Two KEEP -> SUCCESS_ONLY.
         add_episode(hq, song.id, subject="Success", change="Try repeated move", decision="KEEP")
         add_episode(hq, song.id, subject="Success", change="Try repeated move", decision="KEEP")
-        # KEEP + REVERT -> MIXED.
         add_episode(hq, song.id, subject="Mixed", change="Try mixed move", decision="KEEP")
         add_episode(hq, song.id, subject="Mixed", change="Try mixed move", decision="REVERT")
-        # REVISE only -> NO_KEEP_EVIDENCE.
         add_episode(hq, song.id, subject="No keep", change="Try weak move", decision="REVISE")
-        # INCONCLUSIVE only -> INCONCLUSIVE_ONLY.
         add_episode(hq, song.id, subject="Unclear", change="Try unclear move", decision="INCONCLUSIVE")
 
         views = SongSuccessPatterns(hq.store, hq.success).for_song(song.id)
@@ -92,6 +89,7 @@ def test_projection_preserves_all_humility_states_and_strips_internal_identity(t
         assert by_subject["Unclear"].humility_state == "INCONCLUSIVE_ONLY"
 
         single_view = by_subject["Single"]
+        assert single_view.causal_status == "ASSOCIATION_ONLY"
         assert single_view.completed_count == 1
         assert single_view.pending_count == 0
         assert single_view.keep_count == 1
@@ -101,7 +99,6 @@ def test_projection_preserves_all_humility_states_and_strips_internal_identity(t
         assert single_view.alternative_explanations[0].term == "different listening position"
         assert "not proof" in single_view.warning.lower()
 
-        # The artist-facing projection has no internal pattern/episode/source-ref fields.
         serialized = repr(views)
         assert pending.id not in serialized
         assert single.id not in serialized
@@ -127,5 +124,34 @@ def test_projection_is_song_scoped_and_pure_read(tmp_path: Path) -> None:
         assert [item.subject for item in b_views] == ["B-only"]
         assert hq.learning.episodes_for_song(song_a.id) == before_a
         assert hq.learning.episodes_for_song(song_b.id) == before_b
+    finally:
+        hq.close()
+
+
+def test_projection_fails_closed_if_causal_or_source_semantics_drift(tmp_path: Path) -> None:
+    hq = HeadquartersMemory.create(tmp_path / "data", "Pattern Artist")
+    try:
+        song = hq.store.create_song("Drift Song")
+        add_episode(
+            hq,
+            song.id,
+            subject="Drift",
+            change="Try drift move",
+            decision="KEEP",
+            source_kind="MEASURED",
+        )
+        raw = hq.success.patterns_for_song(song.id)[0]
+
+        with pytest.raises(RuntimeError, match="causal semantics changed"):
+            SongSuccessPatterns._view(replace(raw, causal_status="CAUSAL"))
+
+        changed_consequence = replace(
+            raw.consequences[0],
+            source_kinds=("FUTURE_SOURCE",),
+        )
+        with pytest.raises(RuntimeError, match="source semantics changed"):
+            SongSuccessPatterns._view(
+                replace(raw, consequences=(changed_consequence,))
+            )
     finally:
         hq.close()
