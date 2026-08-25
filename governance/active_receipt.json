@@ -34,7 +34,7 @@
     "direct_copy": false
   },
   "completion_proof": [
-    "the normal consumer Song/learning surface can list the current state of every recorded skill with artist-facing level, source/evidence posture and assistance truth without exposing internal assessment IDs or evidence IDs",
+    "the normal consumer Song/learning surface can list the current state of every recorded skill with artist-facing level, source/evidence posture, assistance and confidence truth without exposing internal assessment IDs or evidence IDs",
     "an artist can explicitly declare a named skill state through bounded one-shot authority; UNKNOWN is not available as a declaration because canonical SkillMemory reserves UNKNOWN for correction",
     "an artist can explicitly correct an existing named skill to any canonical level including UNKNOWN, with a required human reason, without deleting or rewriting prior assessments",
     "correction authority binds the exact skill and rendered latest assessment state so a stale page cannot overwrite a newer assessment silently",
@@ -44,6 +44,22 @@
     "quit/relaunch preserves assessment history and current state",
     "authored HTTP/security/stale-state/invariant/restart proof remains separate from executed evidence; absent hosted execution is UNOBSERVED"
   ],
+  "review_repairs": [
+    "correction binding moved from a delimiter-concatenated server payload to JSON because a legitimate Skill name may contain the delimiter",
+    "artist declaration/correction confidence became an explicit bounded user choice; the consumer form defaults visibly to Medium rather than inheriting HTML order or silently storing 100 percent confidence",
+    "UNKNOWN projection now says assistance is not established instead of rendering the schema fallback as High assistance",
+    "Skill level presentation no longer uses positive/good styling that could visually turn a recorded state into a mastery endorsement",
+    "Song-bound SKILL_ASSESSED Activity now renders as Skill assessment recorded in the landed What changed? timeline rather than generic Activity recorded",
+    "consumer correction tests target explicit aria-labels instead of DOM order or nearby-text heuristics"
+  ],
+  "reviewed_product_test_head": "670af7118be38f676111dc0ce42a8191e1bf9f98",
+  "evidence_classification": "UNOBSERVED",
+  "evidence_snapshot": {
+    "commit_statuses": [],
+    "pull_request_workflow_runs": [],
+    "reviews": [],
+    "review_threads": []
+  },
   "non_scope": ["AI-generated teaching plans", "automatic skill assessment", "lesson generation", "DO IT/WITH ME/SHOW ME interaction modes", "skill recommendations", "reference objects", "audio analysis", "DAW/provider mutation", "global Skill dashboard outside the bounded Song learning surface", "Gate-B acceptance"],
   "next_selection_rule": "After this increment lands or blocks, globally reselect. Compare contextual teaching modes, Learning change-consequence-decision reachability, references, fuller Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
 }
