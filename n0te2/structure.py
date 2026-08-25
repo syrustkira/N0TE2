@@ -9,6 +9,7 @@ from .lineage import LineageCorruptionError, LineageStore, NotFoundError, Valida
 
 STRUCTURE_SCHEMA_VERSION = 1
 STRUCTURE_CHANGE_KINDS = {"ADD_SECTION", "EDIT_SECTION", "REMOVE_SECTION", "RESTORE_PREVIOUS"}
+MAX_STRUCTURE_SECTIONS = 256
 
 
 class StaleSongStructureError(RuntimeError):
@@ -46,8 +47,10 @@ class SongStructureMemory:
         "structure_revisions_immutable_update",
         "structure_revisions_immutable_delete",
         "structure_parent_same_song",
+        "structure_revision_extends_current",
         "structure_state_revision_same_song_insert",
         "structure_state_revision_same_song_update",
+        "structure_state_moves_to_child",
         "structure_state_no_delete",
         "structure_revision_activity",
     }
@@ -130,6 +133,21 @@ class SongStructureMemory:
             ) BEGIN
                 SELECT RAISE(ABORT, 'Structure parent revision belongs to a different Song');
             END""",
+            """CREATE TRIGGER structure_revision_extends_current
+            BEFORE INSERT ON song_structure_revisions
+            WHEN (
+                EXISTS (SELECT 1 FROM song_structure_state s WHERE s.song_id=NEW.song_id)
+                AND NOT EXISTS (
+                    SELECT 1 FROM song_structure_state s
+                    WHERE s.song_id=NEW.song_id AND s.current_revision_id=NEW.parent_revision_id
+                )
+            ) OR (
+                NOT EXISTS (SELECT 1 FROM song_structure_state s WHERE s.song_id=NEW.song_id)
+                AND NEW.parent_revision_id IS NOT NULL
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'Structure revision must extend the current revision');
+            END""",
             """CREATE TRIGGER structure_state_revision_same_song_insert
             BEFORE INSERT ON song_structure_state
             WHEN NOT EXISTS (
@@ -145,6 +163,17 @@ class SongStructureMemory:
                 WHERE r.id=NEW.current_revision_id AND r.song_id=NEW.song_id
             ) BEGIN
                 SELECT RAISE(ABORT, 'Structure current revision belongs to a different Song');
+            END""",
+            """CREATE TRIGGER structure_state_moves_to_child
+            BEFORE UPDATE OF current_revision_id ON song_structure_state
+            WHEN NOT EXISTS (
+                SELECT 1 FROM song_structure_revisions r
+                WHERE r.id=NEW.current_revision_id
+                  AND r.song_id=NEW.song_id
+                  AND r.parent_revision_id=OLD.current_revision_id
+            )
+            BEGIN
+                SELECT RAISE(ABORT, 'Structure current revision must advance to a direct child');
             END""",
             """CREATE TRIGGER structure_state_no_delete
             BEFORE DELETE ON song_structure_state BEGIN
@@ -190,19 +219,30 @@ class SongStructureMemory:
         return text
 
     @staticmethod
-    def _bar(value: int, field: str) -> int:
+    def _bar(value: int | str, field: str) -> int:
         if isinstance(value, bool):
             raise ValidationError(f"{field} must be a positive whole bar")
-        try:
-            number = int(value)
-        except (TypeError, ValueError) as exc:
-            raise ValidationError(f"{field} must be a positive whole bar") from exc
+        if isinstance(value, int):
+            number = value
+        elif isinstance(value, str):
+            text = value.strip()
+            if not text.isdecimal():
+                raise ValidationError(f"{field} must be a positive whole bar")
+            number = int(text)
+        else:
+            raise ValidationError(f"{field} must be a positive whole bar")
         if number < 1 or number > 999999:
             raise ValidationError(f"{field} must be between 1 and 999999")
         return number
 
     @classmethod
-    def section(cls, label: str, first_bar: int, last_bar: int, note: str | None = None) -> SongSection:
+    def section(
+        cls,
+        label: str,
+        first_bar: int | str,
+        last_bar: int | str,
+        note: str | None = None,
+    ) -> SongSection:
         label = cls._clean_text(label, "section name", 120)
         first = cls._bar(first_bar, "first bar")
         last = cls._bar(last_bar, "last bar")
@@ -212,8 +252,20 @@ class SongStructureMemory:
 
     @classmethod
     def _normalize_sections(cls, sections: tuple[SongSection, ...]) -> tuple[SongSection, ...]:
-        normalized = tuple(cls.section(item.label, item.first_bar, item.last_bar, item.note) for item in sections)
-        ordered = tuple(sorted(normalized, key=lambda item: (item.first_bar, item.last_bar, item.label.casefold())))
+        if len(sections) > MAX_STRUCTURE_SECTIONS:
+            raise ValidationError(
+                f"Song Structure supports at most {MAX_STRUCTURE_SECTIONS} sections"
+            )
+        normalized = tuple(
+            cls.section(item.label, item.first_bar, item.last_bar, item.note)
+            for item in sections
+        )
+        ordered = tuple(
+            sorted(
+                normalized,
+                key=lambda item: (item.first_bar, item.last_bar, item.label.casefold()),
+            )
+        )
         previous: SongSection | None = None
         for item in ordered:
             if previous is not None and item.first_bar <= previous.last_bar:
@@ -251,10 +303,17 @@ class SongStructureMemory:
         sections: list[SongSection] = []
         try:
             for row in value:
-                if not isinstance(row, dict) or set(row) != {"label", "first_bar", "last_bar", "note"}:
+                if not isinstance(row, dict) or set(row) != {
+                    "label",
+                    "first_bar",
+                    "last_bar",
+                    "note",
+                }:
                     raise LineageCorruptionError("Song Structure section shape is invalid")
                 sections.append(
-                    cls.section(row["label"], row["first_bar"], row["last_bar"], row["note"])
+                    cls.section(
+                        row["label"], row["first_bar"], row["last_bar"], row["note"]
+                    )
                 )
             normalized = cls._normalize_sections(tuple(sections))
         except ValidationError as exc:
@@ -268,7 +327,11 @@ class SongStructureMemory:
             sequence=int(row["seq"]),
             id=str(row["id"]),
             song_id=str(row["song_id"]),
-            parent_revision_id=None if row["parent_revision_id"] is None else str(row["parent_revision_id"]),
+            parent_revision_id=(
+                None
+                if row["parent_revision_id"] is None
+                else str(row["parent_revision_id"])
+            ),
             change_kind=str(row["change_kind"]),
             sections=self._decode_sections(str(row["sections_json"])),
         )
@@ -371,12 +434,15 @@ class SongStructureMemory:
 
     def _validate_existing(self) -> None:
         try:
-            if self._metadata_value("structure_schema_version") != str(STRUCTURE_SCHEMA_VERSION):
+            if self._metadata_value("structure_schema_version") != str(
+                STRUCTURE_SCHEMA_VERSION
+            ):
                 raise LineageCorruptionError("unsupported Song Structure schema version")
             trigger_names = {
                 str(row["name"])
                 for row in self._conn.execute(
-                    "SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'structure_%'"
+                    "SELECT name FROM sqlite_master "
+                    "WHERE type='trigger' AND name LIKE 'structure_%'"
                 )
             }
             missing = self._TRIGGER_NAMES - trigger_names
@@ -392,18 +458,26 @@ class SongStructureMemory:
                 if self.store.get_song(revision.song_id) is None:
                     raise LineageCorruptionError("Song Structure revision lost its Song")
                 if revision.change_kind not in STRUCTURE_CHANGE_KINDS:
-                    raise LineageCorruptionError("Song Structure revision has invalid change kind")
+                    raise LineageCorruptionError(
+                        "Song Structure revision has invalid change kind"
+                    )
                 if revision.parent_revision_id is not None:
                     parent = self.get_revision(revision.parent_revision_id)
                     if parent is None or parent.song_id != revision.song_id:
-                        raise LineageCorruptionError("Song Structure parent crosses Song boundary")
+                        raise LineageCorruptionError(
+                            "Song Structure parent crosses Song boundary"
+                        )
             for row in self._conn.execute(
                 "SELECT song_id,current_revision_id FROM song_structure_state"
             ):
                 current = self.get_revision(str(row["current_revision_id"]))
                 if current is None or current.song_id != str(row["song_id"]):
-                    raise LineageCorruptionError("Song Structure current pointer is invalid")
+                    raise LineageCorruptionError(
+                        "Song Structure current pointer is invalid"
+                    )
         except LineageCorruptionError:
             raise
         except (sqlite3.DatabaseError, ValueError, TypeError) as exc:
-            raise LineageCorruptionError("Song Structure memory is unreadable or corrupt") from exc
+            raise LineageCorruptionError(
+                "Song Structure memory is unreadable or corrupt"
+            ) from exc
