@@ -122,6 +122,11 @@ class SkillModelService:
             assessment = state.latest_assessment
             if assessment is None:
                 continue
+            assistance_label = (
+                "Assistance not established"
+                if state.level == "UNKNOWN"
+                else self._assistance_label(assessment.assistance_level)
+            )
             views.append(
                 SkillModelView(
                     skill_id=state.skill_id,
@@ -129,7 +134,7 @@ class SkillModelService:
                     source_label=_SOURCE_LABELS.get(assessment.source_kind, "Recorded assessment"),
                     confidence=assessment.confidence,
                     assistance_level=assessment.assistance_level,
-                    assistance_label=self._assistance_label(assessment.assistance_level),
+                    assistance_label=assistance_label,
                     evidence_count=len(assessment.evidence_claim_ids),
                     correction_note=(
                         assessment.note if assessment.source_kind == "ARTIST_CORRECTION" else None
