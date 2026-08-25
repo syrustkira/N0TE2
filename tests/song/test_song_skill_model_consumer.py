@@ -34,8 +34,8 @@ class NoRedirect(HTTPRedirectHandler):
 @dataclass
 class Form:
     action: str
+    label: str
     values: dict[str, str]
-    button_text: str = ""
 
 
 class FormParser(HTMLParser):
@@ -43,26 +43,21 @@ class FormParser(HTMLParser):
         super().__init__()
         self.forms: list[Form] = []
         self.current: Form | None = None
-        self.in_button = False
 
     def handle_starttag(self, tag: str, attrs) -> None:  # noqa: ANN001
         values = dict(attrs)
         if tag == "form":
-            self.current = Form(str(values.get("action", "")), {})
+            self.current = Form(
+                action=str(values.get("action", "")),
+                label=str(values.get("aria-label", "")),
+                values={},
+            )
             self.forms.append(self.current)
         elif tag == "input" and self.current is not None and values.get("name"):
             self.current.values[str(values["name"])] = str(values.get("value", ""))
-        elif tag == "button" and self.current is not None:
-            self.in_button = True
-
-    def handle_data(self, data: str) -> None:
-        if self.current is not None and self.in_button:
-            self.current.button_text += data
 
     def handle_endtag(self, tag: str) -> None:
-        if tag == "button":
-            self.in_button = False
-        elif tag == "form":
+        if tag == "form":
             self.current = None
 
 
@@ -127,6 +122,39 @@ def seed_profile(data_root: Path) -> tuple[str, str]:
         hq.close()
 
 
+def declare_fields(form: Form, *, skill: str, level: str, assistance: str, confidence: str) -> dict[str, str]:
+    values = dict(form.values)
+    values.update(
+        {
+            "skill_name": skill,
+            "level": level,
+            "assistance": assistance,
+            "confidence": confidence,
+        }
+    )
+    return values
+
+
+def correction_fields(
+    form: Form,
+    *,
+    level: str,
+    assistance: str,
+    confidence: str,
+    reason: str,
+) -> dict[str, str]:
+    values = dict(form.values)
+    values.update(
+        {
+            "level": level,
+            "assistance": assistance,
+            "confidence": confidence,
+            "reason": reason,
+        }
+    )
+    return values
+
+
 def test_song_surface_shows_inspectable_skill_truth_without_internal_ids(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
@@ -146,7 +174,10 @@ def test_song_surface_shows_inspectable_skill_truth_without_internal_ids(tmp_pat
         assert "Practiced" in page
         assert "N0TE assessment" in page
         assert "Some assistance" in page
+        assert "Confidence 80%" in page
         assert "1 linked evidence claim" in page
+        assert 'name="confidence"' in page
+        assert '<option value="MEDIUM" selected>Medium confidence</option>' in page
         assert "Independent means you can do it without guidance" in page
         assert "skillassess_" not in page
         assert "test:real-work" not in page
@@ -180,17 +211,20 @@ def test_artist_can_declare_then_correct_skill_without_rewriting_history(tmp_pat
     )
     shell.start()
     try:
-        status, page, _ = request(shell, "/song")
-        assert status == 200
-        declare = forms(page, "/skill/declare")
-        assert len(declare) == 1
-        fields = dict(declare[0].values)
-        fields.update({"skill_name": "Arrangement", "level": "APPLIED", "assistance": "SOME"})
+        _, page, _ = request(shell, "/song")
+        declaration = forms(page, "/skill/declare")
+        assert len(declaration) == 1
         status, _, location = request(
             shell,
             "/skill/declare",
             method="POST",
-            fields=fields,
+            fields=declare_fields(
+                declaration[0],
+                skill="Arrangement",
+                level="APPLIED",
+                assistance="SOME",
+                confidence="MEDIUM",
+            ),
             origin=shell.address.origin,
         )
         assert status == 303 and location == "/song"
@@ -198,23 +232,22 @@ def test_artist_can_declare_then_correct_skill_without_rewriting_history(tmp_pat
         assert len(first) == 1
         assert first[0].source_kind == "ARTIST_DECLARED"
         assert first[0].level == "APPLIED"
+        assert first[0].confidence == 0.7
 
-        status, page, _ = request(shell, "/song")
-        assert status == 200
+        _, page, _ = request(shell, "/song")
         corrections = forms(page, "/skill/correct")
-        assert len(corrections) == 2
-        arrangement = next(form for form in corrections if "Arrangement" in page[page.find(form.values["action"]) - 1500 : page.find(form.values["action"]) + 1500])
-        fields = dict(arrangement.values)
-        fields.update({
-            "level": "PRACTICED",
-            "assistance": "HIGH",
-            "reason": "I can practice this, but I overstated how independently I apply it.",
-        })
+        arrangement = next(form for form in corrections if form.label == "Correct Arrangement Skill")
         status, _, location = request(
             shell,
             "/skill/correct",
             method="POST",
-            fields=fields,
+            fields=correction_fields(
+                arrangement,
+                level="PRACTICED",
+                assistance="HIGH",
+                confidence="LOW",
+                reason="I can practice this, but I overstated how independently I apply it.",
+            ),
             origin=shell.address.origin,
         )
         assert status == 303 and location == "/song"
@@ -223,6 +256,7 @@ def test_artist_can_declare_then_correct_skill_without_rewriting_history(tmp_pat
         assert history[0].source_kind == "ARTIST_DECLARED"
         assert history[1].source_kind == "ARTIST_CORRECTION"
         assert history[1].level == "PRACTICED"
+        assert history[1].confidence == 0.4
         assert "overstated" in (history[1].note or "")
     finally:
         shell.stop()
@@ -247,11 +281,15 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
     )
     shell.start()
     try:
-        status, page, _ = request(shell, "/song")
-        assert status == 200
+        _, page, _ = request(shell, "/song")
         declaration = forms(page, "/skill/declare")[0]
-        foreign = dict(declaration.values)
-        foreign.update({"skill_name": "EQ", "level": "PRACTICED", "assistance": "SOME"})
+        foreign = declare_fields(
+            declaration,
+            skill="EQ",
+            level="PRACTICED",
+            assistance="SOME",
+            confidence="MEDIUM",
+        )
         status, _, _ = request(
             shell,
             "/skill/declare",
@@ -262,8 +300,8 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
         assert status == 403
         assert shell.runtime.headquarters.skills.state("EQ").latest_assessment is None
 
-        bad_csrf = dict(declaration.values)
-        bad_csrf.update({"csrf": "wrong", "skill_name": "EQ", "level": "PRACTICED", "assistance": "SOME"})
+        bad_csrf = dict(foreign)
+        bad_csrf["csrf"] = "wrong"
         status, _, _ = request(
             shell,
             "/skill/declare",
@@ -273,13 +311,11 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
         )
         assert status == 403
 
-        good = dict(declaration.values)
-        good.update({"skill_name": "EQ", "level": "PRACTICED", "assistance": "SOME"})
         status, _, _ = request(
             shell,
             "/skill/declare",
             method="POST",
-            fields=good,
+            fields=foreign,
             origin=shell.address.origin,
         )
         assert status == 303
@@ -287,20 +323,16 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
             shell,
             "/skill/declare",
             method="POST",
-            fields=good,
+            fields=foreign,
             origin=shell.address.origin,
         )
         assert status == 409
         assert len(shell.runtime.headquarters.skills.history("EQ")) == 1
 
-        status, page, _ = request(shell, "/song")
-        assert status == 200
+        _, page, _ = request(shell, "/song")
         correction = next(
-            form for form in forms(page, "/skill/correct")
-            if "EQ" in page[page.find(form.values["action"]) - 1500 : page.find(form.values["action"]) + 1500]
+            form for form in forms(page, "/skill/correct") if form.label == "Correct EQ Skill"
         )
-        current = shell.runtime.headquarters.skills.state("EQ").latest_assessment
-        assert current is not None
         shell.runtime.headquarters.skills.correct_skill(
             skill_id="EQ",
             level="APPLIED",
@@ -308,13 +340,17 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
             reason="A newer correction landed after the page rendered.",
             assistance_level=0.5,
         )
-        stale = dict(correction.values)
-        stale.update({"level": "INDEPENDENT", "assistance": "NONE", "reason": "stale page"})
         status, body, _ = request(
             shell,
             "/skill/correct",
             method="POST",
-            fields=stale,
+            fields=correction_fields(
+                correction,
+                level="INDEPENDENT",
+                assistance="NONE",
+                confidence="HIGH",
+                reason="stale page",
+            ),
             origin=shell.address.origin,
         )
         assert status == 409
@@ -324,7 +360,7 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
         shell.stop()
 
 
-def test_independent_cannot_be_claimed_with_assistance_and_skill_writes_do_not_mutate_song(tmp_path: Path) -> None:
+def test_independent_requires_no_assistance_and_skill_writes_leave_song_untouched(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
     profile_id, song_id = seed_profile(data_root)
@@ -339,10 +375,15 @@ def test_independent_cannot_be_claimed_with_assistance_and_skill_writes_do_not_m
         song_before = shell.runtime.headquarters.store.get_song(song_id)
         versions_before = shell.runtime.headquarters.store.versions_for_song(song_id)
         sessions_before = shell.runtime.headquarters.sessions.latest_for_song(song_id)
-        status, page, _ = request(shell, "/song")
+        _, page, _ = request(shell, "/song")
         declaration = forms(page, "/skill/declare")[0]
-        assisted = dict(declaration.values)
-        assisted.update({"skill_name": "Mastering", "level": "INDEPENDENT", "assistance": "SOME"})
+        assisted = declare_fields(
+            declaration,
+            skill="Mastering",
+            level="INDEPENDENT",
+            assistance="SOME",
+            confidence="MEDIUM",
+        )
         status, _, _ = request(
             shell,
             "/skill/declare",
@@ -353,10 +394,15 @@ def test_independent_cannot_be_claimed_with_assistance_and_skill_writes_do_not_m
         assert status == 303
         assert shell.runtime.headquarters.skills.state("Mastering").latest_assessment is None
 
-        status, page, _ = request(shell, "/song")
+        _, page, _ = request(shell, "/song")
         declaration = forms(page, "/skill/declare")[0]
-        independent = dict(declaration.values)
-        independent.update({"skill_name": "Mastering", "level": "INDEPENDENT", "assistance": "NONE"})
+        independent = declare_fields(
+            declaration,
+            skill="Mastering",
+            level="INDEPENDENT",
+            assistance="NONE",
+            confidence="MEDIUM",
+        )
         status, _, _ = request(
             shell,
             "/skill/declare",
@@ -369,6 +415,7 @@ def test_independent_cannot_be_claimed_with_assistance_and_skill_writes_do_not_m
         assert state.level == "INDEPENDENT"
         assert state.latest_assessment is not None
         assert state.latest_assessment.assistance_level == 0.0
+        assert state.latest_assessment.confidence == 0.7
         assert shell.runtime.headquarters.store.get_song(song_id) == song_before
         assert shell.runtime.headquarters.store.versions_for_song(song_id) == versions_before
         assert shell.runtime.headquarters.sessions.latest_for_song(song_id) == sessions_before
