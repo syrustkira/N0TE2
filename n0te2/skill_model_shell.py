@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 from http.server import BaseHTTPRequestHandler
 from typing import Callable, Mapping
 
@@ -59,7 +60,11 @@ def _skill_card(shell: ConsumerShell) -> str:
         binding = service.binding_for(view.skill_id)
         token = shell._new_action(
             "skill-correct",
-            f"{binding.skill_id}|{binding.expected_latest_assessment_id}",
+            json.dumps(
+                [binding.skill_id, binding.expected_latest_assessment_id],
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
         )
         evidence = (
             "No linked evidence claims"
@@ -67,6 +72,7 @@ def _skill_card(shell: ConsumerShell) -> str:
             else f"{view.evidence_count} linked evidence claim"
             + ("" if view.evidence_count == 1 else "s")
         )
+        confidence = f"Confidence {round(view.confidence * 100)}%"
         correction_note = (
             ""
             if view.correction_note is None
@@ -77,7 +83,7 @@ def _skill_card(shell: ConsumerShell) -> str:
             f'<p><strong>{html.escape(view.skill_id)}</strong></p>'
             f'<p class="status good">{html.escape(_LEVEL_LABELS[view.level])}</p>'
             f'<p>{html.escape(view.source_label)} · {html.escape(view.assistance_label)} · '
-            f'{html.escape(evidence)}</p>'
+            f'{html.escape(confidence)} · {html.escape(evidence)}</p>'
             f'{correction_note}'
             '<form class="stack" method="post" action="/skill/correct">'
             f'{shell._hidden(token)}'
@@ -142,8 +148,16 @@ def _post_correct(shell: ConsumerShell, handler: BaseHTTPRequestHandler, form: M
     if action is None or action.value is None:
         shell._send_html(handler, 409, shell._simple_error("That Skill correction was already handled or expired."))
         return
-    skill_id, separator, expected_id = action.value.partition("|")
-    if not separator or not skill_id or not expected_id:
+    try:
+        decoded = json.loads(action.value)
+        if (
+            not isinstance(decoded, list)
+            or len(decoded) != 2
+            or not all(isinstance(item, str) and item for item in decoded)
+        ):
+            raise ValueError
+        skill_id, expected_id = decoded
+    except (ValueError, TypeError, json.JSONDecodeError):
         shell._send_html(handler, 409, shell._simple_error("That Skill correction is no longer valid."))
         return
     try:
