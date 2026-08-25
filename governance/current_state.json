@@ -10,15 +10,17 @@
   "direct_legacy_test_text_copy_authorized": false,
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
   "truth": [
-    "Canonical main is 54bac9b8fed5031328959380117c4adf8278eceb after merged PR #56 landed exact stale-safe Song Version approval. PR #56 exact-head statuses/workflows/reviews/threads were empty, so authored proof remains UNOBSERVED rather than green.",
-    "The owned Song Version loop now supports preserved history, Current selection, structurally admitted local audition and exact Approved selection while keeping Current and Approved independent.",
-    "Whole-graph reselection chose SONG-ACTIVITY-01 because canonical Activity chronology already unifies meaningful Song, Version, Session, Learning, Evidence and Song-bound Headquarters Focus changes, but that operating history is not consumer-visible.",
-    "REQ-SCOPE-104 What changed? is therefore construction-ready without inventing a new history store. ActivityLog is append-only, sequence-ordered and canonically bound to Song/Version objects.",
-    "ActivityEvent has no trustworthy wall-clock timestamp. SONG-ACTIVITY-01 must present canonical sequence/order truth and must not manufacture dates, elapsed times or recency claims that the model cannot support.",
-    "The consumer timeline must translate known canonical event types into artist-facing language, resolve safe Song/Version/material labels from canonical stores, hide internal IDs and payload JSON, and degrade unknown future event types without crashing or falsely interpreting them.",
-    "This increment is read-only consumer reachability. It must not add a second chronology, mutate Activity history, create approval/learning/session state, infer causality, or promote scratch/evidence/taste automatically.",
-    "SONG-ACTIVITY-01 outranks another adjacent Version control because the basic see→hear→select Current→approve loop is now usable, while unified operating-history visibility increases continuity across multiple already-landed product domains.",
-    "Full loudness-aware A/B remains blocked on a truthful audio-analysis/normalization substrate. First-class reference objects, Creative Studio expansion, musical derivation and DAW/OPS lanes remain eligible for later global reselection rather than being silently discarded.",
-    "Selection receipt and current state are committed before product edits on branch codex/song-activity-timeline from exact main 54bac9b8fed5031328959380117c4adf8278eceb."
+    "Canonical main baseline is 54bac9b8fed5031328959380117c4adf8278eceb after merged PR #56 landed exact stale-safe Song Version approval. PR #56 execution remained UNOBSERVED.",
+    "Whole-graph reselection chose SONG-ACTIVITY-01 because canonical Activity chronology already unifies meaningful Song, Version, Session, Learning, Evidence and Song-bound Headquarters Focus changes, while that operating history was not consumer-visible.",
+    "REQ-SCOPE-104 What changed? is implemented here as a read-only SongActivityTimeline projection over canonical ActivityLog. No second chronology or writable timeline store was created.",
+    "Known Song/material/Version/current/approval/Session/Evidence/Learning/Focus events translate to bounded artist-facing language. Version and Asset detail resolves through canonical immutable lineage; unknown future event types degrade to generic Activity recorded instead of leaking event_type/object IDs/payload JSON.",
+    "Activity schema v1 owns sequence ordering but no trustworthy wall-clock timestamp. The consumer timeline therefore shows newest canonical recorded change first and explicitly makes no wall-clock time, elapsed-time or recency claim.",
+    "Normal /song consumer reachability is integrated as one read-only What changed? card appended to the existing Song render without modifying the 75 KB ConsumerShell implementation. The extension is explicit during normal package initialization and guards installation on ConsumerShell itself so repeated calls or module reloads cannot double-wrap the renderer.",
+    "Red-team review rejected a module-local idempotence flag because reloading that module could duplicate the card. The guard was repaired to live on ConsumerShell, preserving exactly one timeline extension per process.",
+    "Authored core proof covers newest-first canonical ordering, label resolution, unknown-event degradation, internal-field hiding, pure reads, restart stability, Song isolation and the no-timestamp contract.",
+    "Authored consumer proof covers direct ConsumerShell import/bootstrap, one-card idempotence, artist-readable /song history, newest-first event order, Activity-ID/payload hiding, GET non-mutation, cross-Song isolation and quit/relaunch persistence.",
+    "Reviewed product/test head is d13544e2c0def793cac78161b7356172497b3ebd. PR #57 is mergeable against exact baseline 54bac9b8fed5031328959380117c4adf8278eceb. Exact-head commit statuses are [] and pull-request workflow runs are []; authored execution remains UNOBSERVED rather than green or failed.",
+    "This increment does not claim a global cross-Song Activity page, timestamps, filtering/search, provider/message/release event population, editing Activity, notifications, reference objects, loudness A/B, analysis, DAW/provider mutation or Gate-B acceptance.",
+    "After this increment lands or blocks, globally reselect from the whole graph rather than continuing by adjacency."
   ]
 }
