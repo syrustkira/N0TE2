@@ -352,3 +352,10 @@ from .activity_timeline_shell import install_song_activity_timeline
 install_song_activity_timeline()
 
 __all__ += ["SongActivityItem", "SongActivityTimeline"]
+
+from .skill_model import SkillModelBinding, SkillModelService, SkillModelView
+from .skill_model_shell import install_song_skill_model
+
+install_song_skill_model()
+
+__all__ += ["SkillModelBinding", "SkillModelService", "SkillModelView"]
