@@ -1,24 +1,21 @@
 # N0TE2
 
-N0TE2 is the clean-room construction repository for N0TE, a Song-centered persistent Artist Headquarters.
+Clean-room construction destination for N0TE under canonical governance.
 
-This repository is intentionally in **BOOT-02**: executable construction governance only. No legacy or product-feature implementation is admitted until the governance harness is exact-head green and the active receipt advances to `LEGACY-01`.
+## Read order
 
-## Current construction law
+Before product edits, read:
 
-- Product semantics come from the canonical N0TE Blueprint and Product DB, mirrored here only as machine-enforceable contracts.
-- Implementation maturity never changes semantic scope.
-- All six core DAWs are peer `DEEP` targets: Ableton Live, FL Studio, Logic Pro, Pro Tools, Studio One, REAPER.
-- Other DAWs retain a substantial truthful N0TE baseline (`DAW-07`).
-- macOS, Windows, and Linux are peer consumer platforms; all three block customer-mode handoff.
-- Core architecture acceptance includes Apple Silicon + Intel Mac, Windows x64 + ARM64, Linux x86_64 + ARM64.
-- Plug-in capability is universal N0TE capability, not one DAW or one format. Standard scan paths plus user-added custom paths are required.
-- Held future services cannot self-activate.
-- Missing future licenses/devices/accounts/certificates can block only their exact evidence claim, never unrelated construction.
+1. `AGENTS.md`
+2. `governance/current_state.json`
+3. `governance/active_receipt.json`
+4. the current Google Drive governance/product sources named by those files
+5. live GitHub branch/PR/CI evidence
 
-Run:
+## Construction rule
 
-```bash
-python governance/check_governance.py --repo .
-python -m unittest discover -s tests -p 'test_*.py'
-```
+Select bounded work by portfolio → outcome → journey → capability lineage. Do not continue by previous code seam or file adjacency. Preserve accepted scope, keep unavailable dependencies truthful, implement normal consumer reachability, test/red-team same-class failures, reconcile current state, then globally reselect.
+
+## Evidence rule
+
+Authored tests are not executed evidence. Empty or unavailable hosted status/workflow surfaces remain `UNOBSERVED`, never green by implication.
