@@ -370,3 +370,10 @@ from .learning_experiment_shell import install_song_learning_experiments
 install_song_learning_experiments()
 
 __all__ += ["LearningDecisionBinding", "LearningExperimentService", "LearningStartBinding"]
+
+from .success_patterns import SongSuccessPatterns, SuccessPatternView
+from .success_patterns_shell import install_song_success_patterns
+
+install_song_success_patterns()
+
+__all__ += ["SongSuccessPatterns", "SuccessPatternView"]
