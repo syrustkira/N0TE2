@@ -58,8 +58,9 @@ def _assistance_options(selected_value: float | None = None) -> str:
 
 
 def _confidence_options(selected_value: float | None = None) -> str:
-    selected_key = None
-    if selected_value is not None:
+    if selected_value is None:
+        selected_key = "MEDIUM"
+    else:
         selected_key = "LOW" if selected_value <= 0.4 else "MEDIUM" if selected_value < 1.0 else "HIGH"
     return "".join(
         f'<option value="{key}"{" selected" if key == selected_key else ""}>'
@@ -101,7 +102,8 @@ def _skill_card(shell: ConsumerShell) -> str:
             f'<p>{html.escape(view.source_label)} · {html.escape(view.assistance_label)} · '
             f'{html.escape(confidence)} · {html.escape(evidence)}</p>'
             f'{correction_note}'
-            '<form class="stack" method="post" action="/skill/correct">'
+            '<form class="stack" method="post" action="/skill/correct" '
+            f'aria-label="Correct {html.escape(view.skill_id, quote=True)} Skill">'
             f'{shell._hidden(token)}'
             '<div><label>Correct N0TE level<select name="level" required>'
             f'{_options(_CORRECTION_LEVELS, selected=view.level)}</select></label></div>'
@@ -120,7 +122,7 @@ def _skill_card(shell: ConsumerShell) -> str:
         else '<ul class="stack" aria-label="Current Skill model">' + "".join(rows) + "</ul>"
     )
     declaration = (
-        '<form class="stack" method="post" action="/skill/declare">'
+        '<form class="stack" method="post" action="/skill/declare" aria-label="Add Skill self-assessment">'
         f'{shell._hidden(shell._new_action("skill-declare"))}'
         '<div><label for="skill-name">Skill</label><input id="skill-name" name="skill_name" type="text" maxlength="120" autocomplete="off" required></div>'
         '<div><label for="skill-level">Where are you now?</label><select id="skill-level" name="level" required>'
