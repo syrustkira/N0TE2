@@ -6,8 +6,6 @@ from typing import Callable
 from .activity_timeline import SongActivityTimeline
 from .consumer_shell import ConsumerShell, ConsumerShellError
 
-_INSTALLED = False
-
 
 def _activity_card(shell: ConsumerShell, song) -> str:
     timeline = SongActivityTimeline(
@@ -41,12 +39,11 @@ def install_song_activity_timeline() -> None:
     The existing shell remains the owner of Song rendering. This bounded extension
     appends one read-only card immediately before the existing Song grid closes and
     does not alter action authority, routing, Session, Version, material or Focus
-    semantics. Installation is explicit and idempotent because package import may
-    be repeated by test runners and launchers.
+    semantics. The installation marker lives on ConsumerShell itself so even a
+    module reload cannot wrap the renderer twice.
     """
 
-    global _INSTALLED
-    if _INSTALLED:
+    if getattr(ConsumerShell, "_song_activity_timeline_installed", False):
         return
 
     original: Callable[[ConsumerShell, object], str] = ConsumerShell._song_content
@@ -63,4 +60,4 @@ def install_song_activity_timeline() -> None:
         return rendered[: -len(marker)] + _activity_card(self, song) + marker
 
     ConsumerShell._song_content = with_activity
-    _INSTALLED = True
+    ConsumerShell._song_activity_timeline_installed = True
