@@ -20,7 +20,8 @@
     "Authored core proof covers newest-first canonical ordering, label resolution, unknown-event degradation, internal-field hiding, pure reads, restart stability, Song isolation and the no-timestamp contract.",
     "Authored consumer proof covers direct ConsumerShell import/bootstrap, one-card idempotence, artist-readable /song history, newest-first event order, Activity-ID/payload hiding, GET non-mutation, cross-Song isolation and quit/relaunch persistence.",
     "Reviewed product/test head is d13544e2c0def793cac78161b7356172497b3ebd. Exact-head commit statuses are [] and pull-request workflow runs are []; authored execution remains UNOBSERVED rather than green or failed.",
-    "Later commits 84835e3127f38eba8ba1c85698e1c657c8a405ef and 233ddc662bdfda747af2c992ec9ca1ddf8f72f5b are governance-only evidence freezes and do not change product/test behavior.",
+    "A later accidental README write was detected by whole-branch comparison and immediately restored byte-for-byte to baseline blob 07dd3dd022abd3082c7320de68b5fbb763a9f1dd. README has zero net diff and is not part of this increment.",
+    "Later commits after d13544e2c0def793cac78161b7356172497b3ebd are governance/evidence or exact drift-repair only and do not change reviewed product/test behavior.",
     "This increment does not claim a global cross-Song Activity page, timestamps, filtering/search, provider/message/release event population, editing Activity, notifications, reference objects, loudness A/B, analysis, DAW/provider mutation or Gate-B acceptance.",
     "After this increment lands or blocks, globally reselect from the whole graph rather than continuing by adjacency."
   ]
