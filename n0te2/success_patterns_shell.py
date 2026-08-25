@@ -40,7 +40,7 @@ def _observations(pattern: SuccessPatternView) -> str:
         rows.append(
             '<li class="stack">'
             f'<p>{html.escape(item.observation)}</p>'
-            f'<p class="muted">Seen {item.count} time{"" if item.count == 1 else "s"} · '
+            f'<p class="muted">Recorded {item.count} time{"" if item.count == 1 else "s"} · '
             f'{html.escape(sources)} · mean confidence {_percent(item.confidence_mean)}</p>'
             '</li>'
         )
@@ -54,6 +54,7 @@ def _pattern(pattern: SuccessPatternView) -> str:
         f'{pattern.keep_count} keep · {pattern.revert_count} revert · '
         f'{pattern.revise_count} revise · {pattern.inconclusive_count} inconclusive'
     )
+    causal_label = "Association only" if pattern.causal_status == "ASSOCIATION_ONLY" else "Causal status unavailable"
     return (
         '<li class="stack">'
         f'<p><strong>{html.escape(pattern.domain)} · {html.escape(pattern.subject)}</strong></p>'
@@ -61,7 +62,7 @@ def _pattern(pattern: SuccessPatternView) -> str:
         f'<p class="status">{html.escape(state)}</p>'
         f'<p>{html.escape(pattern.warning)}</p>'
         f'<p class="muted">{html.escape(counts)}</p>'
-        '<p class="muted">Association only. This pattern is prior evidence, not a recipe or prediction.</p>'
+        f'<p class="muted">{html.escape(causal_label)}. This pattern is prior evidence, not a recipe or prediction.</p>'
         f'{_observations(pattern)}'
         f'{_terms("Conditions recorded with this pattern", pattern.conditions)}'
         f'{_terms("Alternative explanations / confounders", pattern.alternative_explanations)}'
@@ -87,7 +88,7 @@ def _success_card(shell: ConsumerShell) -> str:
     )
     return (
         '<div class="card"><h2>What does your past work suggest?</h2>'
-        '<p>N0TE can summarize exact repeated Learning patterns, but it does not know that a change caused an outcome. '
+        '<p>N0TE can summarize exact Learning patterns, but it does not know that a change caused an outcome. '
         'Counterexamples, uncertainty, pending evidence and alternative explanations stay visible.</p>'
         f'{body}</div>'
     )
