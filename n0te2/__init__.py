@@ -345,3 +345,10 @@ __all__ = [
     "Version",
     "VersionExplanation",
 ]
+
+from .activity_timeline import SongActivityItem, SongActivityTimeline
+from .activity_timeline_shell import install_song_activity_timeline
+
+install_song_activity_timeline()
+
+__all__ += ["SongActivityItem", "SongActivityTimeline"]
