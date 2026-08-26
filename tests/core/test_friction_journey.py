@@ -63,6 +63,32 @@ class SongFrictionJourneyTests(unittest.TestCase):
         finally:
             hq.close()
 
+    def test_duplicate_key_in_same_episode_is_rejected_without_false_recurrence(self) -> None:
+        hq = HeadquartersMemory.create(self.root, "Artist")
+        try:
+            song = hq.store.create_song("Song")
+            _, episode = create_episode(hq, song.id, "Track verse")
+            service = SongFrictionJourney(hq.friction)
+            binding = service.capture_binding(episode.id)
+            service.record(
+                binding,
+                friction_key="context-switching",
+                description="Notifications broke focus",
+                confidence="MEDIUM",
+            )
+            with self.assertRaises(FrictionJourneyError) as cm:
+                service.record(
+                    binding,
+                    friction_key="context-switching",
+                    description="Same blocker must not count twice",
+                    confidence="HIGH",
+                )
+            self.assertIn("already recorded", str(cm.exception))
+            self.assertEqual(len(hq.friction.observations(song_id=song.id)), 1)
+            self.assertEqual(service.recurring_for_active_song(), ())
+        finally:
+            hq.close()
+
     def test_recurrence_requires_same_explicit_key_across_distinct_sessions(self) -> None:
         hq = HeadquartersMemory.create(self.root, "Artist")
         try:
