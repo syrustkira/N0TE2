@@ -172,7 +172,7 @@ def test_song_surface_explains_incident_vs_recurrence_and_hides_identity(tmp_pat
 def test_full_consumer_capture_and_distinct_session_recurrence(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    profile_id, song_id, seeded = seed(data_root, episode_count=2)
+    profile_id, song_id, _ = seed(data_root, episode_count=2)
     shell = new_shell(data_root, state_root, 9962, "friction-flow")
     source_refs: list[str] = []
     try:
@@ -195,15 +195,9 @@ def test_full_consumer_capture_and_distinct_session_recurrence(tmp_path: Path) -
         assert "No recurring blocker is established for this Song yet." in page
         remaining = forms(page, "/friction/record")
         assert len(remaining) == 2
-        first_episode_id = observations[0].episode_id
-        target_form = next(
-            item
-            for item in remaining
-            if item.label != available[0].label or seeded[0][1].id != first_episode_id
-        )
         status, _, _ = post(
             shell,
-            friction_fields(target_form, description="Notifications interrupted the other pass"),
+            friction_fields(remaining[1], description="Notifications interrupted the other pass"),
         )
         assert status == 303
 
