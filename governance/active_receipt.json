@@ -9,7 +9,7 @@
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore"],
+  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore", ".github/workflows/governance.yml"],
   "allowed_prefixes": ["governance/", "tests/governance/", "n0te2/", "tests/core/", "tests/ux/", "tests/song/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
@@ -37,16 +37,21 @@
     "consumer mode selection does not mutate Song, Version, Session, Learning evidence/decision, Skill state, Focus, authority, DAW, provider or durable preference state",
     "internal Song/Learning/Session identities remain out of visible browser markup",
     "Origin, CSRF and one-shot replay protections apply to the mode-selection POST",
-    "GET remains pure and authored tests remain separate from executed evidence"
+    "GET remains pure and authored tests remain separate from executed evidence",
+    "repository governance workflow must instantiate and execute its three OS jobs rather than fail before job creation"
   ],
-  "review_repairs": [],
+  "review_repairs": [
+    "systemic execution-evidence audit found exact-head workflow run 33005838710 failed before creating any jobs; GitHub context availability confirms runner.os was illegally referenced from job-level env, so the governance workflow is explicitly admitted for repair in this increment"
+  ],
   "reviewed_product_test_head": "649002eebc6e378026f324df5d04adb3653c8b64",
-  "evidence_classification": "UNOBSERVED",
+  "evidence_classification": "EXECUTION_FAILED",
   "evidence_snapshot": {
+    "observed_repository_head": "fde7703fb8e22bff3b0a8df18d7362207dce8b07",
     "commit_statuses": [],
-    "pull_request_workflow_runs": [],
-    "reviews": [],
-    "review_threads": []
+    "pull_request_workflow_runs": ["push run 33005838710: completed/failure with zero jobs"],
+    "reviews": ["Codex earlier-head review on 0612b8c0f4 found no major issues; latest-head review pending"],
+    "review_threads": [],
+    "execution_note": "The exact-head workflow failure occurs before runner job creation. Official GitHub context availability excludes runner from jobs.<job_id>.env, matching the workflow's job-level runner.os misuse. This is a systemic CI-definition defect and must be repaired before product merge."
   },
   "non_scope": ["changing ASK/ADVISE/TRY/DO authority semantics", "granting mutation authority from teaching mode", "automatic DAW/provider execution", "persistent global personality preference", "AI-provider dependency", "generic chat system", "cross-domain Artist Team interaction depth", "Gate-B acceptance"],
   "next_selection_rule": "After landing or blockage, globally reselect across Context/History reachability, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS, Artist Team and all other Gate-B blockers."
