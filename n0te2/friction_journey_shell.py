@@ -40,10 +40,10 @@ def _capture_action(shell: ConsumerShell, binding: FrictionCaptureBinding) -> st
     )
 
 
-def _observation(item: FrictionObservationView) -> str:
+def _observation(item: FrictionObservationView, *, include_hint: bool = True) -> str:
     hint = (
         ""
-        if item.prevention_hint is None
+        if not include_hint or item.prevention_hint is None
         else f'<p class="muted"><strong>Prevention idea you recorded:</strong> {html.escape(item.prevention_hint)}</p>'
     )
     return (
@@ -70,7 +70,7 @@ def _pattern(pattern) -> str:
         f'<p class="muted">{pattern.occurrence_count} explicit record{"" if pattern.occurrence_count == 1 else "s"}. '
         'Recurrence means the same blocker name appeared in distinct Sessions; it does not prove one universal cause.</p>'
         '<ul class="stack" aria-label="Evidence for recurring blocker">'
-        + "".join(_observation(item) for item in pattern.occurrences)
+        + "".join(_observation(item, include_hint=False) for item in pattern.occurrences)
         + "</ul>"
         + hints
         + "</li>"
@@ -86,9 +86,10 @@ def _episode(shell: ConsumerShell, service: SongFrictionJourney, episode) -> str
         + "</ul>"
     )
     binding = service.capture_binding(episode.episode_id)
+    label = f"Record friction for {episode.subject}: {episode.change}"
     form = (
         '<form class="stack" method="post" action="/friction/record" '
-        f'aria-label="Record friction for {html.escape(episode.subject, quote=True)}">'
+        f'aria-label="{html.escape(label, quote=True)}">'
         f'{shell._hidden(_capture_action(shell, binding))}'
         '<div><label>Short blocker name'
         '<input name="friction_key" type="text" maxlength="120" required></label></div>'
