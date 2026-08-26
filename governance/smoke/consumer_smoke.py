@@ -14,15 +14,29 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
-if state.get("active_node") != "SONG-01" or state.get("active_increment") != "SONG-01B":
+
+# Preserve the pre-product smoke boundary before importing product implementation.
+if state.get("product_code_authorized") is not True:
+    product_files = [
+        path
+        for path in (repo / "n0te2").rglob("*.py")
+        if path.name != "__pycache__"
+    ] if (repo / "n0te2").exists() else []
+    if product_files:
+        raise SystemExit("STAGE SMOKE: RED: product implementation appeared early")
+
+if (
+    state.get("active_node") != "UX-01"
+    or state.get("active_increment") != "UX-01-INTERACTION-01"
+):
     raise SystemExit(
-        f"STAGE SMOKE: RED: unsupported active stage {state.get('active_node')}/{state.get('active_increment')}"
+        f"STAGE SMOKE: RED: unsupported active stage "
+        f"{state.get('active_node')}/{state.get('active_increment')}"
     )
 
 from n0te2.consumer_shell import ConsumerShell  # noqa: E402
-from n0te2.instance import InstanceLeaseManager, ProcessIdentity  # noqa: E402
+from n0te2.instance import ProcessIdentity  # noqa: E402
 from n0te2.platforms import PlatformEnvironment  # noqa: E402
-from n0te2.shell_design import SHELL_CSS  # noqa: E402
 
 
 class Probe:
@@ -64,9 +78,9 @@ class Parser(HTMLParser):
             self.forms.append(self.current)
         elif tag == "input" and self.current is not None and values.get("name"):
             self.current.values[str(values["name"])] = str(values.get("value", ""))
-        elif tag == "button" and self.current is not None and values.get("name"):
+        elif tag == "button" and self.current is not None:
             self.current_button = Submit(
-                name=str(values["name"]),
+                name=str(values.get("name", "")),
                 value=str(values.get("value", "")),
             )
             self.current.buttons.append(self.current_button)
@@ -86,8 +100,12 @@ class Parser(HTMLParser):
 
 
 def get(shell: ConsumerShell, path: str) -> tuple[int, str]:
-    with build_opener(NoRedirect()).open(Request(shell.address.origin + path), timeout=2.0) as response:
-        return response.status, response.read().decode("utf-8")
+    request = Request(shell.address.origin + path)
+    try:
+        with build_opener(NoRedirect()).open(request, timeout=2.0) as response:
+            return response.status, response.read().decode("utf-8")
+    except HTTPError as exc:
+        return exc.code, exc.read().decode("utf-8")
 
 
 def post(shell: ConsumerShell, path: str, values: dict[str, str]) -> tuple[int, str]:
@@ -113,31 +131,30 @@ def parsed_forms(page: str, action: str) -> list[Form]:
     return [candidate for candidate in parser.forms if candidate.action == action]
 
 
-def form(page: str, action: str) -> Form:
+def one_form(page: str, action: str) -> Form:
     matches = parsed_forms(page, action)
-    assert len(matches) == 1
+    assert len(matches) == 1, f"expected one {action} form, found {len(matches)}"
     return matches[0]
 
 
-def capture_values(page: str, label: str, body: str) -> dict[str, str]:
-    capture = form(page, "/session/capture")
-    matches = [button for button in capture.buttons if button.text.strip() == label]
-    assert len(matches) == 1
-    button = matches[0]
-    values = dict(capture.values)
-    values[button.name] = button.value
-    values["body"] = body
-    return values
+def mode_form(page: str, mode: str) -> Form:
+    matches = [
+        candidate
+        for candidate in parsed_forms(page, "/interaction/depth")
+        if candidate.values.get("mode") == mode
+    ]
+    assert len(matches) == 1, f"expected one {mode} interaction form, found {len(matches)}"
+    return matches[0]
 
 
-def quit_shell(shell: ConsumerShell) -> str:
+def quit_shell(shell: ConsumerShell) -> None:
     status, settings = get(shell, "/settings")
     assert status == 200
-    quit_form = form(settings, "/quit")
+    quit_form = one_form(settings, "/quit")
     status, closed = post(shell, "/quit", quit_form.values)
     assert status == 200
+    assert "N0TE closed safely." in closed
     assert shell.wait_stopped(timeout=2.0)
-    return closed
 
 
 with tempfile.TemporaryDirectory() as temp:
@@ -146,8 +163,8 @@ with tempfile.TemporaryDirectory() as temp:
     state_root = (root / "state").resolve()
     process = ProcessIdentity.from_start_token(
         PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
-        pid=99011,
-        start_token="song-01b-consumer-smoke",
+        pid=99012,
+        start_token="ux-01-interaction-consumer-smoke",
     )
     probe = Probe()
 
@@ -163,81 +180,78 @@ with tempfile.TemporaryDirectory() as temp:
     status, welcome = get(shell, "/")
     assert status == 200
     assert "Welcome to your Headquarters" in welcome
-    create = form(welcome, "/profile/create")
-    create.values["artist_name"] = "Session Capture Smoke Artist"
+    create = one_form(welcome, "/profile/create")
+    create.values["artist_name"] = "Interaction Smoke Artist"
     status, _ = post(shell, "/profile/create", create.values)
     assert status == 303
 
-    status, css = get(shell, "/assets/shell.css")
-    assert status == 200
-    assert css == SHELL_CSS
-    assert "textarea:focus-visible" in css
-
     status, song_page = get(shell, "/song")
-    start_song = form(song_page, "/song/start")
-    start_song.values["song_title"] = "Session Capture Smoke Song"
+    assert status == 200
+    start_song = one_form(song_page, "/song/start")
+    start_song.values["song_title"] = "Interaction Smoke Song"
     status, _ = post(shell, "/song/start", start_song.values)
     assert status == 303
-    song = shell.runtime.headquarters.store.active_song()
-    profile_id = shell.runtime.profile_id
-    assert song is not None and profile_id is not None
 
-    status, session_page = get(shell, "/song")
-    start_session = form(session_page, "/session/start")
-    start_session.values["objective"] = "Shape the chorus and remember the useful decisions"
+    status, song_page = get(shell, "/song")
+    start_session = one_form(song_page, "/session/start")
+    start_session.values["objective"] = "Test one chorus transition without changing unrelated parts"
     status, _ = post(shell, "/session/start", start_session.values)
     assert status == 303
-    opened = shell.runtime.headquarters.sessions.latest_for_song(song.id)
-    assert opened is not None and opened.state == "OPEN"
 
-    captured = [
-        ("Observation", "The sparse first half gives the vocal more room"),
-        ("Decision", "Keep the drums dry until the final four bars"),
-        ("Rejected idea", "Do not double the guitar hook an octave up"),
-        ("Unresolved", "Check whether the last chord needs the vocal third"),
-        ("MARK", "Bar 17 transition is worth revisiting"),
-    ]
-    for label, body in captured:
-        status, page = get(shell, "/song")
-        assert status == 200
-        values = capture_values(page, label, body)
-        status, _ = post(shell, "/session/capture", values)
-        assert status == 303
-
-    items = shell.runtime.headquarters.sessions.items_for_session(opened.id)
-    assert [item.kind for item in items] == [
-        "OBSERVATION",
-        "DECISION",
-        "REJECTED_IDEA",
-        "UNRESOLVED",
-        "MARK",
-    ]
-    assert [item.body for item in items] == [body for _, body in captured]
-    assert all(shell.runtime.headquarters.sessions.promotion_for_item(item.id) is None for item in items)
-    assert shell.runtime.headquarters.store._conn.execute(
-        "SELECT COUNT(*) FROM evidence_claims"
-    ).fetchone()[0] == 0
-
-    for path in ("/", "/song", "/now", "/settings"):
-        status, page = get(shell, path)
-        assert status == 200
-        assert "Session Capture Smoke Artist" in page
-        assert "Session Capture Smoke Song" in page
-        assert "sess_" not in page
-        assert "sitem_" not in page
-        assert "prf_" not in page
-        assert "sqlite" not in page.lower()
-        assert "traceback" not in page.lower()
-    status, open_song_page = get(shell, "/song")
-    assert "Current work Session" in open_song_page
-    assert [open_song_page.index(body) for _, body in captured] == sorted(
-        open_song_page.index(body) for _, body in captured
+    status, song_page = get(shell, "/song")
+    learning = one_form(song_page, "/learning/start")
+    learning.values.update(
+        {
+            "domain": "Arrangement",
+            "subject": "chorus impact",
+            "change": "Mute the pre-chorus kick for one bar before the chorus",
+        }
     )
+    status, _ = post(shell, "/learning/start", learning.values)
+    assert status == 303
 
-    assert InstanceLeaseManager(state_root).inspect(profile_id) is not None
-    closed_shell = quit_shell(shell)
-    assert "N0TE closed safely." in closed_shell
-    assert InstanceLeaseManager(state_root).inspect(profile_id) is None
+    status, song_page = get(shell, "/song")
+    assert len(parsed_forms(song_page, "/interaction/depth")) == 5
+    assert "How should N0TE work with you?" in song_page
+    show = mode_form(song_page, "SHOW_ME")
+    status, _ = post(shell, "/interaction/depth", show.values)
+    assert status == 303
+
+    status, shown = get(shell, "/song")
+    assert status == 200
+    assert "Working style: SHOW ME" in shown
+    assert "read-only walkthrough" in shown
+    assert "BEFORE" in shown and "AFTER" in shown
+    assert "does not claim the project was modified" in shown
+    assert "No consequence has been recorded yet" in shown
+    assert "learn_" not in shown and "sess_" not in shown and "prf_" not in shown
+
+    observe = one_form(shown, "/learning/observe")
+    observe.values.update(
+        {
+            "observation": "The chorus entrance felt larger",
+            "confidence": "MEDIUM",
+            "conditions": "Same playback level",
+            "confounders": "Arrangement contrast may also matter",
+        }
+    )
+    status, _ = post(shell, "/learning/observe", observe.values)
+    assert status == 303
+
+    status, fresh = get(shell, "/song")
+    explain = mode_form(fresh, "EXPLAIN_WHY")
+    status, _ = post(shell, "/interaction/depth", explain.values)
+    assert status == 303
+    status, explained = get(shell, "/song")
+    assert status == 200
+    assert "Working style: EXPLAIN WHY" in explained
+    assert "The chorus entrance felt larger" in explained
+    assert "artist-reported, 70% confidence" in explained
+    assert "question, not established causation" in explained
+    assert "changing fewer variables" in explained
+    assert "choosing a teaching/collaboration mode never approves a mutation" in explained
+
+    quit_shell(shell)
 
     relaunched = ConsumerShell(
         data_root=data_root,
@@ -246,39 +260,16 @@ with tempfile.TemporaryDirectory() as temp:
         probe=probe,
     )
     relaunched.start()
-    status, resumed_open = get(relaunched, "/song")
+    status, resumed = get(relaunched, "/song")
     assert status == 200
-    assert "Current work Session" in resumed_open
-    assert [resumed_open.index(body) for _, body in captured] == sorted(
-        resumed_open.index(body) for _, body in captured
-    )
-
-    finish = form(resumed_open, "/session/finish")
-    finish.values.update(
-        {
-            "debrief": "The chorus is shaped and the decisions survived the restart.",
-            "next_action": "Resolve the last-chord vocal stack before adding layers",
-        }
-    )
-    status, _ = post(relaunched, "/session/finish", finish.values)
-    assert status == 303
-    latest = relaunched.runtime.headquarters.sessions.latest_for_song(song.id)
-    assert latest is not None and latest.state == "CLOSED"
-    assert latest.next_action == "Resolve the last-chord vocal stack before adding layers"
-    assert relaunched.runtime.headquarters.store._conn.execute(
-        "SELECT COUNT(*) FROM evidence_claims"
-    ).fetchone()[0] == 0
-
-    status, closed_session_page = get(relaunched, "/song")
-    assert status == 200
-    assert "Last Session history" in closed_session_page
-    assert parsed_forms(closed_session_page, "/session/capture") == []
-    assert [closed_session_page.index(body) for _, body in captured] == sorted(
-        closed_session_page.index(body) for _, body in captured
-    )
-    assert "Resolve the last-chord vocal stack before adding layers" in closed_session_page
+    assert "Interaction Smoke Artist" in resumed
+    assert "Interaction Smoke Song" in resumed
+    assert "The chorus entrance felt larger" in resumed
+    assert "Working style: EXPLAIN WHY" not in resumed
+    assert len(parsed_forms(resumed, "/interaction/depth")) == 5
+    assert "learn_" not in resumed and "sess_" not in resumed and "prf_" not in resumed
     quit_shell(relaunched)
 
 print(
-    "SONG-01B CONSUMER SMOKE: GREEN: a fresh artist started a canonical Song work Session, captured ordered observations/decisions/rejected ideas/unresolved questions/MARKs, navigated and explicitly quit, relaunched with exact Session history, closed with debrief/next action, kept that history visible, hid raw IDs, and did not silently promote scratch into durable Song evidence"
+    "UX-01-INTERACTION-01 CONSUMER SMOKE: GREEN: a fresh artist created a Song and real Learning job, selected a read-only SHOW ME walkthrough, recorded an observed consequence, selected EXPLAIN WHY and received evidence-labeled causal-humility guidance, explicitly quit/relaunched with durable Learning evidence but no persisted interaction-mode preference, and never exposed internal lineage or granted mutation authority"
 )
