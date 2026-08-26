@@ -95,6 +95,22 @@ class InteractionDepthServiceTests(unittest.TestCase):
         with self.assertRaises(StaleInteractionDepthError):
             self.service.plan(binding, "WITH_ME")
 
+    def test_binding_fails_closed_when_newer_open_learning_job_becomes_current(self) -> None:
+        binding = self.service.binding_for(self.episode.id)
+        newer = self.hq.learning.create_episode(
+            session_id=self.session.id,
+            domain="ARRANGEMENT",
+            subject_ref="chorus transition",
+            change_description="Shorten the fill before the chorus",
+        )
+        current = self.service.current_binding()
+        self.assertIsNotNone(current)
+        self.assertEqual(current.episode_id, newer.id)
+        with self.assertRaises(StaleInteractionDepthError):
+            self.service.plan(binding, "SHOW_ME")
+        with self.assertRaises(StaleInteractionDepthError):
+            self.service.binding_for(self.episode.id)
+
     def test_binding_fails_closed_when_active_song_changes(self) -> None:
         binding = self.service.binding_for(self.episode.id)
         other = self.hq.store.create_song("Other Song")
