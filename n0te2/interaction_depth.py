@@ -20,6 +20,14 @@ _MODE_LABELS = {
     "EXPLAIN_WHY": "EXPLAIN WHY",
     "LET_ME_TRY": "LET ME TRY",
 }
+_SOURCE_LABELS = {
+    "USER_DECLARED": "artist-reported",
+    "OBSERVED": "observed",
+    "MEASURED": "measured",
+    "PROVIDER_VERIFIED": "provider-verified",
+    "REMEMBERED": "remembered",
+    "INFERRED": "inferred",
+}
 
 
 class InteractionDepthError(RuntimeError):
@@ -39,6 +47,12 @@ class InteractionDepthBinding:
 
 
 @dataclass(frozen=True)
+class InteractionPlanStep:
+    actor: str
+    instruction: str
+
+
+@dataclass(frozen=True)
 class InteractionDepthPlan:
     mode: str
     label: str
@@ -49,6 +63,8 @@ class InteractionDepthPlan:
     n0te_role: str
     artist_role: str
     next_step: str
+    steps: tuple[InteractionPlanStep, ...]
+    evidence_summary: tuple[str, ...]
     execution_requested: bool
     action_authority_granted: bool = False
     mutation_permitted_by_mode: bool = False
@@ -59,9 +75,9 @@ class InteractionDepthService:
 
     A mode expresses how much agency the artist wants N0TE to take. It never grants
     action authority, execution eligibility, provider access, entitlement, approval,
-    or mutation permission. The current bounded consumer seam is one canonical
-    Learning episode so mode guidance stays attached to real Song work rather than
-    becoming detached courseware or a global personality preference.
+    or mutation permission. The bounded consumer seam is one current canonical
+    Learning episode. Plans use the exact change and represented consequence evidence
+    so the five modes alter useful behavior rather than merely relabeling one answer.
     """
 
     def __init__(self, learning: LearningMemory):
@@ -141,7 +157,26 @@ class InteractionDepthService:
         return episode
 
     @staticmethod
-    def _plan_for(episode: LearningEpisode, mode: str) -> InteractionDepthPlan:
+    def _evidence_summary(episode: LearningEpisode) -> tuple[str, ...]:
+        if not episode.consequences:
+            return (
+                "No consequence has been recorded yet. Treat the proposed change as a test, not a proven fix.",
+            )
+        out: list[str] = []
+        if len(episode.consequences) > 3:
+            out.append(
+                f"{len(episode.consequences) - 3} earlier consequence observations are also recorded."
+            )
+        for item in episode.consequences[-3:]:
+            source = _SOURCE_LABELS.get(item.source_kind, "recorded")
+            out.append(
+                f"{item.observation} ({source}, {round(item.confidence * 100)}% confidence)"
+            )
+        return tuple(out)
+
+    @classmethod
+    def _plan_for(cls, episode: LearningEpisode, mode: str) -> InteractionDepthPlan:
+        evidence = cls._evidence_summary(episode)
         common = dict(
             mode=mode,
             label=_MODE_LABELS[mode],
@@ -149,85 +184,159 @@ class InteractionDepthService:
             episode_id=episode.id,
             subject=episode.subject_ref,
             change=episode.change_description,
+            evidence_summary=evidence,
             action_authority_granted=False,
             mutation_permitted_by_mode=False,
         )
         if mode == "DO_IT":
+            steps = (
+                InteractionPlanStep(
+                    "N0TE",
+                    f"Keep the requested scope exact: {episode.change_description}. Do not silently broaden the job.",
+                ),
+                InteractionPlanStep(
+                    "N0TE",
+                    "Resolve whether a verified executor exists for this exact job and current environment. If none exists, stop at a truthful blocked state.",
+                ),
+                InteractionPlanStep(
+                    "AUTHORITY",
+                    "If the route would mutate the project or an outside system, obtain the separate exact authority that route requires before execution.",
+                ),
+                InteractionPlanStep(
+                    "YOU",
+                    "Judge the actual result, then record what was observed so N0TE can compare evidence rather than assume success.",
+                ),
+            )
             return InteractionDepthPlan(
                 **common,
                 n0te_role=(
-                    "Take the lead on this job only as far as an already verified capability, "
-                    "separate action authority, and the exact execution surface permit."
+                    "Lead the job as far as verified capability and separate action authority permit; "
+                    "never use the collaboration mode itself as permission."
                 ),
                 artist_role=(
-                    "Judge the result and provide any approval that a consequential action "
-                    "separately requires."
+                    "Provide any separately required approval and judge the result rather than being told a mutation succeeded."
                 ),
-                next_step=(
-                    "This Learning surface does not itself bind an executor. Treat DO IT as a "
-                    "request for maximum N0TE agency, not a claim that the change was executed. "
-                    "Use a verified execution surface when one exists, then record what actually happened."
-                ),
+                next_step=steps[0].instruction,
+                steps=steps,
                 execution_requested=True,
             )
         if mode == "WITH_ME":
+            steps = (
+                InteractionPlanStep(
+                    "N0TE",
+                    f"Frame one variable only: the current Learning job is '{episode.subject_ref}', and the bounded change is '{episode.change_description}'.",
+                ),
+                InteractionPlanStep(
+                    "YOU",
+                    "Make or approve only that bounded step while leaving unrelated parts alone as much as practical.",
+                ),
+                InteractionPlanStep(
+                    "N0TE",
+                    "Compare what you report afterward with the evidence already recorded here; call out uncertainty instead of declaring cause.",
+                ),
+                InteractionPlanStep(
+                    "YOU",
+                    "Record the consequence you actually noticed, then choose KEEP, REVERT, REVISE, or INCONCLUSIVE when the evidence is sufficient.",
+                ),
+            )
             return InteractionDepthPlan(
                 **common,
                 n0te_role=(
-                    "Keep the Song context, explain one bounded step at a time, and help compare "
-                    "what changes without taking the artist's judgment away."
+                    "Hold context, pace the work one bounded step at a time, and help interpret evidence without taking taste authority away."
                 ),
                 artist_role=(
-                    "Perform or approve each meaningful step, listen or inspect the result, and "
-                    "say what should happen next."
+                    "Perform or approve each meaningful step, listen or inspect the result, and make the judgment calls."
                 ),
-                next_step=(
-                    f"Work through one bounded part of '{episode.change_description}' together, "
-                    "then record the observed consequence before deciding."
-                ),
+                next_step=steps[0].instruction,
+                steps=steps,
                 execution_requested=False,
             )
         if mode == "SHOW_ME":
+            steps = (
+                InteractionPlanStep(
+                    "N0TE",
+                    f"Walk through the baseline first: focus on '{episode.subject_ref}' before changing anything and name what would count as a noticeable difference.",
+                ),
+                InteractionPlanStep(
+                    "N0TE",
+                    f"Demonstrate the proposed path conceptually: BEFORE → '{episode.change_description}' → AFTER. This walkthrough does not claim the project was modified.",
+                ),
+                InteractionPlanStep(
+                    "N0TE",
+                    "Point out what to listen for or inspect in the before/after and which observations would still be ambiguous.",
+                ),
+                InteractionPlanStep(
+                    "YOU",
+                    "Decide whether the walkthrough is clear enough to try on the real Song, ask for explanation, or leave it alone.",
+                ),
+            )
             return InteractionDepthPlan(
                 **common,
                 n0te_role=(
-                    "Demonstrate the approach as a read-only example or walkthrough tied to this "
-                    "Song job; do not change the project merely to demonstrate it."
+                    "Give a concrete read-only walkthrough of the current test, including baseline, proposed change, comparison target, and uncertainty."
                 ),
-                artist_role="Watch the demonstration, question it, and decide whether to try it.",
-                next_step=(
-                    f"Show how to approach '{episode.subject_ref}' for the specific change "
-                    f"'{episode.change_description}' without claiming a project mutation occurred."
-                ),
+                artist_role="Inspect the walkthrough, question it, and decide whether to try it.",
+                next_step=steps[0].instruction,
+                steps=steps,
                 execution_requested=False,
             )
         if mode == "EXPLAIN_WHY":
+            steps = (
+                InteractionPlanStep(
+                    "N0TE",
+                    f"State the hypothesis plainly: '{episode.change_description}' is being tested in relation to '{episode.subject_ref}'. That relationship is a question, not established causation.",
+                ),
+                InteractionPlanStep(
+                    "N0TE",
+                    "Explain why keeping the test bounded matters: changing fewer variables makes the before/after easier to interpret and easier to reverse or revise.",
+                ),
+                InteractionPlanStep(
+                    "N0TE",
+                    "Use the represented consequence evidence below to distinguish what is known, what is artist-reported, and what remains uncertain.",
+                ),
+                InteractionPlanStep(
+                    "YOU",
+                    "Challenge the reasoning, add missing context, or decide the experiment is not worth doing. No action is required to justify the analysis.",
+                ),
+            )
             return InteractionDepthPlan(
                 **common,
                 n0te_role=(
-                    "Explain the reasoning, tradeoffs, uncertainty, and evidence behind this job "
-                    "without turning explanation into mutation."
+                    "Explain the hypothesis, evidence, tradeoffs, and uncertainty behind this exact Learning job without turning explanation into mutation."
                 ),
                 artist_role="Challenge the reasoning and keep final authority over musical taste.",
-                next_step=(
-                    f"Explain why '{episode.change_description}' could be worth testing, what would "
-                    "count as useful evidence, and what alternative explanations could remain."
-                ),
+                next_step=steps[0].instruction,
+                steps=steps,
                 execution_requested=False,
             )
+        steps = (
+            InteractionPlanStep(
+                "YOU",
+                f"Try only this bounded change yourself: {episode.change_description}.",
+            ),
+            InteractionPlanStep(
+                "YOU",
+                "Keep unrelated variables as steady as practical so the result is easier to judge.",
+            ),
+            InteractionPlanStep(
+                "N0TE",
+                "Stand back while you act. Do not mutate the project from this mode.",
+            ),
+            InteractionPlanStep(
+                "YOU",
+                "When you are ready, record what you actually noticed; N0TE can then help compare, explain, or decide without rewriting your experience.",
+            ),
+        )
         return InteractionDepthPlan(
             **common,
             n0te_role=(
-                "Stand back while the artist acts, preserve the exact job context, and be ready to "
-                "help observe, compare, or explain afterward."
+                "Preserve the exact job context, stand back while the artist acts, and be ready to help observe or interpret afterward."
             ),
             artist_role=(
                 f"Try '{episode.change_description}' yourself, then describe or capture what actually changed."
             ),
-            next_step=(
-                "Let the artist make the next move first. N0TE should not mutate the project from "
-                "this mode; afterward, record observed consequences and decide what was learned."
-            ),
+            next_step=steps[0].instruction,
+            steps=steps,
             execution_requested=False,
         )
 
