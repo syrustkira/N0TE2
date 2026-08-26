@@ -7,9 +7,11 @@ from pathlib import Path
 from n0te2 import HeadquartersMemory
 from n0te2.interaction_depth import (
     INTERACTION_DEPTH_MODES,
+    InteractionDepthError,
     InteractionDepthService,
     StaleInteractionDepthError,
 )
+from n0te2.learning import ConsequenceObservation, LearningEpisode
 
 
 def seed_episode(hq: HeadquartersMemory):
@@ -43,7 +45,15 @@ class InteractionDepthServiceTests(unittest.TestCase):
         self.assertEqual(len({plan.n0te_role for plan in plans}), 5)
         self.assertEqual(len({plan.artist_role for plan in plans}), 5)
         self.assertEqual(len({plan.next_step for plan in plans}), 5)
-        self.assertEqual(len({tuple((step.actor, step.instruction) for step in plan.steps) for plan in plans}), 5)
+        self.assertEqual(
+            len(
+                {
+                    tuple((step.actor, step.instruction) for step in plan.steps)
+                    for plan in plans
+                }
+            ),
+            5,
+        )
         self.assertTrue(all(len(plan.steps) >= 4 for plan in plans))
         self.assertTrue(all(plan.action_authority_granted is False for plan in plans))
         self.assertTrue(all(plan.mutation_permitted_by_mode is False for plan in plans))
@@ -58,7 +68,10 @@ class InteractionDepthServiceTests(unittest.TestCase):
         self.assertTrue(plan.execution_requested)
         self.assertFalse(plan.action_authority_granted)
         self.assertFalse(plan.mutation_permitted_by_mode)
-        self.assertEqual([step.actor for step in plan.steps], ["N0TE", "N0TE", "AUTHORITY", "YOU"])
+        self.assertEqual(
+            [step.actor for step in plan.steps],
+            ["N0TE", "N0TE", "AUTHORITY", "YOU"],
+        )
         self.assertIn("verified executor", plan.steps[1].instruction)
         self.assertIn("separate exact authority", plan.steps[2].instruction)
         self.assertIn("Do not silently broaden", plan.steps[0].instruction)
@@ -79,11 +92,49 @@ class InteractionDepthServiceTests(unittest.TestCase):
             source_ref="test:explain-observation",
             confidence=0.7,
         )
-        plan = self.service.plan(self.service.binding_for(self.episode.id), "EXPLAIN WHY")
+        plan = self.service.plan(
+            self.service.binding_for(self.episode.id),
+            "EXPLAIN WHY",
+        )
         self.assertIn("question, not established causation", plan.steps[0].instruction)
         self.assertIn("changing fewer variables", plan.steps[1].instruction)
-        self.assertTrue(any("chorus entrance felt larger" in item.lower() for item in plan.evidence_summary))
-        self.assertTrue(any("artist-reported" in item for item in plan.evidence_summary))
+        self.assertTrue(
+            any(
+                "chorus entrance felt larger" in item.lower()
+                for item in plan.evidence_summary
+            )
+        )
+        self.assertTrue(
+            any("artist-reported" in item for item in plan.evidence_summary)
+        )
+
+    def test_unknown_learning_evidence_source_stops_guidance_safely(self) -> None:
+        observation = ConsequenceObservation(
+            sequence=1,
+            id="lobs_future",
+            episode_id="learn_future",
+            observation="A future evidence class exists",
+            source_kind="FUTURE_SOURCE",
+            source_ref="future:1",
+            confidence=0.5,
+            conditions=(),
+            confounders=(),
+        )
+        episode = LearningEpisode(
+            sequence=1,
+            id="learn_future",
+            artist_id="artist_future",
+            song_id="song_future",
+            version_id=None,
+            session_id="session_future",
+            domain="ARRANGEMENT",
+            subject_ref="future subject",
+            change_description="future change",
+            consequences=(observation,),
+            decision=None,
+        )
+        with self.assertRaises(InteractionDepthError):
+            InteractionDepthService._evidence_summary(episode)
 
     def test_let_me_try_keeps_n0te_out_of_mutation(self) -> None:
         plan = self.service.plan(self.service.binding_for(self.episode.id), "LET ME TRY")
@@ -91,7 +142,10 @@ class InteractionDepthServiceTests(unittest.TestCase):
         self.assertFalse(plan.execution_requested)
         self.assertIn("stand back", plan.n0te_role.lower())
         self.assertIn("yourself", plan.artist_role)
-        self.assertEqual([step.actor for step in plan.steps], ["YOU", "YOU", "N0TE", "YOU"])
+        self.assertEqual(
+            [step.actor for step in plan.steps],
+            ["YOU", "YOU", "N0TE", "YOU"],
+        )
         self.assertIn("Do not mutate", plan.steps[2].instruction)
 
     def test_planning_is_pure_and_does_not_create_learning_or_skill_evidence(self) -> None:
