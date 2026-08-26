@@ -64,6 +64,11 @@ class Core02ESuccessMemoryTests(unittest.TestCase):
                 rationale=f"Decision for {episode.id}",
                 confidence=decision_confidence,
             )
+        self.hq.sessions.close_session(
+            session.id,
+            debrief_summary="Completed one bounded Learning experiment",
+            next_action="Review the represented result before another Session",
+        )
         return episode
 
     def test_single_keep_is_thin_association_not_causal_rule(self):
@@ -77,7 +82,10 @@ class Core02ESuccessMemoryTests(unittest.TestCase):
 
     def test_repeated_keep_only_is_success_only_with_survivorship_warning(self):
         first = self._episode(decision="KEEP")
-        second = self._episode(decision="KEEP", observations=(("The mix feels clearer", "OBSERVED", "listen:2", 0.6),))
+        second = self._episode(
+            decision="KEEP",
+            observations=(("The mix feels clearer", "OBSERVED", "listen:2", 0.6),),
+        )
         (pattern,) = self.hq.success.patterns_for_song(self.song.id)
         self.assertEqual(pattern.humility_state, "SUCCESS_ONLY")
         self.assertEqual(pattern.supporting_episode_ids, (first.id, second.id))
@@ -89,8 +97,14 @@ class Core02ESuccessMemoryTests(unittest.TestCase):
 
     def test_keep_with_revert_and_revise_is_mixed(self):
         keep = self._episode(decision="KEEP")
-        revert = self._episode(decision="REVERT", observations=(("The vocal became too thin", "OBSERVED", "listen:2", 0.9),))
-        revise = self._episode(decision="REVISE", observations=(("The idea helped but needed a smaller cut", "USER_DECLARED", "artist:3", 0.7),))
+        revert = self._episode(
+            decision="REVERT",
+            observations=(("The vocal became too thin", "OBSERVED", "listen:2", 0.9),),
+        )
+        revise = self._episode(
+            decision="REVISE",
+            observations=(("The idea helped but needed a smaller cut", "USER_DECLARED", "artist:3", 0.7),),
+        )
         (pattern,) = self.hq.success.patterns_for_song(self.song.id)
         self.assertEqual(pattern.humility_state, "MIXED")
         self.assertEqual(pattern.supporting_episode_ids, (keep.id,))
@@ -163,7 +177,10 @@ class Core02ESuccessMemoryTests(unittest.TestCase):
 
     def test_reads_are_write_free_and_restart_is_identical_without_success_tables(self):
         self._episode(decision="KEEP", confounders=("novelty",))
-        self._episode(decision="KEEP", observations=(("The mix feels clearer", "OBSERVED", "listen:2", 0.65),))
+        self._episode(
+            decision="KEEP",
+            observations=(("The mix feels clearer", "OBSERVED", "listen:2", 0.65),),
+        )
         profile = self.hq.store.profile_id
 
         before = self.hq.store._conn.total_changes
