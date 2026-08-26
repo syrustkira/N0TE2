@@ -168,7 +168,12 @@ class InteractionDepthService:
                 f"{len(episode.consequences) - 3} earlier consequence observations are also recorded."
             )
         for item in episode.consequences[-3:]:
-            source = _SOURCE_LABELS.get(item.source_kind, "recorded")
+            try:
+                source = _SOURCE_LABELS[item.source_kind]
+            except KeyError as exc:
+                raise InteractionDepthError(
+                    "Learning evidence source semantics changed; interaction guidance stopped safely."
+                ) from exc
             out.append(
                 f"{item.observation} ({source}, {round(item.confidence * 100)}% confidence)"
             )
