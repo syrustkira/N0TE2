@@ -86,24 +86,26 @@ class InteractionDepthService:
             expected_decision_id=None if episode.decision is None else episode.decision.id,
         )
 
-    def binding_for(self, episode_id: str) -> InteractionDepthBinding:
-        episode = self.learning.get_episode(str(episode_id))
-        active = self.store.active_song()
-        if episode is None or active is None or episode.song_id != active.id:
-            raise StaleInteractionDepthError(
-                "That Learning job is no longer part of the active Song."
-            )
-        return self._binding_for(episode)
-
-    def current_binding(self) -> InteractionDepthBinding | None:
+    def _current_open_episode(self) -> LearningEpisode | None:
         song = self.store.active_song()
         if song is None:
             return None
-        episodes = self.learning.episodes_for_song(song.id)
-        for episode in reversed(episodes):
+        for episode in reversed(self.learning.episodes_for_song(song.id)):
             if episode.decision is None:
-                return self._binding_for(episode)
+                return episode
         return None
+
+    def binding_for(self, episode_id: str) -> InteractionDepthBinding:
+        current = self._current_open_episode()
+        if current is None or current.id != str(episode_id):
+            raise StaleInteractionDepthError(
+                "That Learning job is no longer the current open job for the active Song."
+            )
+        return self._binding_for(current)
+
+    def current_binding(self) -> InteractionDepthBinding | None:
+        episode = self._current_open_episode()
+        return None if episode is None else self._binding_for(episode)
 
     def _episode_for_binding(self, binding: InteractionDepthBinding) -> LearningEpisode:
         if not isinstance(binding, InteractionDepthBinding):
@@ -117,6 +119,11 @@ class InteractionDepthService:
         if episode is None or episode.song_id != binding.song_id:
             raise StaleInteractionDepthError(
                 "That Learning job no longer belongs to the active Song."
+            )
+        current = self._current_open_episode()
+        if current is None or current.id != binding.episode_id:
+            raise StaleInteractionDepthError(
+                "The current Learning job changed after this interaction choice was prepared."
             )
         current_consequence_ids = tuple(item.id for item in episode.consequences)
         current_decision_id = None if episode.decision is None else episode.decision.id
