@@ -188,7 +188,7 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
         finally:
             reopened.close()
 
-    def test_do_it_and_let_me_try_have_opposite_agency_without_authority_claim(self) -> None:
+    def test_do_it_and_let_me_try_have_opposite_agency_and_usable_steps(self) -> None:
         seed(self.data_root)
         shell = new_shell(self.data_root, self.state_root, 9972, "interaction-agency")
         try:
@@ -200,6 +200,10 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
 
             _, page, _ = request(shell, "/song")
             self.assertIn("Working style: DO IT", page)
+            self.assertIn("Work it this way", page)
+            self.assertIn("Do not silently broaden the job", page)
+            self.assertIn("Resolve whether a verified executor exists", page)
+            self.assertIn("separate exact authority", page)
             self.assertIn("Execution requested, but not granted here", page)
             self.assertIn("does not grant capability, approval, eligibility, or mutation authority", page)
             self.assertIn("will not claim the project changed", page)
@@ -209,9 +213,28 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
             self.assertEqual(status, 303)
             _, page, _ = request(shell, "/song")
             self.assertIn("Working style: LET ME TRY", page)
-            self.assertIn("Stand back while the artist acts", page)
+            self.assertIn("Try only this bounded change yourself", page)
+            self.assertIn("Stand back while you act", page)
             self.assertIn("No execution requested by this interaction mode", page)
             self.assertIn("never approves a mutation", page)
+        finally:
+            shell.stop()
+
+    def test_show_me_is_visible_as_read_only_before_change_walkthrough(self) -> None:
+        seed(self.data_root)
+        shell = new_shell(self.data_root, self.state_root, 9978, "interaction-show")
+        try:
+            _, page, _ = request(shell, "/song")
+            show = form_with_label(page, "/interaction/depth", "SHOW ME")
+            status, _, _ = post(shell, "/interaction/depth", show.values)
+            self.assertEqual(status, 303)
+            _, page, _ = request(shell, "/song")
+            self.assertIn("Working style: SHOW ME", page)
+            self.assertIn("read-only walkthrough", page)
+            self.assertIn("BEFORE", page)
+            self.assertIn("AFTER", page)
+            self.assertIn("does not claim the project was modified", page)
+            self.assertIn("No consequence has been recorded yet", page)
         finally:
             shell.stop()
 
@@ -253,7 +276,7 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
         finally:
             reopened.close()
 
-    def test_learning_evidence_change_invalidates_old_interaction_binding(self) -> None:
+    def test_learning_evidence_change_invalidates_old_binding_and_feeds_fresh_explanation(self) -> None:
         profile_id, _, _, episode_id = seed(self.data_root)
         shell = new_shell(self.data_root, self.state_root, 9974, "interaction-stale")
         try:
@@ -273,6 +296,17 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
             status, body, _ = post(shell, "/interaction/depth", stale_mode.values)
             self.assertEqual(status, 409)
             self.assertIn("changed after this interaction choice was prepared", body)
+
+            _, page, _ = request(shell, "/song")
+            explain = form_with_label(page, "/interaction/depth", "EXPLAIN WHY")
+            status, _, _ = post(shell, "/interaction/depth", explain.values)
+            self.assertEqual(status, 303)
+            _, page, _ = request(shell, "/song")
+            self.assertIn("Working style: EXPLAIN WHY", page)
+            self.assertIn("The chorus entrance felt larger", page)
+            self.assertIn("artist-reported, 70% confidence", page)
+            self.assertIn("question, not established causation", page)
+            self.assertIn("changing fewer variables", page)
         finally:
             shell.stop()
 
