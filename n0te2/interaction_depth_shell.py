@@ -73,6 +73,21 @@ def _plan_markup(plan: InteractionDepthPlan) -> str:
         if plan.execution_requested
         else '<p class="status">No execution requested by this interaction mode</p>'
     )
+    evidence = (
+        '<ul class="stack" aria-label="Evidence already represented for this Learning job">'
+        + "".join(f'<li>{html.escape(item)}</li>' for item in plan.evidence_summary)
+        + "</ul>"
+    )
+    steps = (
+        '<ol class="stack" aria-label="Guided steps for this working style">'
+        + "".join(
+            '<li>'
+            f'<strong>{html.escape(step.actor)}:</strong> {html.escape(step.instruction)}'
+            '</li>'
+            for step in plan.steps
+        )
+        + "</ol>"
+    )
     return (
         '<div class="stack" aria-label="Selected interaction plan">'
         f'<p class="status">Working style: {html.escape(plan.label)}</p>'
@@ -80,6 +95,10 @@ def _plan_markup(plan: InteractionDepthPlan) -> str:
         f'<p><strong>Change under test:</strong> {html.escape(plan.change)}</p>'
         f'<p><strong>N0TE role:</strong> {html.escape(plan.n0te_role)}</p>'
         f'<p><strong>Your role:</strong> {html.escape(plan.artist_role)}</p>'
+        '<p><strong>Evidence already represented</strong></p>'
+        f'{evidence}'
+        '<p><strong>Work it this way</strong></p>'
+        f'{steps}'
         f'<p><strong>Next step:</strong> {html.escape(plan.next_step)}</p>'
         f'{execution}'
         '<p class="muted">Interaction depth and action authority are separate. Choosing a teaching/collaboration mode never approves a mutation.</p>'
