@@ -1,8 +1,8 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-FRICTION-01",
+  "receipt_id": "N0TE2-SONG-01-FRICTION-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-FRICTION-01",
+  "increment_id": "SONG-01-FRICTION-01",
   "baseline_sha": "9fe53a01a58dd5c6f2420721fa239c4405542fff",
   "purpose": "Expose canonical FrictionMemory through the normal Song learning journey so the artist can explicitly record a blocker against a real Learning episode, inspect Song-scoped friction history, and see recurring blockers only when the same explicit key is evidenced across multiple distinct work Sessions.",
   "product_code_allowed": true,
@@ -17,12 +17,12 @@
     "outcome": "The artist can preserve what repeatedly gets in the way of real Song work and distinguish one incident from a genuinely recurring blocker, with only artist-recorded prevention ideas presented as such.",
     "journeys": ["J-WHAT-NEXT", "J-TRUST", "J-SONG-START-RESUME", "J-COMPARE-DECIDE"],
     "capability": "Consumer-reachable Friction Memory with distinct-Session recurrence",
-    "increment": "SONG-FRICTION-01"
+    "increment": "SONG-01-FRICTION-01"
   },
-  "why_now": "REQ-SCOPE-138 is a required pre-Gate-B minimum. CORE-02D already owns append-only explicit Friction observations and recurrence synthesis, while SONG-LEARNING-01 now creates real consumer Learning episodes. The missing high-leverage seam is consumer capture and truthful recurrence reachability, not another process-memory store.",
+  "why_now": "REQ-SCOPE-138 is a required pre-Gate-B minimum. CORE-02D already owns append-only explicit Friction observations and recurrence synthesis, while the consumer Learning journey now creates real Learning episodes. The missing high-leverage seam is consumer capture and truthful recurrence reachability, not another process-memory store.",
   "reuse": {
     "mode": "EXPOSE_CANONICAL_FRICTION_MEMORY_WITH_USER_DECLARED_CAPTURE_AND_DISTINCT_SESSION_RECURRENCE",
-    "n0te2_dependencies": ["CORE-02D FrictionMemory", "CORE-02C LearningMemory", "SONG-LEARNING-01", "CORE-01 ActivityLog", "existing /song shell", "APP quit/relaunch continuity"],
+    "n0te2_dependencies": ["CORE-02D FrictionMemory", "CORE-02C LearningMemory", "consumer Learning journey", "CORE-01 ActivityLog", "existing /song shell", "APP quit/relaunch continuity"],
     "direct_copy": false
   },
   "completion_proof": [
@@ -36,16 +36,26 @@
     "prevention ideas are displayed only when actually recorded and are not presented as N0TE-generated rules",
     "GET is pure and Song-scoped; capture does not mutate Versions, approvals, Session state, Learning decisions, Skill state, Focus, DAWs or providers",
     "Origin, CSRF, one-shot replay, active-Song staleness, profile isolation and quit/relaunch persistence remain enforced",
+    "consumer HTTP tests do not cross the shell runtime SQLite thread boundary",
     "authored core/HTTP/restart proof remains separate from executed evidence"
   ],
-  "review_repairs": [],
-  "reviewed_product_test_head": "9fe53a01a58dd5c6f2420721fa239c4405542fff",
+  "review_repairs": [
+    "renamed the active increment from SONG-FRICTION-01 to SONG-01-FRICTION-01 so the current receipt obeys the repository's explicit completion-node parent naming guard instead of inheriting recent semantic naming drift",
+    "made the increment-parent governance regression state-aware instead of hard-coding a stale CORE-01 active-node assumption",
+    "converted newly authored pytest-style function tests to unittest.TestCase because the repository workflow executes unittest discover and installs no pytest dependency",
+    "reworked HTTP tests after hosted Codex review found direct shell-runtime SQLite access from the test thread; live-shell assertions are now HTTP-only and persisted state is inspected only after shutdown through a fresh HeadquartersMemory connection",
+    "distinguishes an exact duplicate blocker from unrelated SQLite integrity failures so future schema failures are not falsely reported as duplicate input",
+    "keeps same-Session duplicate evidence from manufacturing recurrence and adds an explicit regression for that contract",
+    "deduplicates prevention-hint presentation inside recurring-pattern summaries while retaining per-incident evidence in Learning history",
+    "makes Friction capture form labels distinguishable when multiple Learning episodes share a subject by including the concrete change description"
+  ],
+  "reviewed_product_test_head": "28b6ea9d18f10023c57b71ff3770539870d2c5b6",
   "evidence_classification": "UNOBSERVED",
   "evidence_snapshot": {
     "commit_statuses": [],
     "pull_request_workflow_runs": [],
-    "reviews": [],
-    "review_threads": []
+    "reviews": ["Codex COMMENTED review on 0c0264f050; thread identified test-thread SQLite ownership violation and is repaired downstream"],
+    "review_threads": ["P1 test-thread SQLite ownership thread became outdated after repair; resolution snapshot pending final review pass"]
   },
   "non_scope": ["automatic Friction inference", "cross-pattern similarity", "causal blocker rules", "automatic interventions or next actions", "global Context/History search", "interaction teaching modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
   "next_selection_rule": "After landing or blockage, globally reselect across interaction/teaching modes, Context/History reachability, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and all other Gate-B blockers."
