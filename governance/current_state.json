@@ -1,9 +1,9 @@
 {
   "schema_version": 3,
   "repository": "syrustkira/N0TE2",
-  "construction_phase": "6 SONG JOURNEY",
-  "active_node": "SONG-01",
-  "active_increment": "SONG-01-INTERACTION-01",
+  "construction_phase": "3 PRODUCT SHELL",
+  "active_node": "UX-01",
+  "active_increment": "UX-01-INTERACTION-01",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -11,15 +11,16 @@
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
   "truth": [
     "Canonical main baseline is 649002eebc6e378026f324df5d04adb3653c8b64 after PR #61 landed consumer Friction Memory reachability.",
-    "Whole-product reselection selected SONG-01-INTERACTION-01 because REQ-SCOPE-124 is a REQUIRED MINIMUM Gate-B blocker on the active Song / Produce / Learn journey.",
+    "The repaired governance workflow exposed that SONG-01 had been activated illegally while dependency UX-01 remained PRESERVED. This was a dormant scheduler-state defect masked by a workflow-definition failure.",
+    "Historical PR #49 explicitly said UX-01 remained open while moving into SONG-01; no completion-graph transition made that bypass legal. Already-landed Song increments remain valid implementation evidence, but current construction returns to the unmet dependency instead of falsifying UX-01 as DONE.",
+    "REQ-SCOPE-124 is explicitly mapped to UX-01 and is a REQUIRED MINIMUM Gate-B blocker on the Song / Produce / Learn consumer experience, so the existing interaction-depth customer outcome is reparented to UX-01-INTERACTION-01 rather than discarded or rebuilt.",
     "ASK/ADVISE/TRY/DO remains the authority dimension. DO IT / WITH ME / SHOW ME / EXPLAIN WHY / LET ME TRY is a separate learning/collaboration-depth dimension and cannot grant execution authority.",
-    "Live N0TE2 contains AuthorityService, ExecutionEligibilityGate, capability routing, LearningMemory, SkillMemory and the consumer Learning journey but no first-class interaction-depth model.",
-    "The bounded implementation is per-job and bound to one real Learning episode; it is not a permanent Artist personality setting and does not mature into taste or Skill evidence merely because a mode was selected.",
-    "DO IT means N0TE may carry the job only as far as already-verified capability and authority permit. Where no executor is bound, the consumer result must remain truthful rather than simulating execution.",
-    "WITH ME, SHOW ME, EXPLAIN WHY and LET ME TRY must produce materially distinct roles and next-step behavior, not five labels over identical output.",
-    "Mode planning is read-only product behavior and must bind current active Song plus Learning evidence/decision state so stale guidance fails closed.",
-    "Consumer HTTP tests must stay inside the shell runtime thread boundary; persisted state inspection occurs after shell shutdown.",
-    "Execution evidence remains separate from authored tests; absent hosted or local execution remains UNOBSERVED.",
-    "After this increment lands or blocks, globally reselect rather than following interaction-code adjacency."
+    "The bounded implementation is per-job and bound to one real current open Learning episode; it is not a permanent Artist personality setting and does not mature into taste or Skill evidence merely because a mode was selected.",
+    "DO IT may lead only through a separately verified executor and separately valid authority. Where no executor is bound, the consumer result remains truthful and does not simulate execution.",
+    "WITH ME, SHOW ME, EXPLAIN WHY and LET ME TRY produce materially distinct guided behavior, represented-evidence use and artist/N0TE roles rather than five labels over identical output.",
+    "Mode planning is read-only product behavior and binds current active Song plus Learning consequence/decision state so stale guidance fails closed.",
+    "The governance workflow itself has been repaired so GitHub can instantiate Ubuntu, Windows and macOS jobs; exact-head checkout verification now executes before construction governance.",
+    "Current execution is RED at governance until this graph/current-state/receipt reparenting is fully reconciled. Tests have not yet executed on the repaired workflow.",
+    "After this increment lands or blocks, re-evaluate the whole hierarchy. UX-01 may not be marked DONE until its remaining mapped prerequisite contract is honestly reconciled."
   ]
 }
