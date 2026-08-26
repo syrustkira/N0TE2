@@ -377,3 +377,26 @@ from .success_patterns_shell import install_song_success_patterns
 install_song_success_patterns()
 
 __all__ += ["SongSuccessPatterns", "SuccessPatternView"]
+
+from .friction_journey import (
+    FrictionCaptureBinding,
+    FrictionEpisodeView,
+    FrictionJourneyError,
+    FrictionObservationView,
+    FrictionPatternView,
+    SongFrictionJourney,
+    StaleFrictionJourneyError,
+)
+from .friction_journey_shell import install_song_friction_journey
+
+install_song_friction_journey()
+
+__all__ += [
+    "FrictionCaptureBinding",
+    "FrictionEpisodeView",
+    "FrictionJourneyError",
+    "FrictionObservationView",
+    "FrictionPatternView",
+    "SongFrictionJourney",
+    "StaleFrictionJourneyError",
+]
