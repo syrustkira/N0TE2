@@ -29,7 +29,8 @@ jobs:
       - name: Verify exact event head checkout
         env:
           EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
+        run: |
+          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
       - name: Validate construction governance
         run: python governance/check_governance.py --repo .
       - name: Governance and product regression tests
