@@ -407,6 +407,7 @@ from .interaction_depth import (
     InteractionDepthError,
     InteractionDepthPlan,
     InteractionDepthService,
+    InteractionPlanStep,
     StaleInteractionDepthError,
 )
 from .interaction_depth_shell import install_song_interaction_depth
@@ -419,5 +420,6 @@ __all__ += [
     "InteractionDepthError",
     "InteractionDepthPlan",
     "InteractionDepthService",
+    "InteractionPlanStep",
     "StaleInteractionDepthError",
 ]
