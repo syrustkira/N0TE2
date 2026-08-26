@@ -52,8 +52,10 @@ class Core03BStudioCapabilityProfileTests(unittest.TestCase):
         b = StudioCapabilityProfile.build(
             environment_id="studio:b", candidates=[n0te, native]
         )
-        self.assertEqual(tuple(item.candidate_id for item in a.candidates), ("native", "n0te"))
-        self.assertEqual(tuple(item.candidate_id for item in b.candidates), ("native", "n0te"))
+        # Profile storage order is deliberately neutral and deterministic by candidate_id;
+        # route kind/brand/host history do not establish semantic priority.
+        self.assertEqual(tuple(item.candidate_id for item in a.candidates), ("n0te", "native"))
+        self.assertEqual(tuple(item.candidate_id for item in b.candidates), ("n0te", "native"))
         self.assertEqual(a.resolve(self.job).recommended.candidate.candidate_id, "native")
         self.assertEqual(b.resolve(self.job).recommended.candidate.candidate_id, "native")
 
