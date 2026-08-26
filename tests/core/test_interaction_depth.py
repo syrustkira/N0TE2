@@ -43,6 +43,8 @@ class InteractionDepthServiceTests(unittest.TestCase):
         self.assertEqual(len({plan.n0te_role for plan in plans}), 5)
         self.assertEqual(len({plan.artist_role for plan in plans}), 5)
         self.assertEqual(len({plan.next_step for plan in plans}), 5)
+        self.assertEqual(len({tuple((step.actor, step.instruction) for step in plan.steps) for plan in plans}), 5)
+        self.assertTrue(all(len(plan.steps) >= 4 for plan in plans))
         self.assertTrue(all(plan.action_authority_granted is False for plan in plans))
         self.assertTrue(all(plan.mutation_permitted_by_mode is False for plan in plans))
         self.assertEqual(
@@ -56,16 +58,41 @@ class InteractionDepthServiceTests(unittest.TestCase):
         self.assertTrue(plan.execution_requested)
         self.assertFalse(plan.action_authority_granted)
         self.assertFalse(plan.mutation_permitted_by_mode)
-        self.assertIn("does not itself bind an executor", plan.next_step)
-        self.assertIn("verified execution surface", plan.next_step)
+        self.assertEqual([step.actor for step in plan.steps], ["N0TE", "N0TE", "AUTHORITY", "YOU"])
+        self.assertIn("verified executor", plan.steps[1].instruction)
+        self.assertIn("separate exact authority", plan.steps[2].instruction)
+        self.assertIn("Do not silently broaden", plan.steps[0].instruction)
+
+    def test_show_me_is_a_concrete_read_only_walkthrough(self) -> None:
+        plan = self.service.plan(self.service.binding_for(self.episode.id), "SHOW ME")
+        self.assertFalse(plan.execution_requested)
+        self.assertIn("read-only walkthrough", plan.n0te_role)
+        self.assertIn("BEFORE", plan.steps[1].instruction)
+        self.assertIn("AFTER", plan.steps[1].instruction)
+        self.assertIn("does not claim the project was modified", plan.steps[1].instruction)
+
+    def test_explain_why_uses_hypothesis_evidence_and_causal_humility(self) -> None:
+        self.hq.learning.append_consequence(
+            self.episode.id,
+            observation="The chorus entrance felt larger",
+            source_kind="USER_DECLARED",
+            source_ref="test:explain-observation",
+            confidence=0.7,
+        )
+        plan = self.service.plan(self.service.binding_for(self.episode.id), "EXPLAIN WHY")
+        self.assertIn("question, not established causation", plan.steps[0].instruction)
+        self.assertIn("changing fewer variables", plan.steps[1].instruction)
+        self.assertTrue(any("chorus entrance felt larger" in item.lower() for item in plan.evidence_summary))
+        self.assertTrue(any("artist-reported" in item for item in plan.evidence_summary))
 
     def test_let_me_try_keeps_n0te_out_of_mutation(self) -> None:
         plan = self.service.plan(self.service.binding_for(self.episode.id), "LET ME TRY")
         self.assertEqual(plan.mode, "LET_ME_TRY")
         self.assertFalse(plan.execution_requested)
-        self.assertIn("Stand back", plan.n0te_role)
+        self.assertIn("stand back", plan.n0te_role.lower())
         self.assertIn("yourself", plan.artist_role)
-        self.assertIn("should not mutate", plan.next_step)
+        self.assertEqual([step.actor for step in plan.steps], ["YOU", "YOU", "N0TE", "YOU"])
+        self.assertIn("Do not mutate", plan.steps[2].instruction)
 
     def test_planning_is_pure_and_does_not_create_learning_or_skill_evidence(self) -> None:
         before_changes = self.hq.store._conn.total_changes
