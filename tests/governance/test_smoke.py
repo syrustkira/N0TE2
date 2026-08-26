@@ -10,10 +10,15 @@ SCRIPT = ROOT / "governance/smoke/consumer_smoke.py"
 
 
 class SmokeTests(unittest.TestCase):
-    def test_current_core01b_consumer_smoke_passes(self):
-        cp = subprocess.run(["python", str(SCRIPT)], cwd=ROOT, text=True, capture_output=True)
+    def test_current_consumer_smoke_passes(self):
+        cp = subprocess.run(
+            ["python", str(SCRIPT)],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+        )
         self.assertEqual(cp.returncode, 0, cp.stderr)
-        self.assertIn("CORE-01B CONSUMER SMOKE: GREEN", cp.stdout)
+        self.assertIn("UX-01-INTERACTION-01 CONSUMER SMOKE: GREEN", cp.stdout)
 
     def test_product_code_is_still_rejected_if_stage_is_preproduct(self):
         with tempfile.TemporaryDirectory() as td:
