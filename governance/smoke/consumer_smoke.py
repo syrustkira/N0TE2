@@ -149,10 +149,10 @@ def mode_form(page: str, mode: str) -> Form:
 
 def quit_shell(shell: ConsumerShell) -> None:
     status, settings = get(shell, "/settings")
-    assert status == 200
+    assert status == 200, f"settings GET returned {status}: {settings[:600]}"
     quit_form = one_form(settings, "/quit")
     status, closed = post(shell, "/quit", quit_form.values)
-    assert status == 200
+    assert status == 200, f"quit POST returned {status}: {closed[:600]}"
     assert "N0TE closed safely." in closed
     assert shell.wait_stopped(timeout=2.0)
 
@@ -178,27 +178,29 @@ with tempfile.TemporaryDirectory() as temp:
     assert address.host == "127.0.0.1"
 
     status, welcome = get(shell, "/")
-    assert status == 200
+    assert status == 200, f"welcome GET returned {status}: {welcome[:1200]}"
     assert "Welcome to your Headquarters" in welcome
     create = one_form(welcome, "/profile/create")
     create.values["artist_name"] = "Interaction Smoke Artist"
-    status, _ = post(shell, "/profile/create", create.values)
-    assert status == 303
+    status, created = post(shell, "/profile/create", create.values)
+    assert status == 303, f"profile create returned {status}: {created[:600]}"
 
     status, song_page = get(shell, "/song")
-    assert status == 200
+    assert status == 200, f"initial song GET returned {status}: {song_page[:1200]}"
     start_song = one_form(song_page, "/song/start")
     start_song.values["song_title"] = "Interaction Smoke Song"
-    status, _ = post(shell, "/song/start", start_song.values)
-    assert status == 303
+    status, started_song = post(shell, "/song/start", start_song.values)
+    assert status == 303, f"song start returned {status}: {started_song[:600]}"
 
     status, song_page = get(shell, "/song")
+    assert status == 200, f"song/session GET returned {status}: {song_page[:1200]}"
     start_session = one_form(song_page, "/session/start")
     start_session.values["objective"] = "Test one chorus transition without changing unrelated parts"
-    status, _ = post(shell, "/session/start", start_session.values)
-    assert status == 303
+    status, started_session = post(shell, "/session/start", start_session.values)
+    assert status == 303, f"session start returned {status}: {started_session[:600]}"
 
     status, song_page = get(shell, "/song")
+    assert status == 200, f"learning-start GET returned {status}: {song_page[:1200]}"
     learning = one_form(song_page, "/learning/start")
     learning.values.update(
         {
@@ -207,18 +209,19 @@ with tempfile.TemporaryDirectory() as temp:
             "change": "Mute the pre-chorus kick for one bar before the chorus",
         }
     )
-    status, _ = post(shell, "/learning/start", learning.values)
-    assert status == 303
+    status, started_learning = post(shell, "/learning/start", learning.values)
+    assert status == 303, f"learning start returned {status}: {started_learning[:600]}"
 
     status, song_page = get(shell, "/song")
+    assert status == 200, f"interaction GET returned {status}: {song_page[:1200]}"
     assert len(parsed_forms(song_page, "/interaction/depth")) == 5
     assert "How should N0TE work with you?" in song_page
     show = mode_form(song_page, "SHOW_ME")
-    status, _ = post(shell, "/interaction/depth", show.values)
-    assert status == 303
+    status, show_result = post(shell, "/interaction/depth", show.values)
+    assert status == 303, f"SHOW_ME POST returned {status}: {show_result[:600]}"
 
     status, shown = get(shell, "/song")
-    assert status == 200
+    assert status == 200, f"SHOW_ME result GET returned {status}: {shown[:1200]}"
     assert "Working style: SHOW ME" in shown
     assert "read-only walkthrough" in shown
     assert "BEFORE" in shown and "AFTER" in shown
@@ -235,15 +238,16 @@ with tempfile.TemporaryDirectory() as temp:
             "confounders": "Arrangement contrast may also matter",
         }
     )
-    status, _ = post(shell, "/learning/observe", observe.values)
-    assert status == 303
+    status, observed = post(shell, "/learning/observe", observe.values)
+    assert status == 303, f"learning observe returned {status}: {observed[:600]}"
 
     status, fresh = get(shell, "/song")
+    assert status == 200, f"fresh-evidence GET returned {status}: {fresh[:1200]}"
     explain = mode_form(fresh, "EXPLAIN_WHY")
-    status, _ = post(shell, "/interaction/depth", explain.values)
-    assert status == 303
+    status, explained_post = post(shell, "/interaction/depth", explain.values)
+    assert status == 303, f"EXPLAIN_WHY POST returned {status}: {explained_post[:600]}"
     status, explained = get(shell, "/song")
-    assert status == 200
+    assert status == 200, f"EXPLAIN_WHY result GET returned {status}: {explained[:1200]}"
     assert "Working style: EXPLAIN WHY" in explained
     assert "The chorus entrance felt larger" in explained
     assert "artist-reported, 70% confidence" in explained
@@ -261,7 +265,7 @@ with tempfile.TemporaryDirectory() as temp:
     )
     relaunched.start()
     status, resumed = get(relaunched, "/song")
-    assert status == 200
+    assert status == 200, f"relaunch song GET returned {status}: {resumed[:1200]}"
     assert "Interaction Smoke Artist" in resumed
     assert "Interaction Smoke Song" in resumed
     assert "The chorus entrance felt larger" in resumed
