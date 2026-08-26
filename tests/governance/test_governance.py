@@ -157,32 +157,63 @@ class GovernanceRegressionTests(unittest.TestCase):
 
     def test_receipt_rejects_unselected_product_path_change(self):
         repo = self.clone()
-        subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
-        subprocess.run(["git", "config", "user.name", "N0TE2 Test"], cwd=repo, check=True)
-        subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-m", "seed"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        baseline = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
-        rp = repo / "governance/active_receipt.json"
-        receipt = json.loads(rp.read_text())
-        receipt["baseline_sha"] = baseline
-        self.write_json(rp, receipt)
         subprocess.run(
-            ["git", "add", "governance", "tests", ".github", "AGENTS.md", ".gitignore", "n0te2"],
+            ["git", "init", "-b", "main"],
             cwd=repo,
             check=True,
             stdout=subprocess.DEVNULL,
         )
-        subprocess.run(["git", "commit", "-m", "selected core slice"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.invalid"],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "N0TE2 Test"],
+            cwd=repo,
+            check=True,
+        )
+        # Seed the whole copied repository so receipt-path enforcement is tested
+        # against one deliberate post-baseline change, not every file that happened
+        # to be absent from an artificial README-only baseline.
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "seed complete repository"],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        baseline = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo,
+            text=True,
+        ).strip()
+        rp = repo / "governance/active_receipt.json"
+        receipt = json.loads(rp.read_text())
+        active = receipt["node_id"]
+        receipt["baseline_sha"] = baseline
+        self.write_json(rp, receipt)
+        subprocess.run(["git", "add", "governance/active_receipt.json"], cwd=repo, check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "bind synthetic receipt baseline"],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
         gov.run(repo, verify_git=True)
 
-        (repo / "src").mkdir()
+        (repo / "src").mkdir(exist_ok=True)
         (repo / "src/product.py").write_text("print('outside selected slice')\n")
         subprocess.run(["git", "add", "src/product.py"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-m", "bad adjacent product change"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(
+            ["git", "commit", "-m", "bad adjacent product change"],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
         with self.assertRaises(gov.GovernanceError) as cm:
             gov.run(repo, verify_git=True)
-        self.assertIn("outside CORE-01 receipt", str(cm.exception))
+        self.assertIn(f"outside {active} receipt", str(cm.exception))
 
 
 if __name__ == "__main__":
