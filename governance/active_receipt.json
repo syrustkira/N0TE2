@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-01-FRICTION-01",
+  "receipt_id": "N0TE2-SONG-01-INTERACTION-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-01-FRICTION-01",
-  "baseline_sha": "9fe53a01a58dd5c6f2420721fa239c4405542fff",
-  "purpose": "Expose canonical FrictionMemory through the normal Song learning journey so the artist can explicitly record a blocker against a real Learning episode, inspect Song-scoped friction history, and see recurring blockers only when the same explicit key is evidenced across multiple distinct work Sessions.",
+  "increment_id": "SONG-01-INTERACTION-01",
+  "baseline_sha": "649002eebc6e378026f324df5d04adb3653c8b64",
+  "purpose": "Implement the separate learning/collaboration-depth dimension DO IT / WITH ME / SHOW ME / EXPLAIN WHY / LET ME TRY on the normal Song Learning journey without conflating it with ASK/ADVISE/TRY/DO authority or granting execution permission.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,51 +14,40 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can preserve what repeatedly gets in the way of real Song work and distinguish one incident from a genuinely recurring blocker, with only artist-recorded prevention ideas presented as such.",
-    "journeys": ["J-WHAT-NEXT", "J-TRUST", "J-SONG-START-RESUME", "J-COMPARE-DECIDE"],
-    "capability": "Consumer-reachable Friction Memory with distinct-Session recurrence",
-    "increment": "SONG-01-FRICTION-01"
+    "outcome": "The artist can choose how much agency N0TE should take for one real Song-learning job, receiving behavior that clearly leads, collaborates, demonstrates, explains, or stands back without changing action authority.",
+    "journeys": ["J-LEARN-WHILE-DOING", "J-SONG-START-RESUME", "J-TRUST"],
+    "capability": "Interaction depth independent from mutation authority",
+    "increment": "SONG-01-INTERACTION-01"
   },
-  "why_now": "REQ-SCOPE-138 is a required pre-Gate-B minimum. CORE-02D already owns append-only explicit Friction observations and recurrence synthesis, while the consumer Learning journey now creates real Learning episodes. The missing high-leverage seam is consumer capture and truthful recurrence reachability, not another process-memory store.",
+  "why_now": "REQ-SCOPE-124 is a REQUIRED MINIMUM Gate-B blocker on Song / Produce / Learn. Live N0TE2 has authority, capability, Learning, Skill and consumer Song foundations but no first-class interaction-depth model. It outranks a broad cross-domain Context/History hub because it closes one explicit active SONG-01 journey contract without ballooning node scope.",
   "reuse": {
-    "mode": "EXPOSE_CANONICAL_FRICTION_MEMORY_WITH_USER_DECLARED_CAPTURE_AND_DISTINCT_SESSION_RECURRENCE",
-    "n0te2_dependencies": ["CORE-02D FrictionMemory", "CORE-02C LearningMemory", "consumer Learning journey", "CORE-01 ActivityLog", "existing /song shell", "APP quit/relaunch continuity"],
+    "mode": "EXTEND_EXISTING_LEARNING_JOURNEY_WITH_SEPARATE_INTERACTION_DEPTH",
+    "n0te2_dependencies": ["LearningMemory", "LearningExperimentService", "ConsumerShell one-shot authority", "AuthorityService separation", "ExecutionEligibilityGate separation", "existing /song Learning journey"],
     "direct_copy": false
   },
   "completion_proof": [
-    "the normal Song learning surface shows explicit Friction observations without exposing internal Friction, Learning, Session or source-reference identities",
-    "artist Friction capture binds one exact active Song and one exact canonical Learning episode behind opaque one-shot browser authority",
-    "consumer-created Friction evidence is USER_DECLARED only and receives a server-owned source reference",
-    "blocker key, description, confidence and optional prevention hint are bounded human inputs; the consumer path cannot manufacture observed/measured/provider evidence",
-    "one incident remains an incident and is never labeled recurring",
-    "recurrence appears only when the same explicit friction key exists across at least two distinct work Sessions",
-    "multiple episodes in one Session cannot manufacture recurrence",
-    "prevention ideas are displayed only when actually recorded and are not presented as N0TE-generated rules",
-    "GET is pure and Song-scoped; capture does not mutate Versions, approvals, Session state, Learning decisions, Skill state, Focus, DAWs or providers",
-    "Origin, CSRF, one-shot replay, active-Song staleness, profile isolation and quit/relaunch persistence remain enforced",
-    "consumer HTTP tests do not cross the shell runtime SQLite thread boundary",
-    "authored core/HTTP/restart proof remains separate from executed evidence"
+    "all five canonical interaction-depth modes are first-class and consumer-reachable for a real active Song Learning episode",
+    "mode choice is a per-job request, not silently stored as permanent Artist preference or taste doctrine",
+    "DO IT requests maximum N0TE agency but never grants authority, eligibility, capability, approval or execution and reports truthful blocked/authority-required semantics when execution is not bound",
+    "WITH ME divides the next job into explicit N0TE and artist roles",
+    "SHOW ME remains read-only and demonstration-oriented",
+    "EXPLAIN WHY remains read-only and rationale/tradeoff-oriented",
+    "LET ME TRY leaves the action to the artist and positions N0TE for observation/feedback rather than mutation",
+    "interaction planning binds the exact active Song, exact Learning episode and the evidence/decision state rendered to the artist so stale plans fail closed",
+    "consumer mode selection does not mutate Song, Version, Session, Learning evidence/decision, Skill state, Focus, authority, DAW, provider or durable preference state",
+    "internal Song/Learning/Session identities remain out of visible browser markup",
+    "Origin, CSRF and one-shot replay protections apply to the mode-selection POST",
+    "GET remains pure and authored tests remain separate from executed evidence"
   ],
-  "review_repairs": [
-    "renamed the active increment from SONG-FRICTION-01 to SONG-01-FRICTION-01 so the current receipt obeys the repository's explicit completion-node parent naming guard instead of inheriting recent semantic naming drift",
-    "made the increment-parent governance regression state-aware instead of hard-coding a stale CORE-01 active-node assumption",
-    "converted newly authored pytest-style function tests to unittest.TestCase because the repository workflow executes unittest discover and installs no pytest dependency",
-    "reworked HTTP tests after hosted Codex review found direct shell-runtime SQLite access from the test thread; live-shell assertions are now HTTP-only and persisted state is inspected only after shutdown through a fresh HeadquartersMemory connection",
-    "distinguishes an exact duplicate blocker from unrelated SQLite integrity failures so future schema failures are not falsely reported as duplicate input",
-    "keeps same-Session duplicate evidence from manufacturing recurrence and adds an explicit regression for that contract",
-    "deduplicates prevention-hint presentation inside recurring-pattern summaries while retaining per-incident evidence in Learning history",
-    "makes Friction capture form labels distinguishable when multiple Learning episodes share a subject by including the concrete change description"
-  ],
-  "reviewed_product_test_head": "28b6ea9d18f10023c57b71ff3770539870d2c5b6",
+  "review_repairs": [],
+  "reviewed_product_test_head": "649002eebc6e378026f324df5d04adb3653c8b64",
   "evidence_classification": "UNOBSERVED",
   "evidence_snapshot": {
-    "observed_repository_head": "b85108b9fcf01bf0ee9270b5b07880d27ae33e84",
     "commit_statuses": [],
     "pull_request_workflow_runs": [],
-    "reviews": ["Codex COMMENTED review on 0c0264f050 identified one P1 HTTP-test SQLite thread-ownership violation; the finding was repaired at 28b6ea9d18 and the review thread was replied to and resolved"],
-    "review_threads": ["P1 test-thread SQLite ownership thread is resolved and outdated after repair"],
-    "execution_note": "GitHub exposed no Actions run and no commit-status context for the observed repository head; local clone execution was unavailable because the local environment could not resolve github.com. This is absence of execution evidence, not success or failure."
+    "reviews": [],
+    "review_threads": []
   },
-  "non_scope": ["automatic Friction inference", "cross-pattern similarity", "causal blocker rules", "automatic interventions or next actions", "global Context/History search", "interaction teaching modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
-  "next_selection_rule": "After landing or blockage, globally reselect across interaction/teaching modes, Context/History reachability, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and all other Gate-B blockers."
+  "non_scope": ["changing ASK/ADVISE/TRY/DO authority semantics", "granting mutation authority from teaching mode", "automatic DAW/provider execution", "persistent global personality preference", "AI-provider dependency", "generic chat system", "cross-domain Artist Team interaction depth", "Gate-B acceptance"],
+  "next_selection_rule": "After landing or blockage, globally reselect across Context/History reachability, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS, Artist Team and all other Gate-B blockers."
 }
