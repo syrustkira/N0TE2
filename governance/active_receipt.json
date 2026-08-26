@@ -1,10 +1,10 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-SUCCESS-01",
+  "receipt_id": "N0TE2-SONG-01-FRICTION-01",
   "node_id": "SONG-01",
-  "increment_id": "SONG-SUCCESS-01",
-  "baseline_sha": "9e1e0356ebc383a04e82d4b93470c361f01e31c1",
-  "purpose": "Expose pure-read SuccessMemory through /song so the artist can inspect exact prior Learning patterns with support, counterexamples, pending/inconclusive evidence, conditions, alternative explanations and confidence without manufacturing a success rule.",
+  "increment_id": "SONG-01-FRICTION-01",
+  "baseline_sha": "9fe53a01a58dd5c6f2420721fa239c4405542fff",
+  "purpose": "Expose canonical FrictionMemory through the normal Song learning journey so the artist can explicitly record a blocker against a real Learning episode, inspect Song-scoped friction history, and see recurring blockers only when the same explicit key is evidenced across multiple distinct work Sessions.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -14,42 +14,51 @@
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can recognize what exact comparable past work suggests, including counterexamples and uncertainty, instead of relying on vague memory or a fake universal recipe.",
-    "journeys": ["J-WHAT-NEXT", "J-TRUST", "J-COMPARE-DECIDE", "J-SONG-START-RESUME"],
-    "capability": "Consumer-readable Success Memory with association-only humility",
-    "increment": "SONG-SUCCESS-01"
+    "outcome": "The artist can preserve what repeatedly gets in the way of real Song work and distinguish one incident from a genuinely recurring blocker, with only artist-recorded prevention ideas presented as such.",
+    "journeys": ["J-WHAT-NEXT", "J-TRUST", "J-SONG-START-RESUME", "J-COMPARE-DECIDE"],
+    "capability": "Consumer-reachable Friction Memory with distinct-Session recurrence",
+    "increment": "SONG-01-FRICTION-01"
   },
-  "why_now": "REQ-SCOPE-139 is required minimum and its CORE-02E foundation is implemented; SONG-LEARNING-01 now populates it through normal consumer work.",
+  "why_now": "REQ-SCOPE-138 is a required pre-Gate-B minimum. CORE-02D already owns append-only explicit Friction observations and recurrence synthesis, while the consumer Learning journey now creates real Learning episodes. The missing high-leverage seam is consumer capture and truthful recurrence reachability, not another process-memory store.",
   "reuse": {
-    "mode": "EXPOSE_PURE_READ_SUCCESS_MEMORY_WITH_ASSOCIATION_ONLY_HUMILITY",
-    "n0te2_dependencies": ["CORE-02E SuccessMemory", "CORE-02C LearningMemory", "SONG-LEARNING-01", "existing /song shell", "APP relaunch continuity"],
+    "mode": "EXPOSE_CANONICAL_FRICTION_MEMORY_WITH_USER_DECLARED_CAPTURE_AND_DISTINCT_SESSION_RECURRENCE",
+    "n0te2_dependencies": ["CORE-02D FrictionMemory", "CORE-02C LearningMemory", "consumer Learning journey", "CORE-01 ActivityLog", "existing /song shell", "APP quit/relaunch continuity"],
     "direct_copy": false
   },
   "completion_proof": [
-    "Song-scoped exact-pattern synthesis is consumer-visible without persistent Success state",
-    "all six canonical humility states remain distinguishable",
-    "KEEP support, REVERT/REVISE counterexamples, INCONCLUSIVE and pending evidence remain separate",
-    "canonical warning, conditions, alternative explanations, evidence source posture and confidence summaries remain visible",
-    "internal pattern/episode IDs and source references are absent from the artist projection",
-    "canonical causal status must remain ASSOCIATION_ONLY or the projection fails closed",
-    "unknown future evidence-source semantics fail closed rather than degrading to generic provenance",
-    "GET is pure, Song-scoped and relaunch-stable",
-    "authored core/consumer proof remains separate from executed evidence"
+    "the normal Song learning surface shows explicit Friction observations without exposing internal Friction, Learning, Session or source-reference identities",
+    "artist Friction capture binds one exact active Song and one exact canonical Learning episode behind opaque one-shot browser authority",
+    "consumer-created Friction evidence is USER_DECLARED only and receives a server-owned source reference",
+    "blocker key, description, confidence and optional prevention hint are bounded human inputs; the consumer path cannot manufacture observed/measured/provider evidence",
+    "one incident remains an incident and is never labeled recurring",
+    "recurrence appears only when the same explicit friction key exists across at least two distinct work Sessions",
+    "multiple episodes in one Session cannot manufacture recurrence",
+    "prevention ideas are displayed only when actually recorded and are not presented as N0TE-generated rules",
+    "GET is pure and Song-scoped; capture does not mutate Versions, approvals, Session state, Learning decisions, Skill state, Focus, DAWs or providers",
+    "Origin, CSRF, one-shot replay, active-Song staleness, profile isolation and quit/relaunch persistence remain enforced",
+    "consumer HTTP tests do not cross the shell runtime SQLite thread boundary",
+    "authored core/HTTP/restart proof remains separate from executed evidence"
   ],
   "review_repairs": [
-    "consumer copy originally said exact repeated Learning patterns even though single and pending patterns are intentionally displayable; 'repeated' was removed",
-    "the first UI hardcoded Association only instead of binding canonical causal_status; the projection now carries and validates canonical ASSOCIATION_ONLY semantics and fails closed on drift",
-    "unknown future evidence source kinds originally degraded to generic recorded evidence; the projection now fails closed so provenance changes require deliberate consumer handling",
-    "consumer observation copy now says Recorded N times rather than Seen N times because the canonical count is observation-record count, not necessarily distinct episodes"
+    "renamed the active increment from SONG-FRICTION-01 to SONG-01-FRICTION-01 so the current receipt obeys the repository's explicit completion-node parent naming guard instead of inheriting recent semantic naming drift",
+    "made the increment-parent governance regression state-aware instead of hard-coding a stale CORE-01 active-node assumption",
+    "converted newly authored pytest-style function tests to unittest.TestCase because the repository workflow executes unittest discover and installs no pytest dependency",
+    "reworked HTTP tests after hosted Codex review found direct shell-runtime SQLite access from the test thread; live-shell assertions are now HTTP-only and persisted state is inspected only after shutdown through a fresh HeadquartersMemory connection",
+    "distinguishes an exact duplicate blocker from unrelated SQLite integrity failures so future schema failures are not falsely reported as duplicate input",
+    "keeps same-Session duplicate evidence from manufacturing recurrence and adds an explicit regression for that contract",
+    "deduplicates prevention-hint presentation inside recurring-pattern summaries while retaining per-incident evidence in Learning history",
+    "makes Friction capture form labels distinguishable when multiple Learning episodes share a subject by including the concrete change description"
   ],
-  "reviewed_product_test_head": "c9aca65f57edeb3d6365e40be38a779afa1a5762",
+  "reviewed_product_test_head": "28b6ea9d18f10023c57b71ff3770539870d2c5b6",
   "evidence_classification": "UNOBSERVED",
   "evidence_snapshot": {
+    "observed_repository_head": "b85108b9fcf01bf0ee9270b5b07880d27ae33e84",
     "commit_statuses": [],
     "pull_request_workflow_runs": [],
-    "reviews": [],
-    "review_threads": []
+    "reviews": ["Codex COMMENTED review on 0c0264f050 identified one P1 HTTP-test SQLite thread-ownership violation; the finding was repaired at 28b6ea9d18 and the review thread was replied to and resolved"],
+    "review_threads": ["P1 test-thread SQLite ownership thread is resolved and outdated after repair"],
+    "execution_note": "GitHub exposed no Actions run and no commit-status context for the observed repository head; local clone execution was unavailable because the local environment could not resolve github.com. This is absence of execution evidence, not success or failure."
   },
-  "non_scope": ["Success ranking/recommendations", "automatic next actions", "causal inference", "statistical significance", "cross-pattern similarity", "Friction write UX", "interaction modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
-  "next_selection_rule": "After landing or blockage, globally reselect across Friction capture/reachability, interaction/teaching modes, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and other portfolio outcomes."
+  "non_scope": ["automatic Friction inference", "cross-pattern similarity", "causal blocker rules", "automatic interventions or next actions", "global Context/History search", "interaction teaching modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
+  "next_selection_rule": "After landing or blockage, globally reselect across interaction/teaching modes, Context/History reachability, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and all other Gate-B blockers."
 }
