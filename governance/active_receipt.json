@@ -1,8 +1,8 @@
 {
   "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-01-INTERACTION-01",
-  "node_id": "SONG-01",
-  "increment_id": "SONG-01-INTERACTION-01",
+  "receipt_id": "N0TE2-UX-01-INTERACTION-01",
+  "node_id": "UX-01",
+  "increment_id": "UX-01-INTERACTION-01",
   "baseline_sha": "649002eebc6e378026f324df5d04adb3653c8b64",
   "purpose": "Implement the separate learning/collaboration-depth dimension DO IT / WITH ME / SHOW ME / EXPLAIN WHY / LET ME TRY on the normal Song Learning journey without conflating it with ASK/ADVISE/TRY/DO authority or granting execution permission.",
   "product_code_allowed": true,
@@ -17,42 +17,49 @@
     "outcome": "The artist can choose how much agency N0TE should take for one real Song-learning job, receiving behavior that clearly leads, collaborates, demonstrates, explains, or stands back without changing action authority.",
     "journeys": ["J-LEARN-WHILE-DOING", "J-SONG-START-RESUME", "J-TRUST"],
     "capability": "Interaction depth independent from mutation authority",
-    "increment": "SONG-01-INTERACTION-01"
+    "increment": "UX-01-INTERACTION-01"
   },
-  "why_now": "REQ-SCOPE-124 is a REQUIRED MINIMUM Gate-B blocker on Song / Produce / Learn. Live N0TE2 has authority, capability, Learning, Skill and consumer Song foundations but no first-class interaction-depth model. It outranks a broad cross-domain Context/History hub because it closes one explicit active SONG-01 journey contract without ballooning node scope.",
+  "why_now": "REQ-SCOPE-124 is explicitly mapped to UX-01 and is a REQUIRED MINIMUM Gate-B blocker on Song / Produce / Learn. Repairing the governance workflow exposed that SONG-01 had been activated while its UX-01 dependency remained open. Rather than falsely close UX-01 or weaken dependency checks, this already-selected customer outcome is reparented to its canonical UX-01 node, whose APP-01/CORE-02/CORE-03 dependencies are DONE.",
   "reuse": {
     "mode": "EXTEND_EXISTING_LEARNING_JOURNEY_WITH_SEPARATE_INTERACTION_DEPTH",
-    "n0te2_dependencies": ["LearningMemory", "LearningExperimentService", "ConsumerShell one-shot authority", "AuthorityService separation", "ExecutionEligibilityGate separation", "existing /song Learning journey"],
+    "n0te2_dependencies": ["LearningMemory", "LearningExperimentService", "ConsumerShell one-shot authority", "AuthorityService separation", "ExecutionEligibilityGate separation", "existing /song Learning journey", "UX-01A/B/C landed Headquarters shell"],
     "direct_copy": false
   },
   "completion_proof": [
-    "all five canonical interaction-depth modes are first-class and consumer-reachable for a real active Song Learning episode",
-    "mode choice is a per-job request, not silently stored as permanent Artist preference or taste doctrine",
+    "all five canonical interaction-depth modes are first-class and consumer-reachable for a real current open Song Learning episode",
+    "mode choice is a per-job request, not silently stored as permanent Artist preference, taste doctrine or Skill evidence",
     "DO IT requests maximum N0TE agency but never grants authority, eligibility, capability, approval or execution and reports truthful blocked/authority-required semantics when execution is not bound",
-    "WITH ME divides the next job into explicit N0TE and artist roles",
-    "SHOW ME remains read-only and demonstration-oriented",
-    "EXPLAIN WHY remains read-only and rationale/tradeoff-oriented",
+    "WITH ME divides the current bounded job into explicit N0TE and artist steps",
+    "SHOW ME gives a concrete read-only BEFORE -> proposed change -> AFTER walkthrough without claiming the project was modified",
+    "EXPLAIN WHY uses represented consequence evidence/source/confidence plus bounded-variable reasoning and causal humility",
     "LET ME TRY leaves the action to the artist and positions N0TE for observation/feedback rather than mutation",
-    "interaction planning binds the exact active Song, exact Learning episode and the evidence/decision state rendered to the artist so stale plans fail closed",
+    "interaction planning binds the exact active Song, exact current open Learning episode and the evidence/decision state rendered to the artist so stale plans fail closed",
     "consumer mode selection does not mutate Song, Version, Session, Learning evidence/decision, Skill state, Focus, authority, DAW, provider or durable preference state",
-    "internal Song/Learning/Session identities remain out of visible browser markup",
+    "internal Song/Learning/Session/source-reference identities remain out of visible browser markup",
     "Origin, CSRF and one-shot replay protections apply to the mode-selection POST",
-    "GET remains pure and authored tests remain separate from executed evidence",
-    "repository governance workflow must instantiate and execute its three OS jobs rather than fail before job creation"
+    "GET remains durable-pure and authored tests remain separate from executed evidence",
+    "repository governance workflow instantiates and executes Ubuntu, Windows and macOS jobs and records exact-head status evidence",
+    "active graph/current state obey the real completion dependency order without falsely marking unfinished UX-01 scope DONE"
   ],
   "review_repairs": [
-    "systemic execution-evidence audit found exact-head workflow run 33005838710 failed before creating any jobs; GitHub context availability confirms runner.os was illegally referenced from job-level env, so the governance workflow is explicitly admitted for repair in this increment"
+    "systemic execution-evidence audit found run 33005838710 failed before creating jobs because runner.os was referenced from jobs.<job_id>.env, where GitHub does not expose runner context",
+    "a second pre-job failure was reproduced locally: the checkout-verification run line was a YAML plain scalar containing colon-space text; converting it to a block scalar made the workflow parse and instantiate three OS jobs",
+    "first runner-level run 33006229821 proved exact-head checkout on Ubuntu/Windows/macOS and then exposed the dormant scheduler defect SONG-01 cannot activate before UX-01 is DONE",
+    "historical PR #49 explicitly left UX-01 open while switching to SONG-01, so already-landed Song work is preserved as evidence but the current active node is restored to UX-01 instead of weakening the checker or falsely closing unfinished UX scope",
+    "REQ-SCOPE-124 already belongs to UX-01, so the interaction-depth implementation is reparented to UX-01-INTERACTION-01 without rebuilding or changing its customer outcome",
+    "interaction modes were upgraded from labels/generic role text to concrete guided steps and represented-evidence behavior so SHOW ME, WITH ME, EXPLAIN WHY and LET ME TRY are real bounded teacher/coproducer interactions",
+    "unknown future Learning evidence-source semantics now fail closed rather than flattening provenance"
   ],
-  "reviewed_product_test_head": "649002eebc6e378026f324df5d04adb3653c8b64",
+  "reviewed_product_test_head": "fde7703fb8e22bff3b0a8df18d7362207dce8b07",
   "evidence_classification": "EXECUTION_FAILED",
   "evidence_snapshot": {
-    "observed_repository_head": "fde7703fb8e22bff3b0a8df18d7362207dce8b07",
-    "commit_statuses": [],
-    "pull_request_workflow_runs": ["push run 33005838710: completed/failure with zero jobs"],
-    "reviews": ["Codex earlier-head review on 0612b8c0f4 found no major issues; latest-head review pending"],
+    "observed_repository_head": "268cec7a2964bf0ec518d543c4e1231f131b5031",
+    "commit_statuses": ["n0te2-governance-Linux=failure", "n0te2-governance-Windows=failure", "n0te2-governance-macOS=failure"],
+    "pull_request_workflow_runs": ["push run 33005838710: pre-job failure, zero jobs", "push run 33006145741: pre-job failure, zero jobs after first workflow repair", "push run 33006229821: three OS jobs instantiated; exact-head checkout passed; construction governance failed because SONG-01 dependency UX-01 remained open", "pull_request run 33006236490 registered after workflow syntax repair"],
+    "reviews": ["Codex earlier-head review on 0612b8c0f4 found no major issues; latest/final-head review still required"],
     "review_threads": [],
-    "execution_note": "The exact-head workflow failure occurs before runner job creation. Official GitHub context availability excludes runner from jobs.<job_id>.env, matching the workflow's job-level runner.os misuse. This is a systemic CI-definition defect and must be repaired before product merge."
+    "execution_note": "CI infrastructure now reaches real runners. Current red evidence is a deterministic governance-state failure discovered before product regression tests. Graph/current-state/receipt have been reparented to UX-01 and require a fresh exact-head run before merge."
   },
   "non_scope": ["changing ASK/ADVISE/TRY/DO authority semantics", "granting mutation authority from teaching mode", "automatic DAW/provider execution", "persistent global personality preference", "AI-provider dependency", "generic chat system", "cross-domain Artist Team interaction depth", "Gate-B acceptance"],
-  "next_selection_rule": "After landing or blockage, globally reselect across Context/History reachability, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS, Artist Team and all other Gate-B blockers."
+  "next_selection_rule": "After landing or blockage, globally reselect. Because UX-01 is again the active dependency node, first determine which of its remaining mapped requirements are genuinely incomplete versus already landed/subsumed before any downstream node is activated."
 }
