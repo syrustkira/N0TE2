@@ -70,13 +70,18 @@ class InteractionDepthServiceTests(unittest.TestCase):
     def test_planning_is_pure_and_does_not_create_learning_or_skill_evidence(self) -> None:
         before_changes = self.hq.store._conn.total_changes
         before_episode = self.hq.learning.get_episode(self.episode.id)
-        before_skills = self.hq.skills.states()
+        before_skill_count = self.hq.store._conn.execute(
+            "SELECT COUNT(*) FROM skill_assessments"
+        ).fetchone()[0]
         binding = self.service.binding_for(self.episode.id)
         for mode in INTERACTION_DEPTH_MODES:
             self.service.plan(binding, mode)
         self.assertEqual(self.hq.store._conn.total_changes, before_changes)
         self.assertEqual(self.hq.learning.get_episode(self.episode.id), before_episode)
-        self.assertEqual(self.hq.skills.states(), before_skills)
+        after_skill_count = self.hq.store._conn.execute(
+            "SELECT COUNT(*) FROM skill_assessments"
+        ).fetchone()[0]
+        self.assertEqual(after_skill_count, before_skill_count)
 
     def test_binding_fails_closed_when_learning_evidence_changes(self) -> None:
         binding = self.service.binding_for(self.episode.id)
@@ -101,6 +106,13 @@ class InteractionDepthServiceTests(unittest.TestCase):
         current = self.service.current_binding()
         self.assertIsNotNone(current)
         self.assertEqual(current.episode_id, self.episode.id)
+        self.hq.learning.append_consequence(
+            self.episode.id,
+            observation="The result still needs another pass",
+            source_kind="USER_DECLARED",
+            source_ref="test:close-observation",
+            confidence=0.7,
+        )
         self.hq.learning.decide(
             self.episode.id,
             decision="INCONCLUSIVE",
