@@ -5,7 +5,6 @@ import uuid
 from dataclasses import dataclass
 
 from .friction import FrictionMemory, FrictionObservation, FrictionPattern
-from .learning import LearningEpisode
 from .lineage import LineageCorruptionError, ValidationError
 
 _CONFIDENCE_LEVELS = {"LOW": 0.4, "MEDIUM": 0.7, "HIGH": 1.0}
@@ -226,6 +225,15 @@ class SongFrictionJourney:
                     raise StaleFrictionJourneyError(
                         "That Learning episode no longer belongs to the active Song."
                     )
+                duplicate = self.store._conn.execute(
+                    "SELECT 1 FROM friction_observations "
+                    "WHERE episode_id=? AND friction_key=?",
+                    (binding.episode_id, friction_key),
+                ).fetchone()
+                if duplicate is not None:
+                    raise FrictionJourneyError(
+                        "That blocker is already recorded for this Learning episode. Use another blocker name only if it is genuinely a different source of friction."
+                    )
                 self.store._conn.execute(
                     "INSERT INTO friction_observations("
                     "id,episode_id,friction_key,description,source_kind,source_ref,"
@@ -241,11 +249,11 @@ class SongFrictionJourney:
                         prevention_hint,
                     ),
                 )
-        except StaleFrictionJourneyError:
+        except (StaleFrictionJourneyError, FrictionJourneyError):
             raise
         except sqlite3.IntegrityError as exc:
             raise FrictionJourneyError(
-                "That blocker is already recorded for this Learning episode. Use another blocker name only if it is genuinely a different source of friction."
+                "Friction evidence was rejected safely. Reload the Song before trying again."
             ) from exc
 
         row = self.store._conn.execute(
