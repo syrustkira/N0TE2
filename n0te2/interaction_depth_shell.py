@@ -112,10 +112,17 @@ def _selected_plan(shell: ConsumerShell, service: InteractionDepthService) -> st
         return ""
     binding, mode = selected
     if not isinstance(binding, InteractionDepthBinding) or not isinstance(mode, str):
+        shell._interaction_depth_selection = None
         return ""
     try:
         return _plan_markup(service.plan(binding, mode))
     except (InteractionDepthError, ValidationError):
+        shell._interaction_depth_selection = None
+        if service.current_binding() is None:
+            return (
+                '<p class="muted">That working style ended with the previous Learning job. '
+                'Start a new Learning experiment when there is another real job to work through.</p>'
+            )
         return (
             '<p class="muted">The Learning job changed after that working style was chosen. '
             'Choose a mode again from the current job below.</p>'
