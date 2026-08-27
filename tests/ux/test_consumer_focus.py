@@ -198,9 +198,9 @@ def test_consumer_can_set_switch_end_and_relaunch_durable_focus(tmp_path: Path) 
         probe=Probe(),
     )
     relaunched.start()
-    assert relaunched.runtime.profile_id == profile_id
     status, resumed = request(relaunched, "/now")
     assert status == 200
+    assert relaunched.runtime.profile_id == profile_id
     assert "Manage Focus active" in resumed
     assert "Scope: your Artist Headquarters." in resumed
 
