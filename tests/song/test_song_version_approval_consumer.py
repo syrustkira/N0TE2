@@ -174,7 +174,7 @@ def test_approval_surface_names_exact_version_and_preserves_current_across_resta
         song = before.store.get_song(song_id)
         assert song is not None
         assert song.current_version_id == mix_id
-        activity_before = len(before.activity.events_for_song(song_id))
+        activity_before = len(before.activity.for_song(song_id))
         versions_before = before.store.versions_for_song(song_id)
         assets_before = tuple(before.store.version_asset_ids(v.id) for v in versions_before)
     finally:
@@ -205,7 +205,7 @@ def test_approval_surface_names_exact_version_and_preserves_current_across_resta
         assert song.current_version_id == mix_id
         assert check.store.versions_for_song(song_id) == versions_before
         assert tuple(check.store.version_asset_ids(v.id) for v in versions_before) == assets_before
-        added = check.activity.events_for_song(song_id)[activity_before:]
+        added = check.activity.for_song(song_id)[activity_before:]
         assert [event.event_type for event in added] == ["VERSION_APPROVED"]
         assert added[0].version_id == first_id
     finally:
