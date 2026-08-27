@@ -174,6 +174,36 @@ with tempfile.TemporaryDirectory() as temp:
         process=process,
         probe=probe,
     )
+
+    # The customer page intentionally hides internal exceptions. The smoke harness
+    # runs inside the repository test boundary, so expose only the exception class
+    # and message to CI stderr when cold-start preparation fails.
+    original_ensure_runtime = shell._ensure_runtime
+    original_render_state = shell._render_state
+
+    def diagnostic_ensure_runtime():
+        try:
+            return original_ensure_runtime()
+        except Exception as exc:
+            print(
+                f"SMOKE COLD START _ensure_runtime: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            raise
+
+    def diagnostic_render_state(page_state, *, path: str):
+        try:
+            return original_render_state(page_state, path=path)
+        except Exception as exc:
+            print(
+                f"SMOKE COLD START _render_state: {type(exc).__name__}: {exc}",
+                file=sys.stderr,
+            )
+            raise
+
+    shell._ensure_runtime = diagnostic_ensure_runtime
+    shell._render_state = diagnostic_render_state
+
     address = shell.start()
     assert address.host == "127.0.0.1"
 
