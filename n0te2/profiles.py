@@ -260,7 +260,7 @@ class ApplicationProfiles:
             return existing
 
         if artist_name is None or not str(artist_name).strip():
-            return ProfileResolution("NEEDS_CREATION", (), ())
+            return ProfileResolution("NEEDS_CREATION", ())
         artist = _text(artist_name, "artist_name")
         if process is None or not isinstance(process, ProcessIdentity):
             raise ApplicationProfilesError(
