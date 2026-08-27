@@ -155,6 +155,34 @@ def correction_fields(
     return values
 
 
+def skill_history(data_root: Path, profile_id: str, skill_id: str):
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        return hq.skills.history(skill_id)
+    finally:
+        hq.close()
+
+
+def skill_state(data_root: Path, profile_id: str, skill_id: str):
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        return hq.skills.state(skill_id)
+    finally:
+        hq.close()
+
+
+def song_session_snapshot(data_root: Path, profile_id: str, song_id: str):
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        return (
+            hq.store.get_song(song_id),
+            hq.store.versions_for_song(song_id),
+            hq.sessions.latest_for_song(song_id),
+        )
+    finally:
+        hq.close()
+
+
 def test_song_surface_shows_inspectable_skill_truth_without_internal_ids(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
@@ -183,10 +211,10 @@ def test_song_surface_shows_inspectable_skill_truth_without_internal_ids(tmp_pat
         assert "test:real-work" not in page
         assert "claim_" not in page
         assert "evidence_claim" not in page
-        before = shell.runtime.headquarters.skills.history("Compression")
+        before = skill_history(data_root, profile_id, "Compression")
         status, again, _ = request(shell, "/song")
         assert status == 200
-        assert shell.runtime.headquarters.skills.history("Compression") == before
+        assert skill_history(data_root, profile_id, "Compression") == before
         assert again.count("<h2>What N0TE thinks you can do</h2>") == 1
     finally:
         shell.stop()
@@ -228,7 +256,7 @@ def test_artist_can_declare_then_correct_skill_without_rewriting_history(tmp_pat
             origin=shell.address.origin,
         )
         assert status == 303 and location == "/song"
-        first = shell.runtime.headquarters.skills.history("Arrangement")
+        first = skill_history(data_root, profile_id, "Arrangement")
         assert len(first) == 1
         assert first[0].source_kind == "ARTIST_DECLARED"
         assert first[0].level == "APPLIED"
@@ -251,7 +279,7 @@ def test_artist_can_declare_then_correct_skill_without_rewriting_history(tmp_pat
             origin=shell.address.origin,
         )
         assert status == 303 and location == "/song"
-        history = shell.runtime.headquarters.skills.history("Arrangement")
+        history = skill_history(data_root, profile_id, "Arrangement")
         assert len(history) == 2
         assert history[0].source_kind == "ARTIST_DECLARED"
         assert history[1].source_kind == "ARTIST_CORRECTION"
@@ -272,7 +300,7 @@ def test_artist_can_declare_then_correct_skill_without_rewriting_history(tmp_pat
 def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    seed_profile(data_root)
+    profile_id, _ = seed_profile(data_root)
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
@@ -298,7 +326,7 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
             origin="https://attacker.example",
         )
         assert status == 403
-        assert shell.runtime.headquarters.skills.state("EQ").latest_assessment is None
+        assert skill_state(data_root, profile_id, "EQ").latest_assessment is None
 
         bad_csrf = dict(foreign)
         bad_csrf["csrf"] = "wrong"
@@ -327,19 +355,23 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
             origin=shell.address.origin,
         )
         assert status == 409
-        assert len(shell.runtime.headquarters.skills.history("EQ")) == 1
+        assert len(skill_history(data_root, profile_id, "EQ")) == 1
 
         _, page, _ = request(shell, "/song")
         correction = next(
             form for form in forms(page, "/skill/correct") if form.label == "Correct EQ Skill"
         )
-        shell.runtime.headquarters.skills.correct_skill(
-            skill_id="EQ",
-            level="APPLIED",
-            source_ref="test:newer-assessment",
-            reason="A newer correction landed after the page rendered.",
-            assistance_level=0.5,
-        )
+        changer = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            changer.skills.correct_skill(
+                skill_id="EQ",
+                level="APPLIED",
+                source_ref="test:newer-assessment",
+                reason="A newer correction landed after the page rendered.",
+                assistance_level=0.5,
+            )
+        finally:
+            changer.close()
         status, body, _ = request(
             shell,
             "/skill/correct",
@@ -355,7 +387,7 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
         )
         assert status == 409
         assert "Skill changed" in body
-        assert shell.runtime.headquarters.skills.state("EQ").level == "APPLIED"
+        assert skill_state(data_root, profile_id, "EQ").level == "APPLIED"
     finally:
         shell.stop()
 
@@ -372,9 +404,9 @@ def test_independent_requires_no_assistance_and_skill_writes_leave_song_untouche
     )
     shell.start()
     try:
-        song_before = shell.runtime.headquarters.store.get_song(song_id)
-        versions_before = shell.runtime.headquarters.store.versions_for_song(song_id)
-        sessions_before = shell.runtime.headquarters.sessions.latest_for_song(song_id)
+        song_before, versions_before, sessions_before = song_session_snapshot(
+            data_root, profile_id, song_id
+        )
         _, page, _ = request(shell, "/song")
         declaration = forms(page, "/skill/declare")[0]
         assisted = declare_fields(
@@ -392,7 +424,7 @@ def test_independent_requires_no_assistance_and_skill_writes_leave_song_untouche
             origin=shell.address.origin,
         )
         assert status == 303
-        assert shell.runtime.headquarters.skills.state("Mastering").latest_assessment is None
+        assert skill_state(data_root, profile_id, "Mastering").latest_assessment is None
 
         _, page, _ = request(shell, "/song")
         declaration = forms(page, "/skill/declare")[0]
@@ -411,14 +443,17 @@ def test_independent_requires_no_assistance_and_skill_writes_leave_song_untouche
             origin=shell.address.origin,
         )
         assert status == 303
-        state = shell.runtime.headquarters.skills.state("Mastering")
+        state = skill_state(data_root, profile_id, "Mastering")
         assert state.level == "INDEPENDENT"
         assert state.latest_assessment is not None
         assert state.latest_assessment.assistance_level == 0.0
         assert state.latest_assessment.confidence == 0.7
-        assert shell.runtime.headquarters.store.get_song(song_id) == song_before
-        assert shell.runtime.headquarters.store.versions_for_song(song_id) == versions_before
-        assert shell.runtime.headquarters.sessions.latest_for_song(song_id) == sessions_before
+        song_after, versions_after, sessions_after = song_session_snapshot(
+            data_root, profile_id, song_id
+        )
+        assert song_after == song_before
+        assert versions_after == versions_before
+        assert sessions_after == sessions_before
     finally:
         shell.stop()
 
