@@ -174,9 +174,14 @@ class InteractionDepthService:
                 raise InteractionDepthError(
                     "Learning evidence source semantics changed; interaction guidance stopped safely."
                 ) from exc
-            out.append(
+            details = [
                 f"{item.observation} ({source}, {round(item.confidence * 100)}% confidence)"
-            )
+            ]
+            if item.conditions:
+                details.append("Conditions: " + "; ".join(item.conditions))
+            if item.confounders:
+                details.append("Possible confounders: " + "; ".join(item.confounders))
+            out.append(". ".join(details))
         return tuple(out)
 
     @classmethod
