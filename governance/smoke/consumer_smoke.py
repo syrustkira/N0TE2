@@ -282,7 +282,7 @@ with tempfile.TemporaryDirectory() as temp:
     assert "artist-reported, 70% confidence" in explained
     assert "question, not established causation" in explained
     assert "changing fewer variables" in explained
-    assert "choosing a teaching/collaboration mode never approves a mutation" in explained
+    assert "Choosing a teaching/collaboration mode never approves a mutation" in explained
 
     quit_shell(shell)
 
