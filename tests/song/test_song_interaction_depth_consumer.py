@@ -276,7 +276,7 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
         finally:
             reopened.close()
 
-    def test_learning_evidence_change_invalidates_old_binding_and_feeds_fresh_explanation(self) -> None:
+    def test_learning_evidence_change_invalidates_old_binding_preserves_uncertainty_and_closed_job_clears_selection(self) -> None:
         profile_id, _, _, episode_id = seed(self.data_root)
         shell = new_shell(self.data_root, self.state_root, 9974, "interaction-stale")
         try:
@@ -305,8 +305,26 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
             self.assertIn("Working style: EXPLAIN WHY", page)
             self.assertIn("The chorus entrance felt larger", page)
             self.assertIn("artist-reported, 70% confidence", page)
+            self.assertIn("Conditions: Same playback level", page)
+            self.assertIn("Possible confounders: Arrangement contrast may also matter", page)
             self.assertIn("question, not established causation", page)
             self.assertIn("changing fewer variables", page)
+
+            decide = form_with_label(page, "/learning/decide", "Decide")
+            decide_fields = {
+                **decide.values,
+                "decision": "INCONCLUSIVE",
+                "rationale": "Arrangement contrast is still a plausible alternative explanation",
+                "confidence": "MEDIUM",
+            }
+            status, _, _ = post(shell, "/learning/decide", decide_fields)
+            self.assertEqual(status, 303)
+            _, closed, _ = request(shell, "/song")
+            self.assertNotIn("Working style: EXPLAIN WHY", closed)
+            self.assertIn("That working style ended with the previous Learning job", closed)
+            self.assertIn("Start a new Learning experiment", closed)
+            self.assertEqual(forms(closed, "/interaction/depth"), [])
+            self.assertNotIn("Choose a mode again from the current job below", closed)
         finally:
             shell.stop()
 
@@ -315,7 +333,8 @@ class SongInteractionDepthConsumerTests(unittest.TestCase):
             episode = reopened.learning.get_episode(episode_id)
             self.assertIsNotNone(episode)
             self.assertEqual(len(episode.consequences), 1)
-            self.assertIsNone(episode.decision)
+            self.assertIsNotNone(episode.decision)
+            self.assertEqual(episode.decision.decision, "INCONCLUSIVE")
         finally:
             reopened.close()
 
