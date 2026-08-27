@@ -84,13 +84,15 @@ class InteractionDepthServiceTests(unittest.TestCase):
         self.assertIn("AFTER", plan.steps[1].instruction)
         self.assertIn("does not claim the project was modified", plan.steps[1].instruction)
 
-    def test_explain_why_uses_hypothesis_evidence_and_causal_humility(self) -> None:
+    def test_explain_why_preserves_observation_conditions_confounders_and_causal_humility(self) -> None:
         self.hq.learning.append_consequence(
             self.episode.id,
             observation="The chorus entrance felt larger",
             source_kind="USER_DECLARED",
             source_ref="test:explain-observation",
             confidence=0.7,
+            conditions=("Same monitoring level",),
+            confounders=("Arrangement contrast may also have changed",),
         )
         plan = self.service.plan(
             self.service.binding_for(self.episode.id),
@@ -98,14 +100,13 @@ class InteractionDepthServiceTests(unittest.TestCase):
         )
         self.assertIn("question, not established causation", plan.steps[0].instruction)
         self.assertIn("changing fewer variables", plan.steps[1].instruction)
-        self.assertTrue(
-            any(
-                "chorus entrance felt larger" in item.lower()
-                for item in plan.evidence_summary
-            )
-        )
-        self.assertTrue(
-            any("artist-reported" in item for item in plan.evidence_summary)
+        summary = " ".join(plan.evidence_summary)
+        self.assertIn("The chorus entrance felt larger", summary)
+        self.assertIn("artist-reported", summary)
+        self.assertIn("Conditions: Same monitoring level", summary)
+        self.assertIn(
+            "Possible confounders: Arrangement contrast may also have changed",
+            summary,
         )
 
     def test_unknown_learning_evidence_source_stops_guidance_safely(self) -> None:
