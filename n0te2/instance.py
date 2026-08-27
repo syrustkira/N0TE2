@@ -496,12 +496,13 @@ class InstanceLeaseManager:
                         self._remove_marker_exact(profile, marker)
                         return completed
                     continue
+                taker_status = _probe_status(probe, marker.taker)
+                if taker_status == "DEAD":
+                    self._remove_marker_exact(profile, marker)
+                    continue
                 current = self.inspect(profile)
                 if current is None:
                     return LeaseAcquireResult("UNCERTAIN", marker.expected_previous)
-                current_status = _probe_status(probe, current.process)
-                if current_status == "ALIVE":
-                    return LeaseAcquireResult("HELD_BY_OTHER", current)
                 return LeaseAcquireResult("UNCERTAIN", current)
 
             current = self.inspect(profile)
