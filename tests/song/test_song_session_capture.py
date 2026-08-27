@@ -152,6 +152,14 @@ def make_open_session(
         hq.close()
 
 
+def session_items(data_root: Path, profile_id: str, session_id: str):
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        return hq.sessions.items_for_session(session_id)
+    finally:
+        hq.close()
+
+
 def test_all_capture_kinds_are_chronological_durable_and_visible_after_close(
     tmp_path: Path,
 ) -> None:
@@ -196,19 +204,23 @@ def test_all_capture_kinds_are_chronological_durable_and_visible_after_close(
         status, _ = request(shell, "/session/capture", method="POST", fields=payload)
         assert status == 303
 
-    items = shell.runtime.headquarters.sessions.items_for_session(session_id)
-    assert [item.kind for item in items] == expected_kinds
-    assert [item.body for item in items] == [body for _, body in expected]
-    assert all(shell.runtime.headquarters.sessions.promotion_for_item(item.id) is None for item in items)
-    assert shell.runtime.headquarters.store._conn.execute(
-        "SELECT COUNT(*) FROM evidence_claims"
-    ).fetchone()[0] == 0
-    scratch_events = [
-        event
-        for event in shell.runtime.headquarters.activity.for_song(song_id)
-        if event.event_type == "SESSION_SCRATCH_ADDED"
-    ]
-    assert len(scratch_events) == len(expected)
+    inspect = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        items = inspect.sessions.items_for_session(session_id)
+        assert [item.kind for item in items] == expected_kinds
+        assert [item.body for item in items] == [body for _, body in expected]
+        assert all(inspect.sessions.promotion_for_item(item.id) is None for item in items)
+        assert inspect.store._conn.execute(
+            "SELECT COUNT(*) FROM evidence_claims"
+        ).fetchone()[0] == 0
+        scratch_events = [
+            event
+            for event in inspect.activity.for_song(song_id)
+            if event.event_type == "SESSION_SCRATCH_ADDED"
+        ]
+        assert len(scratch_events) == len(expected)
+    finally:
+        inspect.close()
 
     status, page = request(shell, "/song")
     positions = [page.index(body) for _, body in expected]
@@ -264,7 +276,7 @@ def test_all_capture_kinds_are_chronological_durable_and_visible_after_close(
 def test_capture_action_is_origin_checked_one_shot_and_stale_safe(tmp_path: Path) -> None:
     data_root = (tmp_path / "data-authority").resolve()
     state_root = (tmp_path / "state-authority").resolve()
-    _, song_id, session_id = make_open_session(
+    profile_id, song_id, session_id = make_open_session(
         data_root,
         artist="Authority Artist",
         song_title="Authority Song",
@@ -289,45 +301,61 @@ def test_capture_action_is_origin_checked_one_shot_and_stale_safe(tmp_path: Path
         origin="https://attacker.example",
     )
     assert status == 403
-    assert shell.runtime.headquarters.sessions.items_for_session(session_id) == ()
+    assert session_items(data_root, profile_id, session_id) == ()
 
     status, _ = request(shell, "/session/capture", method="POST", fields=decision)
     assert status == 303
-    items = shell.runtime.headquarters.sessions.items_for_session(session_id)
+    items = session_items(data_root, profile_id, session_id)
     assert len(items) == 1 and items[0].kind == "DECISION"
 
     status, _ = request(shell, "/session/capture", method="POST", fields=decision)
     assert status == 409
-    assert shell.runtime.headquarters.sessions.items_for_session(session_id) == items
+    assert session_items(data_root, profile_id, session_id) == items
 
     # A token rendered for Song A cannot append after canonical active Song changes.
     status, page = request(shell, "/song")
     stale_song = capture_payload(page, "Observation", "Must not cross Songs")
-    second_song = shell.runtime.headquarters.store.create_song("Other Song")
+    changer = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        second_song = changer.store.create_song("Other Song")
+    finally:
+        changer.close()
     status, _ = request(shell, "/session/capture", method="POST", fields=stale_song)
     assert status == 409
-    assert shell.runtime.headquarters.sessions.items_for_session(session_id) == items
-    assert shell.runtime.headquarters.sessions.latest_for_song(second_song.id) is None
+    assert session_items(data_root, profile_id, session_id) == items
+    inspect = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        assert inspect.sessions.latest_for_song(second_song.id) is None
+    finally:
+        inspect.close()
 
     # A token rendered for an open Session cannot append after that Session closes.
-    shell.runtime.headquarters.store.select_song(song_id)
+    changer = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        changer.store.select_song(song_id)
+    finally:
+        changer.close()
     status, page = request(shell, "/song")
     stale_closed = capture_payload(page, "MARK", "Must not append after close")
-    shell.runtime.headquarters.sessions.close_session(
-        session_id,
-        debrief_summary="Authority red-team complete",
-        next_action="Move to the next bounded Song decision",
-    )
+    changer = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        changer.sessions.close_session(
+            session_id,
+            debrief_summary="Authority red-team complete",
+            next_action="Move to the next bounded Song decision",
+        )
+    finally:
+        changer.close()
     status, _ = request(shell, "/session/capture", method="POST", fields=stale_closed)
     assert status == 409
-    assert shell.runtime.headquarters.sessions.items_for_session(session_id) == items
+    assert session_items(data_root, profile_id, session_id) == items
     quit_shell(shell)
 
 
 def test_blank_and_oversized_capture_fail_without_history_or_evidence(tmp_path: Path) -> None:
     data_root = (tmp_path / "data-validation").resolve()
     state_root = (tmp_path / "state-validation").resolve()
-    _, _, session_id = make_open_session(
+    profile_id, _, session_id = make_open_session(
         data_root,
         artist="Validation Artist",
         song_title="Validation Song",
@@ -345,19 +373,23 @@ def test_blank_and_oversized_capture_fail_without_history_or_evidence(tmp_path: 
     blank = capture_payload(page, "Observation", "   \n  ")
     status, _ = request(shell, "/session/capture", method="POST", fields=blank)
     assert status == 303
-    assert shell.runtime.headquarters.sessions.items_for_session(session_id) == ()
+    assert session_items(data_root, profile_id, session_id) == ()
     status, page = request(shell, "/song")
     assert "Session capture must not be empty" in page
 
     oversized = capture_payload(page, "MARK", "x" * 1201)
     status, _ = request(shell, "/session/capture", method="POST", fields=oversized)
     assert status == 303
-    assert shell.runtime.headquarters.sessions.items_for_session(session_id) == ()
+    assert session_items(data_root, profile_id, session_id) == ()
     status, page = request(shell, "/song")
     assert "Session capture is too long" in page
-    assert shell.runtime.headquarters.store._conn.execute(
-        "SELECT COUNT(*) FROM evidence_claims"
-    ).fetchone()[0] == 0
+    inspect = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        assert inspect.store._conn.execute(
+            "SELECT COUNT(*) FROM evidence_claims"
+        ).fetchone()[0] == 0
+    finally:
+        inspect.close()
     quit_shell(shell)
 
 
@@ -411,13 +443,16 @@ def test_capture_is_profile_isolated_and_does_not_mutate_execution_or_song_state
     status, _ = request(shell, "/profile/select", method="POST", fields=chosen.values)
     assert status == 303
 
-    before_song = shell.runtime.headquarters.store.get_song(song_two.id)
-    before_asset = shell.runtime.headquarters.store.get_asset(asset.id)
-    before_version = shell.runtime.headquarters.store.get_version(version.id)
-    conn = shell.runtime.headquarters.store._conn
-    before_evidence = int(conn.execute("SELECT COUNT(*) FROM evidence_claims").fetchone()[0])
-    before_operations = int(conn.execute("SELECT COUNT(*) FROM operations").fetchone()[0])
-    focus = shell.runtime.headquarters.attention.start_focus("MAKE", song_id=song_two.id)
+    inspect = HeadquartersMemory.open(data_root, profile_two)
+    try:
+        before_song = inspect.store.get_song(song_two.id)
+        before_asset = inspect.store.get_asset(asset.id)
+        before_version = inspect.store.get_version(version.id)
+        before_evidence = int(inspect.store._conn.execute("SELECT COUNT(*) FROM evidence_claims").fetchone()[0])
+        before_operations = int(inspect.store._conn.execute("SELECT COUNT(*) FROM operations").fetchone()[0])
+        focus = inspect.attention.start_focus("MAKE", song_id=song_two.id)
+    finally:
+        inspect.close()
 
     status, page = request(shell, "/song")
     assert status == 200
@@ -426,17 +461,21 @@ def test_capture_is_profile_isolated_and_does_not_mutate_execution_or_song_state
     status, _ = request(shell, "/session/capture", method="POST", fields=payload)
     assert status == 303
 
-    captured = shell.runtime.headquarters.sessions.items_for_session(session_two.id)
-    assert len(captured) == 1
-    assert captured[0].kind == "OBSERVATION"
-    assert captured[0].body == "The current version already has enough low-end weight"
-    assert shell.runtime.headquarters.store.get_song(song_two.id) == before_song
-    assert shell.runtime.headquarters.store.get_asset(asset.id) == before_asset
-    assert shell.runtime.headquarters.store.get_version(version.id) == before_version
-    assert int(conn.execute("SELECT COUNT(*) FROM evidence_claims").fetchone()[0]) == before_evidence
-    assert int(conn.execute("SELECT COUNT(*) FROM operations").fetchone()[0]) == before_operations
-    assert shell.runtime.headquarters.attention.active_focus() == focus
-    assert shell.runtime.headquarters.sessions.promotion_for_item(captured[0].id) is None
+    inspect = HeadquartersMemory.open(data_root, profile_two)
+    try:
+        captured = inspect.sessions.items_for_session(session_two.id)
+        assert len(captured) == 1
+        assert captured[0].kind == "OBSERVATION"
+        assert captured[0].body == "The current version already has enough low-end weight"
+        assert inspect.store.get_song(song_two.id) == before_song
+        assert inspect.store.get_asset(asset.id) == before_asset
+        assert inspect.store.get_version(version.id) == before_version
+        assert int(inspect.store._conn.execute("SELECT COUNT(*) FROM evidence_claims").fetchone()[0]) == before_evidence
+        assert int(inspect.store._conn.execute("SELECT COUNT(*) FROM operations").fetchone()[0]) == before_operations
+        assert inspect.attention.active_focus() == focus
+        assert inspect.sessions.promotion_for_item(captured[0].id) is None
+    finally:
+        inspect.close()
 
     status, page = request(shell, "/song")
     assert "Private Artist One MARK" not in page
