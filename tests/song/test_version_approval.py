@@ -42,7 +42,7 @@ def test_exact_approval_changes_only_approved_pointer_and_records_activity(tmp_p
         assets_before = tuple(
             headquarters.store.version_asset_ids(version.id) for version in versions
         )
-        activity_before = headquarters.activity.events_for_song(song.id)
+        activity_before = headquarters.activity.for_song(song.id)
 
         binding = service.binding_for(song.id, versions[0].id)
         result = service.approve(binding)
@@ -54,7 +54,7 @@ def test_exact_approval_changes_only_approved_pointer_and_records_activity(tmp_p
         ) == assets_before
         assert headquarters.store.versions_for_song(song.id) == versions
 
-        activity_after = headquarters.activity.events_for_song(song.id)
+        activity_after = headquarters.activity.for_song(song.id)
         added = activity_after[len(activity_before):]
         assert [event.event_type for event in added] == ["VERSION_APPROVED"]
         assert added[0].song_id == song.id
