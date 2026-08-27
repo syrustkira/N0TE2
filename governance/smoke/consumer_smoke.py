@@ -4,7 +4,6 @@ from __future__ import annotations
 import json
 import sys
 import tempfile
-import traceback
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from pathlib import Path
@@ -174,34 +173,6 @@ with tempfile.TemporaryDirectory() as temp:
         process=process,
         probe=probe,
     )
-
-    original_ensure_runtime = shell._ensure_runtime
-    original_render_state = shell._render_state
-
-    def diagnostic_ensure_runtime():
-        try:
-            return original_ensure_runtime()
-        except Exception as exc:
-            print(
-                f"SMOKE COLD START _ensure_runtime: {type(exc).__name__}: {exc}",
-                file=sys.stderr,
-            )
-            traceback.print_exc(file=sys.stderr)
-            raise
-
-    def diagnostic_render_state(page_state, *, path: str):
-        try:
-            return original_render_state(page_state, path=path)
-        except Exception as exc:
-            print(
-                f"SMOKE COLD START _render_state: {type(exc).__name__}: {exc}",
-                file=sys.stderr,
-            )
-            traceback.print_exc(file=sys.stderr)
-            raise
-
-    shell._ensure_runtime = diagnostic_ensure_runtime
-    shell._render_state = diagnostic_render_state
 
     address = shell.start()
     assert address.host == "127.0.0.1"
