@@ -173,6 +173,19 @@ class GovernanceRegressionTests(unittest.TestCase):
             cwd=repo,
             check=True,
         )
+        # This repository is disposable test evidence. Disable Git's automatic
+        # background maintenance so a detached process cannot outlive a commit
+        # and race TemporaryDirectory cleanup on macOS or Windows.
+        subprocess.run(
+            ["git", "config", "maintenance.auto", "false"],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "gc.auto", "0"],
+            cwd=repo,
+            check=True,
+        )
         # Seed the whole copied repository so receipt-path enforcement is tested
         # against one deliberate post-baseline change, not every file that happened
         # to be absent from an artificial README-only baseline.
