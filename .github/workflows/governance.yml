@@ -36,6 +36,10 @@ jobs:
           python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
       - name: Validate construction governance
         run: python governance/check_governance.py --repo .
+      - name: Validate context lifecycle governance
+        run: python governance/check_context_lifecycle.py --repo .
+      - name: Inspect supervision graph
+        run: python governance/supervision.py --repo .
       - name: Build exact-head runtime handoff
         env:
           N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
