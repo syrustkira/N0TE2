@@ -6,6 +6,7 @@ from .activity import ActivityLog
 from .attention import AttentionMemory
 from .capability_evidence import CapabilityEvidenceMemory
 from .context import ContextIsolationService
+from .context_lifecycle import ContextProjectionService
 from .evidence import EvidenceMemory
 from .focus import FocusContextService
 from .friction import FrictionMemory
@@ -73,6 +74,7 @@ class HeadquartersMemory:
             self.skills,
             self.activity,
         )
+        self.context_projection = ContextProjectionService(self.retention)
         # Shell installation is intentionally lazy. Headquarters instances are
         # constructed only after package import, avoiding a consumer_shell <->
         # memory import cycle while keeping the artist-facing projection attached
