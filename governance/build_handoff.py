@@ -29,6 +29,51 @@ def require(cond: bool, msg: str):
         raise HandoffError(msg)
 
 
+def build_supervision_summary(repo: Path, current: dict) -> dict:
+    registry = load_json(repo / "governance/automation_registry.json")
+    context_policy = load_json(repo / "governance/context_lifecycle.json")
+    require(registry.get("supervisor") == "N0TE-SUPERVISOR", "automation registry supervision root is stale")
+    actors = registry.get("actors", [])
+    require(isinstance(actors, list) and actors, "automation registry requires actors")
+    summarized = []
+    for actor in actors:
+        require(actor.get("parent") == "N0TE-SUPERVISOR", f"automation {actor.get('id')} escaped supervision graph")
+        require(actor.get("reports_to") == "N0TE-SUPERVISOR", f"automation {actor.get('id')} does not report to supervision graph")
+        require(actor.get("reason_running"), f"automation {actor.get('id')} lacks current reason")
+        require(actor.get("allowed_mutations"), f"automation {actor.get('id')} lacks allowed mutation contract")
+        require(actor.get("wake_condition"), f"automation {actor.get('id')} lacks wake condition")
+        require(actor.get("retirement_condition"), f"automation {actor.get('id')} lacks retirement condition")
+        require(actor.get("failure_policy", {}).get("terminal_states"), f"automation {actor.get('id')} lacks terminal failure states")
+        summarized.append(
+            {
+                "id": actor.get("id"),
+                "state": actor.get("lifecycle", {}).get("state"),
+                "purpose": actor.get("purpose"),
+                "reason_running": actor.get("reason_running"),
+                "allowed_mutations": actor.get("allowed_mutations"),
+                "next_wake_condition": actor.get("lifecycle", {}).get("next_wake_condition"),
+                "retirement_condition": actor.get("retirement_condition"),
+                "escalation_target": actor.get("escalation_target"),
+            }
+        )
+    controller = next((actor for actor in actors if actor.get("id") == "AUTO-CONSTRUCTION-CONTROLLER-001"), None)
+    require(controller is not None, "construction controller is not registered")
+    expected_controller_state = "ACTIVE" if current.get("lifecycle_state") == "ACTIVE" else "DORMANT"
+    require(controller.get("lifecycle", {}).get("state") == expected_controller_state, "construction controller lifecycle is stale")
+    if current.get("lifecycle_state") != "ACTIVE":
+        require(controller.get("auto_spawn_successor") is False, "terminal construction cannot auto-spawn successor work")
+    return {
+        "root": registry["supervisor"],
+        "actors": summarized,
+        "context_policy": {
+            "id": context_policy.get("policy_id"),
+            "flattening_rule": context_policy.get("constitutional_rule"),
+            "conversation_is_provenance_not_authority": context_policy.get("conversation_distillation", {}).get("conversation_is_provenance_not_authority"),
+            "semantic_gc_preserves_history": not context_policy.get("semantic_gc", {}).get("delete_canonical_history_by_default", True),
+        },
+    }
+
+
 def build_runtime_handoff(repo: Path) -> dict:
     handoff = load_json(repo / "governance/handoff.json")
     current = load_json(repo / "governance/current_state.json")
@@ -57,12 +102,16 @@ def build_runtime_handoff(repo: Path) -> dict:
         require(receipt.get("product_code_allowed") is False, f"{lifecycle_state} receipt cannot authorize product construction")
         require(receipt.get("legacy_admission_allowed") is False, f"{lifecycle_state} receipt cannot authorize legacy admission")
 
-    refs = handoff["reconstruction"]["required_refs"]
+    reconstruction = handoff["reconstruction"]
+    require(reconstruction.get("handoff_first") is True, "runtime reconstruction must start from durable handoff")
+    require(reconstruction.get("fresh_agent_requires_prior_chat") is False, "runtime reconstruction cannot require prior chat")
+    refs = reconstruction["required_refs"]
     missing = [rel for rel in refs if not (repo / rel).exists()]
     require(not missing, f"handoff references missing authority: {', '.join(missing)}")
+    supervision = build_supervision_summary(repo, current)
 
     runtime = {
-        "schema_version": 1,
+        "schema_version": 2,
         "repository": handoff["repository"],
         "observed_head_sha": head,
         "head_binding": "RUNTIME_EXACT",
@@ -73,14 +122,17 @@ def build_runtime_handoff(repo: Path) -> dict:
         "open_incidents": handoff.get("open_incidents", []),
         "next_admissible_action": handoff["next_admissible_action"],
         "required_refs": refs,
-        "archaeology_fallback": handoff["reconstruction"]["archaeology_fallback"],
+        "required_reconstruction_outcomes": reconstruction.get("required_outcomes", []),
+        "fresh_agent_requires_prior_chat": False,
+        "supervision": supervision,
+        "archaeology_fallback": reconstruction["archaeology_fallback"],
     }
     return runtime
 
 
 def build_observation(runtime: dict) -> dict:
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "automation_id": "AUTO-GH-GOVERNANCE-001",
         "supervision_parent": "N0TE-SUPERVISOR",
         "observed_head_sha": runtime["observed_head_sha"],
@@ -94,6 +146,8 @@ def build_observation(runtime: dict) -> dict:
             "runtime_handoff": "governance-runtime-handoff.json",
             "authority_checked": True,
             "exact_head_checked": True,
+            "context_lifecycle_checked": True,
+            "supervision_graph_checked": True,
             "construction_receipt_status": runtime["construction_receipt_status"],
         },
     }
@@ -121,7 +175,8 @@ def main() -> int:
             print(
                 "N0TE2 HANDOFF: GREEN "
                 f"head={runtime['observed_head_sha']} lifecycle={runtime['lifecycle']['state']} "
-                f"active={runtime['lifecycle'].get('active_node') or '-'} receipt={runtime['construction_receipt_status']}"
+                f"active={runtime['lifecycle'].get('active_node') or '-'} receipt={runtime['construction_receipt_status']} "
+                f"actors={len(runtime['supervision']['actors'])}"
             )
         elif not args.output and not args.observation_output:
             print(json.dumps(runtime, indent=2, sort_keys=True))
