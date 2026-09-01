@@ -73,6 +73,13 @@ class HeadquartersMemory:
             self.skills,
             self.activity,
         )
+        # Shell installation is intentionally lazy. Headquarters instances are
+        # constructed only after package import, avoiding a consumer_shell <->
+        # memory import cycle while keeping the artist-facing projection attached
+        # to the same canonical memory composition root.
+        from .retention_shell import install_song_retention
+
+        install_song_retention()
 
     @classmethod
     def create(cls, root: str | Path, artist_name: str) -> "HeadquartersMemory":
