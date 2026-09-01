@@ -109,6 +109,39 @@ class InteractionDepthServiceTests(unittest.TestCase):
             summary,
         )
 
+    def test_interaction_evidence_preserves_earlier_contradictory_observations(self) -> None:
+        observations = (
+            (
+                "The first listen felt bigger",
+                ("Reference level matched",),
+                ("Fresh ears may have biased the judgment",),
+            ),
+            ("The second listen felt unchanged", (), ()),
+            ("The third listen felt punchier", (), ()),
+            ("The fourth listen felt brighter", (), ()),
+        )
+        for index, (observation, conditions, confounders) in enumerate(observations, start=1):
+            self.hq.learning.append_consequence(
+                self.episode.id,
+                observation=observation,
+                source_kind="USER_DECLARED",
+                source_ref=f"test:history-{index}",
+                confidence=0.6,
+                conditions=conditions,
+                confounders=confounders,
+            )
+        plan = self.service.plan(
+            self.service.binding_for(self.episode.id),
+            "EXPLAIN WHY",
+        )
+        summary = " ".join(plan.evidence_summary)
+        self.assertIn("The first listen felt bigger", summary)
+        self.assertIn("Conditions: Reference level matched", summary)
+        self.assertIn("Possible confounders: Fresh ears may have biased the judgment", summary)
+        self.assertIn("The second listen felt unchanged", summary)
+        self.assertIn("The fourth listen felt brighter", summary)
+        self.assertNotIn("earlier consequence observations are also recorded", summary)
+
     def test_unknown_learning_evidence_source_stops_guidance_safely(self) -> None:
         observation = ConsequenceObservation(
             sequence=1,
@@ -138,7 +171,7 @@ class InteractionDepthServiceTests(unittest.TestCase):
             InteractionDepthService._evidence_summary(episode)
 
     def test_let_me_try_keeps_n0te_out_of_mutation(self) -> None:
-        plan = self.service.plan(self.service.binding_for(self.episode.id), "LET ME TRY")
+        plan = self.service.plan(self.service.binding_for(self.episode.id), "LET_ME_TRY")
         self.assertEqual(plan.mode, "LET_ME_TRY")
         self.assertFalse(plan.execution_requested)
         self.assertIn("stand back", plan.n0te_role.lower())
