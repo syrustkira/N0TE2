@@ -1,5 +1,6 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
+  "status": "ACTIVE",
   "receipt_id": "N0TE2-UX-01-RETENTION-01",
   "node_id": "UX-01",
   "increment_id": "UX-01-RETENTION-01",

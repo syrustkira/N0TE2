@@ -32,6 +32,7 @@ def require(cond: bool, msg: str):
 def build_runtime_handoff(repo: Path) -> dict:
     handoff = load_json(repo / "governance/handoff.json")
     current = load_json(repo / "governance/current_state.json")
+    receipt = load_json(repo / "governance/active_receipt.json")
     require(handoff.get("repository") == current.get("repository") == "syrustkira/N0TE2", "handoff/current repository mismatch")
 
     head = git(repo, "rev-parse", "HEAD")
@@ -40,9 +41,21 @@ def build_runtime_handoff(repo: Path) -> dict:
         require(head == expected, f"exact-head mismatch: expected {expected}, got {head}")
 
     lifecycle = handoff["lifecycle"]
-    require(lifecycle["state"] == current.get("lifecycle_state"), "handoff lifecycle is stale")
+    lifecycle_state = lifecycle["state"]
+    require(lifecycle_state == current.get("lifecycle_state"), "handoff lifecycle is stale")
     require(lifecycle.get("active_node") == current.get("active_node"), "handoff active node is stale")
     require(lifecycle.get("active_increment") == current.get("active_increment"), "handoff active increment is stale")
+
+    receipt_status = receipt.get("status")
+    if lifecycle_state == "ACTIVE":
+        require(receipt_status == "ACTIVE", "ACTIVE lifecycle requires an ACTIVE construction receipt")
+        require(receipt.get("node_id") == lifecycle.get("active_node"), "active receipt node is stale")
+        require(receipt.get("increment_id") == lifecycle.get("active_increment"), "active receipt increment is stale")
+        require(receipt.get("product_code_allowed") is True or receipt.get("node_id") in {"BOOT-02", "LEGACY-01"}, "active product receipt lost construction authority")
+    else:
+        require(receipt_status == "INACTIVE", f"{lifecycle_state} cannot carry an ACTIVE construction receipt")
+        require(receipt.get("product_code_allowed") is False, f"{lifecycle_state} receipt cannot authorize product construction")
+        require(receipt.get("legacy_admission_allowed") is False, f"{lifecycle_state} receipt cannot authorize legacy admission")
 
     refs = handoff["reconstruction"]["required_refs"]
     missing = [rel for rel in refs if not (repo / rel).exists()]
@@ -56,6 +69,7 @@ def build_runtime_handoff(repo: Path) -> dict:
         "delivery": handoff["delivery"],
         "lifecycle": lifecycle,
         "controller": handoff["controller"],
+        "construction_receipt_status": receipt_status,
         "open_incidents": handoff.get("open_incidents", []),
         "next_admissible_action": handoff["next_admissible_action"],
         "required_refs": refs,
@@ -80,6 +94,7 @@ def build_observation(runtime: dict) -> dict:
             "runtime_handoff": "governance-runtime-handoff.json",
             "authority_checked": True,
             "exact_head_checked": True,
+            "construction_receipt_status": runtime["construction_receipt_status"],
         },
     }
 
@@ -106,7 +121,7 @@ def main() -> int:
             print(
                 "N0TE2 HANDOFF: GREEN "
                 f"head={runtime['observed_head_sha']} lifecycle={runtime['lifecycle']['state']} "
-                f"active={runtime['lifecycle'].get('active_node') or '-'}"
+                f"active={runtime['lifecycle'].get('active_node') or '-'} receipt={runtime['construction_receipt_status']}"
             )
         elif not args.output and not args.observation_output:
             print(json.dumps(runtime, indent=2, sort_keys=True))

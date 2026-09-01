@@ -4,11 +4,15 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = importlib.util.spec_from_file_location("n0te2_governance_retention", ROOT / "governance/check_governance.py")
 gov = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gov)
+HANDOFF_SPEC = importlib.util.spec_from_file_location("n0te2_handoff_retention", ROOT / "governance/build_handoff.py")
+handoff_mod = importlib.util.module_from_spec(HANDOFF_SPEC)
+HANDOFF_SPEC.loader.exec_module(handoff_mod)
 
 
 class RetentionSupervisionRegressionTests(unittest.TestCase):
@@ -65,6 +69,33 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
         state["terminal_reason"] = "done"
         self.write_json(state_path, state)
         self.assert_red(repo, "STABLE cannot retain an active_node")
+
+    def test_terminal_handoff_cannot_leave_active_construction_receipt(self):
+        repo = self.clone()
+        state_path = repo / "governance/current_state.json"
+        state = json.loads(state_path.read_text())
+        state.update({"lifecycle_state":"STABLE","active_node":None,"active_increment":None,"product_code_authorized":False,"legacy_admission_authorized":False,"terminal_reason":"done"})
+        self.write_json(state_path, state)
+        handoff_path = repo / "governance/handoff.json"
+        handoff = json.loads(handoff_path.read_text())
+        handoff["lifecycle"] = {"state":"STABLE","active_node":None,"active_increment":None}
+        self.write_json(handoff_path, handoff)
+        with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
+            with self.assertRaises(handoff_mod.HandoffError) as cm:
+                handoff_mod.build_runtime_handoff(repo)
+        self.assertIn("cannot carry an ACTIVE construction receipt", str(cm.exception))
+
+    def test_active_handoff_requires_matching_active_receipt(self):
+        repo = self.clone()
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["status"] = "INACTIVE"
+        receipt["product_code_allowed"] = False
+        self.write_json(receipt_path, receipt)
+        with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
+            with self.assertRaises(handoff_mod.HandoffError) as cm:
+                handoff_mod.build_runtime_handoff(repo)
+        self.assertIn("ACTIVE lifecycle requires an ACTIVE construction receipt", str(cm.exception))
 
     def test_automation_cannot_escape_supervision_graph(self):
         repo = self.clone()
