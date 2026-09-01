@@ -21,7 +21,6 @@ jobs:
       N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       N0TE2_RUN_ID: ${{ github.run_id }}
       N0TE2_RUN_ATTEMPT: ${{ github.run_attempt }}
-      N0TE2_RUNNER_OS: ${{ runner.os }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -49,6 +48,7 @@ jobs:
         if: ${{ always() }}
         env:
           N0TE2_OBSERVATION_STATUS: ${{ job.status }}
+          N0TE2_RUNNER_OS: ${{ runner.os }}
         run: python governance/build_handoff.py --repo . --output governance-runtime-handoff.json --observation-output governance-ci-observation.json
       - name: Upload supervision evidence
         if: ${{ always() }}
