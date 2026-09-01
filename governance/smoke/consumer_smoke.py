@@ -26,7 +26,7 @@ if state.get("product_code_authorized") is not True:
 
 if (
     state.get("active_node") != "UX-01"
-    or state.get("active_increment") != "UX-01-INTERACTION-01"
+    or state.get("active_increment") != "UX-01-RETENTION-01"
 ):
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage "
@@ -163,7 +163,7 @@ with tempfile.TemporaryDirectory() as temp:
     process = ProcessIdentity.from_start_token(
         PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
         pid=99012,
-        start_token="ux-01-interaction-consumer-smoke",
+        start_token="ux-01-retention-consumer-smoke",
     )
     probe = Probe()
 
@@ -181,26 +181,32 @@ with tempfile.TemporaryDirectory() as temp:
     assert status == 200, f"welcome GET returned {status}: {welcome[:1200]}"
     assert "Welcome to your Headquarters" in welcome
     create = one_form(welcome, "/profile/create")
-    create.values["artist_name"] = "Interaction Smoke Artist"
+    create.values["artist_name"] = "Retention Smoke Artist"
     status, created = post(shell, "/profile/create", create.values)
     assert status == 303, f"profile create returned {status}: {created[:600]}"
 
     status, song_page = get(shell, "/song")
     assert status == 200, f"initial song GET returned {status}: {song_page[:1200]}"
     start_song = one_form(song_page, "/song/start")
-    start_song.values["song_title"] = "Interaction Smoke Song"
+    start_song.values["song_title"] = "Retention Smoke Song"
     status, started_song = post(shell, "/song/start", start_song.values)
     assert status == 303, f"song start returned {status}: {started_song[:600]}"
 
     status, song_page = get(shell, "/song")
     assert status == 200, f"song/session GET returned {status}: {song_page[:1200]}"
+    assert "What N0TE remembers" in song_page
+    assert "Retention active" in song_page
     start_session = one_form(song_page, "/session/start")
-    start_session.values["objective"] = "Test one chorus transition without changing unrelated parts"
+    session_objective = "Test one chorus transition without changing unrelated parts"
+    start_session.values["objective"] = session_objective
     status, started_session = post(shell, "/session/start", start_session.values)
     assert status == 303, f"session start returned {status}: {started_session[:600]}"
 
     status, song_page = get(shell, "/song")
     assert status == 200, f"learning-start GET returned {status}: {song_page[:1200]}"
+    assert "What N0TE remembers" in song_page
+    assert session_objective in song_page
+    assert "Work Session still open" in song_page
     learning = one_form(song_page, "/learning/start")
     learning.values.update(
         {
@@ -227,12 +233,14 @@ with tempfile.TemporaryDirectory() as temp:
     assert "BEFORE" in shown and "AFTER" in shown
     assert "does not claim the project was modified" in shown
     assert "No consequence has been recorded yet" in shown
+    assert "What N0TE remembers" in shown
     assert "learn_" not in shown and "sess_" not in shown and "prf_" not in shown
 
     observe = one_form(shown, "/learning/observe")
+    observation_text = "The chorus entrance felt larger"
     observe.values.update(
         {
-            "observation": "The chorus entrance felt larger",
+            "observation": observation_text,
             "confidence": "MEDIUM",
             "conditions": "Same playback level",
             "confounders": "Arrangement contrast may also matter",
@@ -243,17 +251,22 @@ with tempfile.TemporaryDirectory() as temp:
 
     status, fresh = get(shell, "/song")
     assert status == 200, f"fresh-evidence GET returned {status}: {fresh[:1200]}"
+    assert "What N0TE remembers" in fresh
+    assert "1 Learning episode" in fresh
     explain = mode_form(fresh, "EXPLAIN_WHY")
     status, explained_post = post(shell, "/interaction/depth", explain.values)
     assert status == 303, f"EXPLAIN_WHY POST returned {status}: {explained_post[:600]}"
     status, explained = get(shell, "/song")
     assert status == 200, f"EXPLAIN_WHY result GET returned {status}: {explained[:1200]}"
     assert "Working style: EXPLAIN WHY" in explained
-    assert "The chorus entrance felt larger" in explained
+    assert observation_text in explained
     assert "artist-reported, 70% confidence" in explained
     assert "question, not established causation" in explained
     assert "changing fewer variables" in explained
     assert "Choosing a teaching/collaboration mode never approves a mutation" in explained
+    assert "What N0TE remembers" in explained
+    assert "read-only" in explained
+    assert "one kept result does not become permanent taste doctrine or a causal rule" in explained
 
     quit_shell(shell)
 
@@ -266,14 +279,19 @@ with tempfile.TemporaryDirectory() as temp:
     relaunched.start()
     status, resumed = get(relaunched, "/song")
     assert status == 200, f"relaunch song GET returned {status}: {resumed[:1200]}"
-    assert "Interaction Smoke Artist" in resumed
-    assert "Interaction Smoke Song" in resumed
-    assert "The chorus entrance felt larger" in resumed
+    assert "Retention Smoke Artist" in resumed
+    assert "Retention Smoke Song" in resumed
+    assert observation_text in resumed
+    assert "What N0TE remembers" in resumed
+    assert "Retention active" in resumed
+    assert session_objective in resumed
+    assert "Work Session still open" in resumed
+    assert "1 Learning episode" in resumed
     assert "Working style: EXPLAIN WHY" not in resumed
     assert len(parsed_forms(resumed, "/interaction/depth")) == 5
     assert "learn_" not in resumed and "sess_" not in resumed and "prf_" not in resumed
     quit_shell(relaunched)
 
 print(
-    "UX-01-INTERACTION-01 CONSUMER SMOKE: GREEN: a fresh artist created a Song and real Learning job, selected a read-only SHOW ME walkthrough, recorded an observed consequence, selected EXPLAIN WHY and received evidence-labeled causal-humility guidance, explicitly quit/relaunched with durable Learning evidence but no persisted interaction-mode preference, and never exposed internal lineage or granted mutation authority"
+    "UX-01-RETENTION-01 CONSUMER SMOKE: GREEN: a fresh artist created a Song and real work Session, used the inherited interaction-depth Learning journey, recorded evidence, saw N0TE consult the canonical retained thread without leaking lineage or granting mutation authority, explicitly quit/relaunched, and recovered the same Session objective and Learning evidence while the transient interaction-mode choice correctly did not persist"
 )
