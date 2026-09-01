@@ -18,6 +18,7 @@ from .operations import OperationJournal
 from .provenance import ProvenanceLedger
 from .reconcile import ReconciliationService
 from .recovery import RecoveryManager
+from .retention import SongRetentionService
 from .session import SessionMemory
 from .shadow import HostShadow
 from .skills import SkillMemory
@@ -60,6 +61,17 @@ class HeadquartersMemory:
         self.context = ContextIsolationService(store, self.evidence)
         self.knowledge = TwinAwareSongKnowledgeMapService(
             SongKnowledgeMapService(store), self.evidence
+        )
+        self.retention = SongRetentionService(
+            store,
+            self.evidence,
+            self.context,
+            self.sessions,
+            self.learning,
+            self.success,
+            self.friction,
+            self.skills,
+            self.activity,
         )
 
     @classmethod
