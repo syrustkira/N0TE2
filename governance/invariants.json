@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "constitutional": [
+    {"id":"INV-SUP-001","statement":"Every autonomous actor has a registered supervision parent, purpose, wake condition, observability contract and retirement condition.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-SUP-002","statement":"A dormant automation reactivation is an observable event and cannot silently resume mutation authority.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-LIFE-001","statement":"Construction is temporary and must terminate when no currently justified construction work exists.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-LIFE-002","statement":"STABLE, WAITING and BLOCKED are legal terminal controller states with zero ACTIVE construction nodes; re-entry requires a declared trigger and fresh selection.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-SCOPE-001","statement":"Known or incomplete scope does not select itself for work. Selection is explicit, dependency-ready and receipt-bounded.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-EVID-001","statement":"Current observations bind the exact repository head. Prior-head success remains historical evidence only.","authority":"N0TE_SUPERVISION","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-HANDOFF-001","statement":"Normal reconstruction starts from the durable handoff and its referenced authority. Historical conversation or PR archaeology is fallback only for missing or contradictory durable authority.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-AUTH-001","statement":"Workers and controllers cannot expand their own authority, redefine parent purpose or silently change constitutional definitions.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"}
+  ],
+  "derived_definition_policy": {
+    "may_reconcile_from_evidence": true,
+    "must_retain_supersession_history": true,
+    "constitutional_definitions_may_not_silently_drift": true
+  }
+}

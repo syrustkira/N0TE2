@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "target_branch": "main",
+  "required_exact_head_status_contexts": ["n0te2-governance-Linux","n0te2-governance-Windows","n0te2-governance-macOS"],
+  "requirements": {"exact_head_only":true,"handoff_consistent":true,"governance_green":true,"full_regression_green":true,"consumer_smoke_green":true,"blocking_incidents_resolved_before_merge":true,"draft_pr_cannot_merge":true},
+  "external_enforcement": {"desired":"GitHub branch protection or repository ruleset requiring the three exact-head status contexts","repository_file_cannot_prevent_direct_push_by_itself":true}
+}
