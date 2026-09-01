@@ -163,11 +163,7 @@ class InteractionDepthService:
                 "No consequence has been recorded yet. Treat the proposed change as a test, not a proven fix.",
             )
         out: list[str] = []
-        if len(episode.consequences) > 3:
-            out.append(
-                f"{len(episode.consequences) - 3} earlier consequence observations are also recorded."
-            )
-        for item in episode.consequences[-3:]:
+        for item in episode.consequences:
             try:
                 source = _SOURCE_LABELS[item.source_kind]
             except KeyError as exc:
