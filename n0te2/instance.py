@@ -62,7 +62,7 @@ def _sha256_json(value: object) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class ProcessIdentity:
     platform: PlatformEnvironment
     pid: int
@@ -79,6 +79,14 @@ class ProcessIdentity:
                 "start_token_fingerprint must be a 64-character hexadecimal digest"
             )
         object.__setattr__(self, "start_token_fingerprint", token)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ProcessIdentity):
+            return NotImplemented
+        return self.fingerprint == other.fingerprint
+
+    def __hash__(self) -> int:
+        return hash(self.fingerprint)
 
     @classmethod
     def from_start_token(
@@ -318,7 +326,6 @@ class InstanceLeaseManager:
 
     @staticmethod
     def _fsync_dir(path: Path) -> None:
-        # Directory fsync is not uniformly available (notably on Windows).
         try:
             fd = os.open(path, os.O_RDONLY)
         except OSError:
@@ -444,72 +451,31 @@ class InstanceLeaseManager:
                     "takeover marker prior lease does not match stale archive"
                 )
             replacement = InstanceLease.new(profile_id, marker.taker)
-            if not self._write_exclusive(
-                self._lease_path(profile_id), replacement.to_data()
-            ):
+            if not self._write_exclusive(self._lease_path(profile_id), replacement.to_data()):
                 return None
             return LeaseAcquireResult("REPLACED_STALE", replacement, expected)
 
-        if (
-            latest.lease_nonce != expected.lease_nonce
-            or latest.process.fingerprint != expected.process.fingerprint
-        ):
+        if latest != expected:
             return None
-
-        status_now = _probe_status(probe, latest.process)
-        if status_now == "ALIVE":
+        status = _probe_status(probe, latest.process)
+        if status == "ALIVE":
             return LeaseAcquireResult("HELD_BY_OTHER", latest)
-        if status_now == "UNKNOWN":
+        if status == "UNKNOWN":
             return LeaseAcquireResult("UNCERTAIN", latest)
 
         archive = self._stale_dir(profile_id) / f"{latest.lease_nonce}.json"
-        if archive.exists():
+        if not self._write_exclusive(archive, latest.to_data()):
             archived = InstanceLease.from_data(self._read_json(archive))
             if archived != latest:
                 raise InstanceLeaseCorruptionError(
-                    "stale lease archive nonce collision"
+                    "stale archive conflicts with active takeover target"
                 )
-            self._lease_path(profile_id).unlink()
-        else:
-            os.replace(self._lease_path(profile_id), archive)
+        current = self.inspect(profile_id)
+        if current != latest:
+            return None
+        self._lease_path(profile_id).unlink()
         self._fsync_dir(self._profile_dir(profile_id))
-        self._fsync_dir(self._stale_dir(profile_id))
-
-        replacement = InstanceLease.new(profile_id, marker.taker)
-        if not self._write_exclusive(
-            self._lease_path(profile_id), replacement.to_data()
-        ):
-            return None
-        return LeaseAcquireResult("REPLACED_STALE", replacement, latest)
-
-    def _handle_existing_marker(
-        self,
-        profile_id: str,
-        process: ProcessIdentity,
-        probe: ProcessProbe,
-    ) -> LeaseAcquireResult | None:
-        marker = self._read_marker(profile_id)
-        if marker is None:
-            return None
-
-        if marker.taker.fingerprint == process.fingerprint:
-            try:
-                return self._complete_owned_takeover(profile_id, marker, probe)
-            finally:
-                # The same exact process owns this marker. A nonterminal retry can
-                # safely remove it and start again from current truth.
-                try:
-                    self._remove_marker_exact(profile_id, marker)
-                except InstanceLeaseError:
-                    pass
-
-        marker_status = _probe_status(probe, marker.taker)
-        if marker_status in {"ALIVE", "UNKNOWN"}:
-            return LeaseAcquireResult("UNCERTAIN", self.inspect(profile_id))
-
-        # A verified-dead takeover owner may not block the profile forever.
-        self._remove_marker_exact(profile_id, marker)
-        return None
+        return self._complete_owned_takeover(profile_id, marker, probe)
 
     def acquire(
         self,
@@ -521,48 +487,48 @@ class InstanceLeaseManager:
         if not isinstance(process, ProcessIdentity):
             raise TypeError("process must be ProcessIdentity")
         self._prepare_dirs(profile)
-
         for _ in range(self.MAX_ATTEMPTS):
-            marker_result = self._handle_existing_marker(profile, process, probe)
-            if marker_result is not None:
-                return marker_result
-            if self._read_marker(profile) is not None:
-                continue
-
-            candidate = InstanceLease.new(profile, process)
-            if self._write_exclusive(self._lease_path(profile), candidate.to_data()):
-                return LeaseAcquireResult("ACQUIRED", candidate)
-
-            existing = self.inspect(profile)
-            if existing is None:
-                continue
-            if existing.process.fingerprint == process.fingerprint:
-                return LeaseAcquireResult("ALREADY_OWNED", existing)
-
-            existing_status = _probe_status(probe, existing.process)
-            if existing_status == "ALIVE":
-                return LeaseAcquireResult("HELD_BY_OTHER", existing)
-            if existing_status == "UNKNOWN":
-                return LeaseAcquireResult("UNCERTAIN", existing)
-
-            marker = _TakeoverMarker.new(process, existing)
-            if not self._write_exclusive(
-                self._marker_path(profile), marker.to_data()
-            ):
-                continue
-
-            try:
-                result = self._complete_owned_takeover(profile, marker, probe)
-                if result is not None:
-                    return result
-            finally:
-                try:
+            marker = self._read_marker(profile)
+            if marker is not None:
+                if marker.taker.fingerprint == process.fingerprint:
+                    completed = self._complete_owned_takeover(profile, marker, probe)
+                    if completed is not None:
+                        self._remove_marker_exact(profile, marker)
+                        return completed
+                    continue
+                taker_status = _probe_status(probe, marker.taker)
+                if taker_status == "DEAD":
                     self._remove_marker_exact(profile, marker)
-                except InstanceLeaseError:
-                    # Never remove a marker now owned by another process.
-                    pass
+                    continue
+                current = self.inspect(profile)
+                if current is None:
+                    return LeaseAcquireResult("UNCERTAIN", marker.expected_previous)
+                return LeaseAcquireResult("UNCERTAIN", current)
 
-        return LeaseAcquireResult("UNCERTAIN", self.inspect(profile))
+            current = self.inspect(profile)
+            if current is None:
+                lease = InstanceLease.new(profile, process)
+                if self._write_exclusive(self._lease_path(profile), lease.to_data()):
+                    return LeaseAcquireResult("ACQUIRED", lease)
+                continue
+
+            if current.process.fingerprint == process.fingerprint:
+                return LeaseAcquireResult("ALREADY_OWNED", current)
+
+            current_status = _probe_status(probe, current.process)
+            if current_status == "ALIVE":
+                return LeaseAcquireResult("HELD_BY_OTHER", current)
+            if current_status == "UNKNOWN":
+                return LeaseAcquireResult("UNCERTAIN", current)
+
+            marker = _TakeoverMarker.new(process, current)
+            if self._write_exclusive(self._marker_path(profile), marker.to_data()):
+                completed = self._complete_owned_takeover(profile, marker, probe)
+                if completed is not None:
+                    self._remove_marker_exact(profile, marker)
+                    return completed
+            continue
+        raise InstanceLeaseError("could not acquire instance lease after bounded retries")
 
     def release(
         self,
@@ -570,25 +536,19 @@ class InstanceLeaseManager:
         *,
         process: ProcessIdentity,
         lease_nonce: str,
-    ) -> None:
+    ) -> InstanceLease:
         profile = _profile(profile_id)
-        if not isinstance(process, ProcessIdentity):
-            raise TypeError("process must be ProcessIdentity")
-        if self._read_marker(profile) is not None:
-            raise InstanceLeaseOwnershipError(
-                "instance lease cannot be released while takeover ownership is unresolved"
-            )
         current = self.inspect(profile)
         if current is None:
-            raise InstanceLeaseOwnershipError("no active instance lease exists")
-        nonce = _text(lease_nonce, "lease_nonce").lower()
-        if current.process.fingerprint != process.fingerprint:
-            raise InstanceLeaseOwnershipError(
-                "instance lease belongs to a different process identity"
-            )
-        if current.lease_nonce != nonce:
-            raise InstanceLeaseOwnershipError(
-                "instance lease nonce does not match current ownership"
-            )
+            raise InstanceLeaseOwnershipError("instance lease is already absent")
+        if (
+            current.process.fingerprint != process.fingerprint
+            or current.lease_nonce != str(lease_nonce).strip().lower()
+        ):
+            raise InstanceLeaseOwnershipError("instance lease ownership changed")
+        marker = self._read_marker(profile)
+        if marker is not None:
+            raise InstanceLeaseOwnershipError("instance lease has an active takeover claim")
         self._lease_path(profile).unlink()
         self._fsync_dir(self._profile_dir(profile))
+        return current
