@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "policy_id": "CTX-LIFECYCLE-001",
+  "constitutional_rule": "Flattening is a projection, never destruction of the record.",
+  "states": ["RAW", "ACTIVE", "SUMMARIZED", "REFERENCE", "ARCHIVED"],
+  "projection_contract": {
+    "canonical_sources_remain_authoritative": true,
+    "projection_is_disposable": true,
+    "projection_is_regenerable": true,
+    "projection_grants_action_authority": false,
+    "must_record": [
+      "scope",
+      "purpose",
+      "policy_version",
+      "authority_ceiling",
+      "source_manifest",
+      "source_digest",
+      "lossiness",
+      "selected_sections",
+      "budget",
+      "contradictions"
+    ],
+    "must_not_flatten_away": [
+      "UNRESOLVED_CONTRADICTION",
+      "AUTHORITY_DECISION",
+      "ACTIVE_RECEIPT",
+      "OPEN_INCIDENT",
+      "ACCEPTANCE_EVIDENCE",
+      "CONSTITUTIONAL_DEFINITION"
+    ]
+  },
+  "retrieval_policy": {
+    "default": "SELECTIVE",
+    "dump_all_history_by_default": false,
+    "ranking": [
+      "AUTHORITY",
+      "CURRENT_SCOPE",
+      "UNRESOLVED_STATUS",
+      "EVIDENCE_CONFIDENCE",
+      "RECENCY"
+    ],
+    "cross_scope_retrieval_requires_explicit_relevance": true,
+    "archived_context_is_dormant_until_referenced": true
+  },
+  "conversation_distillation": {
+    "conversation_is_provenance_not_authority": true,
+    "automatic_durable_promotion": false,
+    "classes": ["PROPOSAL", "HYPOTHESIS", "ACCEPTED_DECISION", "CORRECTION", "SUPERSEDED", "OBSERVATION"],
+    "durable_promotion_requires": [
+      "EXPLICIT_ACCEPTANCE_OR_CANONICAL_EVIDENCE",
+      "TARGET_LEDGER",
+      "SOURCE_PROVENANCE",
+      "AUTHORITY_CLASS",
+      "SUPERSESSION_POSTURE"
+    ],
+    "accepted_targets": {
+      "ACCEPTED_DECISION": "governance/decisions.jsonl",
+      "CONSTITUTIONAL_DEFINITION": "governance/definitions.jsonl",
+      "INCIDENT": "governance/incidents.jsonl",
+      "EVIDENCE_PROVENANCE": "governance/provenance.jsonl"
+    }
+  },
+  "contradiction_policy": {
+    "average_conflicting_claims": false,
+    "precedence": [
+      "CURRENT_CONSTITUTIONAL_AUTHORITY",
+      "EXPLICIT_USER_AUTHORITY",
+      "CURRENT_CANONICAL_EVIDENCE",
+      "SUPERSEDED_OR_HISTORICAL_EVIDENCE"
+    ],
+    "unresolved_critical_contradiction_blocks_autonomous_mutation": true,
+    "contradiction_must_remain_visible": true
+  },
+  "semantic_gc": {
+    "default_action": "REMOVE_FROM_ACTIVE_RETRIEVAL",
+    "delete_canonical_history_by_default": false,
+    "eligible_for_dormancy": [
+      "COMPLETED_RECEIPT",
+      "SUPERSEDED_DEFINITION",
+      "RETIRED_AUTOMATION",
+      "STALE_PROJECTION",
+      "DISPROVEN_ASSUMPTION"
+    ],
+    "audit_history_retained": true
+  },
+  "constitutional_change_protocol": {
+    "protected_concepts": ["DONE", "AUTHORITY", "MUTATION_PERMISSION", "ACCEPTANCE", "STABLE", "USER_CONTROL"],
+    "silent_change_allowed": false,
+    "requires": [
+      "EXPLICIT_APPROVAL",
+      "VERSIONED_DEFINITION",
+      "IMPACT_RECORD",
+      "MIGRATION_OR_COMPATIBILITY_PLAN",
+      "PROVENANCE"
+    ],
+    "derived_definitions_may_reconcile_from_evidence": true
+  },
+  "reconstruction_contract": {
+    "fresh_agent_must_not_require_prior_chat": true,
+    "startup_surface": "governance/handoff.json",
+    "must_reconstruct": [
+      "CURRENT_LIFECYCLE",
+      "ACTIVE_SELECTION_OR_TERMINAL_STATE",
+      "CURRENT_AUTHORITY",
+      "OPEN_INCIDENTS",
+      "AUTOMATION_SUPERVISION",
+      "CONTEXT_POLICY",
+      "NEXT_ADMISSIBLE_ACTION"
+    ],
+    "historical_archaeology_only_for": ["MISSING_DURABLE_AUTHORITY", "CONTRADICTORY_DURABLE_AUTHORITY"]
+  }
+}
