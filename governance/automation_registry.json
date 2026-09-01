@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "supervisor": "N0TE-SUPERVISOR",
   "actors": [
     {
@@ -7,27 +7,73 @@
       "kind": "GITHUB_ACTIONS",
       "path": ".github/workflows/governance.yml",
       "parent": "N0TE-SUPERVISOR",
+      "reports_to": "N0TE-SUPERVISOR",
       "purpose": "Verify governance, full regression and staged consumer smoke on each relevant exact head and publish a canonical supervision observation.",
+      "reason_running": "A repository event supplied a head whose governance and product evidence must be independently verified.",
       "mode": "EVENT_DRIVEN",
       "authority": "VERIFY_ONLY",
+      "allowed_mutations": ["CI_STATUS_CONTEXT", "CI_ARTIFACT"],
       "wake_condition": "GitHub push or pull_request event for a new repository head",
       "retirement_condition": "A versioned replacement verifier is registered and this actor is explicitly retired.",
-      "lifecycle": {"state":"ACTIVE","last_useful_action":"Verify the current exact head and emit supervision evidence.","next_wake_condition":"A registered GitHub push or pull_request event supplies a new exact head.","health":"OBSERVABLE"},
-      "observability": {"exact_head_required":true,"reactivation_is_event":true,"runtime_handoff_artifact":"governance-runtime-handoff.json","observation_artifact":"governance-ci-observation.json","status_context_prefix":"n0te2-governance-"}
+      "failure_policy": {
+        "max_retries": 1,
+        "backoff": "GITHUB_ACTIONS_PLATFORM_POLICY",
+        "terminal_states": ["FAILED", "CANCELLED", "TIMED_OUT"],
+        "on_exhaustion": "REPORT_BLOCKER_TO_SUPERVISOR"
+      },
+      "escalation_target": "N0TE-SUPERVISOR",
+      "auto_spawn_successor": false,
+      "lifecycle": {
+        "state": "ACTIVE",
+        "last_useful_action": "Verify the current exact head and emit supervision evidence.",
+        "last_observation": "Previous exact-head workflow result remains historical only; the next head requires a fresh observation.",
+        "next_wake_condition": "A registered GitHub push or pull_request event supplies a new exact head.",
+        "health": "OBSERVABLE"
+      },
+      "observability": {
+        "exact_head_required": true,
+        "reactivation_is_event": true,
+        "runtime_handoff_artifact": "governance-runtime-handoff.json",
+        "observation_artifact": "governance-ci-observation.json",
+        "status_context_prefix": "n0te2-governance-"
+      }
     },
     {
       "id": "AUTO-CONSTRUCTION-CONTROLLER-001",
       "kind": "GOVERNANCE_CONTROLLER",
       "path": "governance/current_state.json",
       "parent": "N0TE-SUPERVISOR",
+      "reports_to": "N0TE-SUPERVISOR",
       "purpose": "Select and bound only currently justified construction work, then terminate at stable operation when no justified construction remains.",
+      "reason_running": "The user explicitly selected the retention, context-lifecycle and supervision repair while UX-01 remains ACTIVE under a bounded receipt.",
       "mode": "ACCEPTANCE_BOUND",
       "authority": "SELECT_WITHIN_GOVERNED_SCOPE",
+      "allowed_mutations": ["GOVERNANCE_SELECTION", "RECEIPT_BOUNDED_REPOSITORY_PATHS"],
       "wake_condition": "Lifecycle is ACTIVE after explicit/global selection, or a declared stable-state reactivation trigger is reconciled.",
       "retirement_condition": "At STABLE the construction controller is dormant; a superseding controller version may explicitly retire this actor.",
-      "lifecycle": {"state":"ACTIVE","last_useful_action":"Own UX-01-RETENTION-01 under the current bounded receipt.","next_wake_condition":"After closure/blockage, re-enter the whole acceptance spine; if no justified work exists, transition to STABLE.","health":"GOVERNED"},
-      "observability": {"exact_head_required":true,"reactivation_is_event":true,"runtime_handoff_artifact":"governance-runtime-handoff.json","observation_artifact":"governance-ci-observation.json"}
+      "failure_policy": {
+        "max_retries": 8,
+        "backoff": "BOUNDED_RESELECT_OR_BLOCK",
+        "terminal_states": ["STABLE", "WAITING", "BLOCKED"],
+        "on_exhaustion": "STOP_AND_REPORT_BLOCKER"
+      },
+      "escalation_target": "USER_ROOT",
+      "auto_spawn_successor": false,
+      "lifecycle": {
+        "state": "ACTIVE",
+        "last_useful_action": "Own the current bounded retention/context-lifecycle supervision repair.",
+        "last_observation": "The current delivery lane is PR #63; Windows exact-head lease evidence remains an inherited blocker until repaired and re-observed.",
+        "next_wake_condition": "After closure or blockage, re-enter the whole acceptance spine; if no justified work exists, transition to STABLE.",
+        "health": "GOVERNED"
+      },
+      "observability": {
+        "exact_head_required": true,
+        "reactivation_is_event": true,
+        "runtime_handoff_artifact": "governance-runtime-handoff.json",
+        "observation_artifact": "governance-ci-observation.json"
+      }
     }
   ],
-  "orphan_policy": "Any autonomous actor without a registered parent/purpose/wake/retirement/observation contract is a governance failure."
+  "orphan_policy": "Any autonomous actor without a registered parent, reporting path, purpose, current reason, bounded failure policy, allowed mutations, wake/retirement conditions and observation contract is a governance failure.",
+  "terminal_policy": "No actor may create successor work merely to remain active. Construction terminates at STABLE when no currently justified work exists."
 }
