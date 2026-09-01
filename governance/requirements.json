@@ -1,24 +1,11 @@
 {
-  "schema_version": 2,
-  "sequence": {
-    "start": 2,
-    "end": 153
-  },
-  "held_or_boundary": [
-    "REQ-SCOPE-044",
-    "REQ-SCOPE-045",
-    "REQ-SCOPE-047",
-    "REQ-SCOPE-062",
-    "REQ-SCOPE-063",
-    "REQ-SCOPE-064",
-    "REQ-SCOPE-065",
-    "REQ-SCOPE-066",
-    "REQ-SCOPE-108"
-  ],
-  "superseded": [
-    "REQ-SCOPE-046"
-  ],
-  "default_classification": "ACTIVE",
-  "active_blocks_candidate": true,
-  "non_active_blocks_candidate": false
+  "schema_version": 3,
+  "sequence": {"start": 2, "end": 153},
+  "held_or_boundary": ["REQ-SCOPE-044","REQ-SCOPE-045","REQ-SCOPE-047","REQ-SCOPE-062","REQ-SCOPE-063","REQ-SCOPE-064","REQ-SCOPE-065","REQ-SCOPE-066","REQ-SCOPE-108"],
+  "superseded": ["REQ-SCOPE-046"],
+  "default_classification": "KNOWN",
+  "known_blocks_candidate": true,
+  "known_selects_work": false,
+  "non_active_blocks_candidate": false,
+  "selection_contract": "A requirement may be known and still unfinished without being selected. Work becomes ACTIVE only through current_state plus an active receipt after global dependency-ready selection."
 }

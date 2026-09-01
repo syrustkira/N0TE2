@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -11,6 +12,8 @@ from pathlib import Path
 
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 REQ_ID = re.compile(r"^REQ-SCOPE-\d{3}$")
+LIFECYCLE_STATES = {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}
+TERMINAL_LIFECYCLE_STATES = {"STABLE", "WAITING", "BLOCKED"}
 
 
 class GovernanceError(RuntimeError):
@@ -43,6 +46,21 @@ def load_json(path: Path):
         raise GovernanceError(f"cannot load {path}: {exc}") from exc
 
 
+def load_jsonl(path: Path):
+    rows = []
+    try:
+        for lineno, raw in enumerate(path.read_text().splitlines(), 1):
+            if not raw.strip():
+                continue
+            row = json.loads(raw)
+            if not isinstance(row, dict):
+                raise ValueError(f"line {lineno} is not an object")
+            rows.append(row)
+    except Exception as exc:
+        raise GovernanceError(f"cannot load {path}: {exc}") from exc
+    return rows
+
+
 def require(cond: bool, msg: str):
     if not cond:
         raise GovernanceError(msg)
@@ -57,14 +75,15 @@ def check_requirements(repo: Path):
     superseded = set(doc.get("superseded", []))
     require(not (held & superseded), "requirement cannot be both held and superseded")
     require((held | superseded).issubset(ids), "non-active requirement outside canonical sequence")
-    require(doc.get("default_classification") == "ACTIVE", "default requirement classification must be ACTIVE")
-    require(doc.get("active_blocks_candidate") is True, "active requirements must block candidate")
+    require(doc.get("default_classification") == "KNOWN", "default requirement classification must be KNOWN, not selected work")
+    require(doc.get("known_blocks_candidate") is True, "known unresolved requirements must block candidate completion")
+    require(doc.get("known_selects_work") is False, "known scope must not select work by itself")
     require(doc.get("non_active_blocks_candidate") is False, "non-active requirements cannot block candidate")
     rows = {}
     for rid in ids:
         require(REQ_ID.match(rid) is not None, f"bad requirement id: {rid}")
-        classification = "HELD_OR_BOUNDARY" if rid in held else "SUPERSEDED" if rid in superseded else "ACTIVE"
-        rows[rid] = {"id": rid, "classification": classification, "blocks_candidate": classification == "ACTIVE"}
+        classification = "HELD_OR_BOUNDARY" if rid in held else "SUPERSEDED" if rid in superseded else "KNOWN"
+        rows[rid] = {"id": rid, "classification": classification, "blocks_candidate": classification == "KNOWN", "selects_work": False}
     return rows
 
 
@@ -74,7 +93,6 @@ def check_graph(repo: Path, requirements):
     require(len(ids) == 48, f"expected 48 completion nodes, found {len(ids)}")
     require(len(ids) == len(set(ids)), "duplicate graph node IDs")
     by_id = {n["id"]: n for n in nodes}
-
     for n in nodes:
         require(n["autonomy"] in {"GREEN", "AMBER", "RED"}, f"bad autonomy: {n['id']}")
         require(n["state"] in {"DONE", "ACTIVE", "PRESERVED", "LATER"}, f"bad state: {n['id']}")
@@ -115,9 +133,8 @@ def check_graph(repo: Path, requirements):
     for n in nodes:
         if n["required"]:
             mapped.update(expand_requirement_expr(n.get("requirements", "")))
-    orphan = [rid for rid, row in requirements.items() if row["classification"] == "ACTIVE" and rid not in mapped]
-    require(not orphan, f"orphan active requirements: {', '.join(orphan)}")
-
+    orphan = [rid for rid, row in requirements.items() if row["classification"] == "KNOWN" and rid not in mapped]
+    require(not orphan, f"orphan active requirements (known scope mapping): {', '.join(orphan)}")
     later = by_id["LATER-01"]
     held = {rid for rid, row in requirements.items() if row["classification"] == "HELD_OR_BOUNDARY"}
     require(held.issubset(set(expand_requirement_expr(later.get("requirements", "")))), "LATER-01 does not preserve every held/boundary requirement")
@@ -129,16 +146,15 @@ def check_graph(repo: Path, requirements):
     require(daw_gate["dependency_mode"] == "ALL", "DAW-TEST-READY must be ALL")
     require(set(daw_gate["depends_on"]) == ({"DAW-00", "DAW-07"} | six), "DAW-TEST-READY must require DAW-00, all six core DAWs, and DAW-07")
     platform_gate = by_id["PLATFORM-TEST-READY"]
-    require(platform_gate["dependency_mode"] == "ALL", "PLATFORM-TEST-READY must be ALL")
+    require(platform_gate["dependency_mode"] == "ALL", "platform gate must remain ALL")
     require(set(platform_gate["depends_on"]) == {"PLATFORM-00", "PLATFORM-01", "PLATFORM-02", "PLATFORM-03"}, "platform gate must require macOS+Windows+Linux")
     cand = by_id["CAND-01"]
     require(set(cand["depends_on"]) == {"CONV-01", "DAW-TEST-READY", "PLATFORM-TEST-READY"}, "CAND-01 gate narrowed")
     require(by_id["TEST-01"]["depends_on"] == ["CAND-01"], "TEST-01 must never precede CAND-01")
     require({"REQ-SCOPE-148", "REQ-SCOPE-150"}.issubset(set(expand_requirement_expr(by_id["DAW-07"]["requirements"]))), "DAW-07 lost Generic Other/plugin baseline")
     require("AUDIO-02" in by_id["DAW-07"]["depends_on"], "DAW-07 flattened to manual-only: AUDIO-02 missing")
-
     active_nodes = [n["id"] for n in nodes if n["state"] == "ACTIVE"]
-    require(len(active_nodes) == 1, f"exactly one graph node must be ACTIVE, found {active_nodes}")
+    require(len(active_nodes) <= 1, f"at most one graph node may be ACTIVE, found {active_nodes}")
     return by_id
 
 
@@ -148,11 +164,7 @@ def check_platforms(repo: Path):
     require(policy["core_platforms"] == ["macOS", "Windows", "Linux"], "core platform parity must be macOS+Windows+Linux")
     require(policy["version_name_alone_is_breakpoint"] is False, "OS marketing name cannot be a support breakpoint")
     require(policy["unsupported_requires_named_break"] is True, "unsupported must require a named break")
-    expected = {
-        "macOS": {"arm64", "x86_64"},
-        "Windows": {"x86_64", "arm64"},
-        "Linux": {"x86_64", "aarch64"},
-    }
+    expected = {"macOS": {"arm64", "x86_64"}, "Windows": {"x86_64", "arm64"}, "Linux": {"x86_64", "aarch64"}}
     actual = {key: set(value) for key, value in p["core_architectures"].items()}
     require(actual == expected, f"core architecture matrix narrowed: {actual}")
     linux = p["linux_packaging"]
@@ -179,11 +191,20 @@ def check_authority(repo: Path):
     joined = "\n".join(a["current_authority_files"])
     for marker in a["forbidden_current_authority_markers"]:
         require(marker not in joined, f"stale authority reintroduced: {marker}")
-    require("governance/legacy_admission.json" in a["current_authority_files"], "LEGACY-01 admission manifest missing from repo authority surface")
-    require(a["laws"]["implementation_maturity_must_not_mutate_scope"] is True, "anti-flattening law missing")
-    require(a["laws"]["missing_acceptance_resource_stops_unrelated_construction"] is False, "resource-wait loop reintroduced")
-    require(a["laws"]["legacy_classification_is_not_copy_authority"] is True, "classification became copy authority")
-    require(a["laws"]["legacy_test_green_is_not_product_completion"] is True, "legacy tests became product-completion authority")
+    required = {"AGENTS.md","governance/legacy_admission.json","governance/handoff.json","governance/invariants.json","governance/decisions.jsonl","governance/incidents.jsonl","governance/automation_registry.json","governance/controller_versions.jsonl","governance/provenance.jsonl","governance/definitions.jsonl","governance/trajectory_audits.jsonl","governance/merge_policy.json","governance/build_handoff.py"}
+    require(required.issubset(set(a["current_authority_files"])), "retention/supervision authority surface is incomplete")
+    laws = a["laws"]
+    require(laws["implementation_maturity_must_not_mutate_scope"] is True, "anti-flattening law missing")
+    require(laws["missing_acceptance_resource_stops_unrelated_construction"] is False, "resource-wait loop reintroduced")
+    require(laws["legacy_classification_is_not_copy_authority"] is True, "classification became copy authority")
+    require(laws["legacy_test_green_is_not_product_completion"] is True, "legacy tests became product-completion authority")
+    require(laws["construction_can_terminate_at_stability"] is True, "construction must be able to terminate at stability")
+    require(laws["known_scope_does_not_select_work"] is True, "known scope cannot silently select work")
+    require(laws["automation_must_report_to_supervision_graph"] is True, "automation escaped supervision graph")
+    require(laws["reactivation_must_be_observable"] is True, "reactivation must be observable")
+    require(laws["durable_handoff_precedes_historical_archaeology"] is True, "durable handoff must precede archaeology")
+    require(laws["exact_head_observations_required"] is True, "exact-head observation law missing")
+    require(laws["decisions_and_incidents_retain_provenance"] is True, "decision/incident provenance law missing")
 
 
 def check_legacy_admission(repo: Path):
@@ -209,26 +230,9 @@ def check_legacy_admission(repo: Path):
     require(evidence["behavior_groups"] == 11, "selected behavior-group count changed")
     require(evidence["selected_legacy_test_files"] == 19, "selected legacy-test-file count changed")
     require(evidence["legacy_green_does_not_close_product_nodes"] is True, "legacy green cannot close product nodes")
-    required_gaps = {
-        "CONNECTED_TO_OFFLINE_PENDING_STATE_CHOICE",
-        "OFFLINE_TO_CONNECTED_EXPLICIT_RECONCILIATION_CHOICE",
-        "PRIVATE_DATA_EGRESS_EXACT_DATA_DESTINATION_PURPOSE",
-        "CORRUPTION_VISIBILITY_AND_RECOVERY",
-    }
+    required_gaps = {"CONNECTED_TO_OFFLINE_PENDING_STATE_CHOICE","OFFLINE_TO_CONNECTED_EXPLICIT_RECONCILIATION_CHOICE","PRIVATE_DATA_EGRESS_EXACT_DATA_DESTINATION_PURPOSE","CORRUPTION_VISIBILITY_AND_RECOVERY"}
     require(required_gaps.issubset(set(evidence["n0te2_replacement_regression_gaps"])), "N0TE2 replacement regression gaps were dropped")
-    required_contamination = {
-        "ABLETON_SEMANTIC_PRIORITY",
-        "MANUAL_FALLBACK_AS_PRODUCT_IDENTITY",
-        "DEEPEST_ADAPTER_OR_FIXED_TIER_RANKING",
-        "DUPLICATE_PRODUCT_OR_COMPLETION_AUTHORITY",
-        "PARALLEL_STATE_STORE_SPIDERWEB",
-        "MONOLITHIC_SERVER_OR_ROUTE_MONKEY_PATCHING",
-        "PLAINTEXT_PERSISTENT_SECRET_FALLBACK",
-        "SILENT_CORRUPTION_TO_EMPTY_STATE",
-        "SILENT_FIXED_HISTORY_TRUNCATION",
-        "HISTORICAL_PLATFORM_OR_VERSION_FLOORS_AS_SCOPE",
-        "GENERIC_NAMES_HIDING_HOST_SPECIFIC_IMPLEMENTATION",
-    }
+    required_contamination = {"ABLETON_SEMANTIC_PRIORITY","MANUAL_FALLBACK_AS_PRODUCT_IDENTITY","DEEPEST_ADAPTER_OR_FIXED_TIER_RANKING","DUPLICATE_PRODUCT_OR_COMPLETION_AUTHORITY","PARALLEL_STATE_STORE_SPIDERWEB","MONOLITHIC_SERVER_OR_ROUTE_MONKEY_PATCHING","PLAINTEXT_PERSISTENT_SECRET_FALLBACK","SILENT_CORRUPTION_TO_EMPTY_STATE","SILENT_FIXED_HISTORY_TRUNCATION","HISTORICAL_PLATFORM_OR_VERSION_FLOORS_AS_SCOPE","GENERIC_NAMES_HIDING_HOST_SPECIFIC_IMPLEMENTATION"}
     require(required_contamination.issubset(set(p["contamination_classes"])), "required contamination classes were dropped")
     require(all(p["admission_law"].values()), "legacy admission law weakened")
     return p
@@ -239,9 +243,7 @@ def git(repo: Path, *args: str) -> str:
 
 
 def path_allowed(path: str, receipt: dict) -> bool:
-    if path in set(receipt.get("allowed_exact_paths", [])):
-        return True
-    return any(path.startswith(prefix) for prefix in receipt.get("allowed_prefixes", []))
+    return path in set(receipt.get("allowed_exact_paths", [])) or any(path.startswith(prefix) for prefix in receipt.get("allowed_prefixes", []))
 
 
 def check_receipt(repo: Path, verify_git: bool, current: dict):
@@ -257,12 +259,10 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
         expected_receipt = f"N0TE2-{increment}"
         require(receipt.get("increment_id") == increment, "receipt increment must match current active_increment")
         require(increment.startswith(active), f"active increment {increment} must belong to active node {active}")
-
     require(receipt["receipt_id"] == expected_receipt, "unexpected active receipt")
     require(receipt["node_id"] == active, "receipt must bind current active node")
     baseline = receipt["baseline_sha"]
     require(HEX40.match(baseline) is not None, "receipt baseline_sha must be exact 40-char lowercase SHA")
-
     if active == "BOOT-02":
         require(receipt["product_code_allowed"] is False, "BOOT-02 receipt cannot allow product code")
         require(receipt["legacy_admission_allowed"] is False, "BOOT-02 cannot authorize legacy admission")
@@ -277,22 +277,12 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
         require(receipt["legacy_source_copy_allowed"] is False, f"{active} cannot authorize direct legacy source copy")
         require(receipt["legacy_test_text_copy_allowed"] is False, f"{active} cannot authorize direct legacy test-text copy")
         require(bool(receipt.get("allowed_prefixes")), "product receipt must define bounded allowed paths")
-        if active == "CORE-01":
-            require(
-                {"n0te2/", "tests/core/", "governance/", "tests/governance/", ".github/workflows/"}.issubset(set(receipt.get("allowed_prefixes", []))),
-                "CORE-01 receipt lost bounded implementation/test/governance paths",
-            )
-            require(
-                {"app/", "src/", "legacy/", "vendor/"}.issubset(set(receipt.get("forbidden_prefixes", []))),
-                "CORE-01 receipt weakened clean-room forbidden paths",
-            )
-
     if verify_git:
-        try:
-            inside = git(repo, "rev-parse", "--is-inside-work-tree") == "true"
-        except Exception as exc:
-            raise GovernanceError(f"git verification requested but repo unavailable: {exc}") from exc
-        require(inside, "not a git worktree")
+        require(git(repo, "rev-parse", "--is-inside-work-tree") == "true", "not a git worktree")
+        expected_head = os.environ.get("N0TE2_HEAD_SHA") or os.environ.get("EVIDENCE_SHA")
+        if expected_head:
+            actual_head = git(repo, "rev-parse", "HEAD")
+            require(actual_head == expected_head, f"exact-head mismatch: expected {expected_head}, got {actual_head}")
         try:
             git(repo, "merge-base", "--is-ancestor", baseline, "HEAD")
         except subprocess.CalledProcessError as exc:
@@ -308,17 +298,31 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
 
 def check_stage(repo: Path, graph: dict):
     current = load_json(repo / "governance/current_state.json")
-    active = current["active_node"]
+    lifecycle = current.get("lifecycle_state")
+    active = current.get("active_node")
+    active_increment = current.get("active_increment")
+    active_nodes = [node for node, row in graph.items() if row["state"] == "ACTIVE"]
+    require(lifecycle in LIFECYCLE_STATES, f"invalid lifecycle_state: {lifecycle}")
     held = load_json(repo / "governance/held_scope.json")
     held_ids = {item["id"] for item in held["items"]}
     require(active not in held_ids, "held item became active")
     require(held_ids == {f"HOLD-{n:03d}" for n in range(1, 8)}, "held scope changed without explicit promotion")
-    require(active in graph, "current active node is not in completion graph")
-    require(graph[active]["state"] == "ACTIVE", "current active node must be ACTIVE in graph")
-    require([node for node, row in graph.items() if row["state"] == "ACTIVE"] == [active], "graph/current-state active node mismatch")
     for done in current.get("completed_nodes", []):
         require(done in graph and graph[done]["state"] == "DONE", f"completed node not DONE in graph: {done}")
-
+    if lifecycle in TERMINAL_LIFECYCLE_STATES:
+        require(active is None, f"{lifecycle} cannot retain an active_node")
+        require(active_increment is None, f"{lifecycle} cannot retain an active_increment")
+        require(not active_nodes, f"{lifecycle} requires zero ACTIVE graph nodes")
+        require(current["product_code_authorized"] is False, f"{lifecycle} cannot authorize construction")
+        require(current["legacy_admission_authorized"] is False, f"{lifecycle} cannot authorize legacy admission")
+        if lifecycle == "STABLE":
+            require(bool(str(current.get("terminal_reason") or "").strip()), "STABLE requires terminal_reason")
+        else:
+            require(bool(str(current.get("wake_condition") or "").strip()), f"{lifecycle} requires wake_condition")
+        return current
+    require(active in graph, "ACTIVE lifecycle requires current active node in completion graph")
+    require(graph[active]["state"] == "ACTIVE", "current active node must be ACTIVE in graph")
+    require(active_nodes == [active], "graph/current-state active node mismatch")
     if active == "BOOT-02":
         require(current["product_code_authorized"] is False, "BOOT-02 cannot authorize product code")
         require(current["legacy_admission_authorized"] is False, "BOOT-02 cannot authorize legacy admission")
@@ -334,11 +338,80 @@ def check_stage(repo: Path, graph: dict):
         require(not incomplete, f"{active} cannot activate before dependencies are DONE: {', '.join(incomplete)}")
         require(current["product_code_authorized"] is True, f"{active} product construction must explicitly authorize product code")
         require(current["legacy_admission_authorized"] is False, f"{active} cannot keep legacy admission active")
-        increment = str(current.get("active_increment") or "").strip()
+        increment = str(active_increment or "").strip()
         require(bool(increment), f"{active} requires a bounded active increment")
         require(increment.startswith(active), f"active increment {increment} must belong to active node {active}")
         check_legacy_admission(repo)
     return current
+
+
+def check_jsonl_ids(repo: Path, rel: str):
+    rows = load_jsonl(repo / rel)
+    require(rows, f"{rel} must contain at least one durable record")
+    ids = [row.get("id") for row in rows]
+    require(all(isinstance(item, str) and item.strip() for item in ids), f"{rel} record missing stable id")
+    require(len(ids) == len(set(ids)), f"{rel} contains duplicate stable ids")
+    return rows
+
+
+def check_retention_surfaces(repo: Path, current: dict):
+    invariants = load_json(repo / "governance/invariants.json")
+    required_invariants = {"INV-SUP-001","INV-SUP-002","INV-LIFE-001","INV-LIFE-002","INV-SCOPE-001","INV-EVID-001","INV-HANDOFF-001","INV-AUTH-001"}
+    rows = invariants.get("constitutional", [])
+    ids = [row.get("id") for row in rows]
+    require(len(ids) == len(set(ids)), "invariant registry contains duplicate IDs")
+    require(required_invariants.issubset(set(ids)), "constitutional retention/supervision invariant missing")
+    decisions = check_jsonl_ids(repo, "governance/decisions.jsonl")
+    incidents = check_jsonl_ids(repo, "governance/incidents.jsonl")
+    controllers = check_jsonl_ids(repo, "governance/controller_versions.jsonl")
+    provenance = check_jsonl_ids(repo, "governance/provenance.jsonl")
+    definitions = check_jsonl_ids(repo, "governance/definitions.jsonl")
+    trajectories = check_jsonl_ids(repo, "governance/trajectory_audits.jsonl")
+    for collection, name in ((decisions,"decision"),(incidents,"incident"),(controllers,"controller"),(provenance,"provenance"),(definitions,"definition"),(trajectories,"trajectory audit")):
+        require(all(row.get("recorded_at") for row in collection), f"{name} record missing recorded_at")
+    require(all(row.get("version") for row in definitions), "definition record missing version")
+    require(all(row.get("kind") in {"CONSTITUTIONAL", "DERIVED"} for row in definitions), "definition kind must be CONSTITUTIONAL or DERIVED")
+
+    automation = load_json(repo / "governance/automation_registry.json")
+    require(automation.get("supervisor") == "N0TE-SUPERVISOR", "automation registry must root at N0TE-SUPERVISOR")
+    actors = automation.get("actors", [])
+    actor_ids = [row.get("id") for row in actors]
+    require(actor_ids and len(actor_ids) == len(set(actor_ids)), "automation actors need unique stable IDs")
+    for actor in actors:
+        require(actor.get("parent") == "N0TE-SUPERVISOR", f"automation {actor.get('id')} escaped supervision parent")
+        require(actor.get("purpose"), f"automation {actor.get('id')} lacks purpose")
+        require(actor.get("wake_condition"), f"automation {actor.get('id')} lacks wake condition")
+        require(actor.get("retirement_condition"), f"automation {actor.get('id')} lacks retirement condition")
+        require(actor.get("observability", {}).get("exact_head_required") is True, f"automation {actor.get('id')} lacks exact-head observability")
+        require(actor.get("observability", {}).get("reactivation_is_event") is True, f"automation {actor.get('id')} may reactivate silently")
+        require(actor.get("lifecycle", {}).get("state") in {"ACTIVE","DORMANT","RETIRED","QUARANTINED"}, f"automation {actor.get('id')} lacks lifecycle state")
+    construction_actor = next((actor for actor in actors if actor.get("id") == "AUTO-CONSTRUCTION-CONTROLLER-001"), None)
+    require(construction_actor is not None, "construction controller is not registered")
+    expected_controller_state = "ACTIVE" if current.get("lifecycle_state") == "ACTIVE" else "DORMANT"
+    require(construction_actor["lifecycle"]["state"] == expected_controller_state, "construction controller lifecycle disagrees with current state")
+
+    handoff = load_json(repo / "governance/handoff.json")
+    require(handoff.get("repository") == current.get("repository") == "syrustkira/N0TE2", "handoff repository mismatch")
+    delivery = handoff.get("delivery", {})
+    require(delivery.get("type") == "pull_request" and int(delivery.get("number", 0)) > 0, "handoff lacks tracked delivery object")
+    lifecycle = handoff.get("lifecycle", {})
+    require(lifecycle.get("state") == current.get("lifecycle_state"), "handoff lifecycle is stale")
+    require(lifecycle.get("active_node") == current.get("active_node"), "handoff active node is stale")
+    require(lifecycle.get("active_increment") == current.get("active_increment"), "handoff active increment is stale")
+    reconstruction = handoff.get("reconstruction", {})
+    require(reconstruction.get("handoff_first") is True, "handoff must be first reconstruction surface")
+    fallback = reconstruction.get("archaeology_fallback", {})
+    require(fallback.get("normal_startup") is False, "historical archaeology cannot be normal startup")
+    require(fallback.get("allowed_only_for") == ["MISSING_DURABLE_AUTHORITY", "CONTRADICTORY_DURABLE_AUTHORITY"], "archaeology fallback widened")
+    refs = reconstruction.get("required_refs", [])
+    missing = [rel for rel in refs if not (repo / rel).exists()]
+    require(not missing, f"handoff references missing authority: {', '.join(missing)}")
+
+    merge = load_json(repo / "governance/merge_policy.json")
+    required_contexts = {"n0te2-governance-Linux", "n0te2-governance-Windows", "n0te2-governance-macOS"}
+    require(set(merge.get("required_exact_head_status_contexts", [])) == required_contexts, "merge policy lost cross-platform exact-head contexts")
+    require(merge.get("requirements", {}).get("blocking_incidents_resolved_before_merge") is True, "merge policy permits blocking incidents")
+    require(merge.get("external_enforcement", {}).get("repository_file_cannot_prevent_direct_push_by_itself") is True, "merge policy overclaims repository-file enforcement")
 
 
 def run(repo: Path, verify_git: bool):
@@ -348,9 +421,11 @@ def run(repo: Path, verify_git: bool):
     check_plugins(repo)
     check_authority(repo)
     current = check_stage(repo, graph)
-    check_receipt(repo, verify_git, current)
+    check_retention_surfaces(repo, current)
+    if current["lifecycle_state"] == "ACTIVE":
+        check_receipt(repo, verify_git, current)
     print("N0TE2 GOVERNANCE: GREEN")
-    print(f"requirements={len(requirements)} nodes={len(graph)} active={current['active_node']} increment={current.get('active_increment', '-')}")
+    print(f"requirements={len(requirements)} nodes={len(graph)} lifecycle={current['lifecycle_state']} active={current.get('active_node') or '-'} increment={current.get('active_increment') or '-'}")
 
 
 if __name__ == "__main__":

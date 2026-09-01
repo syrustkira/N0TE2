@@ -18,6 +18,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       EVIDENCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      N0TE2_RUN_ID: ${{ github.run_id }}
+      N0TE2_RUN_ATTEMPT: ${{ github.run_attempt }}
+      N0TE2_RUNNER_OS: ${{ runner.os }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,10 +39,27 @@ jobs:
           python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
       - name: Validate construction governance
         run: python governance/check_governance.py --repo .
+      - name: Build exact-head runtime handoff
+        run: python governance/build_handoff.py --repo . --check --output governance-runtime-handoff.json
       - name: Governance and product regression tests
         run: python -m pytest -q tests
       - name: Stage consumer smoke
         run: python governance/smoke/consumer_smoke.py
+      - name: Record supervision observation
+        if: ${{ always() }}
+        env:
+          N0TE2_OBSERVATION_STATUS: ${{ job.status }}
+        run: python governance/build_handoff.py --repo . --output governance-runtime-handoff.json --observation-output governance-ci-observation.json
+      - name: Upload supervision evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: n0te2-supervision-${{ runner.os }}-${{ env.EVIDENCE_SHA }}
+          path: |
+            governance-runtime-handoff.json
+            governance-ci-observation.json
+          if-no-files-found: error
+          retention-days: 30
       - name: Publish exact-head success evidence
         if: ${{ success() }}
         env:

@@ -1,14 +1,18 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "3 PRODUCT SHELL",
+  "lifecycle_state": "ACTIVE",
   "active_node": "UX-01",
   "active_increment": "UX-01-RETENTION-01",
+  "terminal_reason": null,
+  "wake_condition": null,
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
   "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
+  "supervision": {"root":"N0TE-SUPERVISOR","handoff":"governance/handoff.json","construction_must_terminate_when_unjustified":true,"reactivation_must_be_observable":true,"historical_archaeology_is_fallback_only":true},
   "truth": [
     "Canonical main baseline remains 649002eebc6e378026f324df5d04adb3653c8b64 after consumer Friction Memory reachability landed.",
     "The prior UX-01 interaction-depth lineage was preserved from 76b09bfb0a2a551dd8b8ab1551f8158e61269c10 rather than rebuilt or silently discarded; ASK/ADVISE/TRY/DO authority remains separate from DO IT/WITH ME/SHOW ME/EXPLAIN WHY/LET ME TRY collaboration depth.",
@@ -22,7 +26,9 @@
     "Retention context packets omit internal Song/Session/Learning/claim/source-reference identities, are JSON-safe, can select bounded sections, perform no writes and grant no action authority.",
     "The normal Song page now exposes a read-only What N0TE remembers card with current thread, next action, active durable facts, recurring blocker summary, skill context and imported-context count while preserving the detailed canonical memory surfaces already present.",
     "Quit/relaunch continuity is regression-tested so the same retained thread and next action reappear from canonical local memory after reopening.",
-    "Exact-head 835440a7d7387e795129581dcb640296f92b81fa passed governance, full product regressions and staged consumer smoke on Ubuntu. macOS and Windows execution were still in progress when this governance reconciliation was authored; the new exact head must be observed independently.",
+    "Exact-head observations are runtime evidence and never become current merely because a prior commit was green; each new head must be observed independently.",
+    "Known unfinished scope is not selected work. Selection requires current_state plus a bounded active receipt.",
+    "Construction may terminate at STABLE, WAITING or BLOCKED with zero ACTIVE graph nodes. STABLE is the destination after justified construction, not an invitation to invent adjacent work.",
     "After this increment lands or blocks, re-evaluate the whole acceptance spine instead of continuing by memory-subsystem adjacency."
   ]
 }

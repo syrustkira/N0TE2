@@ -8,28 +8,51 @@ N0TE is Headquarters. A DAW is a creative workspace and execution provider benea
 
 ## Reconstruct before editing
 
-Before selecting work, read:
+Normal startup is deterministic. Do not begin by searching old chats, PRs or adjacent commits.
 
-1. `governance/authority.json`
-2. `governance/current_state.json`
-3. `governance/active_receipt.json`
-4. `governance/completion_graph.json`
-5. `governance/requirements.json`
-6. `governance/platform_support.json`
-7. `governance/held_scope.json`
-8. relevant implementation and tests
+1. Read `governance/handoff.json`.
+2. Run `python governance/build_handoff.py --repo . --check` to bind the handoff to the exact current Git head.
+3. Read every `reconstruction.required_refs` entry named by the handoff.
+4. Verify `governance/current_state.json`, the completion graph and the active receipt agree with the handoff lifecycle.
+5. Only then inspect relevant implementation and tests.
 
-Historical repositories, PR descriptions, old closure tables, old prompts, adapter depth, last commit, and nearest failing test are evidence only. They never select the next N0TE2 job.
+Historical repositories, PR descriptions, old closure tables, old prompts, implementation order, last commit and nearest failing test are evidence only. Invoke historical reconstruction only when durable authority is missing or contradictory. Historical evidence never silently selects the next N0TE2 job.
 
-## Selection
+## Supervision graph
 
-Select only a dependency-ready node permitted by the active baseline-bound receipt. After closure, reconcile evidence and reselect globally from the whole graph. Do not continue by adjacency.
+The artist is root authority. N0TE supervises delegated automation. Workers and controllers never expand their own authority or redefine their parent purpose.
+
+Every autonomous actor must be registered in `governance/automation_registry.json` with a stable ID, parent, purpose, wake condition, observability contract and retirement condition. A dormant actor waking is an observable event, never silent resumption. Current observations bind the exact repository head.
+
+## Lifecycle
+
+Construction is temporary. `ACTIVE`, `STABLE`, `WAITING` and `BLOCKED` are legal controller lifecycle states.
+
+- `ACTIVE` requires exactly one graph node selected through current state and a bounded active receipt.
+- `STABLE`, `WAITING` and `BLOCKED` require zero ACTIVE graph nodes and no construction authority.
+- `WAITING` and `BLOCKED` require an explicit wake condition.
+- `STABLE` requires a terminal reason: no currently justified construction work exists.
+- Reactivation requires a declared trigger, an observable state transition and fresh global selection.
+
+The destination of justified construction is stable operation, not another construction task.
+
+## Scope versus selection
+
+Known unfinished scope is not selected work. Requirements may remain `KNOWN` and still block candidate completeness without becoming ACTIVE. Work becomes active only after dependency-ready global selection plus a bounded receipt.
+
+After closure or blockage, reconcile evidence and reselect globally from the whole graph. Do not continue by adjacency, subsystem momentum or implementation convenience.
+
+## Durable decisions and evidence
+
+Constitutional rules live in `governance/invariants.json`. Consequential choices, incidents, controller changes, definitions, trajectory audits and intent provenance live in the append-oriented durable ledgers referenced by `governance/handoff.json`.
+
+Derived facts may be reconciled from newer evidence, but supersession history must remain visible. Constitutional definitions such as authority, completion, mutation rights, lifecycle semantics and approval meaning cannot silently drift.
 
 ## Autonomy
 
-- `GREEN`: decide, implement, test, continue.
+- `GREEN`: decide, implement, test, continue within delegated scope.
 - `AMBER`: decide professionally, record rationale, keep reversible.
-- `RED`: escalate only for product identity/scope changes, destructive/irreversible behavior, privacy/rights, money/spend, surprise publication/external action, major security boundary, or enduring subjective brand/artist decisions.
+- `RED`: escalate for product identity/scope changes, destructive or irreversible behavior, privacy/rights, money/spend, surprise publication/external action, major security boundaries, or enduring subjective brand/artist decisions.
 
 Do not ask the artist merely because information is incomplete. Ask only when every legitimate autonomous path is blocked or RED authority is required.
 
@@ -48,3 +71,5 @@ Do not ask the artist merely because information is incomplete. Ask only when ev
 ## Systemic repair
 
 A fix is not closed until it covers: instance -> root cause -> sibling scan -> consequence scan -> recurrence scan -> regression guard -> consumer outcome.
+
+A green previous head does not prove the current head. Exact-head cross-platform evidence must be refreshed whenever the repository head changes.
