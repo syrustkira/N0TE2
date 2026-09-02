@@ -1,7 +1,12 @@
 import json
 from pathlib import Path
+import sys
 
-from governance.external_coordination import (
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "governance"))
+
+from external_coordination import (  # noqa: E402
     canonical_digest,
     changed,
     compact_continue_snapshot,
@@ -9,9 +14,6 @@ from governance.external_coordination import (
     operation_state,
     select_executor,
 )
-
-
-ROOT = Path(__file__).resolve().parents[2]
 
 
 def load_json(name: str):
