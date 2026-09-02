@@ -12,13 +12,20 @@
       "reason_running": "A repository event supplied a head whose governance and product evidence must be independently verified.",
       "mode": "EVENT_DRIVEN",
       "authority": "VERIFY_ONLY",
-      "allowed_mutations": ["CI_STATUS_CONTEXT", "CI_ARTIFACT"],
+      "allowed_mutations": [
+        "CI_STATUS_CONTEXT",
+        "CI_ARTIFACT"
+      ],
       "wake_condition": "GitHub push or pull_request event for a new repository head",
       "retirement_condition": "A versioned replacement verifier is registered and this actor is explicitly retired.",
       "failure_policy": {
         "max_retries": 1,
         "backoff": "GITHUB_ACTIONS_PLATFORM_POLICY",
-        "terminal_states": ["FAILED", "CANCELLED", "TIMED_OUT"],
+        "terminal_states": [
+          "FAILED",
+          "CANCELLED",
+          "TIMED_OUT"
+        ],
         "on_exhaustion": "REPORT_BLOCKER_TO_SUPERVISOR"
       },
       "escalation_target": "N0TE-SUPERVISOR",
@@ -48,13 +55,20 @@
       "reason_running": "The user explicitly selected the retention, context-lifecycle and supervision repair while UX-01 remains ACTIVE under a bounded receipt.",
       "mode": "ACCEPTANCE_BOUND",
       "authority": "SELECT_WITHIN_GOVERNED_SCOPE",
-      "allowed_mutations": ["GOVERNANCE_SELECTION", "RECEIPT_BOUNDED_REPOSITORY_PATHS"],
+      "allowed_mutations": [
+        "GOVERNANCE_SELECTION",
+        "RECEIPT_BOUNDED_REPOSITORY_PATHS"
+      ],
       "wake_condition": "Lifecycle is ACTIVE after explicit/global selection, or a declared stable-state reactivation trigger is reconciled.",
       "retirement_condition": "At STABLE the construction controller is dormant; a superseding controller version may explicitly retire this actor.",
       "failure_policy": {
         "max_retries": 8,
         "backoff": "BOUNDED_RESELECT_OR_BLOCK",
-        "terminal_states": ["STABLE", "WAITING", "BLOCKED"],
+        "terminal_states": [
+          "STABLE",
+          "WAITING",
+          "BLOCKED"
+        ],
         "on_exhaustion": "STOP_AND_REPORT_BLOCKER"
       },
       "escalation_target": "USER_ROOT",
@@ -71,6 +85,109 @@
         "reactivation_is_event": true,
         "runtime_handoff_artifact": "governance-runtime-handoff.json",
         "observation_artifact": "governance-ci-observation.json"
+      }
+    },
+    {
+      "id": "AUTO-CHATGPT-PORTFOLIO-CONTROL-001",
+      "kind": "CHATGPT_SCHEDULED_CONTROL_PLANE",
+      "path": "external://chatgpt/automation/6a971171c7f48191ba9422a981551e08",
+      "parent": "N0TE-SUPERVISOR",
+      "reports_to": "N0TE-SUPERVISOR",
+      "purpose": "Reconcile live GitHub, durable Drive authority, worker receipts and provider state so new conversations and autonomous workers start from the current governed frontier instead of stale chat archaeology.",
+      "reason_running": "TellMeN0TE and N0TE require an independent cross-surface reconciler because GitHub execution truth and Drive portfolio truth can change on different clocks.",
+      "mode": "CONDITION_WATCH",
+      "authority": "RECONCILE_DURABLE_STATE",
+      "allowed_mutations": [
+        "VOLATILE_CONTROLLER_STATE",
+        "DURABLE_RECONCILIATION_RECEIPT",
+        "CANONICAL_KNOWLEDGE_UPDATE",
+        "STANDARDS_WATCH_UPDATE"
+      ],
+      "wake_condition": "Scheduled control-plane wake or a material mismatch/new receipt is observed across the registered authority surfaces.",
+      "retirement_condition": "A proven replacement reconciler owns the same authority surfaces and this actor is explicitly retired; temporary stability alone makes it quiet, not nonexistent.",
+      "failure_policy": {
+        "max_retries": 1,
+        "backoff": "WAIT_FOR_NEXT_SCHEDULED_WAKE",
+        "terminal_states": [
+          "BLOCKED_BY_AUTHORITY",
+          "BLOCKED_BY_CONNECTOR",
+          "CONTRADICTORY_DURABLE_AUTHORITY"
+        ],
+        "on_exhaustion": "REPORT_BLOCKER_TO_SUPERVISOR_WITH_SOURCE_RECEIPTS"
+      },
+      "escalation_target": "USER_ROOT",
+      "auto_spawn_successor": false,
+      "lifecycle": {
+        "state": "ACTIVE",
+        "last_useful_action": "Reconcile the stale PR #62 Drive controller state to live PR #63 and supervise the external worker topology.",
+        "last_observation": "GitHub and Drive had diverged; reconciliation is required before selection or startup summaries.",
+        "next_wake_condition": "Next scheduled wake or any newly observed exact repository head/provider receipt.",
+        "health": "GOVERNED_EXTERNAL"
+      },
+      "observability": {
+        "exact_head_required": true,
+        "reactivation_is_event": true,
+        "automation_id": "6a971171c7f48191ba9422a981551e08",
+        "durable_state_sources": [
+          "governance/handoff.json",
+          "governance/current_state.json",
+          "governance/active_receipt.json",
+          "TELLMEN0TE_OS",
+          "N0TE_PRODUCT_DB"
+        ],
+        "observation_contract": "Every material reconciliation must retain the exact observed repository head plus source/receipt provenance."
+      }
+    },
+    {
+      "id": "AUTO-CHATGPT-BUILD-WORKER-001",
+      "kind": "CHATGPT_SCHEDULED_BUILD_WORKER",
+      "path": "external://chatgpt/automation/6a97835af7d08191922f56cc744ff781",
+      "parent": "N0TE-SUPERVISOR",
+      "reports_to": "N0TE-SUPERVISOR",
+      "purpose": "Advance the exact currently selected bounded N0TE construction receipt through the strongest available GitHub/Codex execution path, then return proof or a precise blocker instead of merely watching the repository.",
+      "reason_running": "The governed N0TE completion graph still contains accepted unfinished scope and the current retention-supervision increment has a concrete exact-head Windows blocker.",
+      "mode": "CONDITION_WATCH",
+      "authority": "EXECUTE_OR_DELEGATE_WITHIN_ACTIVE_RECEIPT",
+      "allowed_mutations": [
+        "RECEIPT_BOUNDED_REPOSITORY_PATHS",
+        "DELEGATION_RECEIPT",
+        "GOVERNANCE_HANDOFF_RECONCILIATION"
+      ],
+      "wake_condition": "Scheduled build-worker wake while lifecycle is ACTIVE and the live exact head/receipt exposes a dependency-ready authorized action or new verification result.",
+      "retirement_condition": "Construction lifecycle becomes STABLE, WAITING or BLOCKED with no currently authorized executable action, or a proven replacement worker is explicitly registered.",
+      "failure_policy": {
+        "max_retries": 1,
+        "backoff": "NO_REPEAT_ON_UNCHANGED_HEAD_RECEIPT_BLOCKER",
+        "terminal_states": [
+          "BLOCKED_BY_AUTHORITY",
+          "BLOCKED_BY_EXECUTOR",
+          "BLOCKED_BY_ENVIRONMENT",
+          "WAITING_FOR_NEW_EVIDENCE"
+        ],
+        "on_exhaustion": "WRITE_PRECISE_DELEGATION_RECEIPT_AND_STOP_UNTIL_NEW_EVIDENCE"
+      },
+      "escalation_target": "N0TE-SUPERVISOR",
+      "auto_spawn_successor": false,
+      "lifecycle": {
+        "state": "ACTIVE",
+        "last_useful_action": "Register a live construction worker against the governed PR #63 delivery lane.",
+        "last_observation": "The latest observed PR #63 exact head failed only the Windows governance/product regression job while Linux and macOS passed.",
+        "next_wake_condition": "A scheduled wake with the current exact head, a new CI observation, or a changed bounded receipt.",
+        "health": "GOVERNED_EXTERNAL"
+      },
+      "observability": {
+        "exact_head_required": true,
+        "reactivation_is_event": true,
+        "automation_id": "6a97835af7d08191922f56cc744ff781",
+        "required_inputs": [
+          "governance/handoff.json",
+          "governance/current_state.json",
+          "governance/active_receipt.json",
+          "governance/completion_graph.json",
+          "governance/automation_registry.json",
+          "EXACT_HEAD_CI"
+        ],
+        "observation_contract": "At most one attempt per unchanged head/receipt/blocker; every action or delegation is attributable to the exact head and bounded receipt."
       }
     }
   ],
