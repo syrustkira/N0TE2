@@ -89,6 +89,29 @@ class ContextLifecycleGovernanceTests(unittest.TestCase):
         self.write_json(path, payload)
         self.assert_red(repo, "may not delete canonical history")
 
+    def test_remembrance_retention_and_consultation_are_explicitly_protected(self):
+        payload = json.loads((ROOT / "governance/context_lifecycle.json").read_text())
+        remembrance = payload["remembrance_contract"]
+        retention = payload["retention_contract"]
+        consultation = payload["consultation_contract"]
+
+        self.assertTrue(remembrance["never_require_user_repetition_when_retrievable"])
+        self.assertTrue(remembrance["fresh_agent_must_recover_relevant_prior_context"])
+        self.assertIn("user corrections", remembrance["preserve"])
+        self.assertIn("stable preferences", remembrance["preserve"])
+        self.assertIn("open obligations", remembrance["preserve"])
+
+        self.assertTrue(retention["canonical_history_retained_by_default"])
+        self.assertTrue(retention["scope_may_be_preserved_while_inactive"])
+        self.assertTrue(retention["foreground_focus_never_deletes_retained_scope"])
+
+        self.assertIn("the question would merely make the user repeat known information", consultation["do_not_ask_human_when"])
+        self.assertEqual(consultation["precedence"][0], "CURRENT_EXPLICIT_USER_INTENT")
+        self.assertEqual(consultation["rule"], "Consultation informs judgment; it never silently grants execution authority.")
+
+        protected = set(payload["constitutional_change_protocol"]["protected_concepts"])
+        self.assertTrue({"REMEMBRANCE", "RETENTION", "CONSULTATION"}.issubset(protected))
+
     def test_automation_requires_bounded_failure_policy(self):
         repo = self.clone()
         path = repo / "governance/automation_registry.json"
@@ -120,6 +143,11 @@ class ContextLifecycleGovernanceTests(unittest.TestCase):
         self.assertIn("OPEN_INCIDENTS", runtime["required_reconstruction_outcomes"])
         self.assertIn("AUTOMATION_SUPERVISION", runtime["required_reconstruction_outcomes"])
         self.assertIn("CONTEXT_POLICY", runtime["required_reconstruction_outcomes"])
+        self.assertIn("REMEMBRANCE_RETENTION_CONSULTATION", runtime["required_reconstruction_outcomes"])
+        self.assertIn("ACTION_RECEIPT_TRACE", runtime["required_reconstruction_outcomes"])
+        self.assertIn("ACCEPTANCE_EVIDENCE_SPINE", runtime["required_reconstruction_outcomes"])
+        self.assertIn("governance/action_receipt_contract.json", runtime["required_refs"])
+        self.assertIn("governance/acceptance_evidence_spine.json", runtime["required_refs"])
         self.assertEqual(
             runtime["archaeology_fallback"]["allowed_only_for"],
             ["MISSING_DURABLE_AUTHORITY", "CONTRADICTORY_DURABLE_AUTHORITY"],
