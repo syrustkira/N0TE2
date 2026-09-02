@@ -9,7 +9,7 @@ from n0te2.instance import (
     InstanceLeaseOwnershipError,
     ProcessIdentity,
 )
-from n0te2.platforms import PlatformEnvironment, target_tier
+from n0te2.platforms import PlatformEnvironment
 
 
 class AlwaysAliveProbe:
@@ -22,13 +22,7 @@ class ExactLaunchLeaseRegressionTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name).resolve()
         self.profile = "profile-exact-launch"
-        self.platform = PlatformEnvironment(
-            os_family="Windows",
-            architecture="x86_64",
-            raw_os_name="Windows",
-            raw_machine="AMD64",
-            target_tier=target_tier("Windows", "x86_64"),
-        )
+        self.platform = PlatformEnvironment.from_runtime_labels("Windows", "AMD64")
         self.manager = InstanceLeaseManager(self.root)
         self.probe = AlwaysAliveProbe()
 
