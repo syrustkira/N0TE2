@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "constitutional": [
     {"id":"INV-SUP-001","statement":"Every autonomous actor has a registered supervision parent, purpose, wake condition, observability contract and retirement condition.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-SUP-002","statement":"A dormant automation reactivation is an observable event and cannot silently resume mutation authority.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
@@ -13,7 +13,9 @@
     {"id":"INV-HANDOFF-001","statement":"Normal reconstruction starts from the durable handoff and its referenced authority. Historical conversation or PR archaeology is fallback only for missing or contradictory durable authority.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-AUTH-001","statement":"Workers and controllers cannot expand their own authority, redefine parent purpose or silently change constitutional definitions.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-CTX-001","statement":"Flattening is a projection, never destruction of the record.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
-    {"id":"INV-CTX-002","statement":"Conversation history is provenance, not authority; durable promotion requires explicit acceptance or canonical evidence.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"}
+    {"id":"INV-CTX-002","statement":"Conversation history is provenance, not authority; durable promotion requires explicit acceptance or canonical evidence.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-CLOSE-001","statement":"No orphan actionable discovery: before a control-plane cycle ends, every material actionable suggestion or discovery surfaced in that cycle must be executed, durably captured, deduplicated, blocked with a wake condition, rejected with provenance, or explicitly classified non-actionable.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-CLOSE-002","statement":"When a discovered next action is safe, authorized, reversible and supported by an available tool, the controller executes it rather than stopping at recommendation; this execution bias never grants scope or authority by itself.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"}
   ],
   "required_verbatim_doctrine": [
     "No unjustified persistent loop.",
