@@ -97,6 +97,19 @@ class ContextLifecycleGovernanceTests(unittest.TestCase):
         self.write_json(path, payload)
         self.assert_red(repo, "requires bounded max_retries")
 
+    def test_superseded_ci_work_must_be_cancelled(self):
+        repo = self.clone()
+        path = repo / ".github/workflows/governance.yml"
+        workflow = path.read_text(encoding="utf-8")
+        path.write_text(
+            workflow.replace("cancel-in-progress: true", "cancel-in-progress: false"),
+            encoding="utf-8",
+        )
+        self.assert_red(
+            repo,
+            "superseded governance CI may continue running without justification",
+        )
+
     def test_fresh_agent_reconstructs_without_prior_chat(self):
         with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
             runtime = handoff_mod.build_runtime_handoff(ROOT)
