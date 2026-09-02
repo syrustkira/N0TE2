@@ -168,10 +168,28 @@ def check_authority_and_handoff(repo: Path) -> None:
     require("governance/supervision.py" in refs, "handoff does not reconstruct supervision surface")
 
 
+def check_ci_supervision(repo: Path) -> None:
+    workflow_path = repo / ".github/workflows/governance.yml"
+    try:
+        workflow = workflow_path.read_text(encoding="utf-8")
+    except Exception as exc:
+        raise ContextGovernanceError(f"cannot load {workflow_path}: {exc}") from exc
+    require("concurrency:" in workflow, "governance CI lacks a supersession boundary")
+    require(
+        "group: n0te2-governance-${{ github.event.pull_request.head.ref || github.ref_name }}" in workflow,
+        "governance CI concurrency is not scoped to the active delivery branch",
+    )
+    require(
+        "cancel-in-progress: true" in workflow,
+        "superseded governance CI may continue running without justification",
+    )
+
+
 def run(repo: Path) -> None:
     check_invariants(repo)
     check_context_policy(repo)
     check_authority_and_handoff(repo)
+    check_ci_supervision(repo)
     try:
         inspect_supervision(repo)
     except SupervisionError as exc:
