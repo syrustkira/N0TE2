@@ -26,7 +26,7 @@
       "lifecycle": {
         "state": "ACTIVE",
         "last_useful_action": "Verify the current exact head and emit supervision evidence.",
-        "last_observation": "Previous exact-head workflow result remains historical only; the next head requires a fresh observation.",
+        "last_observation": "Each repository head requires fresh cross-platform governance and product evidence; previous runs are historical only.",
         "next_wake_condition": "A registered GitHub push or pull_request event supplies a new exact head.",
         "health": "OBSERVABLE"
       },
@@ -62,7 +62,7 @@
       "lifecycle": {
         "state": "ACTIVE",
         "last_useful_action": "Own the current bounded retention/context-lifecycle supervision repair.",
-        "last_observation": "The current delivery lane is PR #63; Windows exact-head lease evidence remains an inherited blocker until repaired and re-observed.",
+        "last_observation": "The current delivery lane is PR #63; exact-head evidence remains binding and construction may not advance by adjacency.",
         "next_wake_condition": "After closure or blockage, re-enter the whole acceptance spine; if no justified work exists, transition to STABLE.",
         "health": "GOVERNED"
       },
@@ -75,76 +75,76 @@
     },
     {
       "id": "AUTO-CHATGPT-PORTFOLIO-CONTROL-001",
-      "kind": "CHATGPT_SCHEDULED_CONTROL_PLANE",
+      "kind": "CHATGPT_MASTER_CLOUD_CONTROLLER",
       "path": "external://chatgpt/automation/6a971171c7f48191ba9422a981551e08",
       "parent": "N0TE-SUPERVISOR",
       "reports_to": "N0TE-SUPERVISOR",
-      "purpose": "Reconcile live GitHub, durable Drive authority, worker receipts and provider state so new conversations and autonomous workers start from the current governed frontier instead of stale chat archaeology.",
-      "reason_running": "TellMeN0TE and N0TE require an independent cross-surface reconciler because GitHub execution truth and Drive portfolio truth can change on different clocks.",
+      "purpose": "Operate the single cloud-side TellMeN0TE + N0TE master controller: reconstruct live authority, semantically deduplicate differently worded outcomes, reconcile Drive/GitHub/provider truth, execute safe connected work, invoke due artist/knowledge/standards/profile/opportunity/trajectory subroutines, surface bounded unknown-unknowns and preserve local/cloud handoffs without multiplying independent watchers.",
+      "reason_running": "The portfolio needs one persistent external coordinator so routine continuation, drift detection and cross-surface follow-through do not require the user to reconstruct context or supervise multiple overlapping cloud workers.",
       "mode": "CONDITION_WATCH",
-      "authority": "RECONCILE_DURABLE_STATE",
-      "allowed_mutations": ["VOLATILE_CONTROLLER_STATE", "DURABLE_RECONCILIATION_RECEIPT", "CANONICAL_KNOWLEDGE_UPDATE", "STANDARDS_WATCH_UPDATE"],
-      "wake_condition": "Scheduled control-plane wake or a material mismatch/new receipt is observed across the registered authority surfaces.",
-      "retirement_condition": "A proven replacement reconciler owns the same authority surfaces and this actor is explicitly retired; temporary stability alone makes it quiet, not nonexistent.",
+      "authority": "RECONCILE_AND_EXECUTE_SAFE_CONNECTED_WORK",
+      "allowed_mutations": ["VOLATILE_CONTROLLER_STATE", "DURABLE_RECONCILIATION_RECEIPT", "CANONICAL_KNOWLEDGE_UPDATE", "STANDARDS_WATCH_UPDATE", "AUTHORIZED_ARTIST_OPERATIONS_PREPARATION"],
+      "wake_condition": "Hourly scheduled wake, material authority/provider change, or a due bounded internal audit.",
+      "retirement_condition": "A proven replacement local+cloud controller owns the same authority surfaces and this actor is explicitly retired; temporary stability makes it quiet, not nonexistent.",
       "failure_policy": {
         "max_retries": 1,
-        "backoff": "WAIT_FOR_NEXT_SCHEDULED_WAKE",
-        "terminal_states": ["BLOCKED_BY_AUTHORITY", "BLOCKED_BY_CONNECTOR", "CONTRADICTORY_DURABLE_AUTHORITY"],
-        "on_exhaustion": "REPORT_BLOCKER_TO_SUPERVISOR_WITH_SOURCE_RECEIPTS"
+        "backoff": "WAIT_FOR_NEW_EVIDENCE_OR_NEXT_SCHEDULED_WAKE",
+        "terminal_states": ["BLOCKED_BY_AUTHORITY", "BLOCKED_BY_CONNECTOR", "CONTRADICTORY_DURABLE_AUTHORITY", "BLOCKED_BY_LOCAL_CAPABILITY"],
+        "on_exhaustion": "PRESERVE_EXACT_STATE_AND_REPORT_SMALLEST_REAL_BLOCKER"
       },
       "escalation_target": "USER_ROOT",
       "auto_spawn_successor": false,
       "lifecycle": {
         "state": "ACTIVE",
-        "last_useful_action": "Reconcile the stale PR #62 Drive controller state to live PR #63 and supervise the external worker topology.",
-        "last_observation": "GitHub and Drive had diverged; reconciliation is required before selection or startup summaries.",
-        "next_wake_condition": "Next scheduled wake or any newly observed exact repository head/provider receipt.",
+        "last_useful_action": "Consolidate previously separate external artist, knowledge and standards watchers into one master controller and establish one canonical continuation prompt/state route.",
+        "last_observation": "The cloud topology now has one active master controller; specialist routines are subroutines unless future measured evidence justifies re-isolation.",
+        "next_wake_condition": "Next hourly wake, material cross-surface state change, or due internal audit.",
         "health": "GOVERNED_EXTERNAL"
       },
       "observability": {
         "exact_head_required": true,
         "reactivation_is_event": true,
-        "observation_artifact": "external://chatgpt/automation/6a971171c7f48191ba9422a981551e08/reconciliation-receipt",
+        "observation_artifact": "external://chatgpt/automation/6a971171c7f48191ba9422a981551e08/master-receipt",
         "automation_id": "6a971171c7f48191ba9422a981551e08",
-        "durable_state_sources": ["governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "TELLMEN0TE_OS", "N0TE_PRODUCT_DB"],
-        "observation_contract": "Every material reconciliation must retain the exact observed repository head plus source/receipt provenance."
+        "durable_state_sources": ["docs/MASTER_CONTINUITY_CONTROLLER.md", "governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "TELLMEN0TE_OS", "N0TE_PRODUCT_DB"],
+        "observation_contract": "Every material action or reconciliation retains the exact observed repository/provider state and suppresses repeat work against unchanged evidence."
       }
     },
     {
       "id": "AUTO-CHATGPT-BUILD-WORKER-001",
-      "kind": "CHATGPT_SCHEDULED_BUILD_WORKER",
+      "kind": "CHATGPT_ON_DEMAND_BUILD_EXECUTOR",
       "path": "external://chatgpt/automation/6a97835af7d08191922f56cc744ff781",
       "parent": "N0TE-SUPERVISOR",
       "reports_to": "N0TE-SUPERVISOR",
-      "purpose": "Advance the exact currently selected bounded N0TE construction receipt through the strongest available GitHub/Codex execution path, then return proof or a precise blocker instead of merely watching the repository.",
-      "reason_running": "The governed N0TE completion graph still contains accepted unfinished scope and the current retention-supervision increment has a concrete exact-head Windows blocker.",
-      "mode": "CONDITION_WATCH",
+      "purpose": "Execute or delegate one exact currently selected bounded N0TE construction receipt when explicitly reactivated by the master/controller with actionable current evidence; never operate as an independent always-on lane.",
+      "reason_running": "The executor is deliberately dormant because its external schedule is disabled; construction selection remains owned by canonical governance and the master cloud controller, which may reactivate it only with a current bounded task.",
+      "mode": "ON_DEMAND",
       "authority": "EXECUTE_OR_DELEGATE_WITHIN_ACTIVE_RECEIPT",
       "allowed_mutations": ["RECEIPT_BOUNDED_REPOSITORY_PATHS", "DELEGATION_RECEIPT", "GOVERNANCE_HANDOFF_RECONCILIATION"],
-      "wake_condition": "Scheduled build-worker wake while lifecycle is ACTIVE and the live exact head/receipt exposes a dependency-ready authorized action or new verification result.",
-      "retirement_condition": "Construction lifecycle becomes STABLE, WAITING or BLOCKED with no currently authorized executable action, or a proven replacement worker is explicitly registered.",
+      "wake_condition": "Explicit master/controller delegation against a fresh exact head, active receipt and concrete dependency-ready action.",
+      "retirement_condition": "Construction lifecycle becomes STABLE with no foreseeable on-demand execution need, or a proven replacement executor is explicitly registered.",
       "failure_policy": {
         "max_retries": 1,
         "backoff": "NO_REPEAT_ON_UNCHANGED_HEAD_RECEIPT_BLOCKER",
         "terminal_states": ["BLOCKED_BY_AUTHORITY", "BLOCKED_BY_EXECUTOR", "BLOCKED_BY_ENVIRONMENT", "WAITING_FOR_NEW_EVIDENCE"],
-        "on_exhaustion": "WRITE_PRECISE_DELEGATION_RECEIPT_AND_STOP_UNTIL_NEW_EVIDENCE"
+        "on_exhaustion": "WRITE_PRECISE_DELEGATION_RECEIPT_AND_RETURN_CONTROL_TO_MASTER"
       },
       "escalation_target": "N0TE-SUPERVISOR",
       "auto_spawn_successor": false,
       "lifecycle": {
-        "state": "ACTIVE",
-        "last_useful_action": "Register a live construction worker against the governed PR #63 delivery lane.",
-        "last_observation": "The latest observed PR #63 exact head failed only the Windows governance/product regression job while Linux and macOS passed.",
-        "next_wake_condition": "A scheduled wake with the current exact head, a new CI observation, or a changed bounded receipt.",
-        "health": "GOVERNED_EXTERNAL"
+        "state": "DORMANT",
+        "last_useful_action": "Preserve a bounded build-executor contract while removing the independent scheduled construction loop.",
+        "last_observation": "The ChatGPT N0TE Build Worker automation is disabled and must not be represented as an independently active background actor.",
+        "next_wake_condition": "Explicit current-head delegation from the master/controller after exact evidence is consumed.",
+        "health": "DORMANT_BY_DESIGN"
       },
       "observability": {
         "exact_head_required": true,
         "reactivation_is_event": true,
         "observation_artifact": "external://chatgpt/automation/6a97835af7d08191922f56cc744ff781/build-receipt",
         "automation_id": "6a97835af7d08191922f56cc744ff781",
-        "required_inputs": ["governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "governance/completion_graph.json", "governance/automation_registry.json", "EXACT_HEAD_CI"],
-        "observation_contract": "At most one attempt per unchanged head/receipt/blocker; every action or delegation is attributable to the exact head and bounded receipt."
+        "required_inputs": ["docs/MASTER_CONTINUITY_CONTROLLER.md", "governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "governance/completion_graph.json", "governance/automation_registry.json", "EXACT_HEAD_CI"],
+        "observation_contract": "At most one attempt per unchanged head/receipt/blocker; every reactivation/action/delegation is attributable to explicit current evidence."
       }
     }
   ],
