@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "policy_id": "DISCOVERY-CLOSURE-001",
   "purpose": "Prevent useful analysis, suggestions, reviews and newly discovered requirements from disappearing between conversation and durable execution state.",
   "applies_to": [
@@ -32,10 +32,12 @@
     "Execute safe authorized work immediately when justified.",
     "Otherwise assign one allowed disposition and persist it when durability is required.",
     "Do not leave an actionable item only in prose, a chat answer, a temporary summary or model memory.",
-    "Distinguish work actually performed from work merely proposed in the user-facing status.",
-    "If the cycle must stop, preserve exact blocker, state basis and next wake/action before returning control."
+    "For any item whose execution started but did not finish, apply WORK-CONTINUITY-001 before ending the cycle.",
+    "Distinguish work actually performed from work merely proposed or partially performed in the user-facing status.",
+    "If the cycle must stop, preserve exact progress, remaining work, blocker/waiting state, state basis, next admissible action and a legitimate wake condition before returning control."
   ],
-  "failure_definition": "A material actionable suggestion that leaves the cycle without execution, canonical capture, deduplication, rejection, blocker state or explicit non-actionable classification is an ORPHAN_DISCOVERY controller defect.",
+  "unfinished_work_policy": "governance/work_continuity.json",
+  "failure_definition": "A material actionable suggestion that leaves the cycle without execution, canonical capture, deduplication, rejection, blocker state or explicit non-actionable classification is an ORPHAN_DISCOVERY controller defect. Started work that leaves the cycle without a WORK-CONTINUITY-001 checkpoint is a WORK_LOSS controller defect.",
   "relationship_to_scope": "This policy closes the analysis-to-state gap. It does not make every model suggestion accepted product scope and does not allow the controller to expand its own authority.",
-  "user_intent_basis": "Explicit user correction on 2026-09-02: the controller must not stop updating work after making useful suggestions; suggestions that matter must be carried forward into execution or durable state."
+  "user_intent_basis": "Explicit user corrections on 2026-09-02: the controller must not stop updating work after making useful suggestions, and unfinished processes must be continued or checkpointed rather than forgotten at turn boundaries."
 }
