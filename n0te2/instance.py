@@ -63,10 +63,6 @@ def _sha256_json(value: object) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
-def _digest_text(value: str) -> str:
-    return hashlib.sha256(_text(value, "identity marker").encode("utf-8")).hexdigest()
-
-
 def _digest(value: str, field: str) -> str:
     token = _text(value, field).lower()
     if len(token) != 64 or any(ch not in "0123456789abcdef" for ch in token):
@@ -193,7 +189,7 @@ class ProcessIdentity:
         }
         v2_required = v1_required | {"launch_marker_fingerprint", "launch_fingerprint"}
         keys = set(data)
-        if keys not in {frozenset(v1_required), frozenset(v2_required)}:
+        if keys != v1_required and keys != v2_required:
             raise InstanceLeaseCorruptionError("process identity shape is invalid")
         try:
             platform = PlatformEnvironment(
@@ -520,11 +516,9 @@ class InstanceLeaseManager:
         if latest != expected:
             return None
 
-        # Liveness probes commonly identify a process by PID plus reusable start
-        # workflow marker. When a new exact launch proves that same reusable
-        # workflow has been reincarnated, the older lease is stale even if the PID
-        # currently appears alive. The exact launch marker is the stronger
-        # destructive-ownership boundary.
+        # A liveness probe may only know PID plus the reusable workflow marker.
+        # A different exact launch marker is therefore stronger evidence for
+        # destructive ownership than a reused workflow returning ALIVE.
         if self._reused_workflow_is_stale(latest.process, marker.taker):
             status = "DEAD"
         else:
