@@ -26,7 +26,7 @@ if state.get("product_code_authorized") is not True:
 
 if (
     state.get("active_node") != "UX-01"
-    or state.get("active_increment") != "UX-01-RETENTION-01"
+    or state.get("active_increment") != "UX-01-CONTEXT-LIFECYCLE-01"
 ):
     raise SystemExit(
         f"STAGE SMOKE: RED: unsupported active stage "
@@ -163,7 +163,7 @@ with tempfile.TemporaryDirectory() as temp:
     process = ProcessIdentity.from_start_token(
         PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
         pid=99012,
-        start_token="ux-01-retention-consumer-smoke",
+        start_token="ux-01-context-lifecycle-consumer-smoke",
     )
     probe = Probe()
 
@@ -268,6 +268,17 @@ with tempfile.TemporaryDirectory() as temp:
     assert "read-only" in explained
     assert "one kept result does not become permanent taste doctrine or a causal rule" in explained
 
+    projection = shell.runtime.headquarters.context_projection.projection_for_song(
+        shell.runtime.headquarters.store.active_song().id,
+        purpose="Resume the smoke-test work without flattening canonical history",
+        sections=("SESSIONS", "LEARNING", "DURABLE_FACTS"),
+    )
+    assert projection["schema"] == "n0te.context-projection.v1"
+    assert projection["authority_ceiling"] == "READ_ONLY_CONTEXT"
+    assert projection["mutation_policy"]["grants_action_authority"] is False
+    assert projection["budget"]["canonical_history_deleted"] is False
+    assert len(projection["source_digest"]) == 64
+
     quit_shell(shell)
 
     relaunched = ConsumerShell(
@@ -293,5 +304,5 @@ with tempfile.TemporaryDirectory() as temp:
     quit_shell(relaunched)
 
 print(
-    "UX-01-RETENTION-01 CONSUMER SMOKE: GREEN: a fresh artist created a Song and real work Session, used the inherited interaction-depth Learning journey, recorded evidence, saw N0TE consult the canonical retained thread without leaking lineage or granting mutation authority, explicitly quit/relaunched, and recovered the same Session objective and Learning evidence while the transient interaction-mode choice correctly did not persist"
+    "UX-01-CONTEXT-LIFECYCLE-01 CONSUMER SMOKE: GREEN: a fresh artist created a Song and real work Session, used the inherited interaction-depth Learning journey, recorded evidence, saw N0TE consult canonical retention and create a bounded read-only source-digest context projection without deleting history or granting mutation authority, explicitly quit/relaunched, and recovered the same Session objective and Learning evidence while the transient interaction-mode choice correctly did not persist"
 )
