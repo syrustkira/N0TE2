@@ -10,7 +10,7 @@
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore", ".github/workflows/governance.yml", "docs/CONTROL_PLANE_EXTERNAL_BRIDGE.md", "docs/CONTROL_PLANE_RECEIPT_2026-09-01.md", "docs/EXTERNAL_AUTOMATION_REGISTRY.md", "docs/README_EXTERNAL_CONTROL_PLANE.txt", "docs/STARTUP_RECONCILIATION.md"],
+  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore", ".github/workflows/governance.yml", "docs/CONTROL_PLANE_EXTERNAL_BRIDGE.md", "docs/CONTROL_PLANE_RECEIPT_2026-09-01.md", "docs/EXTERNAL_AUTOMATION_REGISTRY.md", "docs/MASTER_CONTINUITY_CONTROLLER.md", "docs/README_EXTERNAL_CONTROL_PLANE.txt", "docs/STARTUP_RECONCILIATION.md"],
   "allowed_prefixes": ["governance/", "tests/governance/", "n0te2/", "tests/core/", "tests/ux/", "tests/song/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
@@ -48,7 +48,8 @@
     "flattening is implemented as a disposable projection rather than mutation or deletion of canonical stores",
     "the automation registry is upgraded from descriptive registration to an executable supervision contract",
     "fresh reconstruction uses durable repository authority first; historical chats and PR archaeology remain fallback-only",
-    "the existing PR #63 remains the single delivery lane; no parallel branch or PR was created"
+    "the existing PR #63 remains the single delivery lane; no parallel branch or PR was created",
+    "the canonical Master Continuity Controller is an explicitly receipt-authorized context/control-plane document rather than an untracked parallel prompt"
   ],
   "reviewed_product_test_head": null,
   "evidence_classification": "UNOBSERVED",
