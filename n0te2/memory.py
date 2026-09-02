@@ -84,12 +84,21 @@ class HeadquartersMemory:
         install_song_retention()
 
     @classmethod
+    def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
+        """Transfer store ownership only after the full composition root succeeds."""
+        try:
+            return cls(store)
+        except BaseException:
+            store.close()
+            raise
+
+    @classmethod
     def create(cls, root: str | Path, artist_name: str) -> "HeadquartersMemory":
-        return cls(LineageStore.create(root, artist_name))
+        return cls._compose_owned_store(LineageStore.create(root, artist_name))
 
     @classmethod
     def open(cls, root: str | Path, profile_id: str) -> "HeadquartersMemory":
-        return cls(LineageStore.open(root, profile_id))
+        return cls._compose_owned_store(LineageStore.open(root, profile_id))
 
     def close(self) -> None:
         self.store.close()
