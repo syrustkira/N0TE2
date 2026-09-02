@@ -137,6 +137,7 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
             {"EXECUTED", "DURABLY_CAPTURED", "DUPLICATE", "BLOCKED", "REJECTED", "NON_ACTIONABLE"},
         )
         self.assertIn("ORPHAN_DISCOVERY", policy["failure_definition"])
+        self.assertEqual(policy["unfinished_work_policy"], "governance/work_continuity.json")
 
         invariants = json.loads((ROOT / "governance/invariants.json").read_text())
         invariant_ids = {row["id"] for row in invariants["constitutional"]}
@@ -151,6 +152,49 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
         self.assertTrue(authority["laws"]["material_discoveries_require_cycle_disposition"])
         self.assertTrue(authority["laws"]["safe_authorized_discovered_work_executes_instead_of_stopping_at_advice"])
         self.assertTrue(authority["laws"]["discovery_closure_does_not_grant_new_scope_or_authority"])
+
+    def test_unfinished_work_is_durable_across_turn_and_run_boundaries(self):
+        policy = json.loads((ROOT / "governance/work_continuity.json").read_text())
+        self.assertEqual(policy["policy_id"], "WORK-CONTINUITY-001")
+        self.assertEqual(policy["authority"], "USER_ROOT")
+        self.assertTrue(policy["runtime_boundary"]["hard_state_continuity"])
+        self.assertFalse(policy["runtime_boundary"]["pretend_background_execution"])
+        self.assertIn("WORK_LOSS", policy["failure_definition"])
+        self.assertEqual(
+            set(policy["legal_unfinished_states"]),
+            {"ACTIVE", "WAITING", "BLOCKED"},
+        )
+        required_fields = {
+            "canonical_work_id",
+            "outcome",
+            "owner",
+            "state",
+            "progress_checkpoint",
+            "state_basis_or_evidence",
+            "remaining_work",
+            "blocker_or_waiting_condition",
+            "next_admissible_action",
+            "wake_condition",
+            "completion_condition",
+        }
+        self.assertEqual(set(policy["required_checkpoint_fields"]), required_fields)
+
+        invariants = json.loads((ROOT / "governance/invariants.json").read_text())
+        invariant_ids = {row["id"] for row in invariants["constitutional"]}
+        self.assertTrue({"INV-WORK-001", "INV-WORK-002", "INV-WORK-003"}.issubset(invariant_ids))
+
+        handoff = json.loads((ROOT / "governance/handoff.json").read_text())
+        self.assertIn("UNFINISHED_WORK_CONTINUITY", handoff["reconstruction"]["required_outcomes"])
+        self.assertIn("governance/work_continuity.json", handoff["reconstruction"]["required_refs"])
+
+        authority = json.loads((ROOT / "governance/authority.json").read_text())
+        self.assertIn("WORK_CONTINUITY_POLICY", authority["authority_order"])
+        self.assertIn("governance/work_continuity.json", authority["current_authority_files"])
+        self.assertTrue(authority["laws"]["turn_or_run_boundary_is_not_task_completion"])
+        self.assertTrue(authority["laws"]["unfinished_material_work_requires_durable_checkpoint"])
+        self.assertTrue(authority["laws"]["unfinished_work_reconstructs_before_unrelated_reselection"])
+        self.assertTrue(authority["laws"]["continuity_must_not_fake_background_execution"])
+        self.assertTrue(authority["laws"]["partial_execution_must_not_be_reported_complete"])
 
 
 if __name__ == "__main__":
