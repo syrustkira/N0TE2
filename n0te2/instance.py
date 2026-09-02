@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import stat
+import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path, PurePath
@@ -356,6 +357,8 @@ class InstanceLeaseManager:
     """
 
     MAX_ATTEMPTS = 8
+    READ_ATTEMPTS = 8
+    READ_RETRY_SECONDS = 0.001
 
     def __init__(self, state_root: str | Path):
         root = Path(state_root)
@@ -389,25 +392,44 @@ class InstanceLeaseManager:
         finally:
             os.close(fd)
 
-    @staticmethod
-    def _read_json(path: Path) -> object:
-        try:
-            info = os.lstat(path)
-        except FileNotFoundError:
-            raise
-        if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
-            raise InstanceLeaseCorruptionError(
-                f"lease state path is not a regular file: {path}"
-            )
-        try:
-            raw = path.read_text(encoding="utf-8")
-            return json.loads(raw)
-        except FileNotFoundError:
-            raise
-        except Exception as exc:
-            raise InstanceLeaseCorruptionError(
-                f"lease state is unreadable or malformed: {path}"
-            ) from exc
+    @classmethod
+    def _read_json(cls, path: Path) -> object:
+        """Read published lease state while tolerating only bounded write exposure.
+
+        `_write_exclusive` must create the destination before filling it, so a
+        concurrent reader can briefly observe an empty/partial UTF-8 or JSON
+        payload. Retry only decoding/parsing failures for a tiny bounded window.
+        Stable malformed content still becomes visible corruption after the
+        bound, and symlinks/non-regular files fail immediately on every attempt.
+        """
+        last_decode_error: Exception | None = None
+        for attempt in range(cls.READ_ATTEMPTS):
+            try:
+                info = os.lstat(path)
+            except FileNotFoundError:
+                raise
+            if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+                raise InstanceLeaseCorruptionError(
+                    f"lease state path is not a regular file: {path}"
+                )
+            try:
+                raw = path.read_bytes().decode("utf-8")
+                return json.loads(raw)
+            except FileNotFoundError:
+                raise
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                last_decode_error = exc
+                if attempt + 1 < cls.READ_ATTEMPTS:
+                    time.sleep(cls.READ_RETRY_SECONDS)
+                    continue
+                break
+            except OSError as exc:
+                raise InstanceLeaseCorruptionError(
+                    f"lease state is unreadable or malformed: {path}"
+                ) from exc
+        raise InstanceLeaseCorruptionError(
+            f"lease state is unreadable or malformed: {path}"
+        ) from last_decode_error
 
     @staticmethod
     def _write_exclusive(path: Path, data: object) -> bool:
