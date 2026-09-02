@@ -15,6 +15,7 @@ from external_coordination import (  # noqa: E402
     normalize_runtime_actor,
     operation_state,
     prepare_action_request,
+    runtime_actor_conflict,
     select_executor,
 )
 
@@ -48,9 +49,10 @@ def test_runtime_state_does_not_infer_scheduler_from_semantic_active():
     assert normalized.semantic_lifecycle == "ACTIVE"
     assert normalized.scheduler_enabled is None
     assert normalized.health == "UNOBSERVED_RUNTIME"
+    assert runtime_actor_conflict(normalized) is None
 
 
-def test_runtime_observation_can_show_active_semantics_but_disabled_scheduler():
+def test_runtime_observation_detects_active_semantics_but_disabled_scheduler():
     actor = {"id": "x", "lifecycle": {"state": "ACTIVE"}}
     normalized = normalize_runtime_actor(
         actor,
@@ -59,6 +61,19 @@ def test_runtime_observation_can_show_active_semantics_but_disabled_scheduler():
     assert normalized.semantic_lifecycle == "ACTIVE"
     assert normalized.scheduler_enabled is False
     assert normalized.health == "NOT_RUNNING"
+    conflict = runtime_actor_conflict(normalized)
+    assert conflict["conflict"] == "SEMANTIC_ACTIVE_RUNTIME_DISABLED"
+    assert conflict["requires_reconciliation"] is True
+
+
+def test_runtime_observation_detects_nonactive_semantics_but_enabled_scheduler():
+    actor = {"id": "x", "lifecycle": {"state": "DORMANT"}}
+    normalized = normalize_runtime_actor(
+        actor,
+        {"scheduler_enabled": True, "health": "RUNNING", "observed_at": "2026-09-02"},
+    )
+    conflict = runtime_actor_conflict(normalized)
+    assert conflict["conflict"] == "SEMANTIC_NONACTIVE_RUNTIME_ENABLED"
 
 
 def test_continue_snapshot_digest_suppresses_unchanged_loops():
@@ -82,13 +97,13 @@ def test_executor_selection_prefers_observed_working_and_preserves_limits():
     assert choice["surface"] == "CHAT_GITHUB_CONNECTOR"
     assert choice["state"] == "OBSERVED_WORKING"
 
-    limited = select_executor(
+    logs = select_executor(
         matrix,
         "workflow_job_log_read",
         ["CHAT_GITHUB_CONNECTOR", "LOCAL_GH"],
     )
-    assert limited["surface"] == "CHAT_GITHUB_CONNECTOR"
-    assert limited["state"] == "OBSERVED_LIMITED"
+    assert logs["surface"] == "CHAT_GITHUB_CONNECTOR"
+    assert logs["state"] == "OBSERVED_WORKING"
 
 
 def test_action_receipt_preserves_trace_and_memory_consultation_refs():
