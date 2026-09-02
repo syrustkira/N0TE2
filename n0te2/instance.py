@@ -11,7 +11,8 @@ from typing import Protocol
 
 from .platforms import PlatformEnvironment, PlatformRoots, target_tier
 
-LEASE_SCHEMA_VERSION = 1
+LEASE_SCHEMA_VERSION = 2
+SUPPORTED_LEASE_SCHEMA_VERSIONS = {1, LEASE_SCHEMA_VERSION}
 PROCESS_STATUSES = {"ALIVE", "DEAD", "UNKNOWN"}
 ACQUIRE_STATUSES = {
     "ACQUIRED",
@@ -62,31 +63,46 @@ def _sha256_json(value: object) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def _digest_text(value: str) -> str:
+    return hashlib.sha256(_text(value, "identity marker").encode("utf-8")).hexdigest()
+
+
+def _digest(value: str, field: str) -> str:
+    token = _text(value, field).lower()
+    if len(token) != 64 or any(ch not in "0123456789abcdef" for ch in token):
+        raise InstanceLeaseError(f"{field} must be a 64-character hexadecimal digest")
+    return token
+
+
 @dataclass(frozen=True, eq=False)
 class ProcessIdentity:
     platform: PlatformEnvironment
     pid: int
     start_token_fingerprint: str
+    launch_marker_fingerprint: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.platform, PlatformEnvironment):
             raise TypeError("platform must be PlatformEnvironment")
         if isinstance(self.pid, bool) or not isinstance(self.pid, int) or self.pid <= 0:
             raise InstanceLeaseError("pid must be a positive integer")
-        token = _text(self.start_token_fingerprint, "start_token_fingerprint").lower()
-        if len(token) != 64 or any(ch not in "0123456789abcdef" for ch in token):
-            raise InstanceLeaseError(
-                "start_token_fingerprint must be a 64-character hexadecimal digest"
-            )
-        object.__setattr__(self, "start_token_fingerprint", token)
+        start = _digest(self.start_token_fingerprint, "start_token_fingerprint")
+        launch = self.launch_marker_fingerprint
+        if launch is None:
+            # Schema-v1 compatibility: the reusable start marker was the only
+            # launch identity available, so it is the conservative exact marker.
+            launch = start
+        launch = _digest(launch, "launch_marker_fingerprint")
+        object.__setattr__(self, "start_token_fingerprint", start)
+        object.__setattr__(self, "launch_marker_fingerprint", launch)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, ProcessIdentity):
             return NotImplemented
-        return self.fingerprint == other.fingerprint
+        return self.same_launch(other)
 
     def __hash__(self) -> int:
-        return hash(self.fingerprint)
+        return hash(self.launch_fingerprint)
 
     @classmethod
     def from_start_token(
@@ -95,12 +111,15 @@ class ProcessIdentity:
         *,
         pid: int,
         start_token: str,
+        launch_marker: str | None = None,
     ) -> "ProcessIdentity":
         token = _text(start_token, "start_token")
+        launch = token if launch_marker is None else _text(launch_marker, "launch_marker")
         return cls(
             platform=platform,
             pid=pid,
             start_token_fingerprint=hashlib.sha256(token.encode("utf-8")).hexdigest(),
+            launch_marker_fingerprint=hashlib.sha256(launch.encode("utf-8")).hexdigest(),
         )
 
     @property
@@ -114,6 +133,7 @@ class ProcessIdentity:
 
     @property
     def fingerprint(self) -> str:
+        """Reusable workflow/liveness fingerprint, not destructive ownership."""
         return _sha256_json(
             {
                 "platform_fingerprint": self.platform_fingerprint,
@@ -122,6 +142,29 @@ class ProcessIdentity:
             }
         )
 
+    @property
+    def workflow_fingerprint(self) -> str:
+        return self.fingerprint
+
+    @property
+    def launch_fingerprint(self) -> str:
+        return _sha256_json(
+            {
+                "workflow_fingerprint": self.workflow_fingerprint,
+                "launch_marker_fingerprint": self.launch_marker_fingerprint,
+            }
+        )
+
+    def same_workflow(self, other: "ProcessIdentity") -> bool:
+        if not isinstance(other, ProcessIdentity):
+            return False
+        return self.workflow_fingerprint == other.workflow_fingerprint
+
+    def same_launch(self, other: "ProcessIdentity") -> bool:
+        if not isinstance(other, ProcessIdentity):
+            return False
+        return self.launch_fingerprint == other.launch_fingerprint
+
     def to_data(self) -> dict[str, object]:
         return {
             "os_family": self.platform.os_family,
@@ -129,15 +172,17 @@ class ProcessIdentity:
             "target_tier": self.platform.target_tier,
             "pid": self.pid,
             "start_token_fingerprint": self.start_token_fingerprint,
+            "launch_marker_fingerprint": self.launch_marker_fingerprint,
             "platform_fingerprint": self.platform_fingerprint,
             "fingerprint": self.fingerprint,
+            "launch_fingerprint": self.launch_fingerprint,
         }
 
     @classmethod
     def from_data(cls, data: object) -> "ProcessIdentity":
         if not isinstance(data, dict):
             raise InstanceLeaseCorruptionError("process identity must be an object")
-        required = {
+        v1_required = {
             "os_family",
             "architecture",
             "target_tier",
@@ -146,7 +191,9 @@ class ProcessIdentity:
             "platform_fingerprint",
             "fingerprint",
         }
-        if set(data) != required:
+        v2_required = v1_required | {"launch_marker_fingerprint", "launch_fingerprint"}
+        keys = set(data)
+        if keys not in {frozenset(v1_required), frozenset(v2_required)}:
             raise InstanceLeaseCorruptionError("process identity shape is invalid")
         try:
             platform = PlatformEnvironment(
@@ -160,6 +207,11 @@ class ProcessIdentity:
                 platform=platform,
                 pid=data["pid"],  # type: ignore[arg-type]
                 start_token_fingerprint=str(data["start_token_fingerprint"]),
+                launch_marker_fingerprint=(
+                    str(data["launch_marker_fingerprint"])
+                    if "launch_marker_fingerprint" in data
+                    else str(data["start_token_fingerprint"])
+                ),
             )
         except Exception as exc:
             if isinstance(exc, InstanceLeaseCorruptionError):
@@ -171,6 +223,8 @@ class ProcessIdentity:
             raise InstanceLeaseCorruptionError("process platform fingerprint mismatch")
         if str(data["fingerprint"]) != process.fingerprint:
             raise InstanceLeaseCorruptionError("process fingerprint mismatch")
+        if "launch_fingerprint" in data and str(data["launch_fingerprint"]) != process.launch_fingerprint:
+            raise InstanceLeaseCorruptionError("process launch fingerprint mismatch")
         return process
 
 
@@ -218,7 +272,7 @@ class InstanceLease:
             raise InstanceLeaseCorruptionError("instance lease must be an object")
         if set(data) != {"schema_version", "profile_id", "process", "lease_nonce"}:
             raise InstanceLeaseCorruptionError("instance lease shape is invalid")
-        if data["schema_version"] != LEASE_SCHEMA_VERSION:
+        if data["schema_version"] not in SUPPORTED_LEASE_SCHEMA_VERSIONS:
             raise InstanceLeaseCorruptionError("unsupported instance lease schema version")
         try:
             return cls(
@@ -279,7 +333,7 @@ class _TakeoverMarker:
             "expected_previous",
         }:
             raise InstanceLeaseCorruptionError("takeover marker shape is invalid")
-        if data["schema_version"] != LEASE_SCHEMA_VERSION:
+        if data["schema_version"] not in SUPPORTED_LEASE_SCHEMA_VERSIONS:
             raise InstanceLeaseCorruptionError("unsupported takeover marker version")
         nonce = str(data["takeover_nonce"]).strip().lower()
         if len(nonce) != 32 or any(ch not in "0123456789abcdef" for ch in nonce):
@@ -300,8 +354,9 @@ def semantic_lease_ref(roots: PlatformRoots, profile_id: str) -> PurePath:
 class InstanceLeaseManager:
     """Shared file-lease semantics above platform-specific process probes.
 
-    This manager never launches, kills, signals, connects to, or synchronizes a process.
-    Process liveness is supplied by an injected platform adapter.
+    Workflow identity is reusable for liveness probing. Exact launch identity owns
+    destructive lease operations. A new launch that reuses the same PID/start
+    workflow marker therefore cannot inherit an older launch's release authority.
     """
 
     MAX_ATTEMPTS = 8
@@ -416,7 +471,7 @@ class InstanceLeaseManager:
             return
         if (
             current.takeover_nonce != marker.takeover_nonce
-            or current.taker.fingerprint != marker.taker.fingerprint
+            or not current.taker.same_launch(marker.taker)
         ):
             raise InstanceLeaseError("takeover marker ownership changed")
         self._marker_path(profile_id).unlink()
@@ -427,6 +482,13 @@ class InstanceLeaseManager:
         directory.mkdir(parents=True, exist_ok=True)
         self._stale_dir(profile_id).mkdir(exist_ok=True)
 
+    @staticmethod
+    def _reused_workflow_is_stale(
+        previous: ProcessIdentity,
+        taker: ProcessIdentity,
+    ) -> bool:
+        return previous.same_workflow(taker) and not previous.same_launch(taker)
+
     def _complete_owned_takeover(
         self,
         profile_id: str,
@@ -436,7 +498,7 @@ class InstanceLeaseManager:
         expected = marker.expected_previous
         latest = self.inspect(profile_id)
 
-        if latest is not None and latest.process.fingerprint == marker.taker.fingerprint:
+        if latest is not None and latest.process.same_launch(marker.taker):
             return LeaseAcquireResult("ALREADY_OWNED", latest)
 
         if latest is None:
@@ -457,7 +519,16 @@ class InstanceLeaseManager:
 
         if latest != expected:
             return None
-        status = _probe_status(probe, latest.process)
+
+        # Liveness probes commonly identify a process by PID plus reusable start
+        # workflow marker. When a new exact launch proves that same reusable
+        # workflow has been reincarnated, the older lease is stale even if the PID
+        # currently appears alive. The exact launch marker is the stronger
+        # destructive-ownership boundary.
+        if self._reused_workflow_is_stale(latest.process, marker.taker):
+            status = "DEAD"
+        else:
+            status = _probe_status(probe, latest.process)
         if status == "ALIVE":
             return LeaseAcquireResult("HELD_BY_OTHER", latest)
         if status == "UNKNOWN":
@@ -490,7 +561,7 @@ class InstanceLeaseManager:
         for _ in range(self.MAX_ATTEMPTS):
             marker = self._read_marker(profile)
             if marker is not None:
-                if marker.taker.fingerprint == process.fingerprint:
+                if marker.taker.same_launch(process):
                     completed = self._complete_owned_takeover(profile, marker, probe)
                     if completed is not None:
                         self._remove_marker_exact(profile, marker)
@@ -512,10 +583,13 @@ class InstanceLeaseManager:
                     return LeaseAcquireResult("ACQUIRED", lease)
                 continue
 
-            if current.process.fingerprint == process.fingerprint:
+            if current.process.same_launch(process):
                 return LeaseAcquireResult("ALREADY_OWNED", current)
 
-            current_status = _probe_status(probe, current.process)
+            if self._reused_workflow_is_stale(current.process, process):
+                current_status = "DEAD"
+            else:
+                current_status = _probe_status(probe, current.process)
             if current_status == "ALIVE":
                 return LeaseAcquireResult("HELD_BY_OTHER", current)
             if current_status == "UNKNOWN":
@@ -542,7 +616,7 @@ class InstanceLeaseManager:
         if current is None:
             raise InstanceLeaseOwnershipError("instance lease is already absent")
         if (
-            current.process.fingerprint != process.fingerprint
+            not current.process.same_launch(process)
             or current.lease_nonce != str(lease_nonce).strip().lower()
         ):
             raise InstanceLeaseOwnershipError("instance lease ownership changed")
