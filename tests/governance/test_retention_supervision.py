@@ -32,17 +32,98 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
             gov.run(repo, verify_git=False)
         self.assertIn(needle, str(cm.exception))
 
+    def activate_ux01(self, repo, *, activate_receipt=True):
+        state_path = repo / "governance/current_state.json"
+        state = json.loads(state_path.read_text())
+        state.update(
+            {
+                "lifecycle_state": "ACTIVE",
+                "active_node": "UX-01",
+                "active_increment": "UX-01-CONTEXT-LIFECYCLE-01",
+                "terminal_reason": None,
+                "wake_condition": None,
+                "product_code_authorized": True,
+                "legacy_admission_authorized": False,
+            }
+        )
+        self.write_json(state_path, state)
+
+        graph_path = repo / "governance/completion_graph.json"
+        graph = json.loads(graph_path.read_text())
+        for node in graph["nodes"]:
+            if node["state"] == "ACTIVE":
+                node["state"] = "PRESERVED"
+            if node["id"] == "UX-01":
+                node["state"] = "ACTIVE"
+        self.write_json(graph_path, graph)
+
+        handoff_path = repo / "governance/handoff.json"
+        handoff = json.loads(handoff_path.read_text())
+        handoff["lifecycle"] = {
+            "state": "ACTIVE",
+            "active_node": "UX-01",
+            "active_increment": "UX-01-CONTEXT-LIFECYCLE-01",
+        }
+        self.write_json(handoff_path, handoff)
+
+        automation_path = repo / "governance/automation_registry.json"
+        automation = json.loads(automation_path.read_text())
+        controller = next(
+            row
+            for row in automation["actors"]
+            if row["id"] == "AUTO-CONSTRUCTION-CONTROLLER-001"
+        )
+        controller["lifecycle"]["state"] = "ACTIVE"
+        self.write_json(automation_path, automation)
+
+        if activate_receipt:
+            receipt_path = repo / "governance/active_receipt.json"
+            receipt = json.loads(receipt_path.read_text())
+            receipt.update(
+                {
+                    "status": "ACTIVE",
+                    "node_id": "UX-01",
+                    "increment_id": "UX-01-CONTEXT-LIFECYCLE-01",
+                    "receipt_id": "N0TE2-UX-01-CONTEXT-LIFECYCLE-01",
+                    "product_code_allowed": True,
+                    "legacy_admission_allowed": False,
+                    "legacy_source_copy_allowed": False,
+                    "legacy_test_text_copy_allowed": False,
+                }
+            )
+            self.write_json(receipt_path, receipt)
+
     def test_known_scope_does_not_select_work(self):
         doc = json.loads((ROOT / "governance/requirements.json").read_text())
         self.assertEqual(doc["default_classification"], "KNOWN")
         self.assertTrue(doc["known_blocks_candidate"])
         self.assertFalse(doc["known_selects_work"])
+        self.assertEqual(doc["sequence_role"], "BUILD_GRAPH_INDEX")
+        self.assertEqual(doc["canonical_scope"]["retained_requirement_count"], 159)
+        self.assertEqual(doc["canonical_scope"]["end"], 160)
+        extensions = doc["canonical_extensions"]
+        self.assertEqual(
+            [row["id"] for row in extensions],
+            [f"REQ-SCOPE-{n:03d}" for n in range(154, 161)],
+        )
+        self.assertTrue(all(row["state"] == "MAPPED" for row in extensions))
+        self.assertTrue(all(row["selected"] is False for row in extensions))
 
     def test_stable_lifecycle_allows_zero_active_nodes(self):
         repo = self.clone()
         state_path = repo / "governance/current_state.json"
         state = json.loads(state_path.read_text())
-        state.update({"lifecycle_state":"STABLE","active_node":None,"active_increment":None,"product_code_authorized":False,"legacy_admission_authorized":False,"terminal_reason":"No currently justified dependency-ready construction work exists.","wake_condition":None})
+        state.update(
+            {
+                "lifecycle_state": "STABLE",
+                "active_node": None,
+                "active_increment": None,
+                "product_code_authorized": False,
+                "legacy_admission_authorized": False,
+                "terminal_reason": "No currently justified dependency-ready construction work exists.",
+                "wake_condition": None,
+            }
+        )
         self.write_json(state_path, state)
         graph_path = repo / "governance/completion_graph.json"
         graph = json.loads(graph_path.read_text())
@@ -52,7 +133,7 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
         self.write_json(graph_path, graph)
         handoff_path = repo / "governance/handoff.json"
         handoff = json.loads(handoff_path.read_text())
-        handoff["lifecycle"] = {"state":"STABLE","active_node":None,"active_increment":None}
+        handoff["lifecycle"] = {"state": "STABLE", "active_node": None, "active_increment": None}
         self.write_json(handoff_path, handoff)
         automation_path = repo / "governance/automation_registry.json"
         automation = json.loads(automation_path.read_text())
@@ -65,21 +146,25 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
         repo = self.clone()
         state_path = repo / "governance/current_state.json"
         state = json.loads(state_path.read_text())
-        state["lifecycle_state"] = "STABLE"
-        state["terminal_reason"] = "done"
+        state.update(
+            {
+                "lifecycle_state": "STABLE",
+                "active_node": "UX-01",
+                "active_increment": None,
+                "product_code_authorized": False,
+                "terminal_reason": "done",
+            }
+        )
         self.write_json(state_path, state)
         self.assert_red(repo, "STABLE cannot retain an active_node")
 
     def test_terminal_handoff_cannot_leave_active_construction_receipt(self):
         repo = self.clone()
-        state_path = repo / "governance/current_state.json"
-        state = json.loads(state_path.read_text())
-        state.update({"lifecycle_state":"STABLE","active_node":None,"active_increment":None,"product_code_authorized":False,"legacy_admission_authorized":False,"terminal_reason":"done"})
-        self.write_json(state_path, state)
-        handoff_path = repo / "governance/handoff.json"
-        handoff = json.loads(handoff_path.read_text())
-        handoff["lifecycle"] = {"state":"STABLE","active_node":None,"active_increment":None}
-        self.write_json(handoff_path, handoff)
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["status"] = "ACTIVE"
+        receipt["product_code_allowed"] = True
+        self.write_json(receipt_path, receipt)
         with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
             with self.assertRaises(handoff_mod.HandoffError) as cm:
                 handoff_mod.build_runtime_handoff(repo)
@@ -87,11 +172,11 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
 
     def test_active_handoff_requires_matching_active_receipt(self):
         repo = self.clone()
+        self.activate_ux01(repo, activate_receipt=False)
         receipt_path = repo / "governance/active_receipt.json"
         receipt = json.loads(receipt_path.read_text())
-        receipt["status"] = "INACTIVE"
-        receipt["product_code_allowed"] = False
-        self.write_json(receipt_path, receipt)
+        self.assertEqual(receipt["status"], "INACTIVE")
+        self.assertFalse(receipt["product_code_allowed"])
         with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
             with self.assertRaises(handoff_mod.HandoffError) as cm:
                 handoff_mod.build_runtime_handoff(repo)

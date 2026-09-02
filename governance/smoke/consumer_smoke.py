@@ -14,24 +14,28 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
+lifecycle = state.get("lifecycle_state")
 
-if state.get("product_code_authorized") is not True:
-    product_files = [
-        path
-        for path in (repo / "n0te2").rglob("*.py")
-        if path.name != "__pycache__"
-    ] if (repo / "n0te2").exists() else []
-    if product_files:
-        raise SystemExit("STAGE SMOKE: RED: product implementation appeared early")
-
-if (
-    state.get("active_node") != "UX-01"
-    or state.get("active_increment") != "UX-01-CONTEXT-LIFECYCLE-01"
-):
-    raise SystemExit(
-        f"STAGE SMOKE: RED: unsupported active stage "
-        f"{state.get('active_node')}/{state.get('active_increment')}"
-    )
+if lifecycle == "ACTIVE":
+    if state.get("product_code_authorized") is not True:
+        raise SystemExit("STAGE SMOKE: RED: active construction lacks product-code authority")
+    if (
+        state.get("active_node") != "UX-01"
+        or state.get("active_increment") != "UX-01-CONTEXT-LIFECYCLE-01"
+    ):
+        raise SystemExit(
+            f"STAGE SMOKE: RED: unsupported active stage "
+            f"{state.get('active_node')}/{state.get('active_increment')}"
+        )
+elif lifecycle == "STABLE":
+    if (
+        state.get("active_node") is not None
+        or state.get("active_increment") is not None
+        or state.get("product_code_authorized") is not False
+    ):
+        raise SystemExit("STAGE SMOKE: RED: STABLE retained construction authority")
+else:
+    raise SystemExit(f"STAGE SMOKE: RED: unsupported lifecycle {lifecycle}")
 
 from n0te2.consumer_shell import ConsumerShell  # noqa: E402
 from n0te2.instance import ProcessIdentity  # noqa: E402

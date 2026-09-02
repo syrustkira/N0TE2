@@ -137,7 +137,10 @@ class ContextLifecycleGovernanceTests(unittest.TestCase):
         with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
             runtime = handoff_mod.build_runtime_handoff(ROOT)
         self.assertFalse(runtime["fresh_agent_requires_prior_chat"])
-        self.assertEqual(runtime["lifecycle"]["active_increment"], "UX-01-CONTEXT-LIFECYCLE-01")
+        self.assertEqual(runtime["lifecycle"]["state"], "STABLE")
+        self.assertIsNone(runtime["lifecycle"]["active_node"])
+        self.assertIsNone(runtime["lifecycle"]["active_increment"])
+        self.assertEqual(runtime["construction_receipt_status"], "INACTIVE")
         self.assertEqual(runtime["supervision"]["root"], "N0TE-SUPERVISOR")
         self.assertEqual(runtime["supervision"]["context_policy"]["id"], "CTX-LIFECYCLE-001")
         self.assertIn("OPEN_INCIDENTS", runtime["required_reconstruction_outcomes"])
