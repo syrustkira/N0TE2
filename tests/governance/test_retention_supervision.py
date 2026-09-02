@@ -129,6 +129,29 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
         self.write_json(path, payload)
         self.assert_red(repo, "handoff active increment is stale")
 
+    def test_discovery_closure_is_durable_and_reconstructable(self):
+        policy = json.loads((ROOT / "governance/discovery_closure.json").read_text())
+        self.assertEqual(policy["policy_id"], "DISCOVERY-CLOSURE-001")
+        self.assertEqual(
+            set(policy["allowed_dispositions"]),
+            {"EXECUTED", "DURABLY_CAPTURED", "DUPLICATE", "BLOCKED", "REJECTED", "NON_ACTIONABLE"},
+        )
+        self.assertIn("ORPHAN_DISCOVERY", policy["failure_definition"])
+
+        invariants = json.loads((ROOT / "governance/invariants.json").read_text())
+        invariant_ids = {row["id"] for row in invariants["constitutional"]}
+        self.assertTrue({"INV-CLOSE-001", "INV-CLOSE-002"}.issubset(invariant_ids))
+
+        handoff = json.loads((ROOT / "governance/handoff.json").read_text())
+        self.assertIn("DISCOVERY_CLOSURE", handoff["reconstruction"]["required_outcomes"])
+        self.assertIn("governance/discovery_closure.json", handoff["reconstruction"]["required_refs"])
+
+        authority = json.loads((ROOT / "governance/authority.json").read_text())
+        self.assertIn("governance/discovery_closure.json", authority["current_authority_files"])
+        self.assertTrue(authority["laws"]["material_discoveries_require_cycle_disposition"])
+        self.assertTrue(authority["laws"]["safe_authorized_discovered_work_executes_instead_of_stopping_at_advice"])
+        self.assertTrue(authority["laws"]["discovery_closure_does_not_grant_new_scope_or_authority"])
+
 
 if __name__ == "__main__":
     unittest.main()
