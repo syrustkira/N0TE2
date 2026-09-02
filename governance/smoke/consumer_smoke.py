@@ -35,6 +35,7 @@ if (
 
 from n0te2.consumer_shell import ConsumerShell  # noqa: E402
 from n0te2.instance import ProcessIdentity  # noqa: E402
+from n0te2.memory import HeadquartersMemory  # noqa: E402
 from n0te2.platforms import PlatformEnvironment  # noqa: E402
 
 
@@ -268,18 +269,26 @@ with tempfile.TemporaryDirectory() as temp:
     assert "read-only" in explained
     assert "one kept result does not become permanent taste doctrine or a causal rule" in explained
 
-    projection = shell.runtime.headquarters.context_projection.projection_for_song(
-        shell.runtime.headquarters.store.active_song().id,
-        purpose="Resume the smoke-test work without flattening canonical history",
-        sections=("SESSIONS", "LEARNING", "DURABLE_FACTS"),
-    )
-    assert projection["schema"] == "n0te.context-projection.v1"
-    assert projection["authority_ceiling"] == "READ_ONLY_CONTEXT"
-    assert projection["mutation_policy"]["grants_action_authority"] is False
-    assert projection["budget"]["canonical_history_deleted"] is False
-    assert len(projection["source_digest"]) == 64
-
+    profile_id = shell.runtime.profile_id
+    assert profile_id
     quit_shell(shell)
+
+    # ConsumerShell owns its SQLite connection on the HTTP server thread. Open a
+    # fresh read/composition root on this thread for the context-projection proof
+    # instead of reaching across SQLite thread ownership.
+    with HeadquartersMemory.open(data_root, profile_id) as retained:
+        active_song = retained.store.active_song()
+        assert active_song is not None
+        projection = retained.context_projection.projection_for_song(
+            active_song.id,
+            purpose="Resume the smoke-test work without flattening canonical history",
+            sections=("SESSIONS", "LEARNING", "DURABLE_FACTS"),
+        )
+        assert projection["schema"] == "n0te.context-projection.v1"
+        assert projection["authority_ceiling"] == "READ_ONLY_CONTEXT"
+        assert projection["mutation_policy"]["grants_action_authority"] is False
+        assert projection["budget"]["canonical_history_deleted"] is False
+        assert len(projection["source_digest"]) == 64
 
     relaunched = ConsumerShell(
         data_root=data_root,
