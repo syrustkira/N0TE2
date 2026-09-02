@@ -167,15 +167,14 @@ class Core02CChangeConsequenceDecisionTests(unittest.TestCase):
             change_description="Change bass saturation",
         )
         with tempfile.TemporaryDirectory() as td2:
-            other = HeadquartersMemory.create(Path(td2), "Other Artist")
-            self.addCleanup(other.close)
-            with self.assertRaises(NotFoundError):
-                other.learning.append_consequence(
-                    episode.id,
-                    observation="Should never resolve across profiles",
-                    source_kind="OBSERVED",
-                    source_ref="foreign",
-                )
+            with HeadquartersMemory.create(Path(td2), "Other Artist") as other:
+                with self.assertRaises(NotFoundError):
+                    other.learning.append_consequence(
+                        episode.id,
+                        observation="Should never resolve across profiles",
+                        source_kind="OBSERVED",
+                        source_ref="foreign",
+                    )
 
     def test_history_rows_are_immutable(self):
         hq, _, _, session = self._hq_with_session()
