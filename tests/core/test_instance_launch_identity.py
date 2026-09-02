@@ -1,6 +1,8 @@
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from n0te2.instance import (
     InstanceLeaseManager,
@@ -98,11 +100,24 @@ class ExactLaunchLeaseRegressionTests(unittest.TestCase):
         process.pop("launch_marker_fingerprint")
         process.pop("launch_fingerprint")
         data["process"] = process
-        lease_path.write_text(__import__("json").dumps(data), encoding="utf-8")
+        lease_path.write_text(json.dumps(data), encoding="utf-8")
         migrated = self.manager.inspect(self.profile)
         self.assertIsNotNone(migrated)
         self.assertEqual(migrated.process.workflow_fingerprint, worker.workflow_fingerprint)
         self.assertTrue(migrated.process.same_launch(worker))
+
+    def test_reader_retries_bounded_transient_empty_publication(self):
+        worker = self.identity("launch-one")
+        acquired = self.manager.acquire(self.profile, worker, self.probe)
+        self.assertIsNotNone(acquired.lease)
+        lease_path = self.manager._lease_path(self.profile)
+        published = lease_path.read_bytes()
+
+        with mock.patch.object(Path, "read_bytes", side_effect=[b"", published]) as read:
+            recovered = self.manager._read_json(lease_path)
+
+        self.assertEqual(recovered, acquired.lease.to_data())
+        self.assertEqual(read.call_count, 2)
 
 
 if __name__ == "__main__":
