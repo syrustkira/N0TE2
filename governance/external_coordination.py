@@ -91,6 +91,27 @@ def normalize_runtime_actor(
     )
 
 
+def runtime_actor_conflict(actor: RuntimeActorState) -> dict[str, Any] | None:
+    """Detect semantic/runtime liveness drift without silently choosing authority."""
+    if actor.scheduler_enabled is None:
+        return None
+    if actor.semantic_lifecycle == "ACTIVE" and actor.scheduler_enabled is False:
+        return {
+            "actor_id": actor.actor_id,
+            "conflict": "SEMANTIC_ACTIVE_RUNTIME_DISABLED",
+            "requires_reconciliation": True,
+            "observed_at": actor.observed_at,
+        }
+    if actor.semantic_lifecycle != "ACTIVE" and actor.scheduler_enabled is True:
+        return {
+            "actor_id": actor.actor_id,
+            "conflict": "SEMANTIC_NONACTIVE_RUNTIME_ENABLED",
+            "requires_reconciliation": True,
+            "observed_at": actor.observed_at,
+        }
+    return None
+
+
 def _surface_map(capability_matrix: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     return {str(surface["id"]): surface for surface in capability_matrix.get("surfaces", [])}
 
