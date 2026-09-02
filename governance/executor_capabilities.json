@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "purpose": "Durable external execution-surface capability evidence so GitHub/connector/local limits are diagnosed once, refreshed when they change, and not repeatedly rediscovered in model context.",
   "scope": "EXTERNAL_COORDINATION_ONLY",
   "not_product_capabilities": true,
@@ -8,6 +8,17 @@
     "store_secrets": false,
     "rule": "Record capability, authority requirement, failure signature, fallback and freshness only. Connectivity never grants authority."
   },
+  "probe_side_effects": [
+    {
+      "observed_at": "2026-09-02",
+      "surface": "CHAT_GITHUB_CONNECTOR",
+      "effect": "Two unneeded probe branches were created: codex/retention-supervision-layer-separation and x.",
+      "state": "CLEANUP_BLOCKED_BY_CURRENT_CONNECTOR_SURFACE",
+      "impact": "No implementation work was placed on either branch; PR #63 codex/retention-supervision remains the sole governed delivery lane.",
+      "cleanup_wake_condition": "A legitimate GitHub surface with branch-delete authority becomes available.",
+      "lesson": "Capability probing must be side-effect-free where possible. Capability never implies authorization, and mutating probes require an explicit cleanup path before execution."
+    }
+  ],
   "states": ["OBSERVED_WORKING", "OBSERVED_LIMITED", "SUPPORTED_NOT_PROBED", "UNAVAILABLE", "REQUIRES_AUTHORITY", "UNKNOWN"],
   "surfaces": [
     {
@@ -18,9 +29,9 @@
         "repository_read": {"state": "OBSERVED_WORKING", "evidence": "Repository and PR #63 metadata retrieved in Chat."},
         "pr_metadata_read": {"state": "OBSERVED_WORKING", "evidence": "PR #63 exact base/head/state retrieved."},
         "file_read": {"state": "OBSERVED_WORKING", "evidence": "Governance files read from exact branch/head."},
-        "file_create": {"state": "OBSERVED_WORKING", "evidence": "Governance operating-layer file created on governed PR #63 branch in this cycle."},
-        "file_update": {"state": "SUPPORTED_NOT_PROBED", "evidence": "Connector exposes repository update-file action."},
-        "file_delete": {"state": "SUPPORTED_NOT_PROBED", "evidence": "Connector exposes repository delete-file action."},
+        "file_create": {"state": "OBSERVED_WORKING", "evidence": "Governance files created on governed PR #63 branch in this cycle."},
+        "file_update": {"state": "OBSERVED_WORKING", "evidence": "automation_registry.json, handoff.json and this capability matrix were updated on the governed branch."},
+        "file_delete": {"state": "SUPPORTED_NOT_PROBED", "evidence": "Connector exposes repository file-delete action; mutating probe intentionally skipped."},
         "changed_files_read": {"state": "OBSERVED_WORKING", "evidence": "PR #63 changed filenames retrieved."},
         "workflow_run_read": {"state": "OBSERVED_WORKING", "evidence": "Exact-head workflow and jobs retrieved."},
         "workflow_job_log_read": {
@@ -39,7 +50,7 @@
         },
         "branch_delete": {
           "state": "OBSERVED_LIMITED",
-          "evidence": "Current Chat GitHub connector exposes create/update ref but no branch-delete action in the discovered surface.",
+          "evidence": "Current Chat GitHub connector discovery exposes create/update ref but no branch-delete action.",
           "fallback": ["LOCAL_GH", "DIRECT_GITHUB_API", "MANUAL_GITHUB_ADMIN_IF_REQUIRED"]
         },
         "merge": {"state": "UNKNOWN", "evidence": "No merge operation assumed from read/write support."}
@@ -50,9 +61,9 @@
       "observed_at": "2026-09-02",
       "refresh_rule": "Observe live automation runtime on broad CONTINUE/reconciliation when background execution matters.",
       "operations": {
-        "list_or_peek": {"state": "OBSERVED_WORKING"},
-        "enable_disable": {"state": "SUPPORTED_NOT_PROBED"},
-        "create_update_schedule": {"state": "SUPPORTED_NOT_PROBED"}
+        "list_or_peek": {"state": "OBSERVED_WORKING", "evidence": "Live runtime showed one enabled cloud coordination plane and seven disabled specialist/build watchers after reconciliation."},
+        "enable_disable": {"state": "OBSERVED_WORKING", "evidence": "TellMeN0TE + N0TE Cloud Control Plane was enabled successfully in this cycle."},
+        "create_update_schedule": {"state": "OBSERVED_WORKING", "evidence": "Existing cloud control-plane automation title/prompt/runtime state updated successfully."}
       }
     },
     {
@@ -76,7 +87,8 @@
       "operations": {
         "auth_status": {"state": "UNKNOWN"},
         "workflow_logs": {"state": "UNKNOWN"},
-        "push_pr_workflow": {"state": "UNKNOWN"}
+        "push_pr_workflow": {"state": "UNKNOWN"},
+        "branch_delete": {"state": "UNKNOWN"}
       }
     },
     {
