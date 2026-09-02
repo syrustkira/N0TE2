@@ -1,8 +1,8 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "product": "N0TE2",
-  "authority_order": ["CANONICAL_BLUEPRINT","PRODUCT_DB_SCOPE_LEDGER","N0TE2_COMPLETION_GRAPH","GOVERNANCE_INVARIANTS","CONTEXT_LIFECYCLE_POLICY","CONTINUITY_ACCEPTANCE_SPINE","GOVERNANCE_CURRENT_STATE","DURABLE_HANDOFF","ACTIVE_RECEIPT","DECISION_INCIDENT_PROVENANCE","LIVE_N0TE2_SOURCE_TESTS_CI_RUNTIME","SPECIALIZED_REFERENCES","HISTORICAL_N0TE_EVIDENCE"],
-  "current_authority_files": ["AGENTS.md","governance/authority.json","governance/requirements.json","governance/completion_graph.json","governance/current_state.json","governance/handoff.json","governance/active_receipt.json","governance/invariants.json","governance/context_lifecycle.json","governance/continuity_acceptance.json","governance/supervision.py","governance/check_context_lifecycle.py","governance/decisions.jsonl","governance/incidents.jsonl","governance/automation_registry.json","governance/controller_versions.jsonl","governance/provenance.jsonl","governance/trajectory_audits.jsonl","governance/definitions.jsonl","governance/build_handoff.py","governance/merge_policy.json","governance/platform_support.json","governance/held_scope.json","governance/legacy_admission.json","governance/legacy_execution_evidence.json"],
+  "authority_order": ["CANONICAL_BLUEPRINT","PRODUCT_DB_SCOPE_LEDGER","N0TE2_COMPLETION_GRAPH","GOVERNANCE_INVARIANTS","CONTEXT_LIFECYCLE_POLICY","CONTINUITY_ACCEPTANCE_SPINE","DISCOVERY_CLOSURE_POLICY","GOVERNANCE_CURRENT_STATE","DURABLE_HANDOFF","ACTIVE_RECEIPT","DECISION_INCIDENT_PROVENANCE","LIVE_N0TE2_SOURCE_TESTS_CI_RUNTIME","SPECIALIZED_REFERENCES","HISTORICAL_N0TE_EVIDENCE"],
+  "current_authority_files": ["AGENTS.md","governance/authority.json","governance/requirements.json","governance/completion_graph.json","governance/current_state.json","governance/handoff.json","governance/active_receipt.json","governance/invariants.json","governance/context_lifecycle.json","governance/continuity_acceptance.json","governance/discovery_closure.json","governance/supervision.py","governance/check_context_lifecycle.py","governance/decisions.jsonl","governance/incidents.jsonl","governance/automation_registry.json","governance/controller_versions.jsonl","governance/provenance.jsonl","governance/trajectory_audits.jsonl","governance/definitions.jsonl","governance/build_handoff.py","governance/merge_policy.json","governance/platform_support.json","governance/held_scope.json","governance/legacy_admission.json","governance/legacy_execution_evidence.json"],
   "historical_evidence_only": ["N0TE repository history","old PR descriptions","old CLOSURE / Gate next-actions","old prompts and roadmaps","historical implementation order","conversation reconstruction when durable authority is complete and consistent"],
   "forbidden_current_authority_markers": ["PRODUCT_NORTH_STAR.md"],
   "laws": {
@@ -27,6 +27,9 @@
     "critical_contradiction_blocks_autonomous_mutation": true,
     "constitutional_definition_change_requires_explicit_migration": true,
     "continuity_acceptance_stacks_on_product_scope": true,
-    "captured_acceptance_does_not_self_select_construction": true
+    "captured_acceptance_does_not_self_select_construction": true,
+    "material_discoveries_require_cycle_disposition": true,
+    "safe_authorized_discovered_work_executes_instead_of_stopping_at_advice": true,
+    "discovery_closure_does_not_grant_new_scope_or_authority": true
   }
 }
