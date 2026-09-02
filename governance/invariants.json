@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "constitutional": [
     {"id":"INV-SUP-001","statement":"Every autonomous actor has a registered supervision parent, purpose, wake condition, observability contract and retirement condition.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-SUP-002","statement":"A dormant automation reactivation is an observable event and cannot silently resume mutation authority.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
@@ -15,7 +15,10 @@
     {"id":"INV-CTX-001","statement":"Flattening is a projection, never destruction of the record.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-CTX-002","statement":"Conversation history is provenance, not authority; durable promotion requires explicit acceptance or canonical evidence.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-CLOSE-001","statement":"No orphan actionable discovery: before a control-plane cycle ends, every material actionable suggestion or discovery surfaced in that cycle must be executed, durably captured, deduplicated, blocked with a wake condition, rejected with provenance, or explicitly classified non-actionable.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
-    {"id":"INV-CLOSE-002","statement":"When a discovered next action is safe, authorized, reversible and supported by an available tool, the controller executes it rather than stopping at recommendation; this execution bias never grants scope or authority by itself.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"}
+    {"id":"INV-CLOSE-002","statement":"When a discovered next action is safe, authorized, reversible and supported by an available tool, the controller executes it rather than stopping at recommendation; this execution bias never grants scope or authority by itself.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-WORK-001","statement":"A turn, response, context-window, agent, process or controller-run boundary is never by itself a task completion boundary; unfinished material work must be durably checkpointed before that boundary can return control.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-WORK-002","statement":"The next eligible controller invocation reconstructs and reconciles unfinished canonical work before selecting unrelated adjacent work, and resumes the same work when it remains justified and actionable.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-WORK-003","statement":"Continuity never means pretending asynchronous execution: when execution cannot continue in the current environment, preserve exact progress, remaining work, blocker/waiting state, next action and a legitimate wake condition instead of forgetting or falsely claiming completion.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"}
   ],
   "required_verbatim_doctrine": [
     "No unjustified persistent loop.",
