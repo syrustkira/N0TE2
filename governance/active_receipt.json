@@ -10,7 +10,7 @@
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore", ".github/workflows/governance.yml", "requirements.txt", "docs/CONTROL_PLANE_EXTERNAL_BRIDGE.md", "docs/CONTROL_PLANE_RECEIPT_2026-09-01.md", "docs/EXTERNAL_AUTOMATION_REGISTRY.md", "docs/MASTER_CONTINUITY_CONTROLLER.md", "docs/README_EXTERNAL_CONTROL_PLANE.txt", "docs/STARTUP_RECONCILIATION.md"],
+  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore", ".github/workflows/governance.yml", "requirements.txt", "docs/CONTROL_PLANE_EXTERNAL_BRIDGE.md", "docs/CONTROL_PLANE_RECEIPT_2026-09-01.md", "docs/EXTERNAL_AUTOMATION_REGISTRY.md", "docs/MASTER_CONTINUITY_CONTROLLER.md", "docs/README_EXTERNAL_CONTROL_PLANE.txt", "docs/STARTUP_RECONCILIATION.md", "tests/conftest.py", "tests/platform/test_platform_roots.py"],
   "allowed_prefixes": ["governance/", "tests/governance/", "n0te2/", "tests/core/", "tests/ux/", "tests/song/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
@@ -49,7 +49,8 @@
     "the automation registry is upgraded from descriptive registration to an executable supervision contract",
     "fresh reconstruction uses durable repository authority first; historical chats and PR archaeology remain fallback-only",
     "the existing PR #63 remains the single delivery lane; no parallel branch or PR was created",
-    "the canonical Master Continuity Controller is an explicitly receipt-authorized context/control-plane document rather than an untracked parallel prompt"
+    "the canonical Master Continuity Controller is an explicitly receipt-authorized context/control-plane document rather than an untracked parallel prompt",
+    "Windows exact-head evidence exposed cross-platform resource ownership and path-flavor defects; tests/conftest.py and tests/platform/test_platform_roots.py are admitted only as exact dependency-repair paths for this inherited Windows blocker, not as scope expansion"
   ],
   "reviewed_product_test_head": null,
   "evidence_classification": "UNOBSERVED",
