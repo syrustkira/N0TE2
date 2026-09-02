@@ -18,7 +18,7 @@ class SmokeTests(unittest.TestCase):
             capture_output=True,
         )
         self.assertEqual(cp.returncode, 0, cp.stderr)
-        self.assertIn("UX-01-RETENTION-01 CONSUMER SMOKE: GREEN", cp.stdout)
+        self.assertIn("UX-01-CONTEXT-LIFECYCLE-01 CONSUMER SMOKE: GREEN", cp.stdout)
 
     def test_product_code_is_still_rejected_if_stage_is_preproduct(self):
         with tempfile.TemporaryDirectory() as td:
