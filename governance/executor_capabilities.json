@@ -45,12 +45,12 @@
         "file_delete": {"capability": "SUPPORTED", "authority": "EXPLICIT_MUTATION_AUTHORITY", "observed_working": null, "state": "SUPPORTED_NOT_PROBED", "cleanup_path": "NOT_APPLICABLE_TO_DELETE_PROBE", "evidence": "Connector exposes file-delete action; mutating probe intentionally skipped."},
         "changed_files_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "PR #63 changed filenames retrieved."},
         "workflow_run_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Exact-head workflow and jobs retrieved."},
-        "workflow_job_log_read": {"capability": "PARTIAL", "authority": "READ", "observed_working": false, "state": "OBSERVED_LIMITED", "evidence": "Job metadata/evidence available while exact failing pytest output is not reliably surfaced.", "failure_signature": "Exact failing test text opaque or compacted.", "fallback": ["GITHUB_ACTIONS_FAILURE_ARTIFACT_IF_DETAILED", "LOCAL_GH", "DIRECT_GITHUB_API", "BOUNDED_CODEX_EXECUTOR"]},
+        "workflow_job_log_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Decoded exact workflow job logs exposed the full context-governance failure signature and surrounding execution evidence on run 33644883742.", "freshness": "RECHECK_ONLY_AFTER_CONNECTOR_SCHEMA_OR_MATERIAL_LOG_FAILURE"},
         "workflow_artifact_list": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING"},
         "workflow_artifact_download": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING"},
         "workflow_rerun_or_dispatch": {"capability": "UNKNOWN", "authority": "MUTATION_AUTHORITY_REQUIRED", "observed_working": null, "state": "UNKNOWN"},
         "branch_create": {"capability": "SUPPORTED", "authority": "MUTATION_AUTHORITY_REQUIRED", "observed_working": true, "state": "OBSERVED_WORKING", "cleanup_path": "BRANCH_DELETE_REQUIRED_BUT_NOT_AVAILABLE_ON_THIS_SURFACE", "governance_constraint": "PROHIBITED_FOR_CURRENT_INCREMENT: PR #63 remains the single delivery lane. Do not probe again without a cleanup-capable surface."},
-        "branch_delete": {"capability": "NOT_EXPOSED_ON_CURRENT_SURFACE", "authority": "MUTATION_AUTHORITY_REQUIRED", "observed_working": false, "state": "OBSERVED_LIMITED", "fallback": ["LOCAL_GH", "DIRECT_GITHUB_API", "MANUAL_GITHUB_ADMIN_IF_REQUIRED"]},
+        "branch_delete": {"capability": "NOT_EXPOSED_ON_CURRENT_SURFACE", "authority": "MUTATION_AUTHORITY_REQUIRED", "observed_working": false, "state": "OBSERVED_LIMITED", "evidence": "Tool discovery on 2026-09-02 still exposes file deletion and ref update but no branch-ref deletion action.", "fallback": ["LOCAL_GH", "DIRECT_GITHUB_API", "MANUAL_GITHUB_ADMIN_IF_REQUIRED"]},
         "merge": {"capability": "UNKNOWN", "authority": "EXPLICIT_MERGE_AUTHORITY", "observed_working": null, "state": "UNKNOWN"}
       }
     },
@@ -61,8 +61,8 @@
       "availability": "AVAILABLE_IN_CHAT",
       "refresh_rule": "Observe live automation runtime when background execution matters.",
       "operations": {
-        "list_or_peek": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING"},
-        "enable_disable": {"capability": "SUPPORTED", "authority": "EXPLICIT_OR_EXISTING_CONTROL_PLANE_AUTHORITY", "observed_working": true, "state": "OBSERVED_WORKING"},
+        "list_or_peek": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Live runtime was refreshed during CONTINUE and exposed scheduler drift."},
+        "enable_disable": {"capability": "SUPPORTED", "authority": "EXPLICIT_OR_EXISTING_CONTROL_PLANE_AUTHORITY", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Canonical TellMeN0TE + N0TE Cloud Control Plane was re-enabled after live scheduler state contradicted retained ACTIVE semantics."},
         "create_update_schedule": {"capability": "SUPPORTED", "authority": "EXPLICIT_SCHEDULING_AUTHORITY", "observed_working": true, "state": "OBSERVED_WORKING"}
       }
     },
