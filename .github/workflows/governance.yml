@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: n0te2-governance-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   statuses: write
