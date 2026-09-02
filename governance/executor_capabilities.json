@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "purpose": "Durable external execution-surface capability evidence so GitHub/connector/local limits are diagnosed once, refreshed when they change, and not repeatedly rediscovered in model context.",
+  "scope": "EXTERNAL_COORDINATION_ONLY",
+  "not_product_capabilities": true,
+  "security": {
+    "store_credentials": false,
+    "store_secrets": false,
+    "rule": "Record capability, authority requirement, failure signature, fallback and freshness only. Connectivity never grants authority."
+  },
+  "states": ["OBSERVED_WORKING", "OBSERVED_LIMITED", "SUPPORTED_NOT_PROBED", "UNAVAILABLE", "REQUIRES_AUTHORITY", "UNKNOWN"],
+  "surfaces": [
+    {
+      "id": "CHAT_GITHUB_CONNECTOR",
+      "observed_at": "2026-09-02",
+      "refresh_rule": "Re-probe only after connector/tool/schema/auth change or when an operation materially fails.",
+      "operations": {
+        "repository_read": {"state": "OBSERVED_WORKING", "evidence": "Repository and PR #63 metadata retrieved in Chat."},
+        "pr_metadata_read": {"state": "OBSERVED_WORKING", "evidence": "PR #63 exact base/head/state retrieved."},
+        "file_read": {"state": "OBSERVED_WORKING", "evidence": "Governance files read from exact branch/head."},
+        "file_create": {"state": "OBSERVED_WORKING", "evidence": "Governance operating-layer file created on governed PR #63 branch in this cycle."},
+        "file_update": {"state": "SUPPORTED_NOT_PROBED", "evidence": "Connector exposes repository update-file action."},
+        "file_delete": {"state": "SUPPORTED_NOT_PROBED", "evidence": "Connector exposes repository delete-file action."},
+        "changed_files_read": {"state": "OBSERVED_WORKING", "evidence": "PR #63 changed filenames retrieved."},
+        "workflow_run_read": {"state": "OBSERVED_WORKING", "evidence": "Exact-head workflow and jobs retrieved."},
+        "workflow_job_log_read": {
+          "state": "OBSERVED_LIMITED",
+          "evidence": "Job-log action is exposed, but the complete failing pytest output was not reliably surfaced in the current Chat observation.",
+          "failure_signature": "Workflow job metadata/evidence available while exact failing test text remains opaque or compacted.",
+          "fallback": ["GITHUB_ACTIONS_FAILURE_ARTIFACT_IF_DETAILED", "LOCAL_GH", "DIRECT_GITHUB_API", "BOUNDED_CODEX_EXECUTOR"]
+        },
+        "workflow_artifact_list": {"state": "OBSERVED_WORKING", "evidence": "Exact-head Windows/macOS/Linux supervision artifacts listed."},
+        "workflow_artifact_download": {"state": "OBSERVED_WORKING", "evidence": "Windows supervision artifact downloaded successfully."},
+        "workflow_rerun_or_dispatch": {"state": "UNKNOWN", "evidence": "Not probed in this cycle."},
+        "branch_create": {
+          "state": "OBSERVED_WORKING",
+          "evidence": "Branch creation succeeded during the capability probe.",
+          "governance_constraint": "PROHIBITED_FOR_CURRENT_INCREMENT: PR #63 remains the single delivery lane. Capability does not imply authorization."
+        },
+        "branch_delete": {
+          "state": "OBSERVED_LIMITED",
+          "evidence": "Current Chat GitHub connector exposes create/update ref but no branch-delete action in the discovered surface.",
+          "fallback": ["LOCAL_GH", "DIRECT_GITHUB_API", "MANUAL_GITHUB_ADMIN_IF_REQUIRED"]
+        },
+        "merge": {"state": "UNKNOWN", "evidence": "No merge operation assumed from read/write support."}
+      }
+    },
+    {
+      "id": "CHATGPT_AUTOMATIONS",
+      "observed_at": "2026-09-02",
+      "refresh_rule": "Observe live automation runtime on broad CONTINUE/reconciliation when background execution matters.",
+      "operations": {
+        "list_or_peek": {"state": "OBSERVED_WORKING"},
+        "enable_disable": {"state": "SUPPORTED_NOT_PROBED"},
+        "create_update_schedule": {"state": "SUPPORTED_NOT_PROBED"}
+      }
+    },
+    {
+      "id": "CODEX",
+      "observed_at": "2026-09-02",
+      "refresh_rule": "Treat capacity and availability as volatile. Reconcile before delegating.",
+      "operations": {
+        "bounded_repository_implementation": {"state": "REQUIRES_AUTHORITY", "evidence": "Use only after task selection, exact repo evidence and capacity availability are verified."}
+      }
+    },
+    {
+      "id": "LOCAL_GIT",
+      "observed_at": null,
+      "refresh_rule": "Probe when a local execution environment is actually available.",
+      "operations": {"repository_write_push": {"state": "UNKNOWN"}}
+    },
+    {
+      "id": "LOCAL_GH",
+      "observed_at": null,
+      "refresh_rule": "Probe once per environment/auth change, then preserve failure signatures/fallback.",
+      "operations": {
+        "auth_status": {"state": "UNKNOWN"},
+        "workflow_logs": {"state": "UNKNOWN"},
+        "push_pr_workflow": {"state": "UNKNOWN"}
+      }
+    },
+    {
+      "id": "WORK_CLOUD_BROWSER",
+      "observed_at": null,
+      "refresh_rule": "Use for signed-in browser administration when explicitly routed and available.",
+      "operations": {"signed_in_web_administration": {"state": "UNKNOWN"}}
+    },
+    {
+      "id": "LOCAL_N0TE_RUNTIME",
+      "observed_at": null,
+      "refresh_rule": "Probe from actual local N0TE runtime evidence, never from product scope alone.",
+      "operations": {
+        "daw_files_audio_midi_plugins_os": {"state": "UNKNOWN", "evidence": "Role is retained, but current runtime capability must be observed."}
+      }
+    }
+  ]
+}
