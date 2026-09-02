@@ -1,0 +1,1 @@
+See CONTROL_PLANE_EXTERNAL_BRIDGE.md, EXTERNAL_AUTOMATION_REGISTRY.md, STARTUP_RECONCILIATION.md, and CONTROL_PLANE_RECEIPT_2026-09-01.md. This marker exists so repository search can discover the external control-plane contract by simple keywords: TellMeN0TE, ChatGPT, automation, startup, reconciliation, anti-flattening, SCOPE_LEDGER.
