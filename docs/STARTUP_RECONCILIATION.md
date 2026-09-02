@@ -2,14 +2,17 @@
 
 This is the minimum reconstruction protocol for any external ChatGPT/controller session operating N0TE2 with TellMeN0TE.
 
+The governing boot doctrine is `docs/MASTER_CONTINUITY_CONTROLLER.md`. Read it before substantial continuation work. This file defines the minimum live-state reconstruction sequence beneath that doctrine.
+
 ## Read order
 
+0. `docs/MASTER_CONTINUITY_CONTROLLER.md` for control-plane behavior, memory separation, anti-loop, anti-flattening, whole-history audit triggers, semantic deduplication, execution bias and local/cloud boundaries.
 1. Live N0TE2 open construction PR/head and exact-head CI/status evidence.
 2. Repository handoff/current-state/receipt/completion graph at that head.
 3. `N0TE_PRODUCT_DB` canonical `SCOPE_LEDGER` and current governance controller row.
 4. `TELLMEN0TE_OS`, including `CONTROL_PLANE` and active artist/release state.
 5. Relevant worker receipts and connected provider state.
-6. Historical conversation/files only when required to resolve missing provenance or contradiction.
+6. Historical conversation/files only when required to resolve missing provenance or contradiction, or when the Master Continuity Controller triggers a whole-history audit.
 
 ## Output contract
 
@@ -18,6 +21,7 @@ A continuation should normally produce only:
 - CURRENT STATE
 - DELTA
 - OPEN LOOPS
+- ACTIONS TAKEN when work was actually performed
 - NEXT MOVE
 
 Do not restart from a broad history recap when the durable sources above are reachable.
