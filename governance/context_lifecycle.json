@@ -79,6 +79,6 @@
     "fresh_agent_must_not_require_prior_chat": true,
     "startup_surface": "governance/handoff.json",
     "must_reconstruct": ["CURRENT_LIFECYCLE", "ACTIVE_SELECTION_OR_TERMINAL_STATE", "CURRENT_AUTHORITY", "OPEN_INCIDENTS", "AUTOMATION_SUPERVISION", "CONTEXT_POLICY", "RELEVANT_DURABLE_MEMORY", "NEXT_ADMISSIBLE_ACTION"],
-    "historical_archaeology_only_for": ["MISSING_DURABLE_AUTHORITY", "CONTRADICTORY_DURABLE_AUTHORITY", "EXPLICIT_WHOLE_HISTORY_AUDIT"]
+    "historical_archaeology_only_for": ["MISSING_DURABLE_AUTHORITY", "CONTRADICTORY_DURABLE_AUTHORITY"]
   }
 }
