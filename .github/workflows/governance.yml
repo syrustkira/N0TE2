@@ -2,6 +2,7 @@ name: N0TE2 Governance
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:
@@ -37,7 +38,7 @@ jobs:
         if: ${{ runner.os == 'Windows' }}
         shell: pwsh
         run: |
-          python -c "import platform, struct, sys; print(f'executable={sys.executable}'); print(f'python={sys.version}'); print(f'platform={platform.platform()}'); print(f'machine={platform.machine()}'); print(f'pointer_bits={struct.calcsize(\"P\") * 8}')"
+          python -c "import platform, struct, sys; print(f'executable={sys.executable}'); print(f'python={sys.version}'); print(f'platform={platform.platform()}'); print(f'machine={platform.machine()}'); print('pointer_bits=' + str(struct.calcsize('P') * 8))"
           python -m pip show pywin32
           python -c "import pywintypes, win32api; print(f'pywintypes={pywintypes.__file__}'); print(f'win32api={win32api.__file__}'); print(f'windows_version={win32api.GetVersionEx()}')"
       - name: Verify exact event head checkout
