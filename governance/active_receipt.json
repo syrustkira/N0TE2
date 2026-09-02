@@ -1,12 +1,12 @@
 {
-  "schema_version": 5,
-  "status": "ACTIVE",
+  "schema_version": 6,
+  "status": "INACTIVE",
   "receipt_id": "N0TE2-UX-01-CONTEXT-LIFECYCLE-01",
   "node_id": "UX-01",
   "increment_id": "UX-01-CONTEXT-LIFECYCLE-01",
   "baseline_sha": "cfe623aade25c9aa426dded117b88f61cbd7036d",
   "purpose": "Make retained N0TE context safe to flatten, selective to retrieve, reconstructable without chat archaeology and observable under one supervision graph while closing the inherited Windows exact-launch lease regression. Projections remain disposable/read-only; canonical history, authority, contradictions and constitutional definitions remain durable and auditable.",
-  "product_code_allowed": true,
+  "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
@@ -20,7 +20,7 @@
     "capability": "Context lifecycle, reconstruction and automation supervision over canonical retention",
     "increment": "UX-01-CONTEXT-LIFECYCLE-01"
   },
-  "why_now": "The user explicitly selected this repair after identifying a flattening failure: Song retention alone did not preserve the separate construction/supervision doctrine or define safe working-context compression. The same delivery lane also still carries an inherited Windows exact-launch lease failure that must be repaired before exact-head completion can be claimed.",
+  "why_now": "The user explicitly selected this repair after identifying a flattening failure: Song retention alone did not preserve the separate construction/supervision doctrine or define safe working-context compression. The same delivery lane also carried an inherited Windows exact-launch lease failure that required exact-head repair before completion evidence could be claimed.",
   "reuse": {
     "mode": "EXTEND_CANONICAL_RETENTION_AND_EXISTING_GOVERNANCE_WITHOUT_NEW_PERSISTENCE",
     "n0te2_dependencies": ["SongRetentionService", "EvidenceMemory", "ContextIsolationService", "SessionMemory", "LearningMemory", "SuccessMemory", "FrictionMemory", "SkillMemory", "ActivityLog", "InstanceLeaseManager", "ApplicationRuntime", "existing governance handoff/invariant/automation surfaces"],
@@ -39,29 +39,29 @@
     "one supervision inspector exposes what is active, why, what may mutate, what wakes next and how it retires",
     "fresh-agent reconstruction starts from governance/handoff.json and reconstructs lifecycle, selection/terminal state, authority, incidents, supervision, context policy and next admissible action without prior chat",
     "construction controller cannot auto-spawn successor work and becomes dormant when lifecycle is STABLE/WAITING/BLOCKED",
-    "Windows reused-workflow exact-launch regression is tracked and repaired so a distinct launch cannot inherit destructive ownership merely by reproducing a workflow fingerprint",
+    "Windows reused-workflow exact-launch regression is repaired so a distinct launch cannot inherit destructive ownership merely by reproducing a workflow fingerprint",
     "a stale old launch cannot release/delete a newer launch lease",
-    "full regression, context governance, supervision inspection and staged consumer smoke execute on Ubuntu, Windows and macOS at the exact final head before merge evidence is claimed"
+    "full regression, context governance, supervision inspection and staged consumer smoke passed on Ubuntu, Windows and macOS at exact head e9e80f3851f9d0cc9fac058408a36601d4134a54 in pull-request workflow run 33671442872"
   ],
   "review_repairs": [
     "retention remains typed: creative Song memory and construction/governance doctrine are separate authority classes",
     "flattening is implemented as a disposable projection rather than mutation or deletion of canonical stores",
     "the automation registry is upgraded from descriptive registration to an executable supervision contract",
     "fresh reconstruction uses durable repository authority first; historical chats and PR archaeology remain fallback-only",
-    "the existing PR #63 remains the single delivery lane; no parallel branch or PR was created",
+    "the existing PR #63 remains the single delivery lane; no parallel implementation PR was created",
     "the canonical Master Continuity Controller is an explicitly receipt-authorized context/control-plane document rather than an untracked parallel prompt",
-    "Windows exact-head evidence exposed cross-platform resource ownership and path-flavor defects; tests/conftest.py and tests/platform/test_platform_roots.py are admitted only as exact dependency-repair paths for this inherited Windows blocker, not as scope expansion"
+    "Windows exact-head evidence exposed cross-platform resource ownership and path-flavor defects; the repairs remain bounded to the inherited blocker rather than redefining N0TE scope"
   ],
-  "reviewed_product_test_head": null,
-  "evidence_classification": "UNOBSERVED",
+  "reviewed_product_test_head": "e9e80f3851f9d0cc9fac058408a36601d4134a54",
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
   "evidence_snapshot": {
-    "observed_repository_head": null,
-    "commit_statuses": [],
-    "pull_request_workflow_runs": [],
+    "observed_repository_head": "e9e80f3851f9d0cc9fac058408a36601d4134a54",
+    "commit_statuses": ["n0te2-governance-Linux:success", "n0te2-governance-Windows:success", "n0te2-governance-macOS:success"],
+    "pull_request_workflow_runs": [33671442872],
     "reviews": [],
     "review_threads": [],
-    "execution_note": "This receipt starts at cfe623aade25c9aa426dded117b88f61cbd7036d. Every commit after that baseline requires fresh exact-head evidence; prior green results are historical lineage evidence only."
+    "execution_note": "Exact-head pull-request run 33671442872 passed construction governance, context governance, supervision inspection, the full 710-test regression suite and staged consumer smoke on Linux, Windows and macOS. This closes the bounded construction receipt and Windows blocker only; Gate-B acceptance and broader N0TE completion remain unclaimed."
   },
   "non_scope": ["new memory database", "deleting canonical conversation or Song history", "automatic durable-memory promotion", "automatic preference/taste doctrine", "causal-rule generation", "granting DAW/provider action authority", "unbounded background polling", "self-spawning construction work", "cloud sync or backup", "accounts/authentication", "global semantic search across unrelated Artist profiles", "Gate-B acceptance"],
-  "next_selection_rule": "After landing or blockage, re-enter the whole stable-core acceptance spine and select the earliest unresolved connected artist-journey break. If no currently justified dependency-ready work exists, transition construction to STABLE. Do not continue adding context/memory/governance machinery by adjacency."
+  "next_selection_rule": "Re-enter the whole TellMeN0TE + N0TE portfolio and acceptance spine. Do not reactivate construction by code adjacency. A future N0TE build increment requires a globally selected dependency-ready outcome and a new active receipt; otherwise the build harness remains STABLE/dormant."
 }
