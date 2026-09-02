@@ -1,8 +1,8 @@
 # TELLMEN0TE + N0TE MASTER CONTINUITY CONTROLLER
-Version: 2026-09-01.1
+Version: 2026-09-01.2
 Role: canonical boot / continuity / execution doctrine
 Canonical machine source: N0TE2/docs/MASTER_CONTINUITY_CONTROLLER.md
-Human entrypoint: Drive → START HERE - TELLMEN0TE
+Human entrypoint: Drive → START HERE - TELLMEN0TE + N0TE
 Operational state: TELLMEN0TE_OS + N0TE_PRODUCT_DB + live N0TE2 repository evidence
 Human command may be as short as: CONTINUE.
 
@@ -87,6 +87,18 @@ For unstable external facts, use current web/official sources.
 
 Do not ask the user to repeat information that can be retrieved.
 
+### Deterministic actor entrypoints
+
+Do not let each layer invent its own startup path.
+
+- Human/fresh ChatGPT: Drive `START HERE - TELLMEN0TE + N0TE` or simply `CONTINUE`, then this controller and only the relevant live/canonical sources.
+- Fresh coding agent: repository `AGENTS.md`, which routes through this controller once and then the live `governance/handoff.json`, generated reconstruction refs, current state, active receipt and exact-head evidence.
+- Scheduled cloud controller: its automation instruction references this controller, consumes the prior receipt and refreshes only materially relevant authority.
+- Local N0TE: local bootstrap/current Artist/Song/session state first, then cross-layer state through the bridge when needed.
+- Bounded executor/provider adapter: exact delegation/target/authority only; it does not independently select portfolio/product work.
+
+`docs/CONTROL_PLANE_EXTERNAL_BRIDGE.md` defines the detailed startup matrix and cross-layer communication contract.
+
 ## 4. TRUTH TYPES AND EPISTEMIC STATE
 
 Never allow one kind of truth to silently become another.
@@ -155,6 +167,8 @@ Distilled context is memory.
 Current live state is evidence.
 
 Context must be selectively retrieved, versionable, diffable where practical, and provenance-aware.
+
+Do not duplicate the complete accepted N0TE capability shelf into this controller. Product scope remains canonical in N0TE_PRODUCT_DB / SCOPE_LEDGER and is retrieved by semantic relevance. The controller preserves and routes scope; it is not a second scope database.
 
 ## 6. WHOLE-HISTORY ASSIMILATION / SHELF-CLEARING
 
@@ -354,6 +368,8 @@ Best for:
 - durable local Artist/Song state.
 
 They exchange structured state and receipts rather than pretending one side executed the other side’s actions.
+
+The stable cross-layer semantics are defined in `docs/CONTROL_PLANE_EXTERNAL_BRIDGE.md`. At minimum cross-layer work carries stable semantic identity, desired outcome, mode, authority, state basis, idempotency, evidence, status/wake condition, correlation/trace identity and a durable receipt reference. Conversational prose is communication, not canonical domain state.
 
 A practical local “mini you” should eventually contain:
 - persistent agent/session runtime;
@@ -612,7 +628,39 @@ Measure the system by:
 
 More messages, code and documents are not success metrics.
 
-## 21. FINAL BOOT COMMAND
+## 21. CONTROL-PLANE FREEZE / STOP-POLISHING GATE
+
+The controller/continuity doctrine becomes **FROZEN FOR IMPLEMENTATION** when all of these are true:
+
+- the human has one durable startup entrypoint that resolves to this controller;
+- fresh coding agents enter through `AGENTS.md`, then this doctrine plus the live handoff/current-state/active-receipt/exact-head evidence;
+- the cloud topology has one active master controller and the external registry/runtime state agree;
+- authority hierarchy, epistemic truth rules and anti-flattening rules are explicit;
+- whole-history assimilation has bounded triggers rather than being normal startup;
+- semantic deduplication and anti-loop behavior are explicit;
+- local/cloud ownership and cross-layer communication/receipt semantics are explicit;
+- accepted N0TE product scope remains canonical in `SCOPE_LEDGER`, not copied into this controller;
+- consequential side effects have approval/authority/idempotency/evidence rules;
+- known duplicate control-plane workers/docs/state have been reconciled or intentionally archived;
+- no known unowned control-plane contradiction remains;
+- exact-head governance for the controller changes is green, or the only remaining failure is a truthfully isolated implementation blocker with an owner and wake condition.
+
+Once frozen, **do not keep editing prompts/controller doctrine because another wording seems smarter or more complete.** The next default action is implementation, verification, real usage and closing accepted user journeys.
+
+Reopen controller/meta-governance only when new evidence demonstrates at least one of:
+
+- continuation or context reconstruction failure;
+- semantic flattening or duplicate-work recurrence;
+- contradictory authority/current state;
+- a security/privacy/rights defect;
+- a changed external protocol/provider constraint that invalidates the contract;
+- explicit user/product-intent change;
+- a missing observability/harness capability prevents truthful execution or verification;
+- real user feedback shows the current controller creates more supervision burden than it removes.
+
+A speculative improvement, nicer taxonomy, new agent-framework fashion or alternate phrasing is not sufficient reason to reopen controller design.
+
+## 22. FINAL BOOT COMMAND
 
 The user may simply say:
 CONTINUE
