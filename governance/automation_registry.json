@@ -1,10 +1,21 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "supervisor": "N0TE-SUPERVISOR",
+  "terminology": {
+    "cloud_coordination_plane": "Persistent TellMeN0TE + N0TE external coordination role. It is not N0TE and it is not the N0TE build harness.",
+    "n0te_build_harness": "Temporary construction machinery that selects, builds, diagnoses, red-teams, verifies and closes bounded N0TE implementation work.",
+    "runtime_truth": "Registry lifecycle describes semantic/governance posture. Scheduler enabled state, execution claim and health are separate observed runtime facts and must never be inferred from lifecycle=ACTIVE."
+  },
+  "runtime_state_contract": {
+    "registry_is_runtime_source": false,
+    "required_observed_dimensions": ["scheduler_enabled", "execution_claim", "health", "observed_at"],
+    "rule": "When runtime liveness matters, query the actual executor surface and reconcile the observation. A stale ACTIVE registry row may not be represented as a running process."
+  },
   "actors": [
     {
       "id": "AUTO-GH-GOVERNANCE-001",
       "kind": "GITHUB_ACTIONS",
+      "role_class": "CI_VERIFIER",
       "path": ".github/workflows/governance.yml",
       "parent": "N0TE-SUPERVISOR",
       "reports_to": "N0TE-SUPERVISOR",
@@ -30,6 +41,7 @@
         "next_wake_condition": "A registered GitHub push or pull_request event supplies a new exact head.",
         "health": "OBSERVABLE"
       },
+      "runtime_state_source": "GITHUB_ACTIONS_RUNTIME",
       "observability": {
         "exact_head_required": true,
         "reactivation_is_event": true,
@@ -41,16 +53,18 @@
     {
       "id": "AUTO-CONSTRUCTION-CONTROLLER-001",
       "kind": "GOVERNANCE_CONTROLLER",
+      "role_class": "N0TE_BUILD_HARNESS_COORDINATOR",
       "path": "governance/current_state.json",
       "parent": "N0TE-SUPERVISOR",
       "reports_to": "N0TE-SUPERVISOR",
-      "purpose": "Select and bound only currently justified construction work, then terminate at stable operation when no justified construction remains.",
+      "purpose": "Select and bound only currently justified N0TE construction work, then make construction dormant at stable operation when no justified construction remains.",
+      "boundary": "Temporary build harness machinery. It may reference N0TE requirements but does not own N0TE product semantics, artist meaning or permanent cloud coordination.",
       "reason_running": "The user explicitly selected the retention, context-lifecycle and supervision repair while UX-01 remains ACTIVE under a bounded receipt.",
       "mode": "ACCEPTANCE_BOUND",
       "authority": "SELECT_WITHIN_GOVERNED_SCOPE",
       "allowed_mutations": ["GOVERNANCE_SELECTION", "RECEIPT_BOUNDED_REPOSITORY_PATHS"],
       "wake_condition": "Lifecycle is ACTIVE after explicit/global selection, or a declared stable-state reactivation trigger is reconciled.",
-      "retirement_condition": "At STABLE the construction controller is dormant; a superseding controller version may explicitly retire this actor.",
+      "retirement_condition": "At STABLE the build-harness coordinator is dormant; a superseding build harness may explicitly retire this actor.",
       "failure_policy": {
         "max_retries": 8,
         "backoff": "BOUNDED_RESELECT_OR_BLOCK",
@@ -66,6 +80,7 @@
         "next_wake_condition": "After closure or blockage, re-enter the whole acceptance spine; if no justified work exists, transition to STABLE.",
         "health": "GOVERNED"
       },
+      "runtime_state_source": "REPOSITORY_GOVERNANCE_STATE",
       "observability": {
         "exact_head_required": true,
         "reactivation_is_event": true,
@@ -76,16 +91,18 @@
     {
       "id": "AUTO-CHATGPT-PORTFOLIO-CONTROL-001",
       "kind": "CHATGPT_MASTER_CLOUD_CONTROLLER",
+      "role_class": "CLOUD_COORDINATION_PLANE",
       "path": "external://chatgpt/automation/6a971171c7f48191ba9422a981551e08",
       "parent": "N0TE-SUPERVISOR",
       "reports_to": "N0TE-SUPERVISOR",
-      "purpose": "Operate the single cloud-side TellMeN0TE + N0TE master controller: reconstruct live authority, semantically deduplicate differently worded outcomes, reconcile Drive/GitHub/provider truth, execute safe connected work, invoke due artist/knowledge/standards/profile/opportunity/trajectory subroutines, surface bounded unknown-unknowns and preserve local/cloud handoffs without multiplying independent watchers.",
+      "purpose": "Operate the single cloud-side TellMeN0TE + N0TE coordination plane: reconstruct live authority, semantically deduplicate differently worded outcomes, reconcile Drive/GitHub/provider truth, route and execute safe connected work, invoke due bounded subroutines, surface material unknown-unknowns and preserve local/cloud handoffs without multiplying independent watchers.",
+      "boundary": "Persistent coordination plumbing around TellMeN0TE, ChatGPT and N0TE. It is not N0TE, not the N0TE build harness and not a universal executor.",
       "reason_running": "The portfolio needs one persistent external coordinator so routine continuation, drift detection and cross-surface follow-through do not require the user to reconstruct context or supervise multiple overlapping cloud workers.",
       "mode": "CONDITION_WATCH",
       "authority": "RECONCILE_AND_EXECUTE_SAFE_CONNECTED_WORK",
       "allowed_mutations": ["VOLATILE_CONTROLLER_STATE", "DURABLE_RECONCILIATION_RECEIPT", "CANONICAL_KNOWLEDGE_UPDATE", "STANDARDS_WATCH_UPDATE", "AUTHORIZED_ARTIST_OPERATIONS_PREPARATION"],
       "wake_condition": "Hourly scheduled wake, material authority/provider change, or a due bounded internal audit.",
-      "retirement_condition": "A proven replacement local+cloud controller owns the same authority surfaces and this actor is explicitly retired; temporary stability makes it quiet, not nonexistent.",
+      "retirement_condition": "A proven replacement local+cloud coordination plane owns the same authority surfaces and this actor is explicitly retired; temporary stability makes it quiet, not nonexistent.",
       "failure_policy": {
         "max_retries": 1,
         "backoff": "WAIT_FOR_NEW_EVIDENCE_OR_NEXT_SCHEDULED_WAKE",
@@ -96,38 +113,42 @@
       "auto_spawn_successor": false,
       "lifecycle": {
         "state": "ACTIVE",
-        "last_useful_action": "Consolidate previously separate external artist, knowledge and standards watchers into one master controller and establish one canonical continuation prompt/state route.",
-        "last_observation": "The cloud topology now has one active master controller; specialist routines are subroutines unless future measured evidence justifies re-isolation.",
-        "next_wake_condition": "Next hourly wake, material cross-surface state change, or due internal audit.",
-        "health": "GOVERNED_EXTERNAL"
+        "last_useful_action": "Consolidate previously separate external artist, knowledge and standards watchers into one canonical cloud coordination role.",
+        "last_observation": "One cloud coordination role is canonical; actual scheduler liveness must be observed from the external automation runtime and is not implied by this row.",
+        "next_wake_condition": "When scheduler_enabled is observed true: next hourly wake, material cross-surface state change, or due internal audit.",
+        "health": "RUNTIME_MUST_BE_OBSERVED"
       },
+      "runtime_state_source": "CHATGPT_AUTOMATIONS_RUNTIME",
+      "runtime_expectation": {"scheduler_enabled": true, "independent_specialist_watchers": false},
       "observability": {
         "exact_head_required": true,
         "reactivation_is_event": true,
         "observation_artifact": "external://chatgpt/automation/6a971171c7f48191ba9422a981551e08/master-receipt",
         "automation_id": "6a971171c7f48191ba9422a981551e08",
-        "durable_state_sources": ["docs/MASTER_CONTINUITY_CONTROLLER.md", "governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "TELLMEN0TE_OS", "N0TE_PRODUCT_DB"],
-        "observation_contract": "Every material action or reconciliation retains the exact observed repository/provider state and suppresses repeat work against unchanged evidence."
+        "durable_state_sources": ["docs/MASTER_CONTINUITY_CONTROLLER.md", "governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "governance/operating_layers.json", "governance/executor_capabilities.json", "TELLMEN0TE_OS", "N0TE_PRODUCT_DB"],
+        "observation_contract": "Every material action or reconciliation retains the exact observed repository/provider/runtime state and suppresses repeat work against unchanged evidence."
       }
     },
     {
       "id": "AUTO-CHATGPT-BUILD-WORKER-001",
       "kind": "CHATGPT_ON_DEMAND_BUILD_EXECUTOR",
+      "role_class": "N0TE_BUILD_HARNESS_EXECUTOR",
       "path": "external://chatgpt/automation/6a97835af7d08191922f56cc744ff781",
       "parent": "N0TE-SUPERVISOR",
       "reports_to": "N0TE-SUPERVISOR",
-      "purpose": "Execute or delegate one exact currently selected bounded N0TE construction receipt when explicitly reactivated by the master/controller with actionable current evidence; never operate as an independent always-on lane.",
-      "reason_running": "The executor is deliberately dormant because its external schedule is disabled; construction selection remains owned by canonical governance and the master cloud controller, which may reactivate it only with a current bounded task.",
+      "purpose": "Execute or delegate one exact currently selected bounded N0TE construction receipt when explicitly reactivated by the build harness with actionable current evidence; never operate as an independent always-on lane.",
+      "boundary": "Temporary/on-demand build executor. It is not N0TE and does not own permanent coordination or product semantics.",
+      "reason_running": "The executor is deliberately dormant because its external schedule is disabled; construction selection remains owned by canonical governance, which may reactivate it only with a current bounded task.",
       "mode": "ON_DEMAND",
       "authority": "EXECUTE_OR_DELEGATE_WITHIN_ACTIVE_RECEIPT",
       "allowed_mutations": ["RECEIPT_BOUNDED_REPOSITORY_PATHS", "DELEGATION_RECEIPT", "GOVERNANCE_HANDOFF_RECONCILIATION"],
-      "wake_condition": "Explicit master/controller delegation against a fresh exact head, active receipt and concrete dependency-ready action.",
-      "retirement_condition": "Construction lifecycle becomes STABLE with no foreseeable on-demand execution need, or a proven replacement executor is explicitly registered.",
+      "wake_condition": "Explicit build-harness delegation against a fresh exact head, active receipt and concrete dependency-ready action.",
+      "retirement_condition": "Construction lifecycle becomes STABLE with no foreseeable on-demand execution need, or a proven replacement build executor is explicitly registered.",
       "failure_policy": {
         "max_retries": 1,
         "backoff": "NO_REPEAT_ON_UNCHANGED_HEAD_RECEIPT_BLOCKER",
         "terminal_states": ["BLOCKED_BY_AUTHORITY", "BLOCKED_BY_EXECUTOR", "BLOCKED_BY_ENVIRONMENT", "WAITING_FOR_NEW_EVIDENCE"],
-        "on_exhaustion": "WRITE_PRECISE_DELEGATION_RECEIPT_AND_RETURN_CONTROL_TO_MASTER"
+        "on_exhaustion": "WRITE_PRECISE_DELEGATION_RECEIPT_AND_RETURN_CONTROL_TO_BUILD_HARNESS"
       },
       "escalation_target": "N0TE-SUPERVISOR",
       "auto_spawn_successor": false,
@@ -135,19 +156,21 @@
         "state": "DORMANT",
         "last_useful_action": "Preserve a bounded build-executor contract while removing the independent scheduled construction loop.",
         "last_observation": "The ChatGPT N0TE Build Worker automation is disabled and must not be represented as an independently active background actor.",
-        "next_wake_condition": "Explicit current-head delegation from the master/controller after exact evidence is consumed.",
+        "next_wake_condition": "Explicit current-head delegation from the build harness after exact evidence is consumed.",
         "health": "DORMANT_BY_DESIGN"
       },
+      "runtime_state_source": "CHATGPT_AUTOMATIONS_RUNTIME",
+      "runtime_expectation": {"scheduler_enabled": false},
       "observability": {
         "exact_head_required": true,
         "reactivation_is_event": true,
         "observation_artifact": "external://chatgpt/automation/6a97835af7d08191922f56cc744ff781/build-receipt",
         "automation_id": "6a97835af7d08191922f56cc744ff781",
-        "required_inputs": ["docs/MASTER_CONTINUITY_CONTROLLER.md", "governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "governance/completion_graph.json", "governance/automation_registry.json", "EXACT_HEAD_CI"],
+        "required_inputs": ["governance/operating_layers.json", "governance/handoff.json", "governance/current_state.json", "governance/active_receipt.json", "governance/completion_graph.json", "governance/automation_registry.json", "governance/executor_capabilities.json", "EXACT_HEAD_CI"],
         "observation_contract": "At most one attempt per unchanged head/receipt/blocker; every reactivation/action/delegation is attributable to explicit current evidence."
       }
     }
   ],
   "orphan_policy": "Any autonomous actor without a registered parent, reporting path, purpose, current reason, bounded failure policy, allowed mutations, wake/retirement conditions and observation contract is a governance failure.",
-  "terminal_policy": "No actor may create successor work merely to remain active. Construction terminates at STABLE when no currently justified work exists."
+  "terminal_policy": "No actor may create successor work merely to remain active. N0TE build-harness construction terminates at STABLE when no currently justified work exists; the cloud coordination plane may remain persistent and quiet because it serves ongoing portfolio operations rather than perpetual construction."
 }
