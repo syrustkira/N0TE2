@@ -7,11 +7,14 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "governance"))
 
 from external_coordination import (  # noqa: E402
+    acceptance_evidence_status,
+    build_action_result,
     canonical_digest,
     changed,
     compact_continue_snapshot,
     normalize_runtime_actor,
     operation_state,
+    prepare_action_request,
     select_executor,
 )
 
@@ -86,3 +89,63 @@ def test_executor_selection_prefers_observed_working_and_preserves_limits():
     )
     assert limited["surface"] == "CHAT_GITHUB_CONNECTOR"
     assert limited["state"] == "OBSERVED_LIMITED"
+
+
+def test_action_receipt_preserves_trace_and_memory_consultation_refs():
+    contract = load_json("action_receipt_contract.json")
+    request = prepare_action_request(
+        contract,
+        operation_id="op-1",
+        trace_id="trace-song-resume-1",
+        requested_by="CHATGPT-BROAD-OPERATOR",
+        semantic_target="artist:TellMeN0TE/song:Trapout",
+        desired_outcome="resume the correct Song context without losing prior decisions",
+        executor_class="N0TE_PRODUCT",
+        authority_basis={"class": "SAFE_RETRIEVAL"},
+        state_basis={"head": "abc", "song_version": "v3"},
+        preconditions=["artist identity resolved", "song identity resolved"],
+        idempotency_key="resume:TellMeN0TE:Trapout:v3",
+        approval_state="NOT_REQUIRED",
+        artifact_refs=["song:Trapout:v3"],
+        expected_effect="return a read-only reconstructed Song context",
+        consulted_context_refs=["decision:creative-lock-1", "preference:workflow-1"],
+    )
+    assert request["consulted_context_refs"] == ["decision:creative-lock-1", "preference:workflow-1"]
+
+    result = build_action_result(
+        contract,
+        request,
+        executor="N0TE",
+        result_state="SUCCEEDED",
+        observed_effect={"song_context_restored": True},
+        evidence_refs=["receipt:resume-1"],
+        observed_at="2026-09-02T15:00:00Z",
+        retry_safe=True,
+        reconciliation_required=False,
+    )
+    assert result["trace_id"] == request["trace_id"]
+    assert result["operation_id"] == request["operation_id"]
+
+
+def test_acceptance_spine_does_not_infer_missing_reachability_or_value():
+    spine = load_json("acceptance_evidence_spine.json")
+    evidence = {
+        "requirement_id": "REQ-SCOPE-999",
+        "canonical_scope_ref": "scope:REQ-SCOPE-999",
+        "implementation_refs": ["commit:abc"],
+        "integration_refs": ["test:integration"],
+        "user_reachability_refs": [],
+        "verification_refs": ["ci:green"],
+        "failure_recovery_refs": [],
+        "authority_security_refs": [],
+        "consumer_acceptance_refs": [],
+        "value_evidence_refs": ["artist:liked-result"],
+    }
+    status = acceptance_evidence_status(spine, evidence)
+    assert status["states"]["MAPPED"] is True
+    assert status["states"]["IMPLEMENTED"] is True
+    assert status["states"]["INTEGRATED"] is True
+    assert status["states"]["REACHABLE"] is False
+    assert status["states"]["VERIFIED"] is True
+    assert status["states"]["VALUE_EVIDENCED"] is True
+    assert status["highest_contiguous_state"] == "INTEGRATED"
