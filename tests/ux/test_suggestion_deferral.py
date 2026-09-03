@@ -69,11 +69,11 @@ class SuggestionDeferralTests(unittest.TestCase):
 
     def test_duplicate_explicit_action_is_idempotent_and_activity_is_recorded_once(self):
         suggestion = self.suggestions.suggest(distance="ADJACENT")
-        before = len(self.hq.activity.history())
+        before = len(self.hq.activity.for_profile())
         first = self.hq.suggestion_deferrals.defer_later_this_song(suggestion.semantic_key)
         second = self.hq.suggestion_deferrals.defer_later_this_song(suggestion.semantic_key)
         self.assertEqual(first, second)
-        after = self.hq.activity.history()
+        after = self.hq.activity.for_profile()
         self.assertEqual(len(after), before + 1)
         self.assertEqual(after[-1].event_type, "SUGGESTION_DEFERRED")
 
