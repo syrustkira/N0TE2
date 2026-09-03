@@ -1,88 +1,68 @@
 {
   "schema_version": 7,
-  "status": "INACTIVE",
-  "receipt_id": "N0TE2-UX-01-NOW-THREAD-01",
+  "status": "ACTIVE",
+  "receipt_id": "N0TE2-UX-01-NOT-NOW-01",
   "node_id": "UX-01",
-  "increment_id": "UX-01-NOW-THREAD-01",
-  "baseline_sha": "41e9b45286f4cdfb2ed59ff0ed1b0117e228cbe8",
-  "purpose": "Make the canonical NOW surface answer the smallest useful continuation question from truth N0TE already owns: which Song is active, whether a work Session is open, and what objective or last next action should be picked up. This increment is read-only and must not invent a task system, recommendation engine or second attention store.",
-  "product_code_allowed": false,
+  "increment_id": "UX-01-NOT-NOW-01",
+  "baseline_sha": "d812278a50834c42e71c99558fb775e09bac1c86",
+  "purpose": "Implement the missing durable Not Now semantics from REQ-SCOPE-097 on one real existing N0TE item: the canonical NOW Pick up the thread continuation. Reuse AttentionMemory; preserve Focus; do not create a task database, recommendation engine, new authority system, provider/DAW action, or taste/Skill evidence.",
+  "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "allowed_exact_paths": ["n0te2/now_thread_shell.py","n0te2/__init__.py","tests/ux/test_consumer_now_thread.py"],
+  "allowed_exact_paths": [
+    "n0te2/attention_deferral.py",
+    "n0te2/not_now_shell.py",
+    "n0te2/memory.py",
+    "tests/ux/test_attention_deferral.py",
+    "tests/ux/test_consumer_not_now.py"
+  ],
   "allowed_prefixes": ["governance/"],
   "forbidden_prefixes": ["app/","src/","legacy/","vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "Artist Headquarters returns the artist to meaningful current work instead of making NOW only a mode selector.",
+    "outcome": "The artist can tell N0TE not now without losing the underlying Song thread or teaching N0TE a false permanent preference.",
     "journeys": ["J-WHAT-NEXT","J-SONG-START-RESUME","J-TRUST"],
-    "capability": "Read-only NOW continuation projection over canonical Song and Session state",
-    "requirements": ["REQ-SCOPE-016","REQ-SCOPE-096","REQ-SCOPE-097","REQ-SCOPE-103","REQ-SCOPE-142"],
-    "enables": ["SONG-01","ART-01"],
-    "increment": "UX-01-NOW-THREAD-01"
+    "capability": "Durable reversible Attention deferral composed with canonical NOW continuation",
+    "requirements": ["REQ-SCOPE-097","REQ-SCOPE-103","REQ-SCOPE-142"],
+    "enables": ["UX-01 reconciliation","SONG-01","ART-01"],
+    "increment": "UX-01-NOT-NOW-01"
   },
-  "why_now": "The user explicitly continued N0TE after the AUDIO-01 engineering-snapshot increment reached STABLE. Whole-graph comparison selected UX-01 over DAW-00/AUDIO-01/AUDIO-02 because UX-01 is the unmet dependency for SONG-01 and ART-01, while DAW-00A-G are already landed and explicitly preserved against adjacency. Reconciliation also proved the previously selected UX-01-INTERACTION-01 implementation is already present on the exact terminal-green PR #63 baseline, so rebuilding it would duplicate completed product work.",
-  "reconciliation": {
-    "interaction_depth": "PRESENT_AND_VERIFIED_ON_BASELINE",
-    "evidence": [
-      "n0te2/interaction_depth.py and n0te2/interaction_depth_shell.py exist on baseline 41e9b45286f4cdfb2ed59ff0ed1b0117e228cbe8",
-      "tests/song/test_song_interaction_depth_consumer.py covers five modes, stale binding, Origin/CSRF/replay, causal humility and ephemeral selection",
-      "terminal exact-head governance run 33704715804 passed Linux, Windows and macOS full regression plus staged consumer smoke"
-    ],
-    "rule": "Treat the stale Drive CURRENT RECEIPT row for closed-unmerged PR #62 as historical selection evidence; do not revive its branch or rebuild product behavior already absorbed into PR #63."
-  },
+  "why_now": "After REQ-SCOPE-143 was acceptance-proven and merged, global dependency-ready comparison again favored UX-01 because it gates SONG-01 and ART-01. Canonical Drive truth identifies Not Now as the remaining explicit REQ-SCOPE-097 gap while Focus itself is already implemented. The existing NOW continuation item provides an honest first integration point, avoiding a speculative generic suggestion/task subsystem.",
   "reuse": {
-    "mode": "PROJECT_EXISTING_CANONICAL_STATE_INTO_NOW_WITHOUT_NEW_PERSISTENCE",
-    "n0te2_dependencies": ["ConsumerShell","LineageStore.active_song","SessionMemory.latest_for_song","AttentionMemory existing Focus surface","UX-01A/B/C shell"],
+    "mode": "EXTEND_CANONICAL_ATTENTION_WITH_SUPPRESSION_STATE_ONLY",
+    "n0te2_dependencies": ["AttentionMemory","ActivityLog","ConsumerShell one-shot actions","canonical NOW Pick up the thread","Song/Session identity","profile isolation"],
     "direct_copy": false
   },
   "implementation_contract": {
-    "read_only": true,
+    "item_owner": "NOW Pick up the thread remains owned by canonical Song/Session state",
+    "deferral_owner": "AttentionMemory domain only",
+    "horizons": ["LATER_THIS_SONG","AFTER_RELEASE","NEXT_SONG","SOMEDAY","NEVER_SUGGEST_AGAIN"],
+    "reversible": true,
+    "append_only_history": true,
     "network_required": false,
-    "new_semantic_store": false,
-    "surface": "/now",
-    "states": ["NO_ACTIVE_SONG","ACTIVE_SONG_NO_SESSION","OPEN_SESSION_OBJECTIVE","CLOSED_SESSION_NEXT_ACTION"],
-    "truth_order": "Current canonical Artist/Song/Session state only; no inferred priority ranking.",
-    "privacy": "Render artist-facing titles/objective/next action only. Do not expose internal Song/Session IDs.",
-    "composition": "Attach idempotently to the existing NOW grid before Focus controls. Focus remains a separate durable lane selector and is not redefined."
+    "new_task_or_recommendation_store": false,
+    "authority_change": false,
+    "taste_or_skill_learning": false
   },
   "completion_proof": [
-    "a profile with no active Song receives a truthful Start a Song continuation state",
-    "an active Song without a Session receives a truthful Start a work Session continuation state",
-    "an open Session surfaces the exact canonical Song title and Session objective with a direct Continue this Song route",
-    "a closed latest Session surfaces its exact canonical next action with a direct Pick up this Song route",
-    "rendering /now creates no Activity, Song, Session, Focus, evidence, approval, DAW, provider or external mutation",
-    "internal Song and Session IDs are absent from the rendered continuation card",
-    "the extension is idempotent and cannot duplicate the NOW continuation card",
-    "existing Focus behavior remains reachable and unchanged",
-    "full regression and staged consumer smoke pass on Linux, Windows and macOS at the exact implementation head",
-    "staff-engineer and red-team review find no stale/cross-profile context leak, fabricated priority, hidden mutation, inaccessible control or unnecessary new architecture"
+    "all five canonical Not Now horizons are represented as durable Attention state",
+    "Later this Song expires for display when the exact Song work-thread anchor changes",
+    "Next Song suppresses only the Song on which it was chosen",
+    "After release remains scoped to the bound Song and becomes eligible when verified release state is supplied",
+    "Someday and Never suggest again remain suppressed until explicit restore",
+    "every deferral is reversible and supersession preserves history",
+    "Not Now choices do not create EvidenceClaims, Skill state, taste doctrine, authority, DAW/provider actions or a new task/recommendation object",
+    "deferrals are isolated by Artist profile and foreign Song binding fails closed",
+    "consumer POSTs retain exact-host, Origin, CSRF and one-shot replay protection",
+    "stale Song/thread bindings fail closed before deferral mutation",
+    "quit/relaunch preserves active deferral and restore returns the original canonical NOW thread",
+    "full governance, regression and staged consumer smoke pass on Linux, Windows and macOS at the exact active-receipt head"
   ],
-  "observed_verifier_repairs": {
-    "source_run": 33706192636,
-    "head": "7ea8cd93490bf549defa4600f20731a192e9a82a",
-    "rule": "Repair the receipt identifier to obey the existing active-node binding invariant; do not weaken the smoke checker or product assertions.",
-    "classes": ["increment identifier UX-01D-NOW-THREAD-01 did not begin with canonical active-node prefix UX-01-"]
-  },
-  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM_WITH_MONITORED_WINDOWS_RERUN",
-  "evidence_snapshot": {
-    "observed_repository_head": "81d8b2f830a849f7b5a79247bc15b60a52e7e4a8",
-    "workflow_run_id": 33706537908,
-    "successful_jobs": {"Linux":100497305311,"Windows":100497304692,"macOS":100497335420},
-    "initial_windows_transport_observation": {
-      "job_id": 100496748929,
-      "result": "2 failed, 725 passed",
-      "failures": [
-        "consumer smoke profile-create loopback request timed out and cleanup then encountered a Windows file-handle lock",
-        "hostile-Origin Session capture request hit ConnectionAbortedError [WinError 10053]"
-      ],
-      "classification": "RECURRENCE_OF_EXISTING_WINDOWS_LOOPBACK_TRANSPORT_CLASS_NOT_A_NOW_ASSERTION"
-    },
-    "successful_windows_rerun_job_id": 100497304692,
-    "reviews": ["PRODUCT_LINEAGE","STAFF_ENGINEER","RED_TEAM","CONSUMER_REACHABILITY","FAILURE_RECOVERY","SECURITY_PRIVACY_AUTHORITY","OBSERVABILITY_SRE","DELETION_COMPLEXITY"],
-    "execution_note": "Exact head passed Linux, macOS and an unchanged-head Windows rerun with construction governance, context governance, supervision, full regression and staged consumer smoke. The first Windows attempt reproduced the previously monitored loopback transport class; a linked recurrence incident remains open separately. This closes UX-01-NOW-THREAD-01 only; UX-01 and broader N0TE scope remain unfinished."
-  },
-  "non_scope": ["Not Now/snooze persistence","new attention-item or task database","Job Center or Approval Center implementation","automatic recommendation ranking","Career State weighting","DAW FocusContext or host mutation","provider/external actions","Creative Studio timeline","final visual brand direction","Gate-B acceptance","marking UX-01 DONE"],
-  "next_selection_rule": "UX-01-NOW-THREAD-01 is closed. UX-01 remains incomplete unless its remaining mapped customer contracts are reconciled or implemented. Under Continue N0TE, globally reselect across the complete retained scope rather than extending NOW by adjacency; include the reopened Windows loopback reliability signal in comparison without granting it automatic priority."
+  "observed_repairs": [
+    "initial STABLE exploratory run 33749103736 exposed one new semantic defect: AFTER_RELEASE suppression was not scoped to its bound Song; repaired by requiring current Song identity to match the deferred Song"
+  ],
+  "evidence_classification": "ACTIVE_UNVERIFIED",
+  "non_scope": ["generic Job Center","generic recommendation engine","automatic release-state inference","provider execution","DAW mutation","career priority ranking","final UX visual brand direction","marking UX-01 DONE","Gate-B acceptance"],
+  "next_selection_rule": "Finish or block only UX-01-NOT-NOW-01. After exact-head proof, return the build harness to STABLE and globally reselect rather than extending Attention or NOW by adjacency."
 }
