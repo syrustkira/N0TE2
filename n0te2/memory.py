@@ -24,6 +24,7 @@ from .session import SessionMemory
 from .shadow import HostShadow
 from .skills import SkillMemory
 from .success import SuccessMemory
+from .suggestion_deferral import SuggestionDeferralMemory
 from .transactions import TransactionCoordinator
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
 from .workspace import WorkspaceMemory
@@ -53,6 +54,7 @@ class HeadquartersMemory:
         self.operations = OperationJournal(store, self.activity)
         self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
+        self.suggestion_deferrals = SuggestionDeferralMemory(store, self.sessions)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.learning = LearningMemory(store, self.sessions)
         self.success = SuccessMemory(self.learning)
