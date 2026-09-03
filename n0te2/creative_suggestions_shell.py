@@ -30,7 +30,15 @@ def _suggestion_action(shell: ConsumerShell, song_id: str) -> str:
     return shell._new_action("song-suggest", song_id)
 
 
-def _result_markup(result: CreativeSuggestion | None) -> str:
+def _result_binding(result: CreativeSuggestion) -> str:
+    return "|".join((result.song_id, result.session_id or "", result.semantic_key))
+
+
+def _not_now_action(shell: ConsumerShell, result: CreativeSuggestion) -> str:
+    return shell._new_action("suggestion-not-now", _result_binding(result))
+
+
+def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> str:
     if result is None:
         return ""
     objective = (
@@ -39,6 +47,13 @@ def _result_markup(result: CreativeSuggestion | None) -> str:
         else '<p class="muted">Current work objective: '
         + html.escape(result.session_objective)
         + "</p>"
+    )
+    not_now = (
+        '<form method="post" action="/suggestion/not-now" aria-label="Defer this suggestion until later in this Song">'
+        + shell._hidden(_not_now_action(shell, result))
+        + '<button type="submit">Not now · later this Song</button>'
+        + '<p class="muted">N0TE will remember this choice through relaunch for the current work Session. A later Session can surface the idea again.</p>'
+        + '</form>'
     )
     return (
         '<div class="stack" aria-live="polite">'
@@ -49,6 +64,7 @@ def _result_markup(result: CreativeSuggestion | None) -> str:
         f'<p class="muted">{html.escape(result.distance_explanation)}</p>'
         f'{objective}'
         '<p class="muted">Generated locally and deterministically. No AI provider was called, no project was changed, and this is not a claim about what your Song needs.</p>'
+        f'{not_now}'
         '</div>'
     )
 
@@ -80,9 +96,6 @@ def _suggestion_card(shell: ConsumerShell) -> str:
         latest = hq.sessions.latest_for_song(song.id)
         latest_session_id = None if latest is None else latest.id
         if result.song_id != song.id or result.session_id != latest_session_id:
-            # Ephemeral output is bound to the exact Song + latest work Session
-            # that produced it. A context change invalidates it rather than letting
-            # stale advice masquerade as a current recommendation.
             shell._creative_suggestion_result = None
             result = None
 
@@ -98,7 +111,7 @@ def _suggestion_card(shell: ConsumerShell) -> str:
         '<button class="primary" type="submit">Suggest something</button>'
         '<p class="muted">The first suggestion layer is deliberately AI-off and non-personalized. “Familiar” means a smaller move around this Song, not a claim that N0TE already knows your taste.</p>'
         '</form>'
-        f'{_result_markup(result)}</div>'
+        f'{_result_markup(shell, result)}</div>'
     )
 
 
@@ -113,6 +126,24 @@ def _locked_dimensions(form: Mapping[str, str]) -> tuple[str, ...]:
             raise ValidationError(f"invalid lock value for {dimension}")
         locks.append(dimension)
     return tuple(locks)
+
+
+def _next_visible_suggestion(
+    shell: ConsumerShell, *, distance: str, locked_dimensions: tuple[str, ...]
+) -> CreativeSuggestion:
+    service = _service(shell)
+    deferrals = shell.runtime.headquarters.suggestion_deferrals
+    for variation in range(1001):
+        result = service.suggest(
+            distance=distance,
+            locked_dimensions=locked_dimensions,
+            variation=variation,
+        )
+        if not deferrals.is_deferred_now(result.semantic_key):
+            return result
+    raise CreativeSuggestionError(
+        "Every available local suggestion is deferred for this work Session. Start a later Session or change what is locked."
+    )
 
 
 def _post_suggestion(
@@ -136,18 +167,60 @@ def _post_suggestion(
             shell._simple_error("The active Song changed. Reload the Song before asking for an idea."),
         )
         return
-    result = _service(shell).suggest(
+    result = _next_visible_suggestion(
+        shell,
         distance=form.get("distance", ""),
         locked_dimensions=_locked_dimensions(form),
-        variation=0,
     )
     shell._creative_suggestion_result = result
     shell._consumer_notice = "Local creative prompt prepared. Nothing in the Song was changed."
     shell._redirect(handler, "/song")
 
 
+def _post_not_now(
+    shell: ConsumerShell,
+    handler: BaseHTTPRequestHandler,
+    form: Mapping[str, str],
+) -> None:
+    action = shell._consume_action(form.get("action", ""), "suggestion-not-now")
+    if action is None or action.value is None:
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error("That Not now action was already handled or expired."),
+        )
+        return
+    result = getattr(shell, "_creative_suggestion_result", None)
+    if not isinstance(result, CreativeSuggestion) or action.value != _result_binding(result):
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error("That suggestion is no longer the current Song suggestion. Reload before deferring it."),
+        )
+        return
+    hq = shell.runtime.headquarters
+    song = hq.store.active_song()
+    latest = None if song is None else hq.sessions.latest_for_song(song.id)
+    if (
+        song is None
+        or song.id != result.song_id
+        or latest is None
+        or latest.id != result.session_id
+    ):
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error("The Song work Session changed before that suggestion could be deferred."),
+        )
+        return
+    hq.suggestion_deferrals.defer_later_this_song(result.semantic_key)
+    shell._creative_suggestion_result = None
+    shell._consumer_notice = "Not now remembered for this Song work Session. A later Session can surface that idea again."
+    shell._redirect(handler, "/song")
+
+
 def install_song_creative_suggestions() -> None:
-    """Attach one pure creative-suggestion card and protected POST to /song."""
+    """Attach bounded creative suggestions and durable current-Session deferral."""
     if getattr(ConsumerShell, "_song_creative_suggestions_installed", False):
         return
 
@@ -164,7 +237,8 @@ def install_song_creative_suggestions() -> None:
         return rendered[: -len(marker)] + _suggestion_card(self) + marker
 
     def with_suggestion_post(self: ConsumerShell, handler: BaseHTTPRequestHandler) -> None:
-        if self._path(handler) != "/suggestion/create":
+        path = self._path(handler)
+        if path not in {"/suggestion/create", "/suggestion/not-now"}:
             original_post(self, handler)
             return
         if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(handler):
@@ -183,7 +257,10 @@ def install_song_creative_suggestions() -> None:
             )
             return
         try:
-            _post_suggestion(self, handler, form)
+            if path == "/suggestion/not-now":
+                _post_not_now(self, handler, form)
+            else:
+                _post_suggestion(self, handler, form)
         except (ValidationError, CreativeSuggestionError, ConsumerShellError) as exc:
             self._consumer_notice = str(exc)
             self._redirect(handler, "/song")
@@ -192,7 +269,7 @@ def install_song_creative_suggestions() -> None:
                 handler,
                 500,
                 self._simple_error(
-                    "N0TE stopped that suggestion before it could become an unclear consumer state."
+                    "N0TE stopped that suggestion action before it could become an unclear consumer state."
                 ),
             )
 
