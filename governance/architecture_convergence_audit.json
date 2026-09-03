@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "purpose": "Cross-map useful legacy N0TE behavior against current N0TE2 and turn the comparison into concrete convergence actions without admitting legacy GPL-gated source or violating the active product-code receipt.",
+  "evidence_scope": {
+    "legacy_repository": "syrustkira/N0TE",
+    "legacy_head": "25e2f2f5fd8ea4adc0c7e61650531430025e59db",
+    "legacy_tree": "fb7eb7a9d3a6f2e1620dfbbfca7f21b51975b7c4",
+    "current_repository": "syrustkira/N0TE2",
+    "current_main_tree": "649002eebc6e378026f324df5d04adb3653c8b64",
+    "current_active_node": "SONG-01",
+    "product_code_changes_in_this_audit": false
+  },
+  "legacy_quarry_findings": [
+    {
+      "domain": "context",
+      "legacy_artifact": "app/n0te_context_engine.py",
+      "preserve_semantics": [
+        "append-only provenance-aware context",
+        "supersession without erasing history",
+        "conflict preservation instead of silent winner selection",
+        "Song/workspace alias migration that fails closed when ambiguous",
+        "corruption is surfaced and routed to recovery rather than normalized to empty state"
+      ],
+      "reject_topology": [
+        "standalone context JSON ledger as parallel canonical state",
+        "legacy project identifiers impersonating durable Song identity"
+      ],
+      "n0te2_disposition": "KEEP_CURRENT_TOPOLOGY_AND_PORT_ONLY_MISSING_INVARIANTS",
+      "reason": "N0TE2 ContextIsolationService already binds context to canonical LineageStore and EvidenceMemory, so recreating the legacy ContextEngine store would be duplication."
+    },
+    {
+      "domain": "audio_intelligence",
+      "legacy_artifact": "app/n0te_audio.py",
+      "preserve_semantics": [
+        "deterministic offline WAV analysis without optional dependencies for core measurements",
+        "bounded-memory streaming levels and true-peak path",
+        "channel-layout truth including explicit UNKNOWN_CHANNEL_LAYOUT",
+        "BS.1770-style loudness claims remain bounded by conformance evidence",
+        "sample peak, true peak, RMS, DC, crest, loudness and later spectral/dynamics evidence remain measurement claims rather than taste decisions"
+      ],
+      "reject_topology": [
+        "copying GPL source directly",
+        "calling an algorithm certified before conformance proof",
+        "duplicating measurement engines if AUDIO-01/AUDIO-02 current implementations already cover the behavior"
+      ],
+      "n0te2_disposition": "SPEC_QUARRY_FOR_AUDIO_01_AUDIO_02",
+      "reason": "Current completion graph still preserves AUDIO-01 and AUDIO-02, so these legacy numerical and bounded-memory behaviors are useful acceptance quarry, not authority to create a second audio stack."
+    },
+    {
+      "domain": "artist_world_creator",
+      "legacy_artifact": "app/n0te_creator.py",
+      "preserve_semantics": [
+        "Artist World is advisory rather than compulsory",
+        "artist may use, vary from, or ignore remembered style",
+        "identity/visual/sonic/public-voice/content preferences are distinct evidence dimensions",
+        "forgetting durable artist memory requires explicit user authority and exact field targeting",
+        "creative suggestions should support familiar, adjacent and wildcard exploration instead of trapping the artist in past taste"
+      ],
+      "reject_topology": [
+        "standalone artist_world.json as a parallel long-term identity authority",
+        "silent corruption-to-empty behavior in legacy load path",
+        "hard-coded creative pools becoming canonical artistic doctrine"
+      ],
+      "n0te2_disposition": "PORT_SEMANTICS_INTO_ART_01_USING_CANONICAL_PROFILE_EVIDENCE",
+      "reason": "ART-01 is preserved and current profile/lineage infrastructure already provides the canonical identity boundary."
+    },
+    {
+      "domain": "relationships_business",
+      "legacy_artifact": "app/n0te_business.py",
+      "preserve_semantics": [
+        "people, opportunities, jobs, feedback, revisions, packages and financial-status references are artist-work context",
+        "business memory should coordinate external evidence rather than pretend to be accounting, payment processing or legal authority",
+        "opportunities/jobs remain linkable to Song and person identity",
+        "remote/location constraints, waiting-on state, next action, approval and delivery stages are useful operational semantics"
+      ],
+      "reject_topology": [
+        "business.json as an isolated cross-domain source of truth",
+        "duplicating Song/person/delivery/communication/provider records",
+        "local planning state being mislabeled provider-verified financial truth"
+      ],
+      "n0te2_disposition": "USE_AS_SPEC_FOR_OPS_NODES_NOT_AS_STORE",
+      "reason": "The completion graph already preserves ART-01 and OPS-01 through OPS-06; legacy business semantics should seed those nodes while canonical identity/evidence remain shared."
+    },
+    {
+      "domain": "construction_controller",
+      "legacy_artifact": "AUTONOMOUS_CONSTRUCTION.md",
+      "preserve_semantics": [
+        "reconstruct truth before editing",
+        "select by artist outcome rather than adjacency",
+        "one bounded baseline-bound receipt",
+        "reuse before invention",
+        "red-team closure",
+        "systemic repair with sibling/consequence/recurrence scans",
+        "globally reselect after each bounded increment",
+        "repository entropy rule"
+      ],
+      "reject_topology": [
+        "controller owning Artist/Song product memory",
+        "controller becoming a second semantic graph",
+        "controller accumulating user-facing reasoning or runtime autonomy",
+        "controller creating duplicate roadmap/current-state authority documents"
+      ],
+      "n0te2_disposition": "KEEP_AS_CONSTRUCTION_PLANE_ONLY",
+      "reason": "N0TE2 AGENTS/governance already encode the right separation; future controller growth must stay beneath product meaning."
+    }
+  ],
+  "current_architecture_findings": [
+    {
+      "area": "canonical_state_substrate",
+      "finding": "GOOD",
+      "evidence": "ActivityLog, AttentionMemory, FrictionMemory and ContextIsolationService all require the canonical LineageStore; Friction additionally requires canonical LearningMemory and Activity chronology.",
+      "action": "KEEP. Do not merge these domain services merely because their concepts are adjacent. Audit only duplicated projections, terminology and shell composition."
+    },
+    {
+      "area": "activity_attention_friction",
+      "finding": "NOT_PARALLEL_STORES",
+      "action": "RETRACT the earlier recommendation to create a new shared event/memory store. The shared substrate already exists. Preserve domain-specific append-only tables and enforce one-way dependencies into canonical Activity chronology."
+    },
+    {
+      "area": "context",
+      "finding": "CURRENT_TOPOLOGY_SUPERSEDES_LEGACY",
+      "action": "KEEP ContextIsolationService on LineageStore/EvidenceMemory. Add or verify fresh N0TE2 tests for conflict visibility, explicit supersession semantics, ambiguous legacy alias failure, and corruption visibility/recovery. Do not restore context_engine.json."
+    },
+    {
+      "area": "consumer_shell",
+      "finding": "OVERBUILD_RISK",
+      "evidence": "n0te2/consumer_shell.py is a very large composition surface relative to most domain modules.",
+      "action": "REFACTOR BY EXTRACTION WHEN THE ACTIVE RECEIPT PERMITS: shell keeps HTTP/UI composition, request parsing, presentation and dependency wiring; move domain validation/state transitions into domain services. Add an architecture test forbidding new persistent tables or canonical domain dataclasses in consumer_shell.py."
+    },
+    {
+      "area": "capabilities_vs_capability_evidence",
+      "finding": "BOUNDARY_REQUIRES_EXPLICIT_TEST",
+      "action": "KEEP both modules only if capabilities owns operational descriptor/availability semantics and capability_evidence owns proof/provenance. Add a regression test that evidence cannot independently mutate support, authority or runtime availability. Merge only if inspection later proves duplicate canonical fields."
+    },
+    {
+      "area": "construction_governance",
+      "finding": "KEEP_BUT_QUARANTINE",
+      "action": "Governance files may select/authorize/record construction work only. Add a governance invariant preventing Song, Artist preference, runtime capability health, relationship/business records or user memory from being stored as governance truth."
+    },
+    {
+      "area": "N0TED",
+      "finding": "IMPLEMENTATION_BOUNDARY_UNVERIFIED",
+      "action": "DO NOT GROW until a narrow contract is found or written under an authorized receipt. N0TED may not own duplicate Artist/Song identity, durable memory, planner, authority, semantic graph or completion graph. If no unique runtime responsibility survives this test, delete/absorb the concept rather than preserve a name."
+    }
+  ],
+  "concrete_convergence_actions": {
+    "delete_or_do_not_restore": [
+      "legacy standalone context_engine.json topology",
+      "legacy business.json topology",
+      "legacy artist_world.json as canonical identity/memory authority",
+      "duplicate roadmap/master-prompt/current-state prose authorities",
+      "any future N0TED duplicate planner/memory/authority/semantic graph",
+      "any controller-owned product state"
+    ],
+    "merge_or_absorb": [
+      "legacy ContextEngine semantics into current ContextIsolation/Evidence/Lineage tests rather than another service store",
+      "legacy Artist World semantics into ART-01 using canonical profile/evidence lineage",
+      "legacy relationship/business semantics into OPS/ART product nodes using shared identities and evidence",
+      "legacy audio measurement behaviors into AUDIO-01/AUDIO-02 acceptance requirements rather than a copied engine"
+    ],
+    "refactor": [
+      "consumer_shell.py toward composition-only boundaries as future domain work lands",
+      "make capability operational state versus evidence proof boundary executable with regression tests",
+      "keep Activity/Attention/Friction as bounded services while centralizing timeline presentation as projection, not new truth"
+    ],
+    "missing_or_not_yet_closed": [
+      "AUDIO-01/AUDIO-02 current nodes remain PRESERVED",
+      "ART-01 remains PRESERVED and should carry advisory/forget/anti-style-prison Artist World semantics",
+      "OPS-01..OPS-06 remain PRESERVED and should carry relationship/business/release/communication operational semantics without parallel stores",
+      "UX-01 remains PRESERVED and is a dependency of active SONG-01",
+      "N0TED unique responsibility remains unverified",
+      "legacy regression gaps still require fresh N0TE2 proof: both network transition directions, exact private-data egress purpose/destination, corruption visibility/recovery, and full consumer lifecycle"
+    ]
+  },
+  "execution_order": [
+    "1. Preserve this quarry before deleting legacy N0TE.",
+    "2. Do not interrupt the currently authorized SONG-01 increment with unrelated product-code refactors.",
+    "3. After SONG-01 reconciliation, globally reselect from the completion graph.",
+    "4. When UX/domain work naturally touches consumer_shell, extract domain logic instead of adding shell-local state.",
+    "5. Before ART-01, OPS-* and AUDIO-* implementation, seed their fresh acceptance tests from the preserved legacy semantics in this audit.",
+    "6. Resolve N0TED contract before implementation growth; absorb/delete if it has no non-duplicative responsibility.",
+    "7. Red-team the final convergence candidate for duplicate authorities, parallel stores, fake acceptance and controller creep."
+  ]
+}
