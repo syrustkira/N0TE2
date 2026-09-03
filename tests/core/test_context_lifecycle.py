@@ -71,6 +71,36 @@ class ContextLifecycleTests(unittest.TestCase):
         canonical = hq.retention.context_packet_for_song(song.id, sections=("SESSIONS",))
         self.assertEqual(len(canonical["sessions"]), 3)
 
+    def test_narrow_projection_preserves_durable_contradiction_block(self):
+        hq, song = self._memory()
+        self.addCleanup(hq.close)
+        hq.evidence.record_claim(
+            scope_kind="SONG",
+            scope_id=song.id,
+            key="creative.constraint",
+            value="Rewrite the topline",
+            source_kind="USER_DECLARED",
+            source_ref="artist:context-conflict",
+            confidence=1.0,
+            twin_domain="CREATIVE",
+        )
+        before = hq.store._conn.total_changes
+        projection = hq.context_projection.projection_for_song(
+            song.id,
+            purpose="Resume only session history",
+            sections=("SESSIONS",),
+        )
+        self.assertEqual(hq.store._conn.total_changes, before)
+        self.assertNotIn("durable_facts", projection["context"])
+        self.assertTrue(projection["contradictions"])
+        self.assertEqual(
+            projection["contradictions"][0]["kind"],
+            "DURABLE_FACT_CONFLICT",
+        )
+        self.assertTrue(
+            projection["mutation_policy"]["critical_contradiction_blocks_autonomous_mutation"]
+        )
+
     def test_same_sources_produce_same_digest_across_restart(self):
         hq, song = self._memory()
         profile_id = hq.store.profile_id
