@@ -1,9 +1,10 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "product": "N0TE2",
   "authority_order": [
     "CANONICAL_BLUEPRINT",
     "PRODUCT_DB_SCOPE_LEDGER",
+    "N0TE2_CONSTITUTION",
     "N0TE2_COMPLETION_GRAPH",
     "GOVERNANCE_CURRENT_STATE",
     "ACTIVE_RECEIPT",
@@ -12,6 +13,7 @@
     "HISTORICAL_N0TE_EVIDENCE"
   ],
   "current_authority_files": [
+    "governance/constitution.json",
     "governance/requirements.json",
     "governance/completion_graph.json",
     "governance/current_state.json",
@@ -39,6 +41,10 @@
     "missing_acceptance_resource_stops_unrelated_construction": false,
     "legacy_classification_is_not_copy_authority": true,
     "legacy_test_green_is_not_product_completion": true,
-    "legacy_test_failure_must_remain_visible": true
+    "legacy_test_failure_must_remain_visible": true,
+    "one_n0te_identity_must_survive_substrate_replacement": true,
+    "builder_is_not_product_identity": true,
+    "accepted_scope_must_be_machine_retained": true,
+    "conversation_only_accepted_scope_is_forbidden": true
   }
 }
