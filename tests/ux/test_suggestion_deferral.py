@@ -1,7 +1,7 @@
-import sqlite3
 import tempfile
 import unittest
 
+from n0te2.activity import ActivityLog
 from n0te2.creative_suggestions import CreativeSuggestionService
 from n0te2.evidence import EvidenceMemory
 from n0te2.lineage import LineageStore
@@ -35,14 +35,12 @@ class SuggestionDeferralTests(unittest.TestCase):
         self.hq.close()
 
     def test_all_five_horizons_are_durable_and_append_only(self):
-        keys = []
         for index, horizon in enumerate(
             (LATER_THIS_SONG, AFTER_RELEASE, NEXT_SONG, SOMEDAY, NEVER_SUGGEST_AGAIN)
         ):
             suggestion = CreativeSuggestionService(self.hq.store, self.hq.sessions).suggest(
                 distance="ADJACENT", variation=index
             )
-            keys.append(suggestion.semantic_key)
             record = self.hq.suggestion_deferrals.defer(suggestion.semantic_key, horizon)
             self.assertEqual(record.horizon, horizon)
             self.assertEqual(record.action, "DEFER")
@@ -59,7 +57,6 @@ class SuggestionDeferralTests(unittest.TestCase):
         self.assertTrue(self.hq.suggestion_deferrals.applies(baseline.semantic_key))
         hidden = self.suggestions.suggest(distance="FAMILIAR")
         self.assertNotEqual(hidden.semantic_key, baseline.semantic_key)
-
         self.hq.sessions.close_session(
             self.session.id,
             debrief_summary="Paused this idea for now",
@@ -125,15 +122,20 @@ class SuggestionDeferralTests(unittest.TestCase):
         replay = self.hq.suggestion_deferrals.restore(first.deferral_id)
         self.assertEqual(restored, replay)
         events = self.hq.activity.for_profile()[before:]
-        self.assertEqual([item.event_type for item in events], ["SUGGESTION_DEFERRED", "SUGGESTION_DEFERRAL_CLEARED"])
+        self.assertEqual(
+            [item.event_type for item in events],
+            ["SUGGESTION_DEFERRED", "SUGGESTION_DEFERRAL_CLEARED"],
+        )
 
-    def test_v1_later_this_song_rows_migrate_losslessly_to_v2(self):
+    def test_v1_later_this_song_rows_migrate_losslessly_without_replaying_activity(self):
         root = tempfile.mkdtemp(dir=self.tmp.name)
         store = LineageStore.create(root, "Legacy Deferral Artist")
         evidence = EvidenceMemory(store)
+        activity = ActivityLog(store)
         sessions = SessionMemory(store, evidence)
         song = store.create_song("Legacy Song")
         session = sessions.start_session(song_id=song.id, objective="Legacy work")
+        legacy_id = "defer_legacy"
         with store._tx():
             store._conn.execute(
                 "CREATE TABLE suggestion_deferrals ("
@@ -146,18 +148,38 @@ class SuggestionDeferralTests(unittest.TestCase):
                 "UNIQUE(artist_id,song_id,session_id,semantic_key,scope))"
             )
             store._conn.execute(
-                "INSERT INTO suggestion_deferrals(id,artist_id,song_id,session_id,semantic_key,scope) VALUES(?,?,?,?,?,?)",
-                ("defer_legacy", store.primary_artist_id, song.id, session.id, "melody:motif-variation", LATER_THIS_SONG),
+                "INSERT INTO suggestion_deferrals(id,artist_id,song_id,session_id,semantic_key,scope) "
+                "VALUES(?,?,?,?,?,?)",
+                (legacy_id, store.primary_artist_id, song.id, session.id, "melody:motif-variation", LATER_THIS_SONG),
+            )
+            # Represent the Activity event already emitted when the real v1 artist
+            # action originally happened. Migration must not emit it again.
+            store._conn.execute(
+                "INSERT INTO activity_events("
+                "id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json"
+                ") VALUES(?,?,?,?,?,?,?,?)",
+                (
+                    "act_legacy_deferral",
+                    "SUGGESTION_DEFERRED",
+                    store.primary_artist_id,
+                    song.id,
+                    None,
+                    "SUGGESTION_DEFERRAL",
+                    legacy_id,
+                    '{"scope":"LATER_THIS_SONG"}',
+                ),
             )
             store._conn.execute(
                 "INSERT INTO metadata(key,value) VALUES('suggestion_deferral_schema_version','1')"
             )
+        activity_before = len(activity.for_profile())
         migrated = SuggestionDeferralMemory(store, sessions)
         history = migrated.history()
         self.assertEqual(len(history), 1)
-        self.assertEqual(history[0].deferral_id, "defer_legacy")
+        self.assertEqual(history[0].deferral_id, legacy_id)
         self.assertEqual(history[0].horizon, LATER_THIS_SONG)
         self.assertTrue(migrated.applies("melody:motif-variation"))
+        self.assertEqual(len(activity.for_profile()), activity_before)
         self.assertEqual(
             store._conn.execute(
                 "SELECT value FROM metadata WHERE key='suggestion_deferral_schema_version'"

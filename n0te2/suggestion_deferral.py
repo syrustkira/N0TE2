@@ -37,27 +37,23 @@ class SuggestionDeferral:
 
     @property
     def scope(self) -> str:
-        """Backward-compatible name used by the first bounded v1 contract."""
         return self.horizon
 
 
 class SuggestionDeferralMemory:
-    """Append-only artist-owned deferral history for stable suggestion semantics.
+    """Append-only artist-owned deferral history for stable suggestion semantics."""
 
-    Suggestion content remains owned by the suggestion catalog/service. This
-    ledger stores only an artist instruction about when a stable semantic key
-    may be surfaced again. Restoring a suggestion appends a RESTORE event; it
-    never deletes or rewrites the original decision.
-    """
-
-    _TRIGGERS = {
+    _INTEGRITY_TRIGGERS = {
         "suggestion_deferral_binding_valid",
         "suggestion_deferral_restore_valid",
         "suggestion_deferral_immutable",
         "suggestion_deferral_delete_immutable",
+    }
+    _ACTIVITY_TRIGGERS = {
         "suggestion_deferral_activity",
         "suggestion_deferral_restore_activity",
     }
+    _TRIGGERS = _INTEGRITY_TRIGGERS | _ACTIVITY_TRIGGERS
 
     def __init__(self, store: LineageStore, sessions: SessionMemory):
         if not isinstance(store, LineageStore):
@@ -98,7 +94,7 @@ class SuggestionDeferralMemory:
     def _create_v2_schema(self) -> None:
         try:
             with self.store._tx():
-                self._create_v2_table_and_triggers()
+                self._create_v2_table_and_triggers(include_activity=True)
                 self._conn.execute(
                     "INSERT INTO metadata(key,value) VALUES('suggestion_deferral_schema_version',?)",
                     (str(SUGGESTION_DEFERRAL_SCHEMA_VERSION),),
@@ -107,7 +103,7 @@ class SuggestionDeferralMemory:
             raise LineageCorruptionError("cannot initialize suggestion deferral memory") from exc
 
     def _migrate_v1_to_v2(self) -> None:
-        """Losslessly lift the shipped LATER_THIS_SONG ledger into v2 events."""
+        """Lift shipped v1 rows without replaying artist Activity chronology."""
         try:
             with self.store._tx():
                 for name in (
@@ -118,7 +114,9 @@ class SuggestionDeferralMemory:
                 ):
                     self._conn.execute(f"DROP TRIGGER IF EXISTS {name}")
                 self._conn.execute("ALTER TABLE suggestion_deferrals RENAME TO suggestion_deferrals_v1")
-                self._create_v2_table_and_triggers()
+                # Integrity applies during the copy, but Activity triggers are installed
+                # only after it. Migration is not a new artist deferral action.
+                self._create_v2_table_and_triggers(include_activity=False)
                 rows = self._conn.execute(
                     "SELECT seq,id,artist_id,song_id,session_id,semantic_key,scope "
                     "FROM suggestion_deferrals_v1 ORDER BY seq"
@@ -143,6 +141,8 @@ class SuggestionDeferralMemory:
                         ),
                     )
                 self._conn.execute("DROP TABLE suggestion_deferrals_v1")
+                for statement in self._activity_trigger_statements():
+                    self._conn.execute(statement)
                 self._conn.execute(
                     "UPDATE metadata SET value=? WHERE key='suggestion_deferral_schema_version'",
                     (str(SUGGESTION_DEFERRAL_SCHEMA_VERSION),),
@@ -152,7 +152,7 @@ class SuggestionDeferralMemory:
         except sqlite3.DatabaseError as exc:
             raise LineageCorruptionError("cannot migrate suggestion deferral memory") from exc
 
-    def _create_v2_table_and_triggers(self) -> None:
+    def _create_v2_table_and_triggers(self, *, include_activity: bool) -> None:
         horizons = ",".join(f"'{item}'" for item in SUGGESTION_DEFERRAL_HORIZONS)
         self._conn.execute(
             f"""CREATE TABLE suggestion_deferrals (
@@ -168,11 +168,14 @@ class SuggestionDeferralMemory:
                 UNIQUE(deferral_id,action)
             )"""
         )
-        for statement in self._trigger_statements():
+        for statement in self._integrity_trigger_statements():
             self._conn.execute(statement)
+        if include_activity:
+            for statement in self._activity_trigger_statements():
+                self._conn.execute(statement)
 
     @staticmethod
-    def _trigger_statements() -> tuple[str, ...]:
+    def _integrity_trigger_statements() -> tuple[str, ...]:
         return (
             """CREATE TRIGGER suggestion_deferral_binding_valid
             BEFORE INSERT ON suggestion_deferrals
@@ -190,9 +193,7 @@ class SuggestionDeferralMemory:
                     )
                 )
             )
-            BEGIN
-                SELECT RAISE(ABORT, 'Suggestion deferral binding is invalid');
-            END""",
+            BEGIN SELECT RAISE(ABORT, 'Suggestion deferral binding is invalid'); END""",
             """CREATE TRIGGER suggestion_deferral_restore_valid
             BEFORE INSERT ON suggestion_deferrals
             WHEN NEW.action='RESTORE' AND NOT EXISTS (
@@ -204,26 +205,24 @@ class SuggestionDeferralMemory:
                   AND d.semantic_key=NEW.semantic_key
                   AND d.horizon=NEW.horizon
             )
-            BEGIN
-                SELECT RAISE(ABORT, 'Suggestion deferral restore target is invalid');
-            END""",
+            BEGIN SELECT RAISE(ABORT, 'Suggestion deferral restore target is invalid'); END""",
             """CREATE TRIGGER suggestion_deferral_immutable
             BEFORE UPDATE ON suggestion_deferrals
-            BEGIN
-                SELECT RAISE(ABORT, 'Suggestion deferral history is immutable');
-            END""",
+            BEGIN SELECT RAISE(ABORT, 'Suggestion deferral history is immutable'); END""",
             """CREATE TRIGGER suggestion_deferral_delete_immutable
             BEFORE DELETE ON suggestion_deferrals
-            BEGIN
-                SELECT RAISE(ABORT, 'Suggestion deferral history is immutable');
-            END""",
+            BEGIN SELECT RAISE(ABORT, 'Suggestion deferral history is immutable'); END""",
+        )
+
+    @staticmethod
+    def _activity_trigger_statements() -> tuple[str, ...]:
+        return (
             """CREATE TRIGGER suggestion_deferral_activity
             AFTER INSERT ON suggestion_deferrals
             WHEN NEW.action='DEFER'
             BEGIN
                 INSERT INTO activity_events(
-                    id,event_type,artist_id,song_id,version_id,
-                    object_type,object_id,payload_json
+                    id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json
                 ) VALUES(
                     'act_'||lower(hex(randomblob(16))),
                     'SUGGESTION_DEFERRED',NEW.artist_id,NEW.song_id,NULL,
@@ -236,8 +235,7 @@ class SuggestionDeferralMemory:
             WHEN NEW.action='RESTORE'
             BEGIN
                 INSERT INTO activity_events(
-                    id,event_type,artist_id,song_id,version_id,
-                    object_type,object_id,payload_json
+                    id,event_type,artist_id,song_id,version_id,object_type,object_id,payload_json
                 ) VALUES(
                     'act_'||lower(hex(randomblob(16))),
                     'SUGGESTION_DEFERRAL_CLEARED',NEW.artist_id,NEW.song_id,NULL,
@@ -264,15 +262,11 @@ class SuggestionDeferralMemory:
     @staticmethod
     def _record(row: sqlite3.Row) -> SuggestionDeferral:
         return SuggestionDeferral(
-            sequence=int(row["seq"]),
-            id=str(row["id"]),
-            deferral_id=str(row["deferral_id"]),
-            action=str(row["action"]),
-            artist_id=str(row["artist_id"]),
-            song_id=str(row["song_id"]),
+            sequence=int(row["seq"]), id=str(row["id"]),
+            deferral_id=str(row["deferral_id"]), action=str(row["action"]),
+            artist_id=str(row["artist_id"]), song_id=str(row["song_id"]),
             session_id=None if row["session_id"] is None else str(row["session_id"]),
-            semantic_key=str(row["semantic_key"]),
-            horizon=str(row["horizon"]),
+            semantic_key=str(row["semantic_key"]), horizon=str(row["horizon"]),
         )
 
     def _validate_existing(self) -> None:
@@ -304,8 +298,7 @@ class SuggestionDeferralMemory:
             params.append(self._normalize_key(semantic_key))
         rows = self._conn.execute(
             "SELECT d.seq,d.id,d.deferral_id,d.action,d.artist_id,d.song_id,d.session_id,d.semantic_key,d.horizon "
-            "FROM suggestion_deferrals d "
-            "WHERE d.artist_id=? AND d.action='DEFER'" + key_clause +
+            "FROM suggestion_deferrals d WHERE d.artist_id=? AND d.action='DEFER'" + key_clause +
             " AND NOT EXISTS (SELECT 1 FROM suggestion_deferrals r "
             "WHERE r.deferral_id=d.deferral_id AND r.action='RESTORE') ORDER BY d.seq",
             tuple(params),
@@ -325,22 +318,14 @@ class SuggestionDeferralMemory:
         if normalized == LATER_THIS_SONG and session is None:
             raise ValidationError("Start a work Session before choosing Later this Song")
         session_id = None if session is None else session.id
-
         for existing in self._active_rows(key):
             same_context = (
                 existing.horizon == normalized
-                and (
-                    normalized in {SOMEDAY, NEVER_SUGGEST_AGAIN}
-                    or existing.song_id == song.id
-                )
-                and (
-                    normalized != LATER_THIS_SONG
-                    or existing.session_id == session_id
-                )
+                and (normalized in {SOMEDAY, NEVER_SUGGEST_AGAIN} or existing.song_id == song.id)
+                and (normalized != LATER_THIS_SONG or existing.session_id == session_id)
             )
             if same_context:
                 return existing
-
         deferral_id = f"defer_{uuid.uuid4().hex}"
         event_id = f"defer_event_{uuid.uuid4().hex}"
         try:
@@ -349,16 +334,8 @@ class SuggestionDeferralMemory:
                     "INSERT INTO suggestion_deferrals("
                     "id,deferral_id,action,artist_id,song_id,session_id,semantic_key,horizon"
                     ") VALUES(?,?,?,?,?,?,?,?)",
-                    (
-                        event_id,
-                        deferral_id,
-                        "DEFER",
-                        self.store.primary_artist_id,
-                        song.id,
-                        session_id,
-                        key,
-                        normalized,
-                    ),
+                    (event_id, deferral_id, "DEFER", self.store.primary_artist_id,
+                     song.id, session_id, key, normalized),
                 )
         except sqlite3.IntegrityError as exc:
             raise ValidationError(f"cannot defer suggestion: {exc}") from exc
@@ -370,8 +347,7 @@ class SuggestionDeferralMemory:
     def _by_event_id(self, event_id: str) -> SuggestionDeferral:
         row = self._conn.execute(
             "SELECT seq,id,deferral_id,action,artist_id,song_id,session_id,semantic_key,horizon "
-            "FROM suggestion_deferrals WHERE id=?",
-            (event_id,),
+            "FROM suggestion_deferrals WHERE id=?", (event_id,),
         ).fetchone()
         if row is None:
             raise LineageCorruptionError("suggestion deferral event disappeared")
@@ -391,8 +367,7 @@ class SuggestionDeferralMemory:
         deferred = self._record(row)
         existing = self._conn.execute(
             "SELECT seq,id,deferral_id,action,artist_id,song_id,session_id,semantic_key,horizon "
-            "FROM suggestion_deferrals WHERE deferral_id=? AND action='RESTORE'",
-            (target,),
+            "FROM suggestion_deferrals WHERE deferral_id=? AND action='RESTORE'", (target,),
         ).fetchone()
         if existing is not None:
             return self._record(existing)
@@ -403,27 +378,14 @@ class SuggestionDeferralMemory:
                     "INSERT INTO suggestion_deferrals("
                     "id,deferral_id,action,artist_id,song_id,session_id,semantic_key,horizon"
                     ") VALUES(?,?,?,?,?,?,?,?)",
-                    (
-                        event_id,
-                        deferred.deferral_id,
-                        "RESTORE",
-                        deferred.artist_id,
-                        deferred.song_id,
-                        deferred.session_id,
-                        deferred.semantic_key,
-                        deferred.horizon,
-                    ),
+                    (event_id, deferred.deferral_id, "RESTORE", deferred.artist_id,
+                     deferred.song_id, deferred.session_id, deferred.semantic_key, deferred.horizon),
                 )
         except sqlite3.IntegrityError as exc:
             raise ValidationError(f"cannot restore suggestion: {exc}") from exc
         return self._by_event_id(event_id)
 
-    def applies(
-        self,
-        semantic_key: str,
-        *,
-        released_song_ids: Iterable[str] = (),
-    ) -> bool:
+    def applies(self, semantic_key: str, *, released_song_ids: Iterable[str] = ()) -> bool:
         key = self._normalize_key(semantic_key)
         song = self.store.active_song()
         if song is None:
