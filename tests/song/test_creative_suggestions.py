@@ -31,7 +31,7 @@ class CreativeSuggestionTests(unittest.TestCase):
             "evidence_claims",
             "activity_events",
             "attention_focus_sessions",
-            "operation_records",
+            "operations",
         )
         return {
             table: int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
