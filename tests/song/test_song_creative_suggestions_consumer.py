@@ -66,6 +66,16 @@ def suggestion_action(page: str) -> str:
     return match.group(1)
 
 
+def deferral_action(page: str) -> str:
+    match = re.search(
+        r'<form[^>]+action="/suggestion/defer".*?name="action" value="([^"]+)"',
+        page,
+        flags=re.DOTALL,
+    )
+    assert match is not None
+    return match.group(1)
+
+
 def seed_song(data_root: Path) -> None:
     hq = HeadquartersMemory.create(data_root, "Suggestion Consumer")
     try:
@@ -117,8 +127,60 @@ def test_song_page_can_prepare_local_bounded_suggestion(tmp_path: Path) -> None:
         assert "arrangement:contrast-window" not in result
         assert "rhythm:single-groove-variable" not in result
         assert "melody:motif-variation" not in result
+        assert "Not now" in result
     finally:
         shell.stop()
+
+
+def test_not_now_durably_avoids_repeating_the_idea_in_the_current_session(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed_song(data_root)
+
+    shell = new_shell(data_root, state_root, 12106, "suggest-defer")
+    try:
+        _, page = get(shell, "/song")
+        _, first = post(
+            shell,
+            "/suggestion/create",
+            {"csrf": shell._csrf, "action": suggestion_action(page), "distance": "ADJACENT"},
+            origin=shell.address.origin,
+        )
+        first_prompt = re.search(r'<h3>One prompt to try</h3>.*?<p>(.*?)</p>', first, re.DOTALL)
+        assert first_prompt is not None
+
+        status, deferred = post(
+            shell,
+            "/suggestion/defer",
+            {"csrf": shell._csrf, "action": deferral_action(first)},
+            origin=shell.address.origin,
+        )
+        assert status == 200
+        assert "Suggestion set aside for this work Session" in deferred
+        assert "One prompt to try" not in deferred
+
+        _, replacement = post(
+            shell,
+            "/suggestion/create",
+            {"csrf": shell._csrf, "action": suggestion_action(deferred), "distance": "ADJACENT"},
+            origin=shell.address.origin,
+        )
+        assert first_prompt.group(1) not in replacement
+    finally:
+        shell.stop()
+
+    relaunched = new_shell(data_root, state_root, 12107, "suggest-defer-relaunch")
+    try:
+        _, page = get(relaunched, "/song")
+        _, replacement = post(
+            relaunched,
+            "/suggestion/create",
+            {"csrf": relaunched._csrf, "action": suggestion_action(page), "distance": "ADJACENT"},
+            origin=relaunched.address.origin,
+        )
+        assert first_prompt.group(1) not in replacement
+    finally:
+        relaunched.stop()
 
 
 def test_foreign_origin_is_rejected_before_action_consumption_and_replay_is_rejected(tmp_path: Path) -> None:

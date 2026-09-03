@@ -30,7 +30,7 @@ def _suggestion_action(shell: ConsumerShell, song_id: str) -> str:
     return shell._new_action("song-suggest", song_id)
 
 
-def _result_markup(result: CreativeSuggestion | None) -> str:
+def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> str:
     if result is None:
         return ""
     objective = (
@@ -49,6 +49,11 @@ def _result_markup(result: CreativeSuggestion | None) -> str:
         f'<p class="muted">{html.escape(result.distance_explanation)}</p>'
         f'{objective}'
         '<p class="muted">Generated locally and deterministically. No AI provider was called, no project was changed, and this is not a claim about what your Song needs.</p>'
+        '<form method="post" action="/suggestion/defer" aria-label="Set this suggestion aside">'
+        f'{shell._hidden(shell._new_action("song-suggestion-defer", result.song_id))}'
+        '<button type="submit">Not now</button>'
+        '<p class="muted">Do not repeat this idea during the current work Session. A future Session may revisit it.</p>'
+        '</form>'
         '</div>'
     )
 
@@ -98,7 +103,7 @@ def _suggestion_card(shell: ConsumerShell) -> str:
         '<button class="primary" type="submit">Suggest something</button>'
         '<p class="muted">The first suggestion layer is deliberately AI-off and non-personalized. “Familiar” means a smaller move around this Song, not a claim that N0TE already knows your taste.</p>'
         '</form>'
-        f'{_result_markup(result)}</div>'
+        f'{_result_markup(shell, result)}</div>'
     )
 
 
@@ -146,6 +151,25 @@ def _post_suggestion(
     shell._redirect(handler, "/song")
 
 
+def _post_suggestion_deferral(
+    shell: ConsumerShell,
+    handler: BaseHTTPRequestHandler,
+    form: Mapping[str, str],
+) -> None:
+    action = shell._consume_action(form.get("action", ""), "song-suggestion-defer")
+    result = getattr(shell, "_creative_suggestion_result", None)
+    if action is None or action.value is None:
+        shell._send_html(handler, 409, shell._simple_error("That Not now action was already handled or expired."))
+        return
+    if not isinstance(result, CreativeSuggestion) or result.song_id != action.value:
+        shell._send_html(handler, 409, shell._simple_error("That suggestion is no longer current."))
+        return
+    _service(shell).defer(result)
+    shell._creative_suggestion_result = None
+    shell._consumer_notice = "Suggestion set aside for this work Session."
+    shell._redirect(handler, "/song")
+
+
 def install_song_creative_suggestions() -> None:
     """Attach one pure creative-suggestion card and protected POST to /song."""
     if getattr(ConsumerShell, "_song_creative_suggestions_installed", False):
@@ -164,7 +188,8 @@ def install_song_creative_suggestions() -> None:
         return rendered[: -len(marker)] + _suggestion_card(self) + marker
 
     def with_suggestion_post(self: ConsumerShell, handler: BaseHTTPRequestHandler) -> None:
-        if self._path(handler) != "/suggestion/create":
+        path = self._path(handler)
+        if path not in {"/suggestion/create", "/suggestion/defer"}:
             original_post(self, handler)
             return
         if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(handler):
@@ -183,7 +208,10 @@ def install_song_creative_suggestions() -> None:
             )
             return
         try:
-            _post_suggestion(self, handler, form)
+            if path == "/suggestion/create":
+                _post_suggestion(self, handler, form)
+            else:
+                _post_suggestion_deferral(self, handler, form)
         except (ValidationError, CreativeSuggestionError, ConsumerShellError) as exc:
             self._consumer_notice = str(exc)
             self._redirect(handler, "/song")

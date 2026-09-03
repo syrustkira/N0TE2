@@ -2,17 +2,32 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "SONG-01-SUGGEST-01 is already implemented on main and exact-head run 33751234249 verified merge head f287022d93fad7bd10204a3a67182d52310685cf across Linux, macOS and Windows with full regression and staged consumer smoke green. No demonstrated product defect remains in this bounded increment, so construction stops rather than extending suggestion behavior by adjacency.",
+  "lifecycle_state": "ACTIVE",
+  "active_node": "UX-01",
+  "active_increment": "UX-01-SUGGESTION-NOT-NOW-01",
+  "terminal_reason": null,
   "wake_condition": null,
-  "next_admissible_action": "Globally compare dependency-ready retained outcomes against canonical scope and observed product evidence. First prove existing behavior; select a new bounded implementation receipt only for a demonstrated missing behavior. Do not reactivate SONG-01 suggestion work merely because related scope remains retained.",
-  "product_code_authorized": false,
+  "next_admissible_action": "Complete and verify the bounded durable Not now lifecycle for real Song suggestions, then close or block this receipt from exact-head evidence.",
+  "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
-  "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
+  "completed_nodes": [
+    "BOOT-00",
+    "BOOT-01",
+    "BOOT-02",
+    "AUDIT-01",
+    "AUDIT-HISTORY",
+    "AUDIT-DESIGN",
+    "AUDIT-GRAPH",
+    "LEGACY-01",
+    "CORE-01",
+    "CORE-02",
+    "CORE-03",
+    "CORE-04",
+    "PLATFORM-00",
+    "APP-01"
+  ],
   "supervision": {
     "root": "N0TE-SUPERVISOR",
     "handoff": "governance/handoff.json",
@@ -25,11 +40,9 @@
     "construction_must_terminate_at_stability": true
   },
   "truth": [
-    "Exact main head f287022d93fad7bd10204a3a67182d52310685cf contains the merged SONG-01-SUGGEST-01 implementation.",
-    "GitHub Actions run 33751234249 verified that exact head on Linux, macOS and Windows with governance, full regression and staged consumer smoke green.",
-    "The canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 159 requirements, REQ-SCOPE-002 through REQ-SCOPE-160; retained scope does not itself select construction work.",
-    "UX-01 and SONG-01 remain retained product scope, and CONV-01 still requires both before final convergence.",
-    "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains open as cross-cutting reliability evidence and is not automatically selected product work.",
-    "STABLE means no N0TE construction is currently justified or selected; it does not mean N0TE is complete."
+    "Observed implementation already provides deterministic bounded Song suggestions with stable semantic keys, but exposes no consumer Not now action and persists no suggestion deferral.",
+    "UX-01 owns REQ-SCOPE-097 and its APP-01, CORE-02 and CORE-03 dependencies are DONE.",
+    "The selected increment is limited to durable current-Session suppression of a real suggestion; it does not authorize generalized task deferral or taste learning.",
+    "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains open monitored and does not weaken loopback security assertions."
   ]
 }

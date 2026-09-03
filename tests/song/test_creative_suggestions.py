@@ -92,6 +92,44 @@ class CreativeSuggestionTests(unittest.TestCase):
         with self.assertRaisesRegex(CreativeSuggestionError, "Start or select a Song"):
             service.suggest(distance="FAMILIAR")
 
+    def test_not_now_is_durable_for_the_exact_work_session(self):
+        first = self.service.suggest(distance="ADJACENT")
+        self.service.defer(first)
+
+        replacement = self.service.suggest(distance="ADJACENT")
+        self.assertNotEqual(replacement.semantic_key, first.semantic_key)
+
+        profile_id = self.hq.store.profile_id
+        self.hq.close()
+        self.hq = HeadquartersMemory.open(self.tmp.name, profile_id)
+        self.addCleanup(self.hq.close)
+        self.service = CreativeSuggestionService(self.hq.store, self.hq.sessions)
+        after_relaunch = self.service.suggest(distance="ADJACENT")
+        self.assertEqual(after_relaunch.semantic_key, replacement.semantic_key)
+
+        self.hq.sessions.close_session(
+            self.session.id,
+            debrief_summary="Set one idea aside",
+            next_action="Start a new pass",
+        )
+        next_session = self.hq.sessions.start_session(song_id=self.song.id, objective="A new pass")
+        self.assertNotIn(
+            first.semantic_key,
+            self.service._deferred_keys(self.song.id, next_session.id),
+        )
+
+    def test_defer_rejects_a_suggestion_after_session_context_changes(self):
+        suggestion = self.service.suggest(distance="FAMILIAR")
+        self.hq.sessions.close_session(
+            self.session.id,
+            debrief_summary="Context changed",
+            next_action="Try another pass",
+        )
+        self.hq.sessions.start_session(song_id=self.song.id, objective="Changed context")
+
+        with self.assertRaisesRegex(CreativeSuggestionError, "Session changed"):
+            self.service.defer(suggestion)
+
 
 if __name__ == "__main__":
     unittest.main()

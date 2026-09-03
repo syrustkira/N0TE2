@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import sqlite3
 from dataclasses import dataclass
 
 from .lineage import LineageStore, ValidationError
@@ -98,6 +99,64 @@ class CreativeSuggestionService:
             raise TypeError("CreativeSuggestionService requires SessionMemory for the same LineageStore")
         self.store = store
         self.sessions = sessions
+        self._ensure_deferral_schema()
+
+    def _ensure_deferral_schema(self) -> None:
+        try:
+            with self.store._tx():
+                self.store._conn.execute(
+                    """CREATE TABLE IF NOT EXISTS creative_suggestion_deferrals (
+                        song_id TEXT NOT NULL REFERENCES songs(id),
+                        session_context TEXT NOT NULL,
+                        semantic_key TEXT NOT NULL,
+                        PRIMARY KEY(song_id, session_context, semantic_key)
+                    )"""
+                )
+        except sqlite3.DatabaseError as exc:
+            raise CreativeSuggestionError("Creative suggestion deferrals are unavailable.") from exc
+
+    @staticmethod
+    def _session_context(session_id: str | None) -> str:
+        return session_id or "NO_SESSION"
+
+    def defer(self, suggestion: CreativeSuggestion) -> None:
+        """Durably put one suggestion aside for its exact Song/work context."""
+        if not isinstance(suggestion, CreativeSuggestion):
+            raise TypeError("defer requires a CreativeSuggestion")
+        song = self.store.active_song()
+        latest = None if song is None else self.sessions.latest_for_song(song.id)
+        latest_session_id = None if latest is None else latest.id
+        if (
+            song is None
+            or suggestion.song_id != song.id
+            or suggestion.session_id != latest_session_id
+        ):
+            raise CreativeSuggestionError(
+                "The Song or work Session changed. The old suggestion was not deferred."
+            )
+        try:
+            with self.store._tx():
+                self.store._conn.execute(
+                    "INSERT OR IGNORE INTO creative_suggestion_deferrals"
+                    "(song_id,session_context,semantic_key) VALUES(?,?,?)",
+                    (
+                        suggestion.song_id,
+                        self._session_context(suggestion.session_id),
+                        suggestion.semantic_key,
+                    ),
+                )
+        except sqlite3.DatabaseError as exc:
+            raise CreativeSuggestionError("The suggestion could not be deferred safely.") from exc
+
+    def _deferred_keys(self, song_id: str, session_id: str | None) -> set[str]:
+        return {
+            str(row["semantic_key"])
+            for row in self.store._conn.execute(
+                "SELECT semantic_key FROM creative_suggestion_deferrals "
+                "WHERE song_id=? AND session_context=?",
+                (song_id, self._session_context(session_id)),
+            )
+        }
 
     @staticmethod
     def normalize_distance(value: str) -> str:
@@ -131,15 +190,26 @@ class CreativeSuggestionService:
         objective = None if latest is None else latest.objective
         session_id = None if latest is None else latest.id
 
-        available = [dimension for dimension in CREATIVE_DIMENSIONS if dimension not in locks]
-        if not available:
+        unlocked = [dimension for dimension in CREATIVE_DIMENSIONS if dimension not in locks]
+        if not unlocked:
             raise CreativeSuggestionError("Every creative dimension is locked. Unlock at least one dimension to vary the Song.")
+
+        deferred = self._deferred_keys(song.id, session_id)
+        available = [
+            (dimension, entry)
+            for dimension in unlocked
+            for entry in _CATALOG[dimension]
+            if entry[0] not in deferred
+        ]
+        if not available:
+            raise CreativeSuggestionError(
+                "Every available suggestion is set aside for this work Session. Start a new Session to revisit them."
+            )
 
         material = "|".join((song.id, session_id or "", objective or "", mode, ",".join(locks), str(variation))).encode("utf-8")
         digest = hashlib.sha256(material).digest()
-        dimension = available[int.from_bytes(digest[:4], "big") % len(available)]
-        entries = _CATALOG[dimension]
-        semantic_key, title, prompts = entries[int.from_bytes(digest[4:8], "big") % len(entries)]
+        dimension, entry = available[int.from_bytes(digest[:4], "big") % len(available)]
+        semantic_key, title, prompts = entry
 
         return CreativeSuggestion(
             semantic_key=semantic_key,
