@@ -14,19 +14,26 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 repo = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(repo))
 state = json.loads((repo / "governance/current_state.json").read_text())
+receipt = json.loads((repo / "governance/active_receipt.json").read_text())
 lifecycle = state.get("lifecycle_state")
 
 if lifecycle == "ACTIVE":
     if state.get("product_code_authorized") is not True:
         raise SystemExit("STAGE SMOKE: RED: active construction lacks product-code authority")
+    node = state.get("active_node")
+    increment = state.get("active_increment")
+    if not isinstance(node, str) or not node or not isinstance(increment, str) or not increment:
+        raise SystemExit("STAGE SMOKE: RED: ACTIVE construction lacks an exact node/increment")
+    if not increment.startswith(f"{node}-"):
+        raise SystemExit("STAGE SMOKE: RED: active increment is not bound to the active node")
     if (
-        state.get("active_node") != "UX-01"
-        or state.get("active_increment") != "UX-01-CONTEXT-LIFECYCLE-01"
+        receipt.get("status") != "ACTIVE"
+        or receipt.get("node_id") != node
+        or receipt.get("increment_id") != increment
+        or receipt.get("receipt_id") != f"N0TE2-{increment}"
+        or receipt.get("product_code_allowed") is not True
     ):
-        raise SystemExit(
-            f"STAGE SMOKE: RED: unsupported active stage "
-            f"{state.get('active_node')}/{state.get('active_increment')}"
-        )
+        raise SystemExit("STAGE SMOKE: RED: active construction is not bound to its exact active receipt")
 elif lifecycle == "STABLE":
     if (
         state.get("active_node") is not None
@@ -34,6 +41,8 @@ elif lifecycle == "STABLE":
         or state.get("product_code_authorized") is not False
     ):
         raise SystemExit("STAGE SMOKE: RED: STABLE retained construction authority")
+    if receipt.get("status") == "ACTIVE":
+        raise SystemExit("STAGE SMOKE: RED: STABLE retained an ACTIVE construction receipt")
 else:
     raise SystemExit(f"STAGE SMOKE: RED: unsupported lifecycle {lifecycle}")
 
@@ -168,7 +177,7 @@ with tempfile.TemporaryDirectory() as temp:
     process = ProcessIdentity.from_start_token(
         PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
         pid=99012,
-        start_token="ux-01-context-lifecycle-consumer-smoke",
+        start_token="n0te-consumer-smoke",
     )
     probe = Probe()
 
@@ -317,5 +326,5 @@ with tempfile.TemporaryDirectory() as temp:
     quit_shell(relaunched)
 
 print(
-    "UX-01-CONTEXT-LIFECYCLE-01 CONSUMER SMOKE: GREEN: a fresh artist created a Song and real work Session, used the inherited interaction-depth Learning journey, recorded evidence, saw N0TE consult canonical retention and create a bounded read-only source-digest context projection without deleting history or granting mutation authority, explicitly quit/relaunched, and recovered the same Session objective and Learning evidence while the transient interaction-mode choice correctly did not persist"
+    "N0TE CONSUMER SMOKE: GREEN: a fresh artist created a Song and real work Session, used the inherited interaction-depth Learning journey, recorded evidence, saw N0TE consult canonical retention and create a bounded read-only source-digest context projection without deleting history or granting mutation authority, explicitly quit/relaunched, and recovered the same Session objective and Learning evidence while the transient interaction-mode choice correctly did not persist"
 )
