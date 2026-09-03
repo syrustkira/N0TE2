@@ -1,13 +1,16 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "repository": "syrustkira/N0TE2",
   "delivery": {"type":"merged_pull_request","number":63,"head_branch":"codex/retention-supervision","base_branch":"main","merge_commit_sha":"5adbe01657811cc8c3d926a49750605cd0f2496a","state_source":"GITHUB_RUNTIME_AT_RECONCILIATION"},
   "head_binding": {"mode":"RUNTIME_EXACT","command":"git rev-parse HEAD","ci_env":"N0TE2_HEAD_SHA","committed_head_sha":null,"reason":"A committed file cannot truthfully contain the SHA of the commit that contains itself. Exact head is bound and emitted at runtime."},
   "controller": {"id":"CTRL-CONSTRUCTION-002","role_class":"N0TE_BUILD_HARNESS_COORDINATOR","supervisor":"N0TE-SUPERVISOR","boundary":"Temporary N0TE construction machinery; not N0TE and not the persistent TellMeN0TE + N0TE cloud coordination plane."},
-  "lifecycle": {"state":"STABLE","active_node":null,"active_increment":null},
-  "open_incidents": ["INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001"],
-  "canonical_scope": {"source":"N0TE_PRODUCT_DB/SCOPE_LEDGER","range":"REQ-SCOPE-002..REQ-SCOPE-160","retained_requirement_count":159,"build_graph_is_product_scope_owner":false,"canonical_extensions_unselected":["REQ-SCOPE-154","REQ-SCOPE-155","REQ-SCOPE-156","REQ-SCOPE-157","REQ-SCOPE-158","REQ-SCOPE-159","REQ-SCOPE-160"]},
-  "next_admissible_action": "Globally compare dependency-ready N0TE outcomes across the complete retained 159-requirement scope and select only one justified bounded construction increment with a fresh active receipt. Do not continue NOW, UX, Windows reliability, or any other subsystem by adjacency. Preserve the open Windows loopback recurrence as cross-cutting evidence unless fresh evidence justifies selecting it. Preserve persistent cloud coordination as separate from the dormant build harness.",
+  "derived_runtime_truth": {
+    "lifecycle_source": "governance/current_state.json",
+    "next_admissible_action_source": "governance/current_state.json",
+    "canonical_scope_source": "governance/requirements.json",
+    "open_incidents_source": "governance/incidents.jsonl",
+    "rule": "Handoff is a reconstruction recipe, not a second mutable state database. Runtime output derives these values from their canonical owners."
+  },
   "reconstruction": {
     "handoff_first": true,
     "fresh_agent_requires_prior_chat": false,
