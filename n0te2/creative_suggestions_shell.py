@@ -56,7 +56,8 @@ def _result_markup(result: CreativeSuggestion | None) -> str:
 def _suggestion_card(shell: ConsumerShell) -> str:
     if shell.runtime.state != "RUNNING":
         raise ConsumerShellError("Creative suggestions require an open Artist workspace")
-    song = shell.runtime.headquarters.store.active_song()
+    hq = shell.runtime.headquarters
+    song = hq.store.active_song()
     if song is None:
         return ""
 
@@ -75,12 +76,15 @@ def _suggestion_card(shell: ConsumerShell) -> str:
     result = getattr(shell, "_creative_suggestion_result", None)
     if result is not None and not isinstance(result, CreativeSuggestion):
         raise ConsumerShellError("creative suggestion shell state is invalid")
-    if result is not None and result.song_id != song.id:
-        # Ephemeral suggestion output is exact-Song context, not a reusable global
-        # recommendation. Drop it when the active Song changes so stale advice can
-        # never masquerade as current context.
-        shell._creative_suggestion_result = None
-        result = None
+    if result is not None:
+        latest = hq.sessions.latest_for_song(song.id)
+        latest_session_id = None if latest is None else latest.id
+        if result.song_id != song.id or result.session_id != latest_session_id:
+            # Ephemeral output is bound to the exact Song + latest work Session
+            # that produced it. A context change invalidates it rather than letting
+            # stale advice masquerade as a current recommendation.
+            shell._creative_suggestion_result = None
+            result = None
 
     return (
         '<div class="card"><h2>Suggest something</h2>'
