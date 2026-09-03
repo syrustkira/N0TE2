@@ -25,7 +25,7 @@
     "construction_must_terminate_at_stability": true
   },
   "truth": [
-    "Verified main baseline a5fe556dc2e13f05ba2ad23c970e6dc6994270d8 includes the already-proven real Song suggestion capability and the PR #75 governance deduplication closure.",
+    "Current construction baseline c0dd0c3eb6d1aeeaf50c4099cd11e410a9f937ba includes the already-proven real Song suggestion capability, PR #75 governance deduplication, and the later governance-only historical-head wording repair.",
     "UX-01-NOT-NOW-SUGGESTIONS-01 is the sole active construction increment; mutable delivery state remains owned by GitHub runtime and governance/handoff.json records only its delivery reference.",
     "Canonical REQ-SCOPE-097 retains five Not Now horizons: later this Song, after release, next Song, someday and never suggest again. Focus itself is already implemented and must not be rebuilt.",
     "Not Now composes with real suggestion semantic objects and canonical Attention memory; the deferral ledger owns suppression instructions only, never suggestion/job content.",

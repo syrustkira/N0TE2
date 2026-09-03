@@ -4,7 +4,7 @@
   "receipt_id": "N0TE2-UX-01-NOT-NOW-SUGGESTIONS-01",
   "node_id": "UX-01",
   "increment_id": "UX-01-NOT-NOW-SUGGESTIONS-01",
-  "baseline_sha": "a5fe556dc2e13f05ba2ad23c970e6dc6994270d8",
+  "baseline_sha": "c0dd0c3eb6d1aeeaf50c4099cd11e410a9f937ba",
   "purpose": "Compose canonical Attention memory with the real stable Song-suggestion objects already verified on main so the artist can intentionally and reversibly defer actual N0TE suggestions across every REQ-SCOPE-097 Not Now horizon without a fake task system, duplicate recommendation store, false release inference, provider authority or DAW mutation.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
