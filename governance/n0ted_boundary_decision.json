@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "subject": "N0TED",
+  "evidence": {
+    "installed_repository_search": "no N0TED repository found",
+    "n0te_and_n0te2_code_search": "no N0TED references found",
+    "current_n0te2_main_tree": "no N0TED package/module/service identified",
+    "status": "CONCEPT_ONLY_OR_UNEVIDENCED"
+  },
+  "decision": {
+    "verdict": "DO_NOT BUILD N0TED AS A SECOND BRAIN",
+    "default_disposition": "ABSORB_UNLESS_A_NARROW_NON_DUPLICATIVE_RUNTIME_ROLE_IS_PROVEN",
+    "reason": [
+      "N0TE already owns Artist/Song intelligence, durable product memory, context, planning/reasoning, capability resolution and user-facing autonomy.",
+      "The construction controller already owns repository reconstruction, bounded work selection, build orchestration, verification and reconciliation.",
+      "A third autonomous semantic/planning/memory layer would duplicate one or both and increase authority/context drift."
+    ]
+  },
+  "prohibited_n0ted_responsibilities": [
+    "independent Artist or Song model",
+    "independent durable memory or context database",
+    "independent semantic/product requirement graph",
+    "independent planner or what-next authority",
+    "independent mutation authority",
+    "independent capability registry",
+    "independent conversation/personality brain",
+    "independent business/relationship model",
+    "repository construction governance already owned by the controller"
+  ],
+  "roles_that_could_justify_the_name_if_later_proven": [
+    {
+      "role": "thin local daemon/process host",
+      "constraints": "No semantic authority. Runs bounded background IPC/process/device services for N0TE, exposes health and lifecycle, stores no parallel product truth."
+    },
+    {
+      "role": "watchdog/service supervisor",
+      "constraints": "Restarts or observes bounded N0TE runtime services; cannot infer artist intent, select product actions, mutate Song state, or become construction controller."
+    },
+    {
+      "role": "local bridge broker",
+      "constraints": "Routes authenticated local IPC among N0TE Core, ARK, DAW bridges/plugin host; protocol/transport only, not reasoning."
+    }
+  ],
+  "naming_rule": "Do not reserve a component merely because the N0TED name exists in conversation. Create it only if an implementation need emerges that is operational, narrow, testable, and cannot coherently live in N0TE Core, ARK/Bridge/plugin host, app runtime, or the external construction controller.",
+  "current_action": "No N0TED product code should be added. Preserve the name only as an unallocated implementation label, not as accepted architecture.",
+  "revisit_trigger": "A concrete runtime requirement appears with a boundary contract showing unique inputs/outputs, lifecycle, failure isolation, authority exclusions, and why existing components cannot own it."
+}
