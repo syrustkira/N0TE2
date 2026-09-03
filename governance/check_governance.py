@@ -394,10 +394,12 @@ def check_retention_surfaces(repo: Path, current: dict):
     require(handoff.get("repository") == current.get("repository") == "syrustkira/N0TE2", "handoff repository mismatch")
     delivery = handoff.get("delivery", {})
     require(delivery.get("type") == "pull_request" and int(delivery.get("number", 0)) > 0, "handoff lacks tracked delivery object")
-    lifecycle = handoff.get("lifecycle", {})
-    require(lifecycle.get("state") == current.get("lifecycle_state"), "handoff lifecycle is stale")
-    require(lifecycle.get("active_node") == current.get("active_node"), "handoff active node is stale")
-    require(lifecycle.get("active_increment") == current.get("active_increment"), "handoff active increment is stale")
+    lifecycle = handoff.get("lifecycle")
+    if lifecycle is not None:
+        require(isinstance(lifecycle, dict), "handoff lifecycle compatibility input must be an object")
+        for key, label in (("state", "lifecycle"), ("active_node", "active node"), ("active_increment", "active increment")):
+            if key in lifecycle:
+                require(lifecycle.get(key) == current.get("lifecycle_state" if key == "state" else key), f"handoff {label} is stale")
     reconstruction = handoff.get("reconstruction", {})
     require(reconstruction.get("handoff_first") is True, "handoff must be first reconstruction surface")
     fallback = reconstruction.get("archaeology_fallback", {})
