@@ -195,11 +195,27 @@ class ContextProjectionService:
 
         before = self.retention.store._conn.total_changes
         canonical = self.retention.context_packet_for_song(song_id, sections=selected)
+        if "DURABLE_FACTS" in selected:
+            contradiction_source = canonical
+        else:
+            # Contradiction safety is authority metadata, not optional display
+            # content. A narrow projection may omit durable-fact bodies while it
+            # must still know whether conflicting active durable truth blocks
+            # autonomous mutation.
+            contradiction_source = self.retention.context_packet_for_song(
+                song_id,
+                sections=("DURABLE_FACTS",),
+            )
         after = self.retention.store._conn.total_changes
         if before != after:
             raise RuntimeError("context projection source read unexpectedly mutated canonical memory")
 
-        source_digest = self._digest(canonical)
+        source_digest = self._digest(
+            {
+                "selected": canonical,
+                "contradiction_source": contradiction_source,
+            }
+        )
         projected_context: dict[str, Any] = {
             "schema": canonical["schema"],
             "song": canonical["song"],
@@ -221,7 +237,7 @@ class ContextProjectionService:
             elif value is not None:
                 projected_context[output_key] = value
 
-        contradictions = self._durable_contradictions(canonical)
+        contradictions = self._durable_contradictions(contradiction_source)
         source_manifest = [
             {
                 "section": section,
