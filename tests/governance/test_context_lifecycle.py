@@ -134,13 +134,15 @@ class ContextLifecycleGovernanceTests(unittest.TestCase):
         )
 
     def test_fresh_agent_reconstructs_without_prior_chat(self):
+        expected_state = json.loads((ROOT / "governance/current_state.json").read_text())
+        expected_receipt = json.loads((ROOT / "governance/active_receipt.json").read_text())
         with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
             runtime = handoff_mod.build_runtime_handoff(ROOT)
         self.assertFalse(runtime["fresh_agent_requires_prior_chat"])
-        self.assertEqual(runtime["lifecycle"]["state"], "STABLE")
-        self.assertIsNone(runtime["lifecycle"]["active_node"])
-        self.assertIsNone(runtime["lifecycle"]["active_increment"])
-        self.assertEqual(runtime["construction_receipt_status"], "INACTIVE")
+        self.assertEqual(runtime["lifecycle"]["state"], expected_state["lifecycle_state"])
+        self.assertEqual(runtime["lifecycle"]["active_node"], expected_state["active_node"])
+        self.assertEqual(runtime["lifecycle"]["active_increment"], expected_state["active_increment"])
+        self.assertEqual(runtime["construction_receipt_status"], expected_receipt["status"])
         self.assertEqual(runtime["supervision"]["root"], "N0TE-SUPERVISOR")
         self.assertEqual(runtime["supervision"]["context_policy"]["id"], "CTX-LIFECYCLE-001")
         self.assertIn("OPEN_INCIDENTS", runtime["required_reconstruction_outcomes"])
