@@ -1,13 +1,13 @@
 {
-  "schema_version": 7,
+  "schema_version": 8,
   "repository": "syrustkira/N0TE2",
   "delivery": {"type":"pull_request","number":63,"head_branch":"codex/retention-supervision","base_branch":"main","state_source":"GITHUB_RUNTIME"},
   "head_binding": {"mode":"RUNTIME_EXACT","command":"git rev-parse HEAD","ci_env":"N0TE2_HEAD_SHA","committed_head_sha":null,"reason":"A committed file cannot truthfully contain the SHA of the commit that contains itself. Exact head is bound and emitted at runtime."},
   "controller": {"id":"CTRL-CONSTRUCTION-002","role_class":"N0TE_BUILD_HARNESS_COORDINATOR","supervisor":"N0TE-SUPERVISOR","boundary":"Temporary N0TE construction machinery; not N0TE and not the persistent TellMeN0TE + N0TE cloud coordination plane."},
-  "lifecycle": {"state":"STABLE","active_node":null,"active_increment":null},
+  "lifecycle": {"state":"ACTIVE","active_node":"AUDIO-01","active_increment":"AUDIO-01-ENGINEERING-SNAPSHOT-01"},
   "open_incidents": [],
   "canonical_scope": {"source":"N0TE_PRODUCT_DB/SCOPE_LEDGER","range":"REQ-SCOPE-002..REQ-SCOPE-160","retained_requirement_count":159,"build_graph_is_product_scope_owner":false,"canonical_extensions_unselected":["REQ-SCOPE-154","REQ-SCOPE-155","REQ-SCOPE-156","REQ-SCOPE-157","REQ-SCOPE-158","REQ-SCOPE-159","REQ-SCOPE-160"]},
-  "next_admissible_action": "Reconstruct and reconcile the whole TellMeN0TE + N0TE portfolio before selecting new construction. The N0TE build harness is STABLE/dormant and has no active receipt. Preserve all 159 canonical N0TE requirements, including MAPPED REQ-SCOPE-154 through REQ-SCOPE-160, without treating their existence as an instruction to build them next. Evaluate the acceptance evidence spine without collapsing implementation, reachability, consumer acceptance or artist value. Compare dependency-ready N0TE work against current TellMeN0TE outcomes such as release/Creative Lock and public-identity work, then select only the highest-value real outcome. A future N0TE build increment requires an explicit globally selected node/increment plus a fresh bounded receipt. Use executor capability evidence before rediscovering tool limits, preserve unfinished work across turns, and keep the persistent cloud coordination plane separate from the dormant build harness.",
+  "next_admissible_action": "Implement AUDIO-01-ENGINEERING-SNAPSHOT-01 only inside the active receipt on PR #63. Reuse verified SongMaterialMemory, canonical LineageStore and local audition. Add a stdlib-only, read-only engineering snapshot for verified managed integer-PCM WAV material and surface it in the normal Song page beside the exact auditioned asset. Bind every result to Song/Version/Asset/SHA/size/analyzer version; fail truthfully for unsupported or corrupt material; never label RMS as LUFS or measurement as taste. Add unit and consumer reachability tests, then require exact-head Linux/Windows/macOS governance/full regression/consumer smoke plus staff-engineer and red-team review. Do not start AUDIO-02/plugin hosting, mastering automation, references, MonitoringContext or another successor increment by adjacency.",
   "reconstruction": {
     "handoff_first": true,
     "fresh_agent_requires_prior_chat": false,
