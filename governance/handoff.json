@@ -1,13 +1,18 @@
 {
-  "schema_version": 8,
+  "schema_version": 9,
   "repository": "syrustkira/N0TE2",
-  "delivery": {"type":"pull_request","number":63,"head_branch":"codex/retention-supervision","base_branch":"main","state_source":"GITHUB_RUNTIME"},
+  "delivery": {"type":"pull_request","number":63,"head_branch":"codex/retention-supervision","base_branch":"main","state":"merged","merge_commit_sha":"5adbe01657811cc8c3d926a49750605cd0f2496a","state_source":"GITHUB_RUNTIME_AT_RECONCILIATION"},
   "head_binding": {"mode":"RUNTIME_EXACT","command":"git rev-parse HEAD","ci_env":"N0TE2_HEAD_SHA","committed_head_sha":null,"reason":"A committed file cannot truthfully contain the SHA of the commit that contains itself. Exact head is bound and emitted at runtime."},
   "controller": {"id":"CTRL-CONSTRUCTION-002","role_class":"N0TE_BUILD_HARNESS_COORDINATOR","supervisor":"N0TE-SUPERVISOR","boundary":"Temporary N0TE construction machinery; not N0TE and not the persistent TellMeN0TE + N0TE cloud coordination plane."},
   "lifecycle": {"state":"STABLE","active_node":null,"active_increment":null},
-  "open_incidents": ["INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001"],
-  "canonical_scope": {"source":"N0TE_PRODUCT_DB/SCOPE_LEDGER","range":"REQ-SCOPE-002..REQ-SCOPE-160","retained_requirement_count":159,"build_graph_is_product_scope_owner":false,"canonical_extensions_unselected":["REQ-SCOPE-154","REQ-SCOPE-155","REQ-SCOPE-156","REQ-SCOPE-157","REQ-SCOPE-158","REQ-SCOPE-159","REQ-SCOPE-160"]},
-  "next_admissible_action": "First consume exact-head verification for this terminal STABLE transition. UX-01-NOW-THREAD-01 is closed at product head 81d8b2f830a849f7b5a79247bc15b60a52e7e4a8 with workflow run 33706537908 green on Linux, macOS and an unchanged-head Windows rerun; UX-01 is PRESERVED, not DONE. INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains open because the same Windows loopback transport class recurred, but it is cross-cutting reliability evidence rather than an automatically selected successor. Under the user's Continue N0TE intent, reconstruct the complete 159-requirement N0TE scope and compare dependency-ready outcomes globally across UX, Song, Artist, DAW, Audio, platform, operations, trust and the bounded transport-resilience option. Do not extend NOW, UX or Windows work by adjacency. Any future N0TE construction increment requires an explicitly selected node/increment plus a fresh bounded active receipt. Preserve persistent cloud coordination as separate from the dormant build harness.",
+  "derived_runtime_truth": {
+    "lifecycle_source": "governance/current_state.json",
+    "next_admissible_action_source": "governance/current_state.json",
+    "canonical_scope_source": "governance/requirements.json",
+    "open_incidents_source": "governance/incidents.jsonl",
+    "legacy_lifecycle_copy_policy": "Lifecycle remains temporarily mirrored only because check_governance.py still enforces the legacy handoff copy. build_handoff.py derives lifecycle from current_state and treats this copy only as a drift-detection compatibility assertion.",
+    "rule": "Handoff is a reconstruction recipe, not the owner of mutable runtime truth. Next action, canonical scope, and open incidents are no longer copied here."
+  },
   "reconstruction": {
     "handoff_first": true,
     "fresh_agent_requires_prior_chat": false,

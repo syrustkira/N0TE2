@@ -7,6 +7,7 @@
   "active_increment": null,
   "terminal_reason": "UX-01-NOW-THREAD-01 is closed after exact-head run 33706537908 verified head 81d8b2f830a849f7b5a79247bc15b60a52e7e4a8 on Linux, macOS and an unchanged-head Windows rerun, with full regression and staged consumer smoke green. The bounded /now Pick up the thread projection is read-only, uses canonical active Song plus latest Song Session state, creates no new semantic store or authority path, and passed staff-engineer/red-team/consumer/recovery/security/observability/deletion review. UX-01 returns to PRESERVED rather than DONE. The first Windows attempt on this exact head reproduced the previously monitored loopback transport class, so a linked recurrence incident remains open as a cross-cutting reliability signal without being misattributed to the NOW feature. No successor construction was selected by adjacency.",
   "wake_condition": "A globally selected dependency-ready N0TE construction outcome with a fresh bounded active receipt, fresh evidence that justifies a bounded Windows loopback transport-resilience receipt, or contradictory evidence that invalidates this stable closure.",
+  "next_admissible_action": "Globally compare dependency-ready N0TE outcomes across the complete retained scope and select only one justified bounded construction increment with a fresh active receipt. Do not continue any subsystem by adjacency.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -24,18 +25,14 @@
     "construction_must_terminate_at_stability": true
   },
   "truth": [
-    "Canonical main baseline remains 649002eebc6e378026f324df5d04adb3653c8b64; PR #63 remains the single governed delivery lane.",
-    "UX-01-NOW-THREAD-01 is closed. The canonical /now surface now projects the active Song plus the latest open Session objective or last closed Session next action without creating a task database, recommendation engine, new attention store, DAW mutation or provider action.",
-    "The prior stale Drive CURRENT claim for UX-01-INTERACTION-01 / PR #62 was reconciled: its interaction-depth implementation is already present on PR #63 and was not rebuilt.",
-    "Exact product head 81d8b2f830a849f7b5a79247bc15b60a52e7e4a8 passed Linux, macOS and Windows full regression plus staged consumer smoke in workflow run 33706537908; the successful latest jobs are Linux 100497305311, Windows 100497304692 and macOS 100497335420.",
-    "The first Windows attempt on the same exact head failed only in local loopback HTTP transport: one profile-create request timed out and one hostile-Origin Session capture request hit WinError 10053. The unchanged exact head then passed Windows completely, so this evidence does not establish a deterministic NOW, Song-state or authorization defect.",
-    "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 reopens the recurring Windows loopback reliability class because the earlier monitored incident explicitly named future recurrence/increased frequency as a reopening condition. It is cross-cutting reliability evidence, not selected product work by default.",
-    "UX-01 is PRESERVED, not DONE. Closing this increment does not satisfy all UX-01 requirements or unlock SONG-01/ART-01 as completed dependencies.",
-    "The live canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 159 requirements, REQ-SCOPE-002 through REQ-SCOPE-160. The build graph is a bounded construction-selection index, not the product-scope owner.",
-    "REQ-SCOPE-154 through REQ-SCOPE-160 remain retained canonical mapped extensions and are not selected merely because they exist.",
-    "Cross-platform CI proves Build System and bounded Product Health evidence only. Broader Consumer acceptance, Artist value and N0TE completion require separate evidence.",
+    "PR #63 merged into main as merge commit 5adbe01657811cc8c3d926a49750605cd0f2496a. Exact current repository head is runtime-observed rather than committed as self-staling state.",
+    "UX-01-NOW-THREAD-01 is closed; UX-01 remains PRESERVED rather than DONE.",
+    "The canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 159 requirements, REQ-SCOPE-002 through REQ-SCOPE-160. The build graph is a bounded construction-selection index, not the product-scope owner.",
+    "REQ-SCOPE-154 through REQ-SCOPE-160 are retained canonical mapped extensions and are not selected merely because they exist.",
+    "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains open as cross-cutting reliability evidence, not automatically selected product work.",
+    "Cross-platform CI proves bounded Build System and Product Health evidence only; broader Consumer acceptance, Artist value and N0TE completion require separate evidence.",
     "STABLE means no N0TE construction is currently selected. It does not mean N0TE is complete.",
     "One active construction claim is allowed. The persistent TellMeN0TE + N0TE Cloud Control Plane remains separate from the dormant build harness.",
-    "Under the user's Continue N0TE intent, the next move after exact-head verification of this terminal state is a global comparison of dependency-ready N0TE outcomes across the complete retained scope, including but not automatically prioritizing the reopened Windows reliability signal."
+    "Under the user's Continue N0TE intent, the next construction move is global dependency-ready selection across the complete retained scope rather than continuation by subsystem adjacency."
   ]
 }
