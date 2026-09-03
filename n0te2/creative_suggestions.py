@@ -103,6 +103,7 @@ class CreativeSuggestionError(RuntimeError):
 @dataclass(frozen=True)
 class CreativeSuggestion:
     semantic_key: str
+    song_id: str
     distance: str
     dimension: str
     title: str
@@ -184,6 +185,7 @@ class CreativeSuggestionService:
 
         return CreativeSuggestion(
             semantic_key=semantic_key,
+            song_id=song.id,
             distance=mode,
             dimension=dimension,
             title=title,
