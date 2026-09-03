@@ -75,6 +75,12 @@ def _suggestion_card(shell: ConsumerShell) -> str:
     result = getattr(shell, "_creative_suggestion_result", None)
     if result is not None and not isinstance(result, CreativeSuggestion):
         raise ConsumerShellError("creative suggestion shell state is invalid")
+    if result is not None and result.song_id != song.id:
+        # Ephemeral suggestion output is exact-Song context, not a reusable global
+        # recommendation. Drop it when the active Song changes so stale advice can
+        # never masquerade as current context.
+        shell._creative_suggestion_result = None
+        result = None
 
     return (
         '<div class="card"><h2>Suggest something</h2>'
