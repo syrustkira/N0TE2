@@ -12,6 +12,8 @@
   "legacy_test_text_copy_allowed": false,
   "allowed_exact_paths": [
     "n0te2/audio_engineering.py",
+    "n0te2/audio_engineering_shell.py",
+    "n0te2/__init__.py",
     "n0te2/consumer_shell.py",
     "tests/song/test_audio_engineering.py",
     "tests/song/test_song_audio_engineering_consumer.py"
@@ -30,7 +32,7 @@
   "why_now": "The user explicitly reselected N0TE after the prior build harness reached STABLE. AUDIO-01 is dependency-ready, advances the producer/engineer value spine more directly than another controller/UX pass or full cross-format plugin hosting, and reuses existing verified Song bytes, lineage and local audition rather than creating a parallel analyzer product.",
   "reuse": {
     "mode": "EXTEND_VERIFIED_SONG_MATERIAL_AND_AUDITION_WITHOUT_NEW_PERSISTENCE_OR_DSP_PROVIDER",
-    "n0te2_dependencies": ["SongMaterialMemory", "LineageStore", "ConsumerShell", "inspect_audition_media"],
+    "n0te2_dependencies": ["SongMaterialMemory", "LineageStore", "ConsumerShell", "existing idempotent Song shell-extension composition", "inspect_audition_media"],
     "direct_copy": false
   },
   "implementation_contract": {
@@ -39,6 +41,7 @@
     "network_required": false,
     "third_party_runtime_dependency": false,
     "persist_new_semantic_store": false,
+    "consumer_composition": "Install idempotently into the canonical Song page through the repository's established shell-extension composition; do not create a parallel audio dashboard or route.",
     "measurements": ["sample rate", "channels", "bit depth", "duration", "sample peak", "RMS", "crest factor", "DC offset", "stereo correlation when stereo"],
     "provenance_binding": ["song_id", "version_id", "asset_id", "sha256", "source_size_bytes", "analyzer_version"],
     "truthfulness": "Do not label RMS as LUFS, do not infer mastering quality from thresholds, and do not turn signal measurements into artistic prescriptions."
@@ -46,7 +49,7 @@
   "completion_proof": [
     "a verified managed PCM WAV can be analyzed deterministically without loading the entire file into memory",
     "engineering results are bound to exact Song, Version, Asset, SHA-256, byte size and analyzer version",
-    "the normal Song consumer page shows the snapshot beside the exact local material the artist can audition",
+    "the normal Song consumer page shows the snapshot beside the exact current local Version material the artist can audition",
     "the surface clearly distinguishes measurement evidence from taste or approval",
     "unsupported WAV encodings, non-audio material, corrupted material and stale lineage fail truthfully without rebinding to another asset",
     "analysis performs no Song, Version, approval, DAW, provider or file mutation",
