@@ -1,6 +1,10 @@
 {
-  "schema_version": 4,
+  "schema_version": 5,
   "constitutional": [
+    {"id":"INV-N0TE-001","statement":"There is one N0TE: one persistent identity + state + reasoning/decision contract that remembers, understands the active Artist and current work, consults durable memory, acts through interchangeable providers, observes and verifies outcomes, remembers what happened and resumes after interruption without manual reconstruction.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-N0TE-002","statement":"Builder, cloud controller, Drive brain, GitHub, ChatGPT session and DAW are not N0TE. They are replaceable construction machinery, coordination/runtime surfaces, durable substrates, evidence workshops, cognition surfaces and execution providers beneath the one N0TE identity.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-N0TE-003","statement":"The builder may diagnose, repair, replace and extend N0TE components but must never become N0TE, own Artist memory, own product semantics or become a second planning/memory/authority graph.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-N0TE-004","statement":"N0TE continuity must survive provider, process, machine, model, repository, DAW and durable-storage implementation changes so long as canonical identity/state contracts and migration evidence are preserved.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-SUP-001","statement":"Every autonomous actor has a registered supervision parent, purpose, wake condition, observability contract and retirement condition.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-SUP-002","statement":"A dormant automation reactivation is an observable event and cannot silently resume mutation authority.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-SUP-003","statement":"No unjustified persistent loop.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
@@ -9,6 +13,8 @@
     {"id":"INV-LIFE-002","statement":"STABLE, WAITING and BLOCKED are legal terminal controller states with zero ACTIVE construction nodes; re-entry requires a declared trigger and fresh selection.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-LIFE-003","statement":"Construction must terminate at stability.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-SCOPE-001","statement":"Known or incomplete scope does not select itself for work. Selection is explicit, dependency-ready and receipt-bounded.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-SCOPE-002","statement":"The global retained semantic scope must remain whole and lossless even while implementation is dependency-ordered. Accepted scope may not exist only in conversation, and construction indexes/receipts may select subsets without deleting, flattening or forgetting the rest.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
+    {"id":"INV-SCOPE-003","statement":"A newly accepted or recovered requirement is not closed until it is durably retained, semantically deduplicated, classified, mapped to construction affinity or held state, and protected from silent omission by canonical reconciliation.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-EVID-001","statement":"Current observations bind the exact repository head. Prior-head success remains historical evidence only.","authority":"N0TE_SUPERVISION","change_class":"CONSTITUTIONAL"},
     {"id":"INV-HANDOFF-001","statement":"Normal reconstruction starts from the durable handoff and its referenced authority. Historical conversation or PR archaeology is fallback only for missing or contradictory durable authority.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
     {"id":"INV-AUTH-001","statement":"Workers and controllers cannot expand their own authority, redefine parent purpose or silently change constitutional definitions.","authority":"USER_ROOT","change_class":"CONSTITUTIONAL"},
