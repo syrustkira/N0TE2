@@ -5,6 +5,8 @@ from n0te2.creative_suggestions import (
     CREATIVE_DIMENSIONS,
     CreativeSuggestionError,
     CreativeSuggestionService,
+    suggestion_context_anchor,
+    suggestion_item_key,
 )
 from n0te2.memory import HeadquartersMemory
 
@@ -21,6 +23,9 @@ class CreativeSuggestionTests(unittest.TestCase):
             objective="Find a stronger lift into the chorus without rebuilding the whole Song",
         )
         self.service = CreativeSuggestionService(self.hq.store, self.hq.sessions)
+        self.attentive = CreativeSuggestionService(
+            self.hq.store, self.hq.sessions, self.hq.attention_deferrals
+        )
 
     def _counts(self):
         conn = self.hq.store._conn
@@ -41,13 +46,13 @@ class CreativeSuggestionTests(unittest.TestCase):
     def test_same_request_is_deterministic_and_local(self):
         first = self.service.suggest(distance="adjacent", locked_dimensions=("MELODY",))
         second = self.service.suggest(distance="ADJACENT", locked_dimensions=("MELODY",))
-
         self.assertEqual(first, second)
         self.assertEqual(first.source_kind, "DETERMINISTIC_LOCAL")
         self.assertFalse(first.personalized)
         self.assertFalse(first.provider_used)
         self.assertFalse(first.action_authority_granted)
         self.assertEqual(first.song_title, "Suggestion Song")
+        self.assertEqual(first.session_id, self.session.id)
         self.assertEqual(first.session_objective, self.session.objective)
 
     def test_distance_modes_change_semantics_without_claiming_taste(self):
@@ -91,6 +96,68 @@ class CreativeSuggestionTests(unittest.TestCase):
         service = CreativeSuggestionService(empty.store, empty.sessions)
         with self.assertRaisesRegex(CreativeSuggestionError, "Start or select a Song"):
             service.suggest(distance="FAMILIAR")
+
+    def test_real_semantic_deferral_changes_what_n0te_selects(self):
+        first = self.attentive.suggest(distance="ADJACENT")
+        self.hq.attention_deferrals.defer(
+            suggestion_item_key(first.semantic_key),
+            "LATER_THIS_SONG",
+            song_id=self.song.id,
+            anchor=suggestion_context_anchor(self.session.id),
+        )
+        second = self.attentive.suggest(distance="ADJACENT")
+        self.assertNotEqual(second.semantic_key, first.semantic_key)
+
+    def test_later_this_song_expires_when_work_session_changes(self):
+        first = self.attentive.suggest(distance="FAMILIAR")
+        item_key = suggestion_item_key(first.semantic_key)
+        self.hq.attention_deferrals.defer(
+            item_key,
+            "LATER_THIS_SONG",
+            song_id=self.song.id,
+            anchor=suggestion_context_anchor(self.session.id),
+        )
+        hidden = self.attentive.suggest(distance="FAMILIAR")
+        self.assertNotEqual(hidden.semantic_key, first.semantic_key)
+
+        self.hq.sessions.close_session(
+            self.session.id,
+            debrief_summary="Changed context",
+            next_action="Start a fresh pass",
+        )
+        next_session = self.hq.sessions.start_session(
+            song_id=self.song.id,
+            objective="Fresh pass",
+        )
+        self.assertNotEqual(next_session.id, self.session.id)
+        visible_again = self.attentive.suggest(distance="FAMILIAR")
+        self.assertEqual(visible_again.semantic_key, first.semantic_key)
+
+    def test_after_release_requires_explicit_song_release_evidence(self):
+        first = self.attentive.suggest(distance="WILDCARD")
+        self.hq.attention_deferrals.defer(
+            suggestion_item_key(first.semantic_key),
+            "AFTER_RELEASE",
+            song_id=self.song.id,
+        )
+        hidden = self.attentive.suggest(distance="WILDCARD")
+        self.assertNotEqual(hidden.semantic_key, first.semantic_key)
+        released = self.attentive.suggest(
+            distance="WILDCARD", released_song_ids={self.song.id}
+        )
+        self.assertEqual(released.semantic_key, first.semantic_key)
+
+    def test_all_available_suggestions_deferred_fails_closed(self):
+        for allowed in CREATIVE_DIMENSIONS:
+            locked = tuple(item for item in CREATIVE_DIMENSIONS if item != allowed)
+            result = self.attentive.suggest(
+                distance="ADJACENT", locked_dimensions=locked
+            )
+            self.hq.attention_deferrals.defer(
+                suggestion_item_key(result.semantic_key), "NEVER_SUGGEST_AGAIN"
+            )
+        with self.assertRaisesRegex(CreativeSuggestionError, "Every available suggestion is deferred"):
+            self.attentive.suggest(distance="ADJACENT")
 
 
 if __name__ == "__main__":
