@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "ACTIVE",
-  "active_node": "UX-01",
-  "active_increment": "UX-01-NOT-NOW-01",
-  "terminal_reason": null,
-  "wake_condition": "Exact-head implementation, regression, consumer-smoke or review evidence for UX-01-NOT-NOW-01, or contradictory evidence showing the bounded deferral behavior already exists.",
-  "next_admissible_action": "Implement only the demonstrated durable Not Now gap for a real Song suggestion, beginning with later-this-Song semantics. Reuse canonical Lineage/Attention state and existing suggestion semantic keys; do not create a task system or broaden into recommendation learning, presence modes, provider work, or other REQ-SCOPE-140 controls.",
-  "product_code_authorized": true,
+  "lifecycle_state": "STABLE",
+  "active_node": null,
+  "active_increment": null,
+  "terminal_reason": "UX-01-NOT-NOW-01 is exactly-head verified across Linux, Windows and macOS; no further construction is selected by adjacency.",
+  "wake_condition": "Fresh canonical reconciliation demonstrates another dependency-ready missing behavior, or contradictory product/evidence truth requires bounded reactivation.",
+  "next_admissible_action": "Globally reselect from canonical scope and executable product truth. Do not extend Not Now horizons, suggestion controls, or UX-01 merely because they are adjacent to the closed increment.",
+  "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -26,10 +26,11 @@
   },
   "truth": [
     "PR #75 merged as a5fe556dc2e13f05ba2ad23c970e6dc6994270d8 after exact-head cross-platform proof and left construction STABLE.",
-    "Canonical REQ-SCOPE-097 explicitly identifies durable Not Now / deferral semantics as the remaining Attention gap; Focus modes and Focus Sessions already exist and must be reused rather than rebuilt.",
-    "Current main contains a real deterministic Song suggestion object with stable semantic key, but repository probes found no consumer-reachable durable deferral contract or later-this-Song behavior.",
-    "UX-01-NOT-NOW-01 is selected because it is a demonstrated missing behavior and a direct composition seam between existing Attention and Suggestion capabilities.",
-    "The first increment is later-this-Song only: durable across relaunch within the current work Session and automatically eligible again in a distinct later Session. Other deferral horizons remain retained but unselected.",
-    "STABLE will resume after this bounded increment is proved or blocked; no adjacent suggestion work is implied."
+    "Canonical REQ-SCOPE-097 identified durable Not Now / deferral semantics as an Attention gap while preserving existing Focus modes and Focus Sessions.",
+    "UX-01-NOT-NOW-01 implemented only later-this-Song deferral over a real deterministic Song suggestion using canonical LineageStore, Session identity, Activity chronology and existing suggestion semantic keys.",
+    "Exact implementation head da3fea78db19f69de6537a327e8eebb0150a3f8f passed governance, context lifecycle, supervision, full regression and staged consumer smoke on Linux, Windows and macOS in workflow run 33753806106.",
+    "Later-this-Song deferral survives relaunch in the same work Session, becomes eligible again in a distinct later Session, remains Song/profile scoped, and grants no provider, DAW, spend, publication or mutation authority.",
+    "UX-01 remains PRESERVED because other canonical UX requirements remain; closure of this increment does not imply after-release, next-Song, someday, never-suggest-again, More/Less Like This, randomize, templates or presence modes.",
+    "Construction is STABLE and must globally reselect before any further product change."
   ]
 }
