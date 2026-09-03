@@ -189,6 +189,49 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
                 handoff_mod.build_runtime_handoff(repo)
         self.assertIn("cannot carry an ACTIVE construction receipt", str(cm.exception))
 
+    def test_runtime_handoff_does_not_relabel_previous_head_evidence_as_current(self):
+        repo = self.clone()
+        self.stabilize(repo)
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["evidence_classification"] = "VERIFIED_EXACT_HEAD_CROSS_PLATFORM"
+        receipt["evidence_snapshot"] = {
+            "observed_repository_head": "a" * 40,
+            "workflow_run_id": 123,
+            "result": "SUCCESS",
+        }
+        self.write_json(receipt_path, receipt)
+
+        with mock.patch.object(handoff_mod, "git", return_value="b" * 40):
+            runtime = handoff_mod.build_runtime_handoff(repo)
+
+        self.assertEqual(runtime["observed_head_sha"], "b" * 40)
+        self.assertEqual(
+            runtime["construction_receipt_evidence"],
+            {
+                "state": "HISTORICAL_OTHER_HEAD",
+                "observed_head_sha": "a" * 40,
+                "current_checkout_verified": False,
+                "classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
+                "result": "SUCCESS",
+                "workflow_run_id": 123,
+            },
+        )
+
+    def test_runtime_handoff_identifies_current_exact_head_evidence(self):
+        repo = self.clone()
+        self.stabilize(repo)
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["evidence_snapshot"] = {"observed_repository_head": "c" * 40}
+        self.write_json(receipt_path, receipt)
+
+        with mock.patch.object(handoff_mod, "git", return_value="c" * 40):
+            runtime = handoff_mod.build_runtime_handoff(repo)
+
+        self.assertEqual(runtime["construction_receipt_evidence"]["state"], "CURRENT_EXACT_HEAD")
+        self.assertTrue(runtime["construction_receipt_evidence"]["current_checkout_verified"])
+
     def test_active_handoff_requires_matching_active_receipt(self):
         repo = self.clone()
         self.activate_ux01(repo, activate_receipt=False)

@@ -50,6 +50,28 @@ def _step_outcome(name: str) -> dict:
     return {"ran": ran, "outcome": raw or "unreported", "passed": raw == "success"}
 
 
+def classify_receipt_evidence(receipt: dict, observed_head: str) -> dict:
+    """Keep accepted increment evidence distinct from evidence for this checkout."""
+    snapshot = receipt.get("evidence_snapshot")
+    if not isinstance(snapshot, dict):
+        return {
+            "state": "UNRECORDED",
+            "observed_head_sha": None,
+            "current_checkout_verified": False,
+        }
+
+    evidence_head = snapshot.get("observed_repository_head")
+    current = evidence_head == observed_head
+    return {
+        "state": "CURRENT_EXACT_HEAD" if current else "HISTORICAL_OTHER_HEAD",
+        "observed_head_sha": evidence_head,
+        "current_checkout_verified": current,
+        "classification": receipt.get("evidence_classification"),
+        "result": snapshot.get("result"),
+        "workflow_run_id": snapshot.get("workflow_run_id"),
+    }
+
+
 def build_supervision_summary(repo: Path, current: dict) -> dict:
     registry = load_json(repo / "governance/automation_registry.json")
     context_policy = load_json(repo / "governance/context_lifecycle.json")
@@ -192,6 +214,7 @@ def build_runtime_handoff(repo: Path) -> dict:
         "lifecycle": lifecycle,
         "controller": handoff["controller"],
         "construction_receipt_status": receipt_status,
+        "construction_receipt_evidence": classify_receipt_evidence(receipt, head),
         "open_incidents": open_incidents,
         "canonical_scope": canonical_scope,
         "next_admissible_action": next_admissible_action,
@@ -285,6 +308,7 @@ def main() -> int:
                 "N0TE2 HANDOFF: GREEN "
                 f"head={runtime['observed_head_sha']} lifecycle={runtime['lifecycle']['state']} "
                 f"active={runtime['lifecycle'].get('active_node') or '-'} receipt={runtime['construction_receipt_status']} "
+                f"evidence={runtime['construction_receipt_evidence']['state'].lower().replace('_', '-')} "
                 f"actors={len(runtime['supervision']['actors'])}"
             )
         elif not args.output and not args.observation_output:
