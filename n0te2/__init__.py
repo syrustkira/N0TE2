@@ -427,3 +427,7 @@ __all__ += [
 from .audio_engineering_shell import install_song_audio_engineering
 
 install_song_audio_engineering()
+
+from .now_thread_shell import install_now_thread
+
+install_now_thread()
