@@ -1,14 +1,14 @@
 {
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
-  "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "SONG-01-SUGGEST-01 is already implemented and exact-head run 33751234249 verified implementation/merge head f287022d93fad7bd10204a3a67182d52310685cf across Linux, macOS and Windows with full regression and staged consumer smoke green. No demonstrated product defect remains in this bounded increment, so construction stops rather than extending suggestion behavior by adjacency.",
-  "wake_condition": null,
-  "next_admissible_action": "Globally compare dependency-ready retained outcomes against canonical scope and observed product evidence. First prove existing behavior; select a new bounded implementation receipt only for a demonstrated missing behavior. Do not reactivate SONG-01 suggestion work merely because related scope remains retained.",
-  "product_code_authorized": false,
+  "construction_phase": "3 PRODUCT SHELL",
+  "lifecycle_state": "ACTIVE",
+  "active_node": "UX-01",
+  "active_increment": "UX-01-NOT-NOW-SUGGESTIONS-01",
+  "terminal_reason": null,
+  "wake_condition": "Exact-head implementation, regression, consumer-smoke or review evidence for UX-01-NOT-NOW-SUGGESTIONS-01, or contradictory evidence that invalidates its bounded scope.",
+  "next_admissible_action": "Verify and repair only durable reversible Not Now over the real Song-suggestion semantic objects. After closure, return UX-01 to PRESERVED and continue the user-selected SONG-01 step before global reselection.",
+  "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -25,11 +25,14 @@
     "construction_must_terminate_at_stability": true
   },
   "truth": [
-    "Historical verified SONG-01-SUGGEST-01 implementation head f287022d93fad7bd10204a3a67182d52310685cf contains the merged bounded implementation; current repository main must be reconstructed from live GitHub/runtime evidence.",
-    "GitHub Actions run 33751234249 verified that implementation head on Linux, macOS and Windows with governance, full regression and staged consumer smoke green.",
+    "Verified main baseline a5fe556dc2e13f05ba2ad23c970e6dc6994270d8 includes the already-proven real Song suggestion capability and the PR #75 governance deduplication closure.",
+    "UX-01-NOT-NOW-SUGGESTIONS-01 is the sole active construction increment; mutable delivery state remains owned by GitHub runtime and governance/handoff.json records only its delivery reference.",
+    "Canonical REQ-SCOPE-097 retains five Not Now horizons: later this Song, after release, next Song, someday and never suggest again. Focus itself is already implemented and must not be rebuilt.",
+    "Not Now composes with real suggestion semantic objects and canonical Attention memory; the deferral ledger owns suppression instructions only, never suggestion/job content.",
+    "After release is fail-closed. Current N0TE2 has no canonical Song-release completion source, so only exact explicit Song-release evidence supplied to the consumer/service contract can expire that horizon; unrelated app/package or Song release evidence cannot.",
     "The canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 159 requirements, REQ-SCOPE-002 through REQ-SCOPE-160; retained scope does not itself select construction work.",
-    "UX-01 and SONG-01 remain retained product scope, and CONV-01 still requires both before final convergence.",
-    "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains open as cross-cutting reliability evidence and is not automatically selected product work.",
-    "STABLE means no N0TE construction is currently justified or selected; it does not mean N0TE is complete."
+    "SONG-01 remains PRESERVED during this bounded UX-01 increment. UX-01 itself remains broader than this one increment and is not DONE.",
+    "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains cross-cutting reliability evidence and is not automatically selected product work.",
+    "One active construction claim is allowed; runtime liveness and PR state are queried from their runtime owners rather than committed as mutable registry truth."
   ]
 }

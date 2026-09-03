@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .activity import ActivityLog
 from .attention import AttentionMemory
+from .attention_deferral import AttentionDeferralMemory
 from .capability_evidence import CapabilityEvidenceMemory
 from .context import ContextIsolationService
 from .context_lifecycle import ContextProjectionService
@@ -38,6 +39,7 @@ class HeadquartersMemory:
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
         self.attention = AttentionMemory(store)
+        self.attention_deferrals = AttentionDeferralMemory(self.attention)
         self.workspaces = WorkspaceMemory(store)
         self.capability_evidence = CapabilityEvidenceMemory(store, self.workspaces)
         self.shadow = HostShadow(store, self.workspaces)

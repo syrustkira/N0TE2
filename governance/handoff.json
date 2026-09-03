@@ -3,8 +3,8 @@
   "repository": "syrustkira/N0TE2",
   "delivery": {
     "type": "pull_request",
-    "number": 74,
-    "role": "LAST_TRACKED_DELIVERY_REFERENCE",
+    "number": 77,
+    "role": "CURRENT_TRACKED_DELIVERY_REFERENCE",
     "runtime_state_source": "GITHUB_RUNTIME",
     "runtime_state_not_committed": true
   },
