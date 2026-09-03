@@ -7,6 +7,7 @@
   "active_increment": null,
   "terminal_reason": "UX-01-NOW-THREAD-01 is closed after exact-head run 33706537908 verified head 81d8b2f830a849f7b5a79247bc15b60a52e7e4a8 on Linux, macOS and an unchanged-head Windows rerun, with full regression and staged consumer smoke green. The bounded /now Pick up the thread projection is read-only, uses canonical active Song plus latest Song Session state, creates no new semantic store or authority path, and passed staff-engineer/red-team/consumer/recovery/security/observability/deletion review. UX-01 returns to PRESERVED rather than DONE. The first Windows attempt on this exact head reproduced the previously monitored loopback transport class, so a linked recurrence incident remains open as a cross-cutting reliability signal without being misattributed to the NOW feature. No successor construction was selected by adjacency.",
   "wake_condition": "A globally selected dependency-ready N0TE construction outcome with a fresh bounded active receipt, fresh evidence that justifies a bounded Windows loopback transport-resilience receipt, or contradictory evidence that invalidates this stable closure.",
+  "next_admissible_action": "Globally compare dependency-ready N0TE outcomes across the complete retained scope and select only one justified bounded construction increment with a fresh active receipt. Do not continue any subsystem by adjacency.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
