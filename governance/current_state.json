@@ -5,7 +5,7 @@
   "lifecycle_state": "STABLE",
   "active_node": null,
   "active_increment": null,
-  "terminal_reason": "SONG-01-SUGGEST-01 is already implemented on main and exact-head run 33751234249 verified merge head f287022d93fad7bd10204a3a67182d52310685cf across Linux, macOS and Windows with full regression and staged consumer smoke green. No demonstrated product defect remains in this bounded increment, so construction stops rather than extending suggestion behavior by adjacency.",
+  "terminal_reason": "SONG-01-SUGGEST-01 is already implemented and exact-head run 33751234249 verified implementation/merge head f287022d93fad7bd10204a3a67182d52310685cf across Linux, macOS and Windows with full regression and staged consumer smoke green. No demonstrated product defect remains in this bounded increment, so construction stops rather than extending suggestion behavior by adjacency.",
   "wake_condition": null,
   "next_admissible_action": "Globally compare dependency-ready retained outcomes against canonical scope and observed product evidence. First prove existing behavior; select a new bounded implementation receipt only for a demonstrated missing behavior. Do not reactivate SONG-01 suggestion work merely because related scope remains retained.",
   "product_code_authorized": false,
@@ -25,8 +25,8 @@
     "construction_must_terminate_at_stability": true
   },
   "truth": [
-    "Exact main head f287022d93fad7bd10204a3a67182d52310685cf contains the merged SONG-01-SUGGEST-01 implementation.",
-    "GitHub Actions run 33751234249 verified that exact head on Linux, macOS and Windows with governance, full regression and staged consumer smoke green.",
+    "Historical verified SONG-01-SUGGEST-01 implementation head f287022d93fad7bd10204a3a67182d52310685cf contains the merged bounded implementation; current repository main must be reconstructed from live GitHub/runtime evidence.",
+    "GitHub Actions run 33751234249 verified that implementation head on Linux, macOS and Windows with governance, full regression and staged consumer smoke green.",
     "The canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 159 requirements, REQ-SCOPE-002 through REQ-SCOPE-160; retained scope does not itself select construction work.",
     "UX-01 and SONG-01 remain retained product scope, and CONV-01 still requires both before final convergence.",
     "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains open as cross-cutting reliability evidence and is not automatically selected product work.",
