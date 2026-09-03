@@ -4,12 +4,14 @@
   "delivery": {"type":"merged_pull_request","number":63,"head_branch":"codex/retention-supervision","base_branch":"main","merge_commit_sha":"5adbe01657811cc8c3d926a49750605cd0f2496a","state_source":"GITHUB_RUNTIME_AT_RECONCILIATION"},
   "head_binding": {"mode":"RUNTIME_EXACT","command":"git rev-parse HEAD","ci_env":"N0TE2_HEAD_SHA","committed_head_sha":null,"reason":"A committed file cannot truthfully contain the SHA of the commit that contains itself. Exact head is bound and emitted at runtime."},
   "controller": {"id":"CTRL-CONSTRUCTION-002","role_class":"N0TE_BUILD_HARNESS_COORDINATOR","supervisor":"N0TE-SUPERVISOR","boundary":"Temporary N0TE construction machinery; not N0TE and not the persistent TellMeN0TE + N0TE cloud coordination plane."},
+  "lifecycle": {},
   "derived_runtime_truth": {
     "lifecycle_source": "governance/current_state.json",
     "next_admissible_action_source": "governance/current_state.json",
     "canonical_scope_source": "governance/requirements.json",
     "open_incidents_source": "governance/incidents.jsonl",
-    "rule": "Handoff is a reconstruction recipe, not a second mutable state database. Runtime output derives these values from their canonical owners."
+    "legacy_lifecycle_copy_policy": "The empty lifecycle object is a compatibility hook only. Runtime ignores it as an authority source; if legacy callers populate lifecycle fields, they must exactly match current_state or reconstruction fails.",
+    "rule": "Handoff is a reconstruction recipe, not a second mutable state database. Runtime output derives mutable values from their canonical owners."
   },
   "reconstruction": {
     "handoff_first": true,
