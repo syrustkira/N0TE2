@@ -122,8 +122,8 @@ class CreativeSuggestionService:
 
     Suggestions remain provider-free and mutation-free. When canonical Attention
     deferrals are supplied, the service excludes semantically deferred ideas before
-    choosing a prompt. The shell therefore cannot bypass Not Now by merely
-    re-rendering or requesting the same deterministic variation again.
+    choosing a prompt. With no applicable deferral, selection is byte-for-byte the
+    same deterministic path introduced by SONG-01-SUGGEST-01.
     """
 
     def __init__(
@@ -204,20 +204,25 @@ class CreativeSuggestionService:
         if not dimensions:
             raise CreativeSuggestionError("Every creative dimension is locked. Unlock at least one dimension to vary the Song.")
 
-        candidates = [
-            (dimension, semantic_key, title, prompts)
-            for dimension in dimensions
-            for semantic_key, title, prompts in _CATALOG[dimension]
-        ]
         material = "|".join(
             (song.id, session_id or "", objective or "", mode, ",".join(locks), str(variation))
         ).encode("utf-8")
         digest = hashlib.sha256(material).digest()
-        start = int.from_bytes(digest[:8], "big") % len(candidates)
+        first_dimension_index = int.from_bytes(digest[:4], "big") % len(dimensions)
+
+        candidates = []
+        for dimension_offset in range(len(dimensions)):
+            dimension = dimensions[(first_dimension_index + dimension_offset) % len(dimensions)]
+            entries = _CATALOG[dimension]
+            first_entry_index = int.from_bytes(digest[4:8], "big") % len(entries)
+            for entry_offset in range(len(entries)):
+                semantic_key, title, prompts = entries[
+                    (first_entry_index + entry_offset) % len(entries)
+                ]
+                candidates.append((dimension, semantic_key, title, prompts))
 
         selected = None
-        for offset in range(len(candidates)):
-            candidate = candidates[(start + offset) % len(candidates)]
+        for candidate in candidates:
             if not self._is_deferred(
                 candidate[1],
                 song_id=song.id,
