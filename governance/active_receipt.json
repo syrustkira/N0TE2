@@ -1,12 +1,12 @@
 {
   "schema_version": 7,
-  "status": "ACTIVE",
+  "status": "INACTIVE",
   "receipt_id": "N0TE2-SONG-01-SUGGEST-01",
   "node_id": "SONG-01",
   "increment_id": "SONG-01-SUGGEST-01",
   "baseline_sha": "c527c70098735be33146ae78d5fe47c20045eda2",
   "purpose": "Give the active Song one real, bounded, deterministic AI-off creative suggestion surface so the artist can ask for a small, adjacent, or deliberately contrasting experiment while locking dimensions they do not want varied. This establishes a truthful suggestion object for later Not Now/suppression work without inventing a task system, Artist World personalization, provider authority or DAW mutation.",
-  "product_code_allowed": true,
+  "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
@@ -28,7 +28,7 @@
     "enables": ["REQ-SCOPE-097 durable Not Now over real suggestions","later controlled randomize and reversible suppression"],
     "increment": "SONG-01-SUGGEST-01"
   },
-  "why_now": "PR #72 repaired the coarse construction dependency that incorrectly required all cross-cutting UX-01 work to finish before SONG-01, while CONV-01 still requires both UX and Song. Canonical SCOPE_LEDGER reconciliation shows REQ-SCOPE-097 Not Now needs real N0TE suggestions/jobs, and REQ-SCOPE-140 under SONG-01 owns that creative suggestion lifecycle. Current main has template/recipe planning foundations but no consumer Familiar/Adjacent/Wildcard suggestion surface or durable suggestion object. This bounded slice creates the smallest truthful prerequisite instead of manufacturing fake deferred tasks.",
+  "why_now": "PR #72 repaired the coarse construction dependency that incorrectly required all cross-cutting UX-01 work to finish before SONG-01, while CONV-01 still requires both UX and Song. Canonical SCOPE_LEDGER reconciliation shows REQ-SCOPE-097 Not Now needs real N0TE suggestions/jobs, and REQ-SCOPE-140 under SONG-01 owns that creative suggestion lifecycle. This bounded slice supplied the smallest truthful prerequisite instead of manufacturing fake deferred tasks.",
   "reuse": {
     "mode": "PURE_SONG_SESSION_CONTEXT_PLUS_MODULAR_CONSUMER_EXTENSION",
     "n0te2_dependencies": ["LineageStore.active_song","SessionMemory.latest_for_song","HeadquartersMemory","ConsumerShell existing Host/Origin/CSRF/one-shot authority"],
@@ -61,13 +61,15 @@
     "visible copy says no AI/provider was called, no project was changed, and the prompt is not a diagnosis of what the Song needs",
     "internal semantic suggestion keys and Song/session IDs are not exposed in normal rendered markup",
     "suggestion result is ephemeral and does not survive shell relaunch",
-    "full regression and staged consumer smoke pass on Linux, Windows and macOS at the exact implementation head"
+    "full regression and staged consumer smoke pass on Linux, Windows and macOS at the exact merged implementation head"
   ],
-  "evidence_classification": "UNOBSERVED",
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
   "evidence_snapshot": {
-    "observed_repository_head": "fea2487f32cbb2cc3184b1c3086c6e43d28ac185",
-    "workflow_run_id": null,
-    "execution_note": "Product code and authored tests exist on PR #74, but exact-head execution after governance activation has not yet been observed."
+    "observed_repository_head": "f287022d93fad7bd10204a3a67182d52310685cf",
+    "workflow_run_id": 33751234249,
+    "result": "SUCCESS",
+    "platforms": ["Linux","Windows","macOS"],
+    "execution_note": "Exact merged head passed construction governance, context governance, supervision, full regression and staged consumer smoke on Linux, Windows and macOS. No demonstrated product defect remains in SONG-01-SUGGEST-01."
   },
   "non_scope": [
     "Artist World or taste personalization",
@@ -82,5 +84,5 @@
     "marking SONG-01 DONE",
     "Gate-B acceptance"
   ],
-  "next_selection_rule": "After exact-head closure, return SONG-01 to PRESERVED and globally reselect. Do not extend suggestion behavior by adjacency; use the new real suggestion object only if whole-product selection next justifies controlled randomize, suppression, Not Now, Artist World composition, or another higher-value outcome."
+  "next_selection_rule": "This increment is closed. Keep SONG-01 PRESERVED and globally reselect only after proving existing behavior against canonical scope. Create another implementation receipt only for a demonstrated missing behavior."
 }
