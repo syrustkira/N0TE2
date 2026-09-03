@@ -400,3 +400,34 @@ __all__ += [
     "SongFrictionJourney",
     "StaleFrictionJourneyError",
 ]
+
+from .interaction_depth import (
+    INTERACTION_DEPTH_MODES,
+    InteractionDepthBinding,
+    InteractionDepthError,
+    InteractionDepthPlan,
+    InteractionDepthService,
+    InteractionPlanStep,
+    StaleInteractionDepthError,
+)
+from .interaction_depth_shell import install_song_interaction_depth
+
+install_song_interaction_depth()
+
+__all__ += [
+    "INTERACTION_DEPTH_MODES",
+    "InteractionDepthBinding",
+    "InteractionDepthError",
+    "InteractionDepthPlan",
+    "InteractionDepthService",
+    "InteractionPlanStep",
+    "StaleInteractionDepthError",
+]
+
+from .audio_engineering_shell import install_song_audio_engineering
+
+install_song_audio_engineering()
+
+from .now_thread_shell import install_now_thread
+
+install_now_thread()

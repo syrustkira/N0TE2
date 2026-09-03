@@ -33,6 +33,66 @@ class GovernanceRegressionTests(unittest.TestCase):
         if needle:
             self.assertIn(needle, str(cm.exception))
 
+    def activate_ux01(self, repo):
+        state_path = repo / "governance/current_state.json"
+        state = json.loads(state_path.read_text())
+        state.update(
+            {
+                "lifecycle_state": "ACTIVE",
+                "active_node": "UX-01",
+                "active_increment": "UX-01-CONTEXT-LIFECYCLE-01",
+                "terminal_reason": None,
+                "wake_condition": None,
+                "product_code_authorized": True,
+                "legacy_admission_authorized": False,
+            }
+        )
+        self.write_json(state_path, state)
+
+        graph_path = repo / "governance/completion_graph.json"
+        graph = json.loads(graph_path.read_text())
+        for node in graph["nodes"]:
+            if node["state"] == "ACTIVE":
+                node["state"] = "PRESERVED"
+            if node["id"] == "UX-01":
+                node["state"] = "ACTIVE"
+        self.write_json(graph_path, graph)
+
+        handoff_path = repo / "governance/handoff.json"
+        handoff = json.loads(handoff_path.read_text())
+        handoff["lifecycle"] = {
+            "state": "ACTIVE",
+            "active_node": "UX-01",
+            "active_increment": "UX-01-CONTEXT-LIFECYCLE-01",
+        }
+        self.write_json(handoff_path, handoff)
+
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt.update(
+            {
+                "status": "ACTIVE",
+                "node_id": "UX-01",
+                "increment_id": "UX-01-CONTEXT-LIFECYCLE-01",
+                "receipt_id": "N0TE2-UX-01-CONTEXT-LIFECYCLE-01",
+                "product_code_allowed": True,
+                "legacy_admission_allowed": False,
+                "legacy_source_copy_allowed": False,
+                "legacy_test_text_copy_allowed": False,
+            }
+        )
+        self.write_json(receipt_path, receipt)
+
+        automation_path = repo / "governance/automation_registry.json"
+        automation = json.loads(automation_path.read_text())
+        controller = next(
+            row
+            for row in automation["actors"]
+            if row["id"] == "AUTO-CONSTRUCTION-CONTROLLER-001"
+        )
+        controller["lifecycle"]["state"] = "ACTIVE"
+        self.write_json(automation_path, automation)
+
     def test_current_contract_is_green_without_git(self):
         gov.run(ROOT, verify_git=False)
 
@@ -118,10 +178,28 @@ class GovernanceRegressionTests(unittest.TestCase):
         p = repo / "governance/completion_graph.json"
         d = json.loads(p.read_text())
         for n in d["nodes"]:
-            reqs = [r for r in gov.expand_requirement_expr(n.get("requirements", "")) if r != "REQ-SCOPE-002"]
+            reqs = [
+                r
+                for r in gov.expand_requirement_expr(n.get("requirements", ""))
+                if r != "REQ-SCOPE-002"
+            ]
             n["requirements"] = ",".join(r.rsplit("-", 1)[1] for r in reqs)
         self.write_json(p, d)
         self.assert_red(repo, "orphan active requirements")
+
+    def test_canonical_scope_can_exceed_build_graph_without_being_selected(self):
+        doc = json.loads((ROOT / "governance/requirements.json").read_text())
+        self.assertEqual(doc["sequence_role"], "BUILD_GRAPH_INDEX")
+        self.assertEqual(doc["sequence"], {"start": 2, "end": 153})
+        self.assertEqual(doc["canonical_scope"]["end"], 160)
+        self.assertEqual(doc["canonical_scope"]["retained_requirement_count"], 159)
+        extensions = doc["canonical_extensions"]
+        self.assertEqual(
+            [row["id"] for row in extensions],
+            [f"REQ-SCOPE-{n:03d}" for n in range(154, 161)],
+        )
+        self.assertTrue(all(row["state"] == "MAPPED" for row in extensions))
+        self.assertTrue(all(row["selected"] is False for row in extensions))
 
     def test_stale_product_north_star_cannot_be_current_authority(self):
         repo = self.clone()
@@ -141,6 +219,7 @@ class GovernanceRegressionTests(unittest.TestCase):
 
     def test_core_receipt_must_explicitly_authorize_product_code(self):
         repo = self.clone()
+        self.activate_ux01(repo)
         p = repo / "governance/active_receipt.json"
         d = json.loads(p.read_text())
         d["product_code_allowed"] = False
@@ -149,6 +228,7 @@ class GovernanceRegressionTests(unittest.TestCase):
 
     def test_core_receipt_cannot_reopen_legacy_copy(self):
         repo = self.clone()
+        self.activate_ux01(repo)
         p = repo / "governance/active_receipt.json"
         d = json.loads(p.read_text())
         d["legacy_source_copy_allowed"] = True
@@ -157,32 +237,75 @@ class GovernanceRegressionTests(unittest.TestCase):
 
     def test_receipt_rejects_unselected_product_path_change(self):
         repo = self.clone()
-        subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=repo, check=True)
-        subprocess.run(["git", "config", "user.name", "N0TE2 Test"], cwd=repo, check=True)
-        subprocess.run(["git", "add", "README.md"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-m", "seed"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
-        baseline = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
-        rp = repo / "governance/active_receipt.json"
-        receipt = json.loads(rp.read_text())
-        receipt["baseline_sha"] = baseline
-        self.write_json(rp, receipt)
+        self.activate_ux01(repo)
         subprocess.run(
-            ["git", "add", "governance", "tests", ".github", "AGENTS.md", ".gitignore", "n0te2"],
+            ["git", "init", "-b", "main"],
             cwd=repo,
             check=True,
             stdout=subprocess.DEVNULL,
         )
-        subprocess.run(["git", "commit", "-m", "selected core slice"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.invalid"],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "user.name", "N0TE2 Test"],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "maintenance.auto", "false"],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "config", "gc.auto", "0"],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+        subprocess.run(
+            ["git", "commit", "-m", "seed complete repository"],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        baseline = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo,
+            text=True,
+        ).strip()
+        rp = repo / "governance/active_receipt.json"
+        receipt = json.loads(rp.read_text())
+        active = receipt["node_id"]
+        receipt["baseline_sha"] = baseline
+        self.write_json(rp, receipt)
+        subprocess.run(
+            ["git", "add", "governance/active_receipt.json"],
+            cwd=repo,
+            check=True,
+        )
+        subprocess.run(
+            ["git", "commit", "-m", "bind synthetic receipt baseline"],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
         gov.run(repo, verify_git=True)
 
-        (repo / "src").mkdir()
+        (repo / "src").mkdir(exist_ok=True)
         (repo / "src/product.py").write_text("print('outside selected slice')\n")
         subprocess.run(["git", "add", "src/product.py"], cwd=repo, check=True)
-        subprocess.run(["git", "commit", "-m", "bad adjacent product change"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
+        subprocess.run(
+            ["git", "commit", "-m", "bad adjacent product change"],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
         with self.assertRaises(gov.GovernanceError) as cm:
             gov.run(repo, verify_git=True)
-        self.assertIn("outside CORE-01 receipt", str(cm.exception))
+        self.assertIn(f"outside {active} receipt", str(cm.exception))
 
 
 if __name__ == "__main__":

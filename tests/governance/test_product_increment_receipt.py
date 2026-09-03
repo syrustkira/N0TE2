@@ -29,8 +29,69 @@ class ProductIncrementReceiptTests(unittest.TestCase):
     def write(path, data):
         path.write_text(json.dumps(data, indent=2) + "\n")
 
+    def activate_ux01(self, repo):
+        state_path = repo / "governance/current_state.json"
+        state = json.loads(state_path.read_text())
+        state.update(
+            {
+                "lifecycle_state": "ACTIVE",
+                "active_node": "UX-01",
+                "active_increment": "UX-01-CONTEXT-LIFECYCLE-01",
+                "terminal_reason": None,
+                "wake_condition": None,
+                "product_code_authorized": True,
+                "legacy_admission_authorized": False,
+            }
+        )
+        self.write(state_path, state)
+
+        graph_path = repo / "governance/completion_graph.json"
+        graph = json.loads(graph_path.read_text())
+        for node in graph["nodes"]:
+            if node["state"] == "ACTIVE":
+                node["state"] = "PRESERVED"
+            if node["id"] == "UX-01":
+                node["state"] = "ACTIVE"
+        self.write(graph_path, graph)
+
+        handoff_path = repo / "governance/handoff.json"
+        handoff = json.loads(handoff_path.read_text())
+        handoff["lifecycle"] = {
+            "state": "ACTIVE",
+            "active_node": "UX-01",
+            "active_increment": "UX-01-CONTEXT-LIFECYCLE-01",
+        }
+        self.write(handoff_path, handoff)
+
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt.update(
+            {
+                "status": "ACTIVE",
+                "node_id": "UX-01",
+                "increment_id": "UX-01-CONTEXT-LIFECYCLE-01",
+                "receipt_id": "N0TE2-UX-01-CONTEXT-LIFECYCLE-01",
+                "product_code_allowed": True,
+                "legacy_admission_allowed": False,
+                "legacy_source_copy_allowed": False,
+                "legacy_test_text_copy_allowed": False,
+            }
+        )
+        self.write(receipt_path, receipt)
+
+        automation_path = repo / "governance/automation_registry.json"
+        automation = json.loads(automation_path.read_text())
+        controller = next(
+            row
+            for row in automation["actors"]
+            if row["id"] == "AUTO-CONSTRUCTION-CONTROLLER-001"
+        )
+        controller["lifecycle"]["state"] = "ACTIVE"
+        self.write(automation_path, automation)
+
     def test_receipt_increment_must_match_current_increment(self):
         repo = self.clone()
+        self.activate_ux01(repo)
         path = repo / "governance/active_receipt.json"
         receipt = json.loads(path.read_text())
         receipt["increment_id"] = "WRONG-INCREMENT"
@@ -41,6 +102,7 @@ class ProductIncrementReceiptTests(unittest.TestCase):
 
     def test_increment_cannot_claim_a_different_parent_node(self):
         repo = self.clone()
+        self.activate_ux01(repo)
         state_path = repo / "governance/current_state.json"
         receipt_path = repo / "governance/active_receipt.json"
         state = json.loads(state_path.read_text())
@@ -57,6 +119,7 @@ class ProductIncrementReceiptTests(unittest.TestCase):
 
     def test_active_increment_is_explicitly_parent_bound(self):
         repo = self.clone()
+        self.activate_ux01(repo)
         state = json.loads((repo / "governance/current_state.json").read_text())
         increment = str(state["active_increment"])
         self.assertTrue(

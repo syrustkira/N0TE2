@@ -6,6 +6,7 @@ from .activity import ActivityLog
 from .attention import AttentionMemory
 from .capability_evidence import CapabilityEvidenceMemory
 from .context import ContextIsolationService
+from .context_lifecycle import ContextProjectionService
 from .evidence import EvidenceMemory
 from .focus import FocusContextService
 from .friction import FrictionMemory
@@ -18,6 +19,7 @@ from .operations import OperationJournal
 from .provenance import ProvenanceLedger
 from .reconcile import ReconciliationService
 from .recovery import RecoveryManager
+from .retention import SongRetentionService
 from .session import SessionMemory
 from .shadow import HostShadow
 from .skills import SkillMemory
@@ -61,14 +63,42 @@ class HeadquartersMemory:
         self.knowledge = TwinAwareSongKnowledgeMapService(
             SongKnowledgeMapService(store), self.evidence
         )
+        self.retention = SongRetentionService(
+            store,
+            self.evidence,
+            self.context,
+            self.sessions,
+            self.learning,
+            self.success,
+            self.friction,
+            self.skills,
+            self.activity,
+        )
+        self.context_projection = ContextProjectionService(self.retention)
+        # Shell installation is intentionally lazy. Headquarters instances are
+        # constructed only after package import, avoiding a consumer_shell <->
+        # memory import cycle while keeping the artist-facing projection attached
+        # to the same canonical memory composition root.
+        from .retention_shell import install_song_retention
+
+        install_song_retention()
+
+    @classmethod
+    def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
+        """Transfer store ownership only after the full composition root succeeds."""
+        try:
+            return cls(store)
+        except BaseException:
+            store.close()
+            raise
 
     @classmethod
     def create(cls, root: str | Path, artist_name: str) -> "HeadquartersMemory":
-        return cls(LineageStore.create(root, artist_name))
+        return cls._compose_owned_store(LineageStore.create(root, artist_name))
 
     @classmethod
     def open(cls, root: str | Path, profile_id: str) -> "HeadquartersMemory":
-        return cls(LineageStore.open(root, profile_id))
+        return cls._compose_owned_store(LineageStore.open(root, profile_id))
 
     def close(self) -> None:
         self.store.close()

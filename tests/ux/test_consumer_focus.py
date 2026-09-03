@@ -126,6 +126,14 @@ def profile_with_song(root: Path, artist: str, song: str) -> tuple[str, str]:
         headquarters.close()
 
 
+def focus_state(data_root: Path, profile_id: str):
+    headquarters = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        return headquarters.attention.active_focus(), headquarters.attention.history()
+    finally:
+        headquarters.close()
+
+
 def test_consumer_can_set_switch_end_and_relaunch_durable_focus(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
@@ -157,7 +165,7 @@ def test_consumer_can_set_switch_end_and_relaunch_durable_focus(tmp_path: Path) 
     assert "Focused Song:" in focused
     assert "Focus Song" in focused
     assert "focus_" not in focused
-    active = shell.runtime.headquarters.attention.active_focus()
+    active, _ = focus_state(data_root, profile_id)
     assert active is not None
     assert active.mode == "MAKE"
     assert active.song_id == song_id
@@ -172,11 +180,10 @@ def test_consumer_can_set_switch_end_and_relaunch_durable_focus(tmp_path: Path) 
     manage_form = choose_focus(now, "Manage")
     status, _ = post_form(shell, manage_form)
     assert status == 303
-    active = shell.runtime.headquarters.attention.active_focus()
+    active, history = focus_state(data_root, profile_id)
     assert active is not None
     assert active.mode == "MANAGE"
     assert active.song_id is None
-    history = shell.runtime.headquarters.attention.history()
     assert len(history) == 2
     assert history[0].mode == "MAKE"
     assert history[0].state == "ENDED"
@@ -191,9 +198,9 @@ def test_consumer_can_set_switch_end_and_relaunch_durable_focus(tmp_path: Path) 
         probe=Probe(),
     )
     relaunched.start()
-    assert relaunched.runtime.profile_id == profile_id
     status, resumed = request(relaunched, "/now")
     assert status == 200
+    assert relaunched.runtime.profile_id == profile_id
     assert "Manage Focus active" in resumed
     assert "Scope: your Artist Headquarters." in resumed
 
@@ -201,7 +208,8 @@ def test_consumer_can_set_switch_end_and_relaunch_durable_focus(tmp_path: Path) 
     assert len(end_forms) == 1
     status, _ = post_form(relaunched, end_forms[0])
     assert status == 303
-    assert relaunched.runtime.headquarters.attention.active_focus() is None
+    active, _ = focus_state(data_root, profile_id)
+    assert active is None
     status, open_now = request(relaunched, "/now")
     assert "No Focus Session active" in open_now
     assert "Manage Focus" not in open_now
@@ -211,7 +219,7 @@ def test_consumer_can_set_switch_end_and_relaunch_durable_focus(tmp_path: Path) 
 def test_focus_write_rejects_foreign_origin_and_one_shot_replay(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    profile_with_song(data_root, "Authority Artist", "Authority Song")
+    profile_id, _ = profile_with_song(data_root, "Authority Artist", "Authority Song")
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
@@ -224,13 +232,14 @@ def test_focus_write_rejects_foreign_origin_and_one_shot_replay(tmp_path: Path) 
     finish_form = choose_focus(now, "Finish")
     status, _ = post_form(shell, finish_form, origin="https://attacker.example")
     assert status == 403
-    assert shell.runtime.headquarters.attention.active_focus() is None
+    active, _ = focus_state(data_root, profile_id)
+    assert active is None
 
     status, _ = post_form(shell, finish_form)
     assert status == 303
     status, _ = post_form(shell, finish_form)
     assert status == 409
-    history = shell.runtime.headquarters.attention.history()
+    _, history = focus_state(data_root, profile_id)
     assert len(history) == 1
     assert history[0].mode == "FINISH"
     quit_shell(shell)
@@ -268,5 +277,6 @@ def test_focus_history_isolated_between_artist_profiles(tmp_path: Path) -> None:
     assert "No Focus Session active" in now
     assert "Make Focus" not in now
     assert "Alpha Song" not in now
-    assert shell.runtime.headquarters.attention.history() == ()
+    _, history = focus_state(data_root, profile_b)
+    assert history == ()
     quit_shell(shell)

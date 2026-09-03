@@ -1,64 +1,88 @@
 {
-  "schema_version": 3,
-  "receipt_id": "N0TE2-SONG-01-FRICTION-01",
-  "node_id": "SONG-01",
-  "increment_id": "SONG-01-FRICTION-01",
-  "baseline_sha": "9fe53a01a58dd5c6f2420721fa239c4405542fff",
-  "purpose": "Expose canonical FrictionMemory through the normal Song learning journey so the artist can explicitly record a blocker against a real Learning episode, inspect Song-scoped friction history, and see recurring blockers only when the same explicit key is evidenced across multiple distinct work Sessions.",
-  "product_code_allowed": true,
+  "schema_version": 7,
+  "status": "INACTIVE",
+  "receipt_id": "N0TE2-UX-01-NOW-THREAD-01",
+  "node_id": "UX-01",
+  "increment_id": "UX-01-NOW-THREAD-01",
+  "baseline_sha": "41e9b45286f4cdfb2ed59ff0ed1b0117e228cbe8",
+  "purpose": "Make the canonical NOW surface answer the smallest useful continuation question from truth N0TE already owns: which Song is active, whether a work Session is open, and what objective or last next action should be picked up. This increment is read-only and must not invent a task system, recommendation engine or second attention store.",
+  "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "allowed_exact_paths": ["README.md", "AGENTS.md", ".gitignore"],
-  "allowed_prefixes": ["governance/", "tests/governance/", "n0te2/", "tests/core/", "tests/ux/", "tests/song/"],
-  "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
+  "allowed_exact_paths": ["n0te2/now_thread_shell.py","n0te2/__init__.py","tests/ux/test_consumer_now_thread.py"],
+  "allowed_prefixes": ["governance/"],
+  "forbidden_prefixes": ["app/","src/","legacy/","vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can preserve what repeatedly gets in the way of real Song work and distinguish one incident from a genuinely recurring blocker, with only artist-recorded prevention ideas presented as such.",
-    "journeys": ["J-WHAT-NEXT", "J-TRUST", "J-SONG-START-RESUME", "J-COMPARE-DECIDE"],
-    "capability": "Consumer-reachable Friction Memory with distinct-Session recurrence",
-    "increment": "SONG-01-FRICTION-01"
+    "outcome": "Artist Headquarters returns the artist to meaningful current work instead of making NOW only a mode selector.",
+    "journeys": ["J-WHAT-NEXT","J-SONG-START-RESUME","J-TRUST"],
+    "capability": "Read-only NOW continuation projection over canonical Song and Session state",
+    "requirements": ["REQ-SCOPE-016","REQ-SCOPE-096","REQ-SCOPE-097","REQ-SCOPE-103","REQ-SCOPE-142"],
+    "enables": ["SONG-01","ART-01"],
+    "increment": "UX-01-NOW-THREAD-01"
   },
-  "why_now": "REQ-SCOPE-138 is a required pre-Gate-B minimum. CORE-02D already owns append-only explicit Friction observations and recurrence synthesis, while the consumer Learning journey now creates real Learning episodes. The missing high-leverage seam is consumer capture and truthful recurrence reachability, not another process-memory store.",
+  "why_now": "The user explicitly continued N0TE after the AUDIO-01 engineering-snapshot increment reached STABLE. Whole-graph comparison selected UX-01 over DAW-00/AUDIO-01/AUDIO-02 because UX-01 is the unmet dependency for SONG-01 and ART-01, while DAW-00A-G are already landed and explicitly preserved against adjacency. Reconciliation also proved the previously selected UX-01-INTERACTION-01 implementation is already present on the exact terminal-green PR #63 baseline, so rebuilding it would duplicate completed product work.",
+  "reconciliation": {
+    "interaction_depth": "PRESENT_AND_VERIFIED_ON_BASELINE",
+    "evidence": [
+      "n0te2/interaction_depth.py and n0te2/interaction_depth_shell.py exist on baseline 41e9b45286f4cdfb2ed59ff0ed1b0117e228cbe8",
+      "tests/song/test_song_interaction_depth_consumer.py covers five modes, stale binding, Origin/CSRF/replay, causal humility and ephemeral selection",
+      "terminal exact-head governance run 33704715804 passed Linux, Windows and macOS full regression plus staged consumer smoke"
+    ],
+    "rule": "Treat the stale Drive CURRENT RECEIPT row for closed-unmerged PR #62 as historical selection evidence; do not revive its branch or rebuild product behavior already absorbed into PR #63."
+  },
   "reuse": {
-    "mode": "EXPOSE_CANONICAL_FRICTION_MEMORY_WITH_USER_DECLARED_CAPTURE_AND_DISTINCT_SESSION_RECURRENCE",
-    "n0te2_dependencies": ["CORE-02D FrictionMemory", "CORE-02C LearningMemory", "consumer Learning journey", "CORE-01 ActivityLog", "existing /song shell", "APP quit/relaunch continuity"],
+    "mode": "PROJECT_EXISTING_CANONICAL_STATE_INTO_NOW_WITHOUT_NEW_PERSISTENCE",
+    "n0te2_dependencies": ["ConsumerShell","LineageStore.active_song","SessionMemory.latest_for_song","AttentionMemory existing Focus surface","UX-01A/B/C shell"],
     "direct_copy": false
   },
-  "completion_proof": [
-    "the normal Song learning surface shows explicit Friction observations without exposing internal Friction, Learning, Session or source-reference identities",
-    "artist Friction capture binds one exact active Song and one exact canonical Learning episode behind opaque one-shot browser authority",
-    "consumer-created Friction evidence is USER_DECLARED only and receives a server-owned source reference",
-    "blocker key, description, confidence and optional prevention hint are bounded human inputs; the consumer path cannot manufacture observed/measured/provider evidence",
-    "one incident remains an incident and is never labeled recurring",
-    "recurrence appears only when the same explicit friction key exists across at least two distinct work Sessions",
-    "multiple episodes in one Session cannot manufacture recurrence",
-    "prevention ideas are displayed only when actually recorded and are not presented as N0TE-generated rules",
-    "GET is pure and Song-scoped; capture does not mutate Versions, approvals, Session state, Learning decisions, Skill state, Focus, DAWs or providers",
-    "Origin, CSRF, one-shot replay, active-Song staleness, profile isolation and quit/relaunch persistence remain enforced",
-    "consumer HTTP tests do not cross the shell runtime SQLite thread boundary",
-    "authored core/HTTP/restart proof remains separate from executed evidence"
-  ],
-  "review_repairs": [
-    "renamed the active increment from SONG-FRICTION-01 to SONG-01-FRICTION-01 so the current receipt obeys the repository's explicit completion-node parent naming guard instead of inheriting recent semantic naming drift",
-    "made the increment-parent governance regression state-aware instead of hard-coding a stale CORE-01 active-node assumption",
-    "converted newly authored pytest-style function tests to unittest.TestCase because the repository workflow executes unittest discover and installs no pytest dependency",
-    "reworked HTTP tests after hosted Codex review found direct shell-runtime SQLite access from the test thread; live-shell assertions are now HTTP-only and persisted state is inspected only after shutdown through a fresh HeadquartersMemory connection",
-    "distinguishes an exact duplicate blocker from unrelated SQLite integrity failures so future schema failures are not falsely reported as duplicate input",
-    "keeps same-Session duplicate evidence from manufacturing recurrence and adds an explicit regression for that contract",
-    "deduplicates prevention-hint presentation inside recurring-pattern summaries while retaining per-incident evidence in Learning history",
-    "makes Friction capture form labels distinguishable when multiple Learning episodes share a subject by including the concrete change description"
-  ],
-  "reviewed_product_test_head": "28b6ea9d18f10023c57b71ff3770539870d2c5b6",
-  "evidence_classification": "UNOBSERVED",
-  "evidence_snapshot": {
-    "observed_repository_head": "b85108b9fcf01bf0ee9270b5b07880d27ae33e84",
-    "commit_statuses": [],
-    "pull_request_workflow_runs": [],
-    "reviews": ["Codex COMMENTED review on 0c0264f050 identified one P1 HTTP-test SQLite thread-ownership violation; the finding was repaired at 28b6ea9d18 and the review thread was replied to and resolved"],
-    "review_threads": ["P1 test-thread SQLite ownership thread is resolved and outdated after repair"],
-    "execution_note": "GitHub exposed no Actions run and no commit-status context for the observed repository head; local clone execution was unavailable because the local environment could not resolve github.com. This is absence of execution evidence, not success or failure."
+  "implementation_contract": {
+    "read_only": true,
+    "network_required": false,
+    "new_semantic_store": false,
+    "surface": "/now",
+    "states": ["NO_ACTIVE_SONG","ACTIVE_SONG_NO_SESSION","OPEN_SESSION_OBJECTIVE","CLOSED_SESSION_NEXT_ACTION"],
+    "truth_order": "Current canonical Artist/Song/Session state only; no inferred priority ranking.",
+    "privacy": "Render artist-facing titles/objective/next action only. Do not expose internal Song/Session IDs.",
+    "composition": "Attach idempotently to the existing NOW grid before Focus controls. Focus remains a separate durable lane selector and is not redefined."
   },
-  "non_scope": ["automatic Friction inference", "cross-pattern similarity", "causal blocker rules", "automatic interventions or next actions", "global Context/History search", "interaction teaching modes", "References", "audio analysis", "DAW/provider mutation", "Gate-B acceptance"],
-  "next_selection_rule": "After landing or blockage, globally reselect across interaction/teaching modes, Context/History reachability, References, Compare/A-B, Creative Studio, audio-analysis substrate, DAW/OPS and all other Gate-B blockers."
+  "completion_proof": [
+    "a profile with no active Song receives a truthful Start a Song continuation state",
+    "an active Song without a Session receives a truthful Start a work Session continuation state",
+    "an open Session surfaces the exact canonical Song title and Session objective with a direct Continue this Song route",
+    "a closed latest Session surfaces its exact canonical next action with a direct Pick up this Song route",
+    "rendering /now creates no Activity, Song, Session, Focus, evidence, approval, DAW, provider or external mutation",
+    "internal Song and Session IDs are absent from the rendered continuation card",
+    "the extension is idempotent and cannot duplicate the NOW continuation card",
+    "existing Focus behavior remains reachable and unchanged",
+    "full regression and staged consumer smoke pass on Linux, Windows and macOS at the exact implementation head",
+    "staff-engineer and red-team review find no stale/cross-profile context leak, fabricated priority, hidden mutation, inaccessible control or unnecessary new architecture"
+  ],
+  "observed_verifier_repairs": {
+    "source_run": 33706192636,
+    "head": "7ea8cd93490bf549defa4600f20731a192e9a82a",
+    "rule": "Repair the receipt identifier to obey the existing active-node binding invariant; do not weaken the smoke checker or product assertions.",
+    "classes": ["increment identifier UX-01D-NOW-THREAD-01 did not begin with canonical active-node prefix UX-01-"]
+  },
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM_WITH_MONITORED_WINDOWS_RERUN",
+  "evidence_snapshot": {
+    "observed_repository_head": "81d8b2f830a849f7b5a79247bc15b60a52e7e4a8",
+    "workflow_run_id": 33706537908,
+    "successful_jobs": {"Linux":100497305311,"Windows":100497304692,"macOS":100497335420},
+    "initial_windows_transport_observation": {
+      "job_id": 100496748929,
+      "result": "2 failed, 725 passed",
+      "failures": [
+        "consumer smoke profile-create loopback request timed out and cleanup then encountered a Windows file-handle lock",
+        "hostile-Origin Session capture request hit ConnectionAbortedError [WinError 10053]"
+      ],
+      "classification": "RECURRENCE_OF_EXISTING_WINDOWS_LOOPBACK_TRANSPORT_CLASS_NOT_A_NOW_ASSERTION"
+    },
+    "successful_windows_rerun_job_id": 100497304692,
+    "reviews": ["PRODUCT_LINEAGE","STAFF_ENGINEER","RED_TEAM","CONSUMER_REACHABILITY","FAILURE_RECOVERY","SECURITY_PRIVACY_AUTHORITY","OBSERVABILITY_SRE","DELETION_COMPLEXITY"],
+    "execution_note": "Exact head passed Linux, macOS and an unchanged-head Windows rerun with construction governance, context governance, supervision, full regression and staged consumer smoke. The first Windows attempt reproduced the previously monitored loopback transport class; a linked recurrence incident remains open separately. This closes UX-01-NOW-THREAD-01 only; UX-01 and broader N0TE scope remain unfinished."
+  },
+  "non_scope": ["Not Now/snooze persistence","new attention-item or task database","Job Center or Approval Center implementation","automatic recommendation ranking","Career State weighting","DAW FocusContext or host mutation","provider/external actions","Creative Studio timeline","final visual brand direction","Gate-B acceptance","marking UX-01 DONE"],
+  "next_selection_rule": "UX-01-NOW-THREAD-01 is closed. UX-01 remains incomplete unless its remaining mapped customer contracts are reconciled or implemented. Under Continue N0TE, globally reselect across the complete retained scope rather than extending NOW by adjacency; include the reopened Windows loopback reliability signal in comparison without granting it automatic priority."
 }

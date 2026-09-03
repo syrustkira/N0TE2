@@ -88,6 +88,34 @@ def form(page: str, action: str) -> Form:
     return matches[0]
 
 
+def headquarters_snapshot(data_root: Path, profile_id: str, song_id: str, asset_id: str, version_id: str):
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        conn = hq.store._conn
+        counts = {
+            table: int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+            for table in ("assets", "versions", "version_assets", "evidence_claims", "operations")
+        }
+        return (
+            hq.store.get_song(song_id),
+            hq.store.get_asset(asset_id),
+            hq.store.get_version(version_id),
+            counts,
+            hq.attention.active_focus(),
+            hq.sessions.latest_for_song(song_id),
+        )
+    finally:
+        hq.close()
+
+
+def latest_session(data_root: Path, profile_id: str, song_id: str):
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        return hq.sessions.latest_for_song(song_id)
+    finally:
+        hq.close()
+
+
 def test_session_start_finish_does_not_mutate_song_artifact_evidence_or_execution_state(
     tmp_path: Path,
 ) -> None:
@@ -111,6 +139,11 @@ def test_session_start_finish_does_not_mutate_song_artifact_evidence_or_executio
     assert before_song is not None and before_song.current_version_id == version.id
     headquarters.close()
 
+    before_song_state, before_asset, before_version, before_counts, before_focus, _ = headquarters_snapshot(
+        data_root, profile_id, song.id, asset.id, version.id
+    )
+    assert before_focus is None
+
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
@@ -118,19 +151,6 @@ def test_session_start_finish_does_not_mutate_song_artifact_evidence_or_executio
         probe=Probe(),
     )
     shell.start()
-    conn = shell.runtime.headquarters.store._conn
-
-    def count(table: str) -> int:
-        return int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
-
-    before_counts = {
-        "assets": count("assets"),
-        "versions": count("versions"),
-        "version_assets": count("version_assets"),
-        "evidence_claims": count("evidence_claims"),
-        "operations": count("operations"),
-    }
-    assert shell.runtime.headquarters.attention.active_focus() is None
 
     status, page = request(shell, "/song")
     assert status == 200
@@ -153,19 +173,14 @@ def test_session_start_finish_does_not_mutate_song_artifact_evidence_or_executio
     status, _ = request(shell, "/session/finish", method="POST", fields=fields)
     assert status == 303
 
-    assert shell.runtime.headquarters.store.get_song(song.id) == before_song
-    assert shell.runtime.headquarters.store.get_asset(asset.id) == asset
-    assert shell.runtime.headquarters.store.get_version(version.id) == version
-    assert {
-        "assets": count("assets"),
-        "versions": count("versions"),
-        "version_assets": count("version_assets"),
-        "evidence_claims": count("evidence_claims"),
-        "operations": count("operations"),
-    } == before_counts
-    assert shell.runtime.headquarters.attention.active_focus() is None
-
-    latest = shell.runtime.headquarters.sessions.latest_for_song(song.id)
+    after_song, after_asset, after_version, after_counts, after_focus, latest = headquarters_snapshot(
+        data_root, profile_id, song.id, asset.id, version.id
+    )
+    assert after_song == before_song_state == before_song
+    assert after_asset == before_asset == asset
+    assert after_version == before_version == version
+    assert after_counts == before_counts
+    assert after_focus is None
     assert latest is not None and latest.state == "CLOSED"
     assert latest.next_action == "Mute the extra harmony idea and listen again tomorrow"
 
@@ -188,6 +203,7 @@ def test_blank_next_action_keeps_open_session_unchanged(tmp_path: Path) -> None:
     data_root = (tmp_path / "data-next").resolve()
     state_root = (tmp_path / "state-next").resolve()
     headquarters = HeadquartersMemory.create(data_root, "Next Action Artist")
+    profile_id = headquarters.store.profile_id
     song = headquarters.store.create_song("Next Action Song")
     headquarters.close()
 
@@ -208,7 +224,7 @@ def test_blank_next_action_keeps_open_session_unchanged(tmp_path: Path) -> None:
     fields["objective"] = "Shape the outro"
     status, _ = request(shell, "/session/start", method="POST", fields=fields)
     assert status == 303
-    opened = shell.runtime.headquarters.sessions.latest_for_song(song.id)
+    opened = latest_session(data_root, profile_id, song.id)
     assert opened is not None and opened.state == "OPEN"
 
     status, page = request(shell, "/song")
@@ -217,7 +233,7 @@ def test_blank_next_action_keeps_open_session_unchanged(tmp_path: Path) -> None:
     fields.update({"debrief": "The outro shape works.", "next_action": "   "})
     status, _ = request(shell, "/session/finish", method="POST", fields=fields)
     assert status == 303
-    assert shell.runtime.headquarters.sessions.latest_for_song(song.id) == opened
+    assert latest_session(data_root, profile_id, song.id) == opened
 
     status, page = request(shell, "/song")
     assert "Next action must not be empty" in page

@@ -2,7 +2,12 @@ name: N0TE2 Governance
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: n0te2-governance-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -17,8 +22,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     env:
-      EVIDENCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-      EVIDENCE_CONTEXT: n0te2-governance-${{ runner.os }}
+      N0TE2_RUN_ID: ${{ github.run_id }}
+      N0TE2_RUN_ATTEMPT: ${{ github.run_attempt }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,18 +32,71 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install repository dependencies and test runner
+        run: python -m pip install --disable-pip-version-check -r requirements.txt "pytest>=8.4,<9"
+      - name: Verify Windows Python runtime dependencies
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          python -c "import platform, struct, sys; print(f'executable={sys.executable}'); print(f'python={sys.version}'); print(f'platform={platform.platform()}'); print(f'machine={platform.machine()}'); print('pointer_bits=' + str(struct.calcsize('P') * 8))"
+          python -m pip show pywin32
+          python -c "import pywintypes, win32api; print(f'pywintypes={pywintypes.__file__}'); print(f'win32api={win32api.__file__}'); print(f'windows_version={win32api.GetVersionEx()}')"
       - name: Verify exact event head checkout
+        id: exact_checkout
         env:
           EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-        run: python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
+        run: |
+          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
       - name: Validate construction governance
+        id: construction_governance
         run: python governance/check_governance.py --repo .
+      - name: Validate context lifecycle governance
+        id: context_lifecycle
+        run: python governance/check_context_lifecycle.py --repo .
+      - name: Inspect supervision graph
+        id: supervision_graph
+        run: python governance/supervision.py --repo .
+      - name: Build exact-head runtime handoff
+        id: runtime_handoff
+        env:
+          N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        run: python governance/build_handoff.py --repo . --check --output governance-runtime-handoff.json
       - name: Governance and product regression tests
-        run: python -m unittest discover -s tests -p 'test_*.py'
+        id: regression_tests
+        run: python -m pytest -q tests --junitxml=pytest-results.xml
       - name: Stage consumer smoke
+        id: consumer_smoke
         run: python governance/smoke/consumer_smoke.py
+      - name: Record supervision observation
+        if: ${{ always() }}
+        env:
+          N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          N0TE2_OBSERVATION_STATUS: ${{ job.status }}
+          N0TE2_RUNNER_OS: ${{ runner.os }}
+          N0TE2_EXACT_CHECKOUT_OUTCOME: ${{ steps.exact_checkout.outcome }}
+          N0TE2_GOVERNANCE_OUTCOME: ${{ steps.construction_governance.outcome }}
+          N0TE2_CONTEXT_LIFECYCLE_OUTCOME: ${{ steps.context_lifecycle.outcome }}
+          N0TE2_SUPERVISION_OUTCOME: ${{ steps.supervision_graph.outcome }}
+          N0TE2_HANDOFF_OUTCOME: ${{ steps.runtime_handoff.outcome }}
+          N0TE2_REGRESSION_OUTCOME: ${{ steps.regression_tests.outcome }}
+          N0TE2_SMOKE_OUTCOME: ${{ steps.consumer_smoke.outcome }}
+        run: python governance/build_handoff.py --repo . --output governance-runtime-handoff.json --observation-output governance-ci-observation.json
+      - name: Upload supervision evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: n0te2-supervision-${{ runner.os }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          path: |
+            governance-runtime-handoff.json
+            governance-ci-observation.json
+            pytest-results.xml
+          if-no-files-found: error
+          retention-days: 30
       - name: Publish exact-head success evidence
         if: ${{ success() }}
+        env:
+          EVIDENCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          EVIDENCE_CONTEXT: n0te2-governance-${{ runner.os }}
         uses: actions/github-script@v7
         with:
           script: |
@@ -52,6 +110,9 @@ jobs:
             })
       - name: Publish exact-head failure evidence
         if: ${{ failure() }}
+        env:
+          EVIDENCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          EVIDENCE_CONTEXT: n0te2-governance-${{ runner.os }}
         uses: actions/github-script@v7
         with:
           script: |

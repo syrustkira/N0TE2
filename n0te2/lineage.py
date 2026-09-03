@@ -113,12 +113,21 @@ class LineageStore:
         db_path = root / "profiles" / profile_id / cls.DB_NAME
         if not db_path.is_file():
             raise NotFoundError(f"profile not found: {profile_id}")
+        conn: sqlite3.Connection | None = None
         try:
             conn = cls._connect(db_path)
             cls._validate_existing(conn, profile_id)
         except sqlite3.DatabaseError as exc:
+            if conn is not None:
+                conn.close()
             raise LineageCorruptionError(f"lineage database is unreadable: {profile_id}") from exc
         except LineageCorruptionError:
+            if conn is not None:
+                conn.close()
+            raise
+        except Exception:
+            if conn is not None:
+                conn.close()
             raise
         return cls(root, profile_id, conn)
 
@@ -130,10 +139,14 @@ class LineageStore:
     @staticmethod
     def _connect(path: Path) -> sqlite3.Connection:
         conn = sqlite3.connect(path, timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute("PRAGMA journal_mode = WAL")
-        conn.execute("PRAGMA synchronous = FULL")
+        try:
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = FULL")
+        except Exception:
+            conn.close()
+            raise
         return conn
 
     @classmethod

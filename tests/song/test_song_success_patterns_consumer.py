@@ -71,6 +71,11 @@ def add_completed(
         rationale=f"{decision} rationale",
         confidence=confidence,
     )
+    hq.sessions.close_session(
+        session.id,
+        debrief_summary=f"{decision} pattern test completed",
+        next_action="Continue evaluating the Song",
+    )
     return episode, consequence
 
 
@@ -98,13 +103,20 @@ def seed(data_root: Path) -> tuple[str, str, tuple[str, ...]]:
             conditions=("same vocal take",),
             confounders=("different arrangement section",),
         )
-        # Pending exact pattern remains visible as pending evidence.
+        # A Learning episode can remain pending after its work Session closes. This
+        # preserves pending decision evidence without violating the one-open-Session
+        # invariant needed to seed unrelated Song evidence.
         session = hq.sessions.start_session(song_id=song.id, objective="Pending pattern test")
         pending = hq.learning.create_episode(
             session_id=session.id,
             domain="Mixing",
             subject_ref="Vocal compression",
             change_description="Lengthen compressor attack",
+        )
+        hq.sessions.close_session(
+            session.id,
+            debrief_summary="Pending Learning decision remains open",
+            next_action="Return when there is enough evidence to decide",
         )
         foreign = hq.store.create_song("Other Song")
         add_completed(
@@ -125,7 +137,7 @@ def seed(data_root: Path) -> tuple[str, str, tuple[str, ...]]:
 def test_song_success_card_shows_mixed_pattern_without_internal_identity(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, song_id, internal = seed(data_root)
+    profile_id, song_id, internal = seed(data_root)
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
@@ -152,13 +164,20 @@ def test_song_success_card_shows_mixed_pattern_without_internal_identity(tmp_pat
             assert value not in page
         assert "success_" not in page
 
-        before = shell.runtime.headquarters.learning.episodes_for_song(song_id)
         status, again = request(shell, "/song")
         assert status == 200
-        assert shell.runtime.headquarters.learning.episodes_for_song(song_id) == before
         assert again.count("<h2>What does your past work suggest?</h2>") == 1
     finally:
         shell.stop()
+
+    reopened = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        # Two GETs remain pure: seed created exactly three Learning episodes for the
+        # active Song and the read-only success projection did not append anything.
+        assert len(reopened.learning.episodes_for_song(song_id)) == 3
+        assert len(reopened.success.patterns_for_song(song_id)) == 1
+    finally:
+        reopened.close()
 
 
 def test_success_extension_is_idempotent_and_relaunch_stable(tmp_path: Path) -> None:

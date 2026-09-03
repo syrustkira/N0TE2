@@ -115,9 +115,12 @@ class ConsumerMaterialUploadParserTests(unittest.TestCase):
 
     def test_stream_that_overreads_requested_bound_is_rejected(self):
         body = multipart_body()
+        # Content-Length authorizes exactly ``body``. The extra sentinel makes an
+        # adversarial stream's size+1 return physically observable, proving the
+        # parser rejects bytes beyond the declared request envelope.
         with self.assertRaises(MaterialUploadParseError):
             parse_material_upload(
-                _OverreadStream(body),
+                _OverreadStream(body + b"X"),
                 content_type=f"multipart/form-data; boundary={BOUNDARY}",
                 content_length=len(body),
             )

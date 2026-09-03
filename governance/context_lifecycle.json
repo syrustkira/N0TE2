@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "policy_id": "CTX-LIFECYCLE-001",
+  "constitutional_rule": "Flattening is a projection, never destruction of the record.",
+  "states": ["RAW", "ACTIVE", "SUMMARIZED", "REFERENCE", "ARCHIVED"],
+  "projection_contract": {
+    "canonical_sources_remain_authoritative": true,
+    "projection_is_disposable": true,
+    "projection_is_regenerable": true,
+    "projection_grants_action_authority": false,
+    "must_record": ["scope", "purpose", "policy_version", "authority_ceiling", "source_manifest", "source_digest", "lossiness", "selected_sections", "budget", "contradictions"],
+    "must_not_flatten_away": ["UNRESOLVED_CONTRADICTION", "AUTHORITY_DECISION", "ACTIVE_RECEIPT", "OPEN_INCIDENT", "ACCEPTANCE_EVIDENCE", "CONSTITUTIONAL_DEFINITION", "USER_CORRECTION", "DURABLE_PREFERENCE", "UNRESOLVED_OBLIGATION"]
+  },
+  "remembrance_contract": {
+    "purpose": "Preserve useful continuity without forcing the user to repeat prior accepted context.",
+    "conversation_history_is_provenance": true,
+    "durable_memory_is_distilled": true,
+    "live_state_is_evidence": true,
+    "fresh_agent_must_recover_relevant_prior_context": true,
+    "never_require_user_repetition_when_retrievable": true,
+    "preserve": ["accepted decisions", "user corrections", "stable preferences", "goals", "constraints", "lessons", "meaningful outcomes", "open obligations", "failure signatures", "supersession history"],
+    "do_not_promote_without_basis": ["casual speculation", "unaccepted proposal", "stale assumption", "model inference presented as fact"]
+  },
+  "retention_contract": {
+    "canonical_history_retained_by_default": true,
+    "active_context_is_selective": true,
+    "semantic_gc_removes_from_active_retrieval_before_deletion": true,
+    "scope_may_be_preserved_while_inactive": true,
+    "foreground_focus_never_deletes_retained_scope": true,
+    "superseded_information_remains_available_as_history": true
+  },
+  "consultation_contract": {
+    "purpose": "Use remembered context and current evidence to advise coherently while preserving TellMeN0TE human authority.",
+    "consult_prior_context_when": ["the request refers to previous work or decisions", "a prior preference or constraint materially changes the answer", "continuation depends on an accepted architecture or product decision", "an apparent contradiction or repeated loop requires provenance", "a recommendation could reopen completed or superseded work"],
+    "consult_live_evidence_when": ["state is volatile", "execution success is claimed", "provider, repository, runtime or public state may have changed", "memory conflicts with current implementation"],
+    "ask_human_when": ["irreducible artistic taste is required", "consequential approval is required", "money, identity, rights, publication, merge, release or irreversible deletion requires authority", "critical contradiction remains unresolved after retrieval"],
+    "do_not_ask_human_when": ["the answer is recoverable from authorized durable context", "a safe reversible action is already authorized", "the question would merely make the user repeat known information"],
+    "precedence": ["CURRENT_EXPLICIT_USER_INTENT", "CURRENT_CONSTITUTIONAL_AUTHORITY", "FRESH_OBSERVED_EVIDENCE", "ACCEPTED_DURABLE_MEMORY", "HISTORICAL_PROVENANCE", "MODEL_INFERENCE"],
+    "rule": "Consultation informs judgment; it never silently grants execution authority."
+  },
+  "retrieval_policy": {
+    "default": "SELECTIVE",
+    "dump_all_history_by_default": false,
+    "ranking": ["AUTHORITY", "CURRENT_SCOPE", "UNRESOLVED_STATUS", "EVIDENCE_CONFIDENCE", "RECENCY"],
+    "cross_scope_retrieval_requires_explicit_relevance": true,
+    "archived_context_is_dormant_until_referenced": true
+  },
+  "conversation_distillation": {
+    "conversation_is_provenance_not_authority": true,
+    "automatic_durable_promotion": false,
+    "classes": ["PROPOSAL", "HYPOTHESIS", "ACCEPTED_DECISION", "CORRECTION", "SUPERSEDED", "OBSERVATION"],
+    "durable_promotion_requires": ["EXPLICIT_ACCEPTANCE_OR_CANONICAL_EVIDENCE", "TARGET_LEDGER", "SOURCE_PROVENANCE", "AUTHORITY_CLASS", "SUPERSESSION_POSTURE"],
+    "accepted_targets": {
+      "ACCEPTED_DECISION": "governance/decisions.jsonl",
+      "CONSTITUTIONAL_DEFINITION": "governance/definitions.jsonl",
+      "INCIDENT": "governance/incidents.jsonl",
+      "EVIDENCE_PROVENANCE": "governance/provenance.jsonl"
+    }
+  },
+  "contradiction_policy": {
+    "average_conflicting_claims": false,
+    "precedence": ["CURRENT_CONSTITUTIONAL_AUTHORITY", "EXPLICIT_USER_AUTHORITY", "CURRENT_CANONICAL_EVIDENCE", "SUPERSEDED_OR_HISTORICAL_EVIDENCE"],
+    "unresolved_critical_contradiction_blocks_autonomous_mutation": true,
+    "contradiction_must_remain_visible": true
+  },
+  "semantic_gc": {
+    "default_action": "REMOVE_FROM_ACTIVE_RETRIEVAL",
+    "delete_canonical_history_by_default": false,
+    "eligible_for_dormancy": ["COMPLETED_RECEIPT", "SUPERSEDED_DEFINITION", "RETIRED_AUTOMATION", "STALE_PROJECTION", "DISPROVEN_ASSUMPTION"],
+    "audit_history_retained": true
+  },
+  "constitutional_change_protocol": {
+    "protected_concepts": ["DONE", "AUTHORITY", "MUTATION_PERMISSION", "ACCEPTANCE", "STABLE", "USER_CONTROL", "REMEMBRANCE", "RETENTION", "CONSULTATION"],
+    "silent_change_allowed": false,
+    "requires": ["EXPLICIT_APPROVAL", "VERSIONED_DEFINITION", "IMPACT_RECORD", "MIGRATION_OR_COMPATIBILITY_PLAN", "PROVENANCE"],
+    "derived_definitions_may_reconcile_from_evidence": true
+  },
+  "reconstruction_contract": {
+    "fresh_agent_must_not_require_prior_chat": true,
+    "startup_surface": "governance/handoff.json",
+    "must_reconstruct": ["CURRENT_LIFECYCLE", "ACTIVE_SELECTION_OR_TERMINAL_STATE", "CURRENT_AUTHORITY", "OPEN_INCIDENTS", "AUTOMATION_SUPERVISION", "CONTEXT_POLICY", "RELEVANT_DURABLE_MEMORY", "NEXT_ADMISSIBLE_ACTION"],
+    "historical_archaeology_only_for": ["MISSING_DURABLE_AUTHORITY", "CONTRADICTORY_DURABLE_AUTHORITY"]
+  }
+}

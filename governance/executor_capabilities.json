@@ -1,0 +1,105 @@
+{
+  "schema_version": 3,
+  "purpose": "Durable external execution-surface capability evidence so GitHub/connector/local limits are diagnosed once, refreshed when they change, and not repeatedly rediscovered in model context.",
+  "scope": "EXTERNAL_COORDINATION_ONLY",
+  "not_product_capabilities": true,
+  "dimensions": ["capability", "authority", "availability", "observed_working", "freshness", "failure_signature", "fallback", "cleanup_path"],
+  "security": {
+    "store_credentials": false,
+    "store_secrets": false,
+    "rule": "Record capability, authority requirement, availability, observed behavior, failure signature, fallback, freshness and cleanup path only. Connectivity never grants authority."
+  },
+  "probe_policy": {
+    "prefer_read_only": true,
+    "mutating_probe_requires_known_cleanup_path": true,
+    "mutating_probe_requires_current_authority": true,
+    "probe_success_does_not_authorize_product_work": true,
+    "unknown_cleanup_path_means_do_not_probe": true,
+    "reprobe_only_on": ["TOOL_SCHEMA_CHANGE", "AUTH_CHANGE", "ENVIRONMENT_CHANGE", "MATERIAL_OPERATION_FAILURE", "FRESHNESS_EXPIRY"]
+  },
+  "probe_side_effects": [
+    {
+      "observed_at": "2026-09-02",
+      "surface": "CHAT_GITHUB_CONNECTOR",
+      "effect": "Two unneeded probe branches were created: codex/retention-supervision-layer-separation and x.",
+      "state": "CLEANUP_BLOCKED_BY_CURRENT_CONNECTOR_SURFACE",
+      "impact": "No implementation work was placed on either branch; PR #63 codex/retention-supervision remains the sole governed delivery lane.",
+      "cleanup_wake_condition": "A legitimate GitHub surface with branch-delete authority becomes available.",
+      "lesson": "Capability probing must be side-effect-free where possible. Capability never implies authorization, and mutating probes require an explicit cleanup path before execution."
+    }
+  ],
+  "states": ["OBSERVED_WORKING", "OBSERVED_LIMITED", "SUPPORTED_NOT_PROBED", "UNAVAILABLE", "REQUIRES_AUTHORITY", "UNKNOWN"],
+  "surfaces": [
+    {
+      "id": "CHAT_GITHUB_CONNECTOR",
+      "observed_at": "2026-09-02",
+      "freshness": "VALID_UNTIL_TOOL_SCHEMA_AUTH_OR_MATERIAL_FAILURE_CHANGE",
+      "availability": "AVAILABLE_IN_CURRENT_CHAT",
+      "refresh_rule": "Re-probe only after connector/tool/schema/auth change or when an operation materially fails.",
+      "operations": {
+        "repository_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Repository and PR #63 metadata retrieved in Chat."},
+        "pr_metadata_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "PR #63 exact base/head/state retrieved."},
+        "file_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Governance files read from exact branch/head."},
+        "file_create": {"capability": "SUPPORTED", "authority": "WRITE_ON_GOVERNED_BRANCH", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Governance files created on governed PR #63 branch."},
+        "file_update": {"capability": "SUPPORTED", "authority": "WRITE_ON_GOVERNED_BRANCH", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Governance files updated on governed PR #63 branch."},
+        "file_delete": {"capability": "SUPPORTED", "authority": "EXPLICIT_MUTATION_AUTHORITY", "observed_working": null, "state": "SUPPORTED_NOT_PROBED", "cleanup_path": "NOT_APPLICABLE_TO_DELETE_PROBE", "evidence": "Connector exposes file-delete action; mutating probe intentionally skipped."},
+        "changed_files_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "PR #63 changed filenames retrieved."},
+        "workflow_run_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Exact-head workflow and jobs retrieved."},
+        "workflow_job_log_read": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Decoded exact workflow job logs exposed the full context-governance failure signature and surrounding execution evidence on run 33644883742.", "freshness": "RECHECK_ONLY_AFTER_CONNECTOR_SCHEMA_OR_MATERIAL_LOG_FAILURE"},
+        "workflow_artifact_list": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING"},
+        "workflow_artifact_download": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING"},
+        "workflow_rerun_or_dispatch": {"capability": "UNKNOWN", "authority": "MUTATION_AUTHORITY_REQUIRED", "observed_working": null, "state": "UNKNOWN"},
+        "branch_create": {"capability": "SUPPORTED", "authority": "MUTATION_AUTHORITY_REQUIRED", "observed_working": true, "state": "OBSERVED_WORKING", "cleanup_path": "BRANCH_DELETE_REQUIRED_BUT_NOT_AVAILABLE_ON_THIS_SURFACE", "governance_constraint": "PROHIBITED_FOR_CURRENT_INCREMENT: PR #63 remains the single delivery lane. Do not probe again without a cleanup-capable surface."},
+        "branch_delete": {"capability": "NOT_EXPOSED_ON_CURRENT_SURFACE", "authority": "MUTATION_AUTHORITY_REQUIRED", "observed_working": false, "state": "OBSERVED_LIMITED", "evidence": "Tool discovery on 2026-09-02 still exposes file deletion and ref update but no branch-ref deletion action.", "fallback": ["LOCAL_GH", "DIRECT_GITHUB_API", "MANUAL_GITHUB_ADMIN_IF_REQUIRED"]},
+        "merge": {"capability": "UNKNOWN", "authority": "EXPLICIT_MERGE_AUTHORITY", "observed_working": null, "state": "UNKNOWN"}
+      }
+    },
+    {
+      "id": "CHATGPT_AUTOMATIONS",
+      "observed_at": "2026-09-02",
+      "freshness": "REFRESH_ON_STATEFUL_CONTINUE_WHEN_BACKGROUND_EXECUTION_MATTERS",
+      "availability": "AVAILABLE_IN_CHAT",
+      "refresh_rule": "Observe live automation runtime when background execution matters.",
+      "operations": {
+        "list_or_peek": {"capability": "SUPPORTED", "authority": "READ", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Live runtime was refreshed during CONTINUE and exposed scheduler drift."},
+        "enable_disable": {"capability": "SUPPORTED", "authority": "EXPLICIT_OR_EXISTING_CONTROL_PLANE_AUTHORITY", "observed_working": true, "state": "OBSERVED_WORKING", "evidence": "Canonical TellMeN0TE + N0TE Cloud Control Plane was re-enabled after live scheduler state contradicted retained ACTIVE semantics."},
+        "create_update_schedule": {"capability": "SUPPORTED", "authority": "EXPLICIT_SCHEDULING_AUTHORITY", "observed_working": true, "state": "OBSERVED_WORKING"}
+      }
+    },
+    {
+      "id": "CODEX",
+      "observed_at": "2026-09-02",
+      "availability": "VOLATILE",
+      "refresh_rule": "Treat capacity and availability as volatile. Reconcile before delegating.",
+      "operations": {"bounded_repository_implementation": {"capability": "SUPPORTED_WHEN_AVAILABLE", "authority": "BOUNDED_DELEGATION_REQUIRED", "observed_working": null, "state": "REQUIRES_AUTHORITY"}}
+    },
+    {
+      "id": "LOCAL_GIT",
+      "observed_at": null,
+      "availability": "UNOBSERVED",
+      "refresh_rule": "Probe when a local execution environment is actually available.",
+      "operations": {"repository_write_push": {"capability": "UNKNOWN", "authority": "LOCAL_AUTH_REQUIRED", "observed_working": null, "state": "UNKNOWN"}}
+    },
+    {
+      "id": "LOCAL_GH",
+      "observed_at": null,
+      "availability": "UNOBSERVED",
+      "refresh_rule": "Probe once per environment/auth change, then preserve failure signatures/fallback.",
+      "operations": {"auth_status": {"state": "UNKNOWN"}, "workflow_logs": {"state": "UNKNOWN"}, "push_pr_workflow": {"state": "UNKNOWN"}, "branch_delete": {"state": "UNKNOWN"}}
+    },
+    {
+      "id": "WORK_CLOUD_BROWSER",
+      "observed_at": null,
+      "availability": "UNOBSERVED",
+      "refresh_rule": "Use for signed-in browser administration when explicitly routed and available.",
+      "operations": {"signed_in_web_administration": {"state": "UNKNOWN"}}
+    },
+    {
+      "id": "LOCAL_N0TE_RUNTIME",
+      "observed_at": null,
+      "availability": "UNOBSERVED",
+      "refresh_rule": "Probe from actual local N0TE runtime evidence, never from product scope alone.",
+      "operations": {"daw_files_audio_midi_plugins_os": {"state": "UNKNOWN", "evidence": "Role is retained, but current runtime capability must be observed."}}
+    }
+  ]
+}

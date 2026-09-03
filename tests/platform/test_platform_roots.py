@@ -112,13 +112,18 @@ class Platform00AEnvironmentRootTests(unittest.TestCase):
 
     def test_resolution_is_pure_and_creates_no_directories(self):
         with tempfile.TemporaryDirectory() as temp:
-            home = Path(temp) / "not-created-home"
+            # The function is deliberately resolving a Linux environment. Feed
+            # it a Linux absolute path even when this test itself runs on Windows,
+            # and use the host temp directory only as a mutation guard.
+            host_guard = Path(temp)
+            before = tuple(host_guard.iterdir())
+            home = f"/__n0te2_purity__/{host_guard.name}/not-created-home"
             roots = resolve_application_roots(
                 PlatformEnvironment.from_runtime_labels("Linux", "x86_64"),
-                home=str(home),
+                home=home,
             )
-            self.assertFalse(home.exists())
-            self.assertFalse(Path(str(roots.data_root)).exists())
+            self.assertEqual(tuple(host_guard.iterdir()), before)
+            self.assertEqual(str(roots.data_root), f"{home}/.local/share/N0TE")
 
     def test_no_platform_root_uses_legacy_ableton_branded_state(self):
         fixtures = (

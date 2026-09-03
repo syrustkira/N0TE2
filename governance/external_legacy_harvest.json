@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-09-02",
+  "purpose": "Evidence-only harvest of non-N0TE repositories for mechanisms N0TE2 may reuse without merging project identity, importing stale authority, or directly copying legacy source.",
+  "target_delivery": {
+    "repository": "syrustkira/N0TE2",
+    "pull_request": 63,
+    "branch": "codex/retention-supervision",
+    "base_main": "649002eebc6e378026f324df5d04adb3653c8b64"
+  },
+  "authority": {
+    "classification": "HISTORICAL_AND_EXTERNAL_IMPLEMENTATION_EVIDENCE_ONLY",
+    "direct_source_copy_authorized": false,
+    "direct_test_text_copy_authorized": false,
+    "fresh_reimplementation_default": true,
+    "runtime_product_code_authorized_by_this_record": false,
+    "cloud_backup_sync_promoted": false
+  },
+  "sources": [
+    {
+      "id": "EXT-ZENITH",
+      "repository": "syrustkira/Zenith",
+      "tree_sha": "96bec629fd7825325913ce45c6d8e1cd171ec421",
+      "findings": [
+        {
+          "id": "ZENITH-TEMPORAL-CONTEXT",
+          "mechanism": "bounded recent-session context loaded from local logs",
+          "disposition": "REJECT_DUPLICATE_MECHANISM",
+          "reason": "N0TE2 already owns stronger scoped Session, Memory, Resume, Context and provenance semantics. Do not create a second log-memory substrate."
+        },
+        {
+          "id": "ZENITH-PRIVACY-SCRUB",
+          "mechanism": "pre-egress redaction of obvious private values",
+          "disposition": "REJECT_DUPLICATE_MECHANISM",
+          "reason": "N0TE2 already has explicit egress, provenance, private-data destination/purpose approval and trust-boundary semantics. Regex scrubbing is not sufficient authority."
+        },
+        {
+          "id": "ZENITH-HITL-GATE",
+          "mechanism": "human alignment before autonomous execution",
+          "disposition": "REJECT_DUPLICATE_MECHANISM",
+          "reason": "N0TE2 authority/approval/revalidation/transaction contracts supersede the coarse gate."
+        },
+        {
+          "id": "ZENITH-RESET-RECOVERY",
+          "mechanism": "hard-reset path after suspicious command generation",
+          "disposition": "REJECT_HOST_SPECIFIC_AND_OVERBROAD",
+          "reason": "N0TE2 recovery, worker isolation, failure visibility and safe mutation contracts are more granular and should remain canonical."
+        },
+        {
+          "id": "ZENITH-LOCAL-CLOUD-CONTINUITY",
+          "mechanism": "persist a local session artifact and mirror it to Google Drive",
+          "disposition": "ADAPT_AS_SHARED_BRAIN_RECONCILIATION_CONTRACT",
+          "reason": "The useful idea is durable local/cloud continuity, not Zenith's credential-file uploader. N0TE2 PR #63 already defines shared durable brain, receipts, revision/conflict checks and GitHub/Drive reconciliation. Runtime product cloud backup/sync remains held."
+        },
+        {
+          "id": "ZENITH-DIRECT-DRIVE-UPLOADER",
+          "mechanism": "service-account credentials.json plus direct Drive upload of session JSON",
+          "disposition": "REJECT_SECURITY_AND_AUTHORITY_MODEL",
+          "reason": "Do not copy credentials, broad session dumps, or direct cloud mutation into N0TE2. Connected execution must remain minimum-needed, authority-gated, receipt-backed and conflict-safe."
+        },
+        {
+          "id": "ZENITH-OFFENSIVE-ORCHESTRATOR",
+          "mechanism": "autonomous Kali/SSH tool execution loop",
+          "disposition": "REJECT_OUT_OF_PRODUCT_SCOPE",
+          "reason": "Offensive-target execution is not a N0TE product capability and must not contaminate Artist Headquarters or its control plane. Generic executor-envelope ideas are already represented independently."
+        }
+      ]
+    },
+    {
+      "id": "EXT-ABLETONAI",
+      "repository": "syrustkira/AbletonAI",
+      "tree_sha": "0763c92ec69d3172638008fba3631162d4e5b7b2",
+      "status": "FROZEN_LEGACY_IMPLEMENTATION_EVIDENCE",
+      "findings": [
+        {
+          "id": "ABLETON-COMPOSITE-HEALTH",
+          "mechanism": "single health snapshot combining runtime prerequisites, install artifacts, local endpoints, context/library state, transactions/checkpoints and Remote Script diagnostics",
+          "disposition": "MINE_BEHAVIOR_FOR_FUTURE_DAW_AND_SUPPORT_ACCEPTANCE",
+          "reason": "The diagnostic shape is useful evidence for DAW-01/support/packaging acceptance, but N0TE2 must re-express it through current host-observation, support, platform and executor-evidence boundaries rather than restore an Ableton-specific product center."
+        },
+        {
+          "id": "ABLETON-TRANSACTIONAL-LIFECYCLE",
+          "mechanism": "transactional install/update/uninstall, rollback, path confinement, health handshake and recovery of displaced files",
+          "disposition": "PRESERVE_AS_STRONG_TEST_AND_ACCEPTANCE_EVIDENCE",
+          "reason": "These behaviors remain relevant to APP/PLATFORM/DAW acceptance. They do not authorize direct legacy transplant and must be independently verified per current platform/host scope."
+        },
+        {
+          "id": "ABLETON-OFFLINE-PROVIDER-SAFETY",
+          "mechanism": "fail-closed offline defaults, local loopback allowance, no automatic paid fallback and provider-specific transport constraints",
+          "disposition": "ALREADY_SUPERSEDED_OR_MAPPED",
+          "reason": "N0TE2 already represents network/offline, egress, provider authority and local/cloud separation. Retain the legacy tests as regression ideas, not a parallel policy source."
+        },
+        {
+          "id": "ABLETON-DAW-REALITY-GAP",
+          "mechanism": "explicit separation between mocked/unit validation and real Ableton/audio/plugin/customer-machine acceptance",
+          "disposition": "PRESERVE_AS_ACCEPTANCE_INVARIANT",
+          "reason": "This strengthens N0TE2's existing evidence-spine rule that authored tests and build health cannot masquerade as real host, consumer, audio or value acceptance."
+        }
+      ]
+    },
+    {
+      "id": "EXT-MUSIC-AI-ZIP",
+      "repository": "syrustkira/Music",
+      "tree_sha": "c560eaa4448484810957c1be2446af40eee166c9",
+      "asset": "AI.zip",
+      "blob_sha": "45c36c89cd8a818975b098bb6bc65074217bde68",
+      "observed_archive_prefix": ["AI/", "AI/autogen-core/", "AI/autogen-core/core.py"],
+      "inspection_state": "PARTIAL_BINARY_INSPECTION_ONLY",
+      "disposition": "QUARANTINE_PENDING_COMPLETE_EXTRACTION",
+      "reason": "The current GitHub connector exposes the ZIP as binary/base64 but cannot decode the full blob through its UTF-8 blob path. No implementation is admitted from an incompletely inspected archive. Preserve the exact blob identity so a future binary-capable executor can inspect it once without rediscovery."
+    }
+  ],
+  "net_new_value_for_n0te2": [
+    {
+      "id": "HARVEST-001",
+      "value": "Make external-repository archaeology a durable, provenance-bound harvest record so useful mechanisms are not repeatedly rediscovered and rejected duplicates stay rejected.",
+      "implementation": "THIS_FILE"
+    },
+    {
+      "id": "HARVEST-002",
+      "value": "Treat Drive brain continuity as conflict-safe governance/context reconciliation across repository, Product DB and canonical Drive context, not as raw session mirroring or product cloud backup/sync.",
+      "implementation": "docs/DRIVE_BRAIN_SYNC.md + existing PR63 control-plane contracts"
+    },
+    {
+      "id": "HARVEST-003",
+      "value": "Retain AbletonAI's composite health and transactional lifecycle evidence for later DAW/platform/support acceptance without re-centering N0TE on Ableton.",
+      "implementation": "EVIDENCE_ONLY_UNTIL_DEPENDENCY_READY_SELECTION"
+    }
+  ],
+  "next_binary_wake_condition": "A binary-capable authorized GitHub/local executor becomes available to inspect Music/AI.zip at blob 45c36c89cd8a818975b098bb6bc65074217bde68. Do not repeatedly retry unchanged connector limitations.",
+  "sync_rule": "Any material change to this harvest's canonical disposition must be reconciled into N0TE_PRODUCT_DB and relevant Drive context in the same operating cycle."
+}

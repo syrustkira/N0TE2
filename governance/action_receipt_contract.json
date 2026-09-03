@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "contract_id": "ACTION-RECEIPT-001",
+  "purpose": "Provide one typed cross-layer envelope for meaningful actions from TellMeN0TE/ChatGPT/N0TE through cloud, local, provider, GitHub or build executors without merging those layers.",
+  "principles": [
+    "One operation carries one stable trace identity across planning, routing, execution, observation and acceptance.",
+    "Connectivity does not grant authority.",
+    "A request is not proof of execution.",
+    "A successful executor response is not automatically product acceptance.",
+    "Retries must be idempotent or explicitly guarded against duplicate external consequence.",
+    "Recovery and undo information are first-class where the target permits them."
+  ],
+  "required_request_fields": [
+    "operation_id",
+    "trace_id",
+    "requested_by",
+    "semantic_target",
+    "desired_outcome",
+    "executor_class",
+    "authority_basis",
+    "state_basis",
+    "preconditions",
+    "idempotency_key",
+    "approval_state",
+    "artifact_refs",
+    "expected_effect"
+  ],
+  "optional_request_fields": ["expires_at", "retry_policy", "undo_strategy", "privacy_class", "consulted_context_refs", "parent_operation_id"],
+  "result_states": ["PREPARED", "AUTHORIZED", "EXECUTING", "SUCCEEDED", "FAILED", "PARTIAL", "UNKNOWN", "BLOCKED", "WAITING", "CANCELLED", "UNDONE"],
+  "required_result_fields": [
+    "operation_id",
+    "trace_id",
+    "executor",
+    "result_state",
+    "observed_effect",
+    "evidence_refs",
+    "observed_at",
+    "retry_safe",
+    "reconciliation_required"
+  ],
+  "optional_result_fields": ["failure_signature", "recovery_action", "undo_receipt", "result_artifact_refs", "next_wake_condition", "acceptance_refs"],
+  "authority_rules": {
+    "model_confidence_is_authority": false,
+    "stale_receipt_authorizes_new_work": false,
+    "target_must_be_revalidated_before_external_consequence": true,
+    "irreversible_or_consequential_actions_require_current_authority": true
+  },
+  "traceability": {
+    "trace_id_scope": "end_to_end_user_or_system_intent",
+    "operation_id_scope": "one executable action",
+    "must_survive_hops": ["CLOUD_COORDINATION_PLANE", "DETERMINISTIC_COORDINATOR", "LOCAL_OR_PROVIDER_EXECUTOR", "CI_OR_RUNTIME_OBSERVER", "RECEIPT_STORE", "ACCEPTANCE_EVIDENCE"],
+    "logs_may_be_ephemeral": true,
+    "receipt_reference_must_be_durable": true
+  },
+  "memory_consultation": {
+    "consulted_context_refs_recorded_when_material": true,
+    "memory_does_not_override_fresh_live_state": true,
+    "user_correction_must_propagate_to_future_relevant_actions": true,
+    "execution_receipts_may_be_distilled_into_long_term_memory_when_material": true
+  }
+}

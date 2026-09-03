@@ -100,6 +100,14 @@ def create_profile(data_root: Path, artist: str, song_title: str) -> tuple[str, 
         headquarters.close()
 
 
+def latest_session(data_root: Path, profile_id: str, song_id: str):
+    headquarters = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        return headquarters.sessions.latest_for_song(song_id)
+    finally:
+        headquarters.close()
+
+
 def quit_shell(shell: ConsumerShell) -> None:
     status, settings = request(shell, "/settings")
     assert status == 200
@@ -148,7 +156,7 @@ def test_song_work_session_survives_quit_and_resumes_next_action(tmp_path: Path)
         origin=shell.address.origin,
     )
     assert status == 303
-    opened = shell.runtime.headquarters.sessions.latest_for_song(song_id)
+    opened = latest_session(data_root, profile_id, song_id)
     assert opened is not None
     assert opened.state == "OPEN"
     assert opened.objective == "Finish the chorus arrangement without mixing"
@@ -194,7 +202,7 @@ def test_song_work_session_survives_quit_and_resumes_next_action(tmp_path: Path)
         origin=reopened.address.origin,
     )
     assert status == 303
-    closed = reopened.runtime.headquarters.sessions.latest_for_song(song_id)
+    closed = latest_session(data_root, profile_id, song_id)
     assert closed is not None
     assert closed.state == "CLOSED"
     assert closed.debrief_summary == "Chorus is arranged; the second half needs a stronger counterline."
@@ -237,7 +245,7 @@ def test_song_work_session_survives_quit_and_resumes_next_action(tmp_path: Path)
 def test_session_actions_are_one_shot_origin_checked_and_do_not_duplicate(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, song_id = create_profile(data_root, "Authority Artist", "Authority Song")
+    profile_id, song_id = create_profile(data_root, "Authority Artist", "Authority Song")
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
@@ -260,7 +268,7 @@ def test_session_actions_are_one_shot_origin_checked_and_do_not_duplicate(tmp_pa
         origin="https://attacker.example",
     )
     assert rejected == 403
-    assert shell.runtime.headquarters.sessions.latest_for_song(song_id) is None
+    assert latest_session(data_root, profile_id, song_id) is None
 
     # Origin rejection occurs before action consumption, so the local action still works once.
     accepted, _ = request(
@@ -271,7 +279,7 @@ def test_session_actions_are_one_shot_origin_checked_and_do_not_duplicate(tmp_pa
         origin=shell.address.origin,
     )
     assert accepted == 303
-    first = shell.runtime.headquarters.sessions.latest_for_song(song_id)
+    first = latest_session(data_root, profile_id, song_id)
     assert first is not None and first.state == "OPEN"
 
     replay, _ = request(
@@ -282,7 +290,7 @@ def test_session_actions_are_one_shot_origin_checked_and_do_not_duplicate(tmp_pa
         origin=shell.address.origin,
     )
     assert replay == 409
-    assert shell.runtime.headquarters.sessions.latest_for_song(song_id) == first
+    assert latest_session(data_root, profile_id, song_id) == first
 
     status, open_page = request(shell, "/song")
     finish = forms(open_page, "/session/finish")[0]
@@ -296,7 +304,7 @@ def test_session_actions_are_one_shot_origin_checked_and_do_not_duplicate(tmp_pa
         origin=shell.address.origin,
     )
     assert accepted == 303
-    closed = shell.runtime.headquarters.sessions.latest_for_song(song_id)
+    closed = latest_session(data_root, profile_id, song_id)
     assert closed is not None and closed.state == "CLOSED"
 
     replay, _ = request(
@@ -307,7 +315,7 @@ def test_session_actions_are_one_shot_origin_checked_and_do_not_duplicate(tmp_pa
         origin=shell.address.origin,
     )
     assert replay == 409
-    assert shell.runtime.headquarters.sessions.latest_for_song(song_id) == closed
+    assert latest_session(data_root, profile_id, song_id) == closed
     quit_shell(shell)
 
 
@@ -316,7 +324,7 @@ def test_blank_oversized_and_stale_session_actions_fail_without_history_corrupti
 ) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, first_song_id = create_profile(data_root, "Validation Artist", "First Song")
+    profile_id, first_song_id = create_profile(data_root, "Validation Artist", "First Song")
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
@@ -337,7 +345,7 @@ def test_blank_oversized_and_stale_session_actions_fail_without_history_corrupti
         origin=shell.address.origin,
     )
     assert status == 303
-    assert shell.runtime.headquarters.sessions.latest_for_song(first_song_id) is None
+    assert latest_session(data_root, profile_id, first_song_id) is None
 
     status, page = request(shell, "/song")
     start = forms(page, "/session/start")[0]
@@ -351,12 +359,16 @@ def test_blank_oversized_and_stale_session_actions_fail_without_history_corrupti
         origin=shell.address.origin,
     )
     assert status == 303
-    assert shell.runtime.headquarters.sessions.latest_for_song(first_song_id) is None
+    assert latest_session(data_root, profile_id, first_song_id) is None
 
     # A server-bound action for Song A becomes stale if canonical active Song changes.
     status, page = request(shell, "/song")
     stale_start = forms(page, "/session/start")[0]
-    second_song = shell.runtime.headquarters.store.create_song("Second Song")
+    changer = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        second_song = changer.store.create_song("Second Song")
+    finally:
+        changer.close()
     stale_payload = dict(stale_start.values)
     stale_payload["objective"] = "This must not land on either Song"
     status, _ = request(
@@ -367,8 +379,8 @@ def test_blank_oversized_and_stale_session_actions_fail_without_history_corrupti
         origin=shell.address.origin,
     )
     assert status == 409
-    assert shell.runtime.headquarters.sessions.latest_for_song(first_song_id) is None
-    assert shell.runtime.headquarters.sessions.latest_for_song(second_song.id) is None
+    assert latest_session(data_root, profile_id, first_song_id) is None
+    assert latest_session(data_root, profile_id, second_song.id) is None
 
     status, second_page = request(shell, "/song")
     fresh = forms(second_page, "/session/start")[0]
@@ -382,7 +394,7 @@ def test_blank_oversized_and_stale_session_actions_fail_without_history_corrupti
         origin=shell.address.origin,
     )
     assert status == 303
-    current = shell.runtime.headquarters.sessions.latest_for_song(second_song.id)
+    current = latest_session(data_root, profile_id, second_song.id)
     assert current is not None and current.state == "OPEN"
 
     status, open_page = request(shell, "/song")
@@ -397,7 +409,7 @@ def test_blank_oversized_and_stale_session_actions_fail_without_history_corrupti
         origin=shell.address.origin,
     )
     assert status == 303
-    still_open = shell.runtime.headquarters.sessions.latest_for_song(second_song.id)
+    still_open = latest_session(data_root, profile_id, second_song.id)
     assert still_open == current
     quit_shell(shell)
 

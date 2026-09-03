@@ -88,7 +88,11 @@ class RecoveryManager:
 
     @staticmethod
     def _fsync_file(path: Path) -> None:
-        with path.open("rb") as handle:
+        # Windows maps os.fsync() to a descriptor commit that requires a
+        # write-capable handle. Open the already-writable file in update mode
+        # instead of weakening the durability guarantee by suppressing fsync.
+        with path.open("r+b") as handle:
+            handle.flush()
             os.fsync(handle.fileno())
 
     @staticmethod

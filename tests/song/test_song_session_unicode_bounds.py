@@ -124,11 +124,15 @@ def test_maximum_unicode_session_fields_fit_transport_envelope(tmp_path: Path) -
 
     status, _ = request(shell, "/session/finish", method="POST", fields=finish_payload)
     assert status == 303
-    closed = shell.runtime.headquarters.sessions.latest_for_song(song.id)
-    assert closed is not None
-    assert closed.state == "CLOSED"
-    assert closed.debrief_summary == debrief
-    assert closed.next_action == next_action
+    inspect = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        closed = inspect.sessions.latest_for_song(song.id)
+        assert closed is not None
+        assert closed.state == "CLOSED"
+        assert closed.debrief_summary == debrief
+        assert closed.next_action == next_action
+    finally:
+        inspect.close()
 
     status, settings = request(shell, "/settings")
     assert status == 200

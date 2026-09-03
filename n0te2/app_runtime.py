@@ -127,13 +127,13 @@ class ApplicationRuntime:
             if (
                 self._profile_id == profile
                 and self._process is not None
-                and self._process.fingerprint == process.fingerprint
+                and self._process.same_launch(process)
             ):
                 return LaunchResult(
                     "ALREADY_RUNNING",
                     profile,
                     self._lease,
-                    reason="this ApplicationRuntime already owns the requested profile",
+                    reason="this ApplicationRuntime already owns the requested exact launch/profile",
                 )
             raise ApplicationRuntimeError(
                 "one ApplicationRuntime cannot launch another profile/process while RUNNING"
@@ -146,14 +146,14 @@ class ApplicationRuntime:
                 profile,
                 acquired.lease,
                 acquired.previous_lease,
-                "the exact process already owns this profile; do not open a second Headquarters",
+                "the exact launch already owns this profile; do not open a second Headquarters",
             )
         if acquired.status == "HELD_BY_OTHER":
             return LaunchResult(
                 "HELD_BY_OTHER",
                 profile,
                 acquired.lease,
-                reason="another verified-live process owns this profile",
+                reason="another verified-live exact launch owns this profile",
             )
         if acquired.status == "UNCERTAIN":
             return LaunchResult(

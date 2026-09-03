@@ -144,6 +144,7 @@ class SongSkillModelTests(unittest.TestCase):
         )
         self.hq.close()
         self.hq = HeadquartersMemory.open(self.root, profile_id)
+        self.addCleanup(self.hq.close)
         self.service = SkillModelService(self.hq.skills)
         self.assertEqual(self.service.views()[0].level, "APPLIED")
         self.assertEqual(len(self.hq.skills.history("Bass writing")), 2)

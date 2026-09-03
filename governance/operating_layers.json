@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "purpose": "Keep TellMeN0TE, ChatGPT, N0TE, the external cloud coordination plane, local execution, and temporary N0TE construction machinery semantically separate while allowing them to cooperate through shared state, consultation, trace identities and receipts.",
+  "authority": "BOUNDARY_CONTRACT",
+  "cross_layer_contracts": ["governance/context_lifecycle.json", "governance/action_receipt_contract.json", "governance/acceptance_evidence_spine.json", "governance/executor_capabilities.json"],
+  "layers": [
+    {
+      "id": "TELLMEN0TE-HUMAN-PRINCIPAL",
+      "class": "HUMAN_PRINCIPAL",
+      "persistent": true,
+      "purpose": "Human artist/principal. Owns authorship, taste, identity, relationships, consequential approval and final authority.",
+      "not": ["BUILD_HARNESS", "AUTOMATION_WORKER", "PRODUCT_RUNTIME"]
+    },
+    {
+      "id": "CHATGPT-BROAD-OPERATOR",
+      "class": "CLOUD_OPERATOR_SIBLING",
+      "persistent": true,
+      "purpose": "Broad TellMeN0TE operator/reconciliation branch across portfolio, external research, connected services, cross-domain reasoning, delegation, consultation and evidence reconciliation.",
+      "not": ["N0TE_PRODUCT", "N0TE_BUILD_HARNESS", "UNIVERSAL_EXECUTOR"]
+    },
+    {
+      "id": "N0TE-PRODUCT",
+      "class": "EMBEDDED_ARTIST_HQ_SIBLING",
+      "persistent": true,
+      "purpose": "The N0TE product: persistent Artist/Song intelligence and reachable artist, studio, learning, A&R, release, audience, relationship and business jobs retained by canonical product scope.",
+      "scope_owner": ["N0TE_PRODUCT_DB/SCOPE_LEDGER", "N0TE Canonical Blueprint"],
+      "memory_rule": "N0TE must preserve relevant Artist/Song decisions, corrections, preferences, lineage and lessons through canonical memory/context mechanisms rather than relying on transient chat alone.",
+      "consultation_rule": "N0TE consults relevant retained context and fresh evidence before material advice or action, and escalates only irreducible human decisions or unresolved critical contradictions.",
+      "not": ["BUILD_HARNESS", "BOOTLOADER", "CI", "GITHUB_COORDINATOR"]
+    },
+    {
+      "id": "N0TE-LOCAL-RUNTIME-ROLE",
+      "class": "LOCAL_EXECUTION_ROLE",
+      "persistent": true,
+      "purpose": "Local execution role for DAW/project/files/audio/MIDI/plugins/hardware/OS and persistent workstation-side jobs when implemented and available.",
+      "implementation_truth": "Do not infer a specific daemon/process/module name from this role. Live repository and runtime evidence decide what local implementation actually exists.",
+      "protocol_rule": "A future N0TEd or equivalent local executor implements the cross-layer action/receipt protocol; it does not redefine product semantics or coordination authority.",
+      "not": ["CLOUD_CONTROL_PLANE", "BUILD_HARNESS"]
+    },
+    {
+      "id": "SHARED-DURABLE-BRAIN",
+      "class": "DURABLE_STATE_SUBSTRATE",
+      "persistent": true,
+      "purpose": "Canonical semantic memory and operational state owned by the appropriate Drive/repository/product/domain stores. It preserves shared meaning, provenance and relevant remembrance without granting universal access or authority."
+    },
+    {
+      "id": "TELLMEN0TE-N0TE-CLOUD-COORDINATION",
+      "class": "CLOUD_COORDINATION_PLANE",
+      "persistent": true,
+      "purpose": "One cloud-side coordination loop that observes, reconciles, deduplicates, routes, delegates, consumes receipts and writes back material state across legitimate executors.",
+      "semantic_rule": "One brain means one coordinated semantic state/claim graph, not one process, one agent, one executor or one blob.",
+      "trace_rule": "Meaningful cross-layer work preserves trace identity and durable receipts rather than relying on prose continuity alone.",
+      "not": ["N0TE_PRODUCT", "N0TE_BUILD_HARNESS", "UNIVERSAL_EXECUTOR"]
+    },
+    {
+      "id": "EXTERNAL-DETERMINISTIC-COORDINATOR",
+      "class": "COORDINATION_PLUMBING",
+      "persistent": true,
+      "purpose": "Deterministic checkpoint/delta/claim/executor-capability/routing/receipt/retry plumbing that reduces repeated CONTINUE reconstruction and tool-limit rediscovery.",
+      "owns": ["compact state projection", "change digest", "execution claims", "executor capability evidence", "routing metadata", "trace propagation", "receipts", "retry/backoff metadata"],
+      "does_not_own": ["artist meaning", "creative judgment", "N0TE product scope", "product requirements", "human authority", "durable memory semantics"]
+    },
+    {
+      "id": "N0TE-BUILD-HARNESS",
+      "class": "TEMPORARY_CONSTRUCTION_MACHINERY",
+      "persistent": false,
+      "purpose": "Build, diagnose, test, red-team, repair and verify bounded N0TE construction increments. It exists to make N0TE correct, then becomes dormant or retires.",
+      "owns": ["bounded construction selection", "build receipt", "implementation verification", "engineering diagnosis", "red-team evidence", "CI/acceptance evidence", "construction completion state"],
+      "does_not_own": ["N0TE product semantics", "TellMeN0TE portfolio meaning", "artist identity", "permanent cloud coordination", "product personality", "long-term memory authority"],
+      "retirement_rule": "Construction machinery must shrink, become dormant or retire as accepted construction closes. New harness complexity requires an observed failure class, a bounded repair purpose, proof and a deletion/retirement condition.",
+      "deletion_budget_rule": "Every material harness artifact must identify the observed failure class it prevents, its supersession or retirement condition, and whether it can be removed at the next accepted milestone."
+    }
+  ],
+  "scope_invariants": [
+    "Foreground outcomes or one active bounded increment never replace the complete retained N0TE scope.",
+    "Semantic deduplication merges duplicate work expressions, never distinct accepted capabilities.",
+    "MAPPED, IMPLEMENTED, INTEGRATED, REACHABLE, VERIFIED, RECOVERABLE, AUTHORITY_SAFE, CONSUMER_ACCEPTED and VALUE_EVIDENCED remain distinguishable evidence states.",
+    "The external executor-capability assay describes execution surfaces only and must not become a second N0TE product-capability system.",
+    "The build harness may reference product requirements but may not redefine them.",
+    "Remembrance and retention preserve relevant accepted context and history without making stale memory outrank fresh evidence.",
+    "Consultation retrieves prior context and current evidence before asking the user to repeat known information.",
+    "Bare 'controller' terminology is ambiguous. Human-facing and machine-facing state should qualify CLOUD_COORDINATION_PLANE versus N0TE_BUILD_HARNESS."
+  ],
+  "required_review_lenses": {
+    "per_material_build_increment": ["PRODUCT_LINEAGE", "STAFF_ENGINEER", "RED_TEAM", "CONSUMER_REACHABILITY", "FAILURE_RECOVERY", "SECURITY_PRIVACY_AUTHORITY", "OBSERVABILITY_SRE", "DELETION_COMPLEXITY"],
+    "health_planes": ["BUILD_SYSTEM_HEALTH", "PRODUCT_HEALTH", "CONSUMER_HEALTH", "VALUE_HEALTH"],
+    "rule": "Review lenses are perspectives over one shared state, not permission to create permanent peer agents."
+  }
+}

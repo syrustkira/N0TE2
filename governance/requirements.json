@@ -1,24 +1,28 @@
 {
-  "schema_version": 2,
-  "sequence": {
+  "schema_version": 4,
+  "sequence": {"start": 2, "end": 153},
+  "sequence_role": "BUILD_GRAPH_INDEX",
+  "canonical_scope": {
+    "source": "N0TE_PRODUCT_DB/SCOPE_LEDGER",
     "start": 2,
-    "end": 153
+    "end": 160,
+    "retained_requirement_count": 159,
+    "rule": "The canonical product ledger owns full accepted N0TE scope. The temporary build graph is a construction-selection index and must not expand into a second product database merely because canonical scope grows."
   },
-  "held_or_boundary": [
-    "REQ-SCOPE-044",
-    "REQ-SCOPE-045",
-    "REQ-SCOPE-047",
-    "REQ-SCOPE-062",
-    "REQ-SCOPE-063",
-    "REQ-SCOPE-064",
-    "REQ-SCOPE-065",
-    "REQ-SCOPE-066",
-    "REQ-SCOPE-108"
+  "canonical_extensions": [
+    {"id":"REQ-SCOPE-154","state":"MAPPED","selected":false,"construction_affinity":["UX-01","CORE-02","CORE-03","CORE-04"],"summary":"Creative Partner professional-lens selection and bounded multi-perspective synthesis."},
+    {"id":"REQ-SCOPE-155","state":"MAPPED","selected":false,"construction_affinity":["UX-01","CORE-04"],"summary":"Creative Partner presence, initiative and silence policy including explicit no-action posture."},
+    {"id":"REQ-SCOPE-156","state":"MAPPED","selected":false,"construction_affinity":["UX-01","CORE-01","CORE-02"],"summary":"Relevance brokerage and lens-sensitive bounded context projection."},
+    {"id":"REQ-SCOPE-157","state":"MAPPED","selected":false,"construction_affinity":["UX-01","CORE-01","CORE-02","CORE-04"],"summary":"Versioned backward-readable Creative Partner InteractionPolicy with ephemeral-first lifecycle and stale-state safety."},
+    {"id":"REQ-SCOPE-158","state":"MAPPED","selected":false,"construction_affinity":["UX-01","CORE-02"],"summary":"Creative tension, tradeoff and Challenger reasoning with simulated-versus-observed audience truth."},
+    {"id":"REQ-SCOPE-159","state":"MAPPED","selected":false,"construction_affinity":["CONV-01","CORE-01","CORE-02","CORE-04"],"summary":"Stable semantic keys and versioned definition-lineage evolution."},
+    {"id":"REQ-SCOPE-160","state":"MAPPED","selected":false,"construction_affinity":["DAW-07","CORE-03","CORE-04","CONV-01"],"summary":"Provider/host/protocol-neutral negotiated capability with versioned adapters, fidelity truth and route receipts."}
   ],
-  "superseded": [
-    "REQ-SCOPE-046"
-  ],
-  "default_classification": "ACTIVE",
-  "active_blocks_candidate": true,
-  "non_active_blocks_candidate": false
+  "held_or_boundary": ["REQ-SCOPE-044","REQ-SCOPE-045","REQ-SCOPE-047","REQ-SCOPE-062","REQ-SCOPE-063","REQ-SCOPE-064","REQ-SCOPE-065","REQ-SCOPE-066","REQ-SCOPE-108"],
+  "superseded": ["REQ-SCOPE-046"],
+  "default_classification": "KNOWN",
+  "known_blocks_candidate": true,
+  "known_selects_work": false,
+  "non_active_blocks_candidate": false,
+  "selection_contract": "A requirement may be known and still unfinished without being selected. Work becomes ACTIVE only through current_state plus an active receipt after global dependency-ready selection. Canonical extensions remain retained even when the build graph does not yet index them as construction nodes."
 }

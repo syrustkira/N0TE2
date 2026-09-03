@@ -24,13 +24,14 @@ class LegacyAdmissionTests(unittest.TestCase):
 
     def assert_red(self, repo, needle):
         with self.assertRaises(gov.GovernanceError) as cm:
-            gov.run(repo, verify_git=False)
+            gov.check_legacy_admission(repo)
         self.assertIn(needle, str(cm.exception))
 
     def execution_evidence(self):
         return json.loads((ROOT / "governance/legacy_execution_evidence.json").read_text())
 
     def test_current_legacy_contract_is_green_without_git(self):
+        gov.check_legacy_admission(ROOT)
         gov.run(ROOT, verify_git=False)
 
     def test_census_cannot_hide_unclassified_assets(self):

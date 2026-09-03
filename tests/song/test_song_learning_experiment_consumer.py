@@ -155,7 +155,7 @@ def post(shell: ConsumerShell, path: str, fields: dict[str, str], origin: str | 
 def test_song_surface_is_causally_humble_and_hides_internal_identity(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    seed(data_root)
+    profile_id, song_id, _ = seed(data_root)
     shell = new_shell(data_root, state_root, 9901, "learning-visible")
     try:
         status, page, _ = request(shell, "/song")
@@ -167,10 +167,18 @@ def test_song_surface_is_causally_humble_and_hides_internal_identity(tmp_path: P
         for forbidden in ("learn_", "lobs_", "ldec_", "sess_", "consumer-learning-observation:"):
             assert forbidden not in page
 
-        song_id = shell.runtime.headquarters.store.active_song().id
-        before = shell.runtime.headquarters.learning.episodes_for_song(song_id)
+        before_hq = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            before = before_hq.learning.episodes_for_song(song_id)
+        finally:
+            before_hq.close()
         assert request(shell, "/song")[0] == 200
-        assert shell.runtime.headquarters.learning.episodes_for_song(song_id) == before == ()
+        after_hq = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            after = after_hq.learning.episodes_for_song(song_id)
+        finally:
+            after_hq.close()
+        assert after == before == ()
     finally:
         shell.stop()
 
@@ -192,11 +200,15 @@ def test_full_consumer_learning_chain_preserves_source_and_session(tmp_path: Pat
             observation_fields(forms(page, "/learning/observe")[0]),
         )
         assert status == 303
-        episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        assert episode.session_id == session_id
-        assert episode.consequences[0].source_kind == "USER_DECLARED"
-        assert episode.consequences[0].source_ref.startswith("consumer-learning-observation:")
-        assert episode.consequences[0].confidence == 0.7
+        inspect = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            episode = inspect.learning.episodes_for_song(song_id)[0]
+            assert episode.session_id == session_id
+            assert episode.consequences[0].source_kind == "USER_DECLARED"
+            assert episode.consequences[0].source_ref.startswith("consumer-learning-observation:")
+            assert episode.consequences[0].confidence == 0.7
+        finally:
+            inspect.close()
 
         _, page, _ = request(shell, "/song")
         assert "You reported this" in page
@@ -212,9 +224,13 @@ def test_full_consumer_learning_chain_preserves_source_and_session(tmp_path: Pat
             decision_fields(forms(page, "/learning/decide")[0]),
         )
         assert status == 303
-        episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        assert episode.decision is not None and episode.decision.decision == "KEEP"
-        assert shell.runtime.headquarters.sessions.get_session(session_id).state == "OPEN"
+        inspect = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            episode = inspect.learning.episodes_for_song(song_id)[0]
+            assert episode.decision is not None and episode.decision.decision == "KEEP"
+            assert inspect.sessions.get_session(session_id).state == "OPEN"
+        finally:
+            inspect.close()
 
         _, page, _ = request(shell, "/song")
         assert "Decision: Keep this change" in page
@@ -233,26 +249,38 @@ def test_full_consumer_learning_chain_preserves_source_and_session(tmp_path: Pat
 def test_start_action_origin_csrf_replay_and_stale_session_fail_closed(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, song_id, session_id = seed(data_root)
+    profile_id, song_id, session_id = seed(data_root)
     shell = new_shell(data_root, state_root, 9903, "learning-authority")
     try:
         _, page, _ = request(shell, "/song")
         fields = start_fields(forms(page, "/learning/start")[0])
         assert post(shell, "/learning/start", fields, origin="https://attacker.example")[0] == 403
-        assert shell.runtime.headquarters.learning.episodes_for_song(song_id) == ()
+        inspect = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            assert inspect.learning.episodes_for_song(song_id) == ()
+        finally:
+            inspect.close()
 
         bad = dict(fields)
         bad["csrf"] = "wrong"
         assert post(shell, "/learning/start", bad)[0] == 403
 
-        shell.runtime.headquarters.sessions.close_session(
-            session_id,
-            debrief_summary="Closed before the prepared experiment began",
-            next_action="Start a fresh Session",
-        )
+        changer = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            changer.sessions.close_session(
+                session_id,
+                debrief_summary="Closed before the prepared experiment began",
+                next_action="Start a fresh Session",
+            )
+        finally:
+            changer.close()
         status, body, _ = post(shell, "/learning/start", fields)
         assert status == 409 and "Session changed" in body
-        assert shell.runtime.headquarters.learning.episodes_for_song(song_id) == ()
+        inspect = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            assert inspect.learning.episodes_for_song(song_id) == ()
+        finally:
+            inspect.close()
         assert post(shell, "/learning/start", fields)[0] == 409
     finally:
         shell.stop()
@@ -261,7 +289,7 @@ def test_start_action_origin_csrf_replay_and_stale_session_fail_closed(tmp_path:
 def test_decision_action_rejects_unseen_new_evidence(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, song_id, _ = seed(data_root)
+    profile_id, song_id, _ = seed(data_root)
     shell = new_shell(data_root, state_root, 9904, "learning-stale-decision")
     try:
         _, page, _ = request(shell, "/song")
@@ -275,19 +303,27 @@ def test_decision_action_rejects_unseen_new_evidence(tmp_path: Path) -> None:
 
         _, page, _ = request(shell, "/song")
         stale = forms(page, "/learning/decide")[0]
-        episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        shell.runtime.headquarters.learning.append_consequence(
-            episode.id,
-            observation="A second observation arrived after the decision form rendered.",
-            source_kind="MEASURED",
-            source_ref="test:newer-measurement",
-            confidence=0.8,
-            confounders=("Arrangement playback position changed",),
-        )
+        changer = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            episode = changer.learning.episodes_for_song(song_id)[0]
+            changer.learning.append_consequence(
+                episode.id,
+                observation="A second observation arrived after the decision form rendered.",
+                source_kind="MEASURED",
+                source_ref="test:newer-measurement",
+                confidence=0.8,
+                confounders=("Arrangement playback position changed",),
+            )
+        finally:
+            changer.close()
         status, body, _ = post(shell, "/learning/decide", decision_fields(stale))
         assert status == 409 and "New Learning evidence" in body
-        episode = shell.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        assert len(episode.consequences) == 2 and episode.decision is None
+        inspect = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            episode = inspect.learning.episodes_for_song(song_id)[0]
+            assert len(episode.consequences) == 2 and episode.decision is None
+        finally:
+            inspect.close()
 
         _, page, _ = request(shell, "/song")
         assert "Measured evidence" in page
@@ -310,11 +346,15 @@ def test_undecided_history_survives_quit_and_can_close_after_session(tmp_path: P
             "/learning/observe",
             observation_fields(forms(page, "/learning/observe")[0]),
         )[0] == 303
-        shell.runtime.headquarters.sessions.close_session(
-            session_id,
-            debrief_summary="Captured the observation",
-            next_action="Judge the experiment after reopening",
-        )
+        changer = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            changer.sessions.close_session(
+                session_id,
+                debrief_summary="Captured the observation",
+                next_action="Judge the experiment after reopening",
+            )
+        finally:
+            changer.close()
     finally:
         shell.stop()
 
@@ -331,9 +371,13 @@ def test_undecided_history_survives_quit_and_can_close_after_session(tmp_path: P
             decision_fields(forms(page, "/learning/decide")[0], decision="INCONCLUSIVE"),
         )
         assert status == 303
-        episode = shell2.runtime.headquarters.learning.episodes_for_song(song_id)[0]
-        assert episode.decision is not None and episode.decision.decision == "INCONCLUSIVE"
-        assert shell2.runtime.headquarters.sessions.get_session(session_id).state == "CLOSED"
+        inspect = HeadquartersMemory.open(data_root, profile_id)
+        try:
+            episode = inspect.learning.episodes_for_song(song_id)[0]
+            assert episode.decision is not None and episode.decision.decision == "INCONCLUSIVE"
+            assert inspect.sessions.get_session(session_id).state == "CLOSED"
+        finally:
+            inspect.close()
     finally:
         shell2.stop()
 
