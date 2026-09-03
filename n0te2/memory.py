@@ -77,11 +77,13 @@ class HeadquartersMemory:
         self.context_projection = ContextProjectionService(self.retention)
         # Shell installation is intentionally lazy. Headquarters instances are
         # constructed only after package import, avoiding a consumer_shell <->
-        # memory import cycle while keeping the artist-facing projection attached
+        # memory import cycle while keeping artist-facing projections attached
         # to the same canonical memory composition root.
+        from .creative_suggestions_shell import install_song_creative_suggestions
         from .retention_shell import install_song_retention
 
         install_song_retention()
+        install_song_creative_suggestions()
 
     @classmethod
     def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
