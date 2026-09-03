@@ -423,3 +423,7 @@ __all__ += [
     "InteractionPlanStep",
     "StaleInteractionDepthError",
 ]
+
+from .audio_engineering_shell import install_song_audio_engineering
+
+install_song_audio_engineering()
