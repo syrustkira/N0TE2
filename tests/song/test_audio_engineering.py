@@ -132,6 +132,17 @@ class AudioEngineeringTests(unittest.TestCase):
         with self.assertRaisesRegex(CorruptEngineeringMedia, "size changed"):
             analyze_pcm_wave(path, binding=binding)
 
+    def test_same_size_fingerprint_change_after_binding_fails_closed(self) -> None:
+        path = self.root / "same-size-changed.wav"
+        _write_pcm16(path, [(0,), (1000,), (-1000,)])
+        binding = _binding(path)
+        changed = bytearray(path.read_bytes())
+        changed[-2:] = struct.pack("<h", 2000)
+        self.assertEqual(len(changed), binding.source_size_bytes)
+        path.write_bytes(changed)
+        with self.assertRaisesRegex(CorruptEngineeringMedia, "fingerprint changed"):
+            analyze_pcm_wave(path, binding=binding)
+
     def test_misaligned_pcm_data_is_rejected(self) -> None:
         path = self.root / "bad.wav"
         fmt = struct.pack("<HHIIHH", 1, 2, 48000, 48000 * 4, 4, 16)
