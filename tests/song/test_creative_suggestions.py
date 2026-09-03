@@ -143,19 +143,42 @@ class CreativeSuggestionTests(unittest.TestCase):
         clean_baseline = self.service.suggest(distance="FAMILIAR")
         self.assertEqual(visible_again, clean_baseline)
 
-    def test_after_release_requires_explicit_song_release_evidence(self):
+    def test_after_release_requires_exact_explicit_song_release_evidence(self):
         first = self.attentive.suggest(distance="WILDCARD")
+        item_key = suggestion_item_key(first.semantic_key)
         self.hq.attention_deferrals.defer(
-            suggestion_item_key(first.semantic_key),
+            item_key,
             "AFTER_RELEASE",
             song_id=self.song.id,
         )
         hidden = self.attentive.suggest(distance="WILDCARD")
         self.assertNotEqual(hidden.semantic_key, first.semantic_key)
+
+        unrelated = self.hq.store.create_song("Already Released Somewhere Else")
+        self.hq.store.select_song(self.song.id)
+        still_hidden = self.attentive.suggest(
+            distance="WILDCARD", released_song_ids={unrelated.id}
+        )
+        self.assertNotEqual(still_hidden.semantic_key, first.semantic_key)
+        self.assertTrue(
+            self.hq.attention_deferrals.applies(
+                item_key,
+                song_id=self.song.id,
+                released_song_ids={unrelated.id},
+            )
+        )
+
         released = self.attentive.suggest(
             distance="WILDCARD", released_song_ids={self.song.id}
         )
         self.assertEqual(released.semantic_key, first.semantic_key)
+        self.assertFalse(
+            self.hq.attention_deferrals.applies(
+                item_key,
+                song_id=self.song.id,
+                released_song_ids={self.song.id},
+            )
+        )
 
     def test_all_available_suggestions_deferred_fails_closed(self):
         for allowed in CREATIVE_DIMENSIONS:
