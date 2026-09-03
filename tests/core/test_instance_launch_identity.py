@@ -55,6 +55,29 @@ class ExactLaunchLeaseRegressionTests(unittest.TestCase):
         self.assertEqual(current.process, worker)
         self.assertTrue(current.process.same_launch(worker))
 
+    def test_default_launch_marker_is_process_scoped_not_reused_workflow_token(self):
+        default_identity = ProcessIdentity.from_start_token(
+            self.platform,
+            pid=4242,
+            start_token="reused-workflow-start-token",
+        )
+        legacy_collapsed_identity = self.identity("reused-workflow-start-token")
+        repeated_default = ProcessIdentity.from_start_token(
+            self.platform,
+            pid=4242,
+            start_token="reused-workflow-start-token",
+        )
+
+        self.assertEqual(
+            default_identity.workflow_fingerprint,
+            legacy_collapsed_identity.workflow_fingerprint,
+        )
+        self.assertNotEqual(
+            default_identity.launch_fingerprint,
+            legacy_collapsed_identity.launch_fingerprint,
+        )
+        self.assertTrue(default_identity.same_launch(repeated_default))
+
     def test_stale_old_launch_cannot_release_newer_lease(self):
         old = self.identity("launch-old")
         worker = self.identity("launch-new")
@@ -82,6 +105,14 @@ class ExactLaunchLeaseRegressionTests(unittest.TestCase):
         self.assertEqual(first.status, "ACQUIRED")
         self.assertEqual(second.status, "ALREADY_OWNED")
         self.assertEqual(second.lease, first.lease)
+
+    def test_retry_exhaustion_returns_uncertain_instead_of_raising(self):
+        worker = self.identity("launch-one")
+        with mock.patch.object(self.manager, "_write_exclusive", return_value=False) as write:
+            result = self.manager.acquire(self.profile, worker, self.probe)
+        self.assertEqual(result.status, "UNCERTAIN")
+        self.assertIsNone(result.lease)
+        self.assertEqual(write.call_count, self.manager.MAX_ATTEMPTS)
 
     def test_schema_v1_process_data_remains_readable(self):
         worker = self.identity("reused-workflow-start-token")
