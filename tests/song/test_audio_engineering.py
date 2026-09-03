@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import math
 import struct
 import tempfile
 import unittest
@@ -49,7 +48,10 @@ def _encode_signed(value: int, bits: int) -> bytes:
 def _write_pcm24(path: Path, samples: list[int], *, rate: int = 48000) -> None:
     data = b"".join(_encode_signed(value, 24) for value in samples)
     fmt = struct.pack("<HHIIHH", 1, 1, rate, rate * 3, 3, 24)
-    payload = b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data
+    data_chunk = b"data" + struct.pack("<I", len(data)) + data
+    if len(data) & 1:
+        data_chunk += b"\x00"
+    payload = b"fmt " + struct.pack("<I", len(fmt)) + fmt + data_chunk
     path.write_bytes(b"RIFF" + struct.pack("<I", 4 + len(payload)) + b"WAVE" + payload)
 
 
