@@ -16,7 +16,10 @@
     "n0te2/__init__.py",
     "n0te2/consumer_shell.py",
     "tests/song/test_audio_engineering.py",
-    "tests/song/test_song_audio_engineering_consumer.py"
+    "tests/song/test_song_audio_engineering_consumer.py",
+    "tests/governance/test_context_lifecycle.py",
+    "tests/governance/test_retention_supervision.py",
+    "tests/governance/test_smoke.py"
   ],
   "allowed_prefixes": ["governance/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
@@ -57,6 +60,12 @@
     "exact-head Linux, Windows and macOS governance/full regression/consumer smoke passes after implementation",
     "staff-engineer and red-team review find no material cross-Artist leak, stale-binding promotion, unbounded read, misleading loudness claim or hidden mutation"
   ],
+  "observed_verifier_repairs": {
+    "source_run": 33699061014,
+    "head": "c69eb933138e7adbd7f5833b3011a554f386d439",
+    "rule": "Only repair verifier assumptions proven stale by this active receipt. Do not weaken product assertions.",
+    "classes": ["fresh reconstruction test assumed STABLE", "retention regression fixtures assumed checked-in INACTIVE receipt", "consumer smoke expected a UX-specific banner"]
+  },
   "non_scope": [
     "LUFS or true-peak claims",
     "automatic mastering",
