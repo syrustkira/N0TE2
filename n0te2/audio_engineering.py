@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import hashlib
 import math
 from dataclasses import dataclass
 from pathlib import Path
 
-ANALYZER_VERSION = "AUDIO_ENGINEERING_SNAPSHOT_V1"
+ANALYZER_VERSION = "AUDIO_ENGINEERING_SNAPSHOT_V2"
 MAX_ENGINEERING_BYTES = 256 * 1024 * 1024
 _MAX_DATA_CHUNKS = 64
 _SUPPORTED_BITS = {8, 16, 24, 32}
@@ -82,6 +83,17 @@ def _u32(value: bytes) -> int:
     if len(value) != 4:
         raise CorruptEngineeringMedia("truncated 32-bit WAV field")
     return int.from_bytes(value, "little", signed=False)
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while True:
+            block = source.read(1024 * 1024)
+            if not block:
+                break
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def _inspect_pcm_layout(path: Path, *, size_bytes: int) -> _WaveLayout:
@@ -209,6 +221,8 @@ def analyze_pcm_wave(
     size_bytes = media_path.stat().st_size
     if size_bytes != binding.source_size_bytes:
         raise CorruptEngineeringMedia("engineering material size changed after lineage verification")
+    if _sha256_file(media_path) != binding.sha256:
+        raise CorruptEngineeringMedia("engineering material fingerprint changed after lineage verification")
 
     layout = _inspect_pcm_layout(media_path, size_bytes=size_bytes)
     bytes_per_sample = layout.bits_per_sample // 8
@@ -251,6 +265,10 @@ def analyze_pcm_wave(
 
     if frames_seen != layout.frame_count:
         raise CorruptEngineeringMedia("PCM frame count changed during engineering analysis")
+    if media_path.stat().st_size != binding.source_size_bytes:
+        raise CorruptEngineeringMedia("engineering material size changed during engineering analysis")
+    if _sha256_file(media_path) != binding.sha256:
+        raise CorruptEngineeringMedia("engineering material fingerprint changed during engineering analysis")
 
     total_sq = sum(sums_sq)
     sample_peak = max(peaks)
