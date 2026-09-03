@@ -99,7 +99,11 @@ def test_deferrals_are_profile_isolated_and_item_keys_are_semantic(tmp_path) -> 
         with pytest.raises(ValidationError):
             second.attention_deferrals.defer("NOW_THREAD", "SOMEDAY")
         with pytest.raises(ValidationError):
-            second.attention_deferrals.defer("SUGGESTION:unknown:key", "SOMEDAY")
+            second.attention_deferrals.defer('SUGGESTION:bad"key', "SOMEDAY")
+        # The Attention layer remains generic enough for future real N0TE job
+        # domains. It validates semantic-key shape, not today's suggestion catalog.
+        future = second.attention_deferrals.defer("JOB:future-real-job", "SOMEDAY")
+        assert future.item_key == "JOB:future-real-job"
     finally:
         second.close()
 
