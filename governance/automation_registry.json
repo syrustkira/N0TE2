@@ -47,7 +47,7 @@
       "failure_policy": {"max_retries":8,"backoff":"BOUNDED_RESELECT_OR_BLOCK","terminal_states":["STABLE","WAITING","BLOCKED"],"on_exhaustion":"STOP_AND_REPORT_BLOCKER"},
       "escalation_target": "USER_ROOT",
       "auto_spawn_successor": false,
-      "lifecycle": {"state":"ACTIVE","last_observation":"Construction lifecycle is canonically selected in current_state; this field is compatibility projection only.","next_wake_condition":"Return to dormant when current_state returns to STABLE.","health":"DERIVED_FROM_CURRENT_STATE"},
+      "lifecycle": {"state":"DORMANT","last_observation":"Construction runtime truth is derived from current_state, not this registry.","next_wake_condition":"A fresh canonical construction selection.","health":"DERIVED_FROM_CURRENT_STATE"},
       "runtime_state_source": "REPOSITORY_GOVERNANCE_STATE",
       "observability": {"exact_head_required":true,"reactivation_is_event":true,"runtime_handoff_artifact":"governance-runtime-handoff.json","observation_artifact":"governance-ci-observation.json"}
     },
