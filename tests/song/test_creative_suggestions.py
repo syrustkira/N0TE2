@@ -98,7 +98,9 @@ class CreativeSuggestionTests(unittest.TestCase):
             service.suggest(distance="FAMILIAR")
 
     def test_real_semantic_deferral_changes_what_n0te_selects(self):
+        baseline = self.service.suggest(distance="ADJACENT")
         first = self.attentive.suggest(distance="ADJACENT")
+        self.assertEqual(first, baseline)
         self.hq.attention_deferrals.defer(
             suggestion_item_key(first.semantic_key),
             "LATER_THIS_SONG",
@@ -130,8 +132,16 @@ class CreativeSuggestionTests(unittest.TestCase):
             objective="Fresh pass",
         )
         self.assertNotEqual(next_session.id, self.session.id)
+        self.assertFalse(
+            self.hq.attention_deferrals.applies(
+                item_key,
+                song_id=self.song.id,
+                anchor=suggestion_context_anchor(next_session.id),
+            )
+        )
         visible_again = self.attentive.suggest(distance="FAMILIAR")
-        self.assertEqual(visible_again.semantic_key, first.semantic_key)
+        clean_baseline = self.service.suggest(distance="FAMILIAR")
+        self.assertEqual(visible_again, clean_baseline)
 
     def test_after_release_requires_explicit_song_release_evidence(self):
         first = self.attentive.suggest(distance="WILDCARD")
