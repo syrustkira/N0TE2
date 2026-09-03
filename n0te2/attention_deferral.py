@@ -413,5 +413,5 @@ class AttentionDeferralMemory:
             return current_song == current.song_id
         if current.horizon == "AFTER_RELEASE":
             released = {str(value).strip() for value in released_song_ids}
-            return current.song_id not in released
+            return current_song == current.song_id and current.song_id not in released
         return True
