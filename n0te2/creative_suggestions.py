@@ -88,8 +88,9 @@ class CreativeSuggestionService:
 
     This service is deliberately smaller than an Artist World or recommendation
     engine. It reads current Song/Session context, respects explicit dimension
-    locks, and returns one bounded prompt. It does not persist preferences,
-    infer taste, call AI/providers, mutate a DAW, or grant action authority.
+    locks, and returns one bounded prompt. It persists only explicit, session-
+    scoped deferrals; it does not infer taste, call AI/providers, mutate a DAW,
+    or grant action authority.
     """
 
     def __init__(self, store: LineageStore, sessions: SessionMemory):

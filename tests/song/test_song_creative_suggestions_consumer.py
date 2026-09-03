@@ -131,7 +131,6 @@ def test_song_page_can_prepare_local_bounded_suggestion(tmp_path: Path) -> None:
     finally:
         shell.stop()
 
-
 def test_not_now_durably_avoids_repeating_the_idea_in_the_current_session(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
@@ -181,6 +180,37 @@ def test_not_now_durably_avoids_repeating_the_idea_in_the_current_session(tmp_pa
         assert first_prompt.group(1) not in replacement
     finally:
         relaunched.stop()
+
+
+def test_not_now_rejects_foreign_origin_without_consuming_the_action(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed_song(data_root)
+
+    shell = new_shell(data_root, state_root, 12108, "suggest-defer-origin")
+    try:
+        _, page = get(shell, "/song")
+        _, result = post(
+            shell,
+            "/suggestion/create",
+            {"csrf": shell._csrf, "action": suggestion_action(page), "distance": "FAMILIAR"},
+            origin=shell.address.origin,
+        )
+        token = deferral_action(result)
+        fields = {"csrf": shell._csrf, "action": token}
+
+        status, _ = post(shell, "/suggestion/defer", fields, origin="https://example.invalid")
+        assert status == 403
+
+        status, deferred = post(shell, "/suggestion/defer", fields, origin=shell.address.origin)
+        assert status == 200
+        assert "Suggestion set aside" in deferred
+
+        status, replay = post(shell, "/suggestion/defer", fields, origin=shell.address.origin)
+        assert status == 409
+        assert "already handled or expired" in replay
+    finally:
+        shell.stop()
 
 
 def test_foreign_origin_is_rejected_before_action_consumption_and_replay_is_rejected(tmp_path: Path) -> None:

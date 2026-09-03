@@ -130,6 +130,17 @@ class CreativeSuggestionTests(unittest.TestCase):
         with self.assertRaisesRegex(CreativeSuggestionError, "Session changed"):
             self.service.defer(suggestion)
 
+    def test_exhausted_session_fails_closed_instead_of_repeating_an_idea(self):
+        seen = set()
+        for _ in CREATIVE_DIMENSIONS:
+            suggestion = self.service.suggest(distance="WILDCARD")
+            self.assertNotIn(suggestion.semantic_key, seen)
+            seen.add(suggestion.semantic_key)
+            self.service.defer(suggestion)
+
+        with self.assertRaisesRegex(CreativeSuggestionError, "Every available suggestion"):
+            self.service.suggest(distance="WILDCARD")
+
 
 if __name__ == "__main__":
     unittest.main()
