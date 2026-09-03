@@ -32,6 +32,50 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
             gov.run(repo, verify_git=False)
         self.assertIn(needle, str(cm.exception))
 
+    def stabilize(self, repo):
+        state_path = repo / "governance/current_state.json"
+        state = json.loads(state_path.read_text())
+        state.update(
+            {
+                "lifecycle_state": "STABLE",
+                "active_node": None,
+                "active_increment": None,
+                "product_code_authorized": False,
+                "legacy_admission_authorized": False,
+                "terminal_reason": "No currently justified dependency-ready construction work exists.",
+                "wake_condition": None,
+            }
+        )
+        self.write_json(state_path, state)
+
+        graph_path = repo / "governance/completion_graph.json"
+        graph = json.loads(graph_path.read_text())
+        for node in graph["nodes"]:
+            if node["state"] == "ACTIVE":
+                node["state"] = "PRESERVED"
+        self.write_json(graph_path, graph)
+
+        handoff_path = repo / "governance/handoff.json"
+        handoff = json.loads(handoff_path.read_text())
+        handoff["lifecycle"] = {"state": "STABLE", "active_node": None, "active_increment": None}
+        self.write_json(handoff_path, handoff)
+
+        automation_path = repo / "governance/automation_registry.json"
+        automation = json.loads(automation_path.read_text())
+        controller = next(
+            row
+            for row in automation["actors"]
+            if row["id"] == "AUTO-CONSTRUCTION-CONTROLLER-001"
+        )
+        controller["lifecycle"]["state"] = "DORMANT"
+        self.write_json(automation_path, automation)
+
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["status"] = "INACTIVE"
+        receipt["product_code_allowed"] = False
+        self.write_json(receipt_path, receipt)
+
     def activate_ux01(self, repo, *, activate_receipt=True):
         state_path = repo / "governance/current_state.json"
         state = json.loads(state_path.read_text())
@@ -76,9 +120,11 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
         controller["lifecycle"]["state"] = "ACTIVE"
         self.write_json(automation_path, automation)
 
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt["status"] = "INACTIVE"
+        receipt["product_code_allowed"] = False
         if activate_receipt:
-            receipt_path = repo / "governance/active_receipt.json"
-            receipt = json.loads(receipt_path.read_text())
             receipt.update(
                 {
                     "status": "ACTIVE",
@@ -91,7 +137,7 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
                     "legacy_test_text_copy_allowed": False,
                 }
             )
-            self.write_json(receipt_path, receipt)
+        self.write_json(receipt_path, receipt)
 
     def test_known_scope_does_not_select_work(self):
         doc = json.loads((ROOT / "governance/requirements.json").read_text())
@@ -111,35 +157,7 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
 
     def test_stable_lifecycle_allows_zero_active_nodes(self):
         repo = self.clone()
-        state_path = repo / "governance/current_state.json"
-        state = json.loads(state_path.read_text())
-        state.update(
-            {
-                "lifecycle_state": "STABLE",
-                "active_node": None,
-                "active_increment": None,
-                "product_code_authorized": False,
-                "legacy_admission_authorized": False,
-                "terminal_reason": "No currently justified dependency-ready construction work exists.",
-                "wake_condition": None,
-            }
-        )
-        self.write_json(state_path, state)
-        graph_path = repo / "governance/completion_graph.json"
-        graph = json.loads(graph_path.read_text())
-        for node in graph["nodes"]:
-            if node["state"] == "ACTIVE":
-                node["state"] = "PRESERVED"
-        self.write_json(graph_path, graph)
-        handoff_path = repo / "governance/handoff.json"
-        handoff = json.loads(handoff_path.read_text())
-        handoff["lifecycle"] = {"state": "STABLE", "active_node": None, "active_increment": None}
-        self.write_json(handoff_path, handoff)
-        automation_path = repo / "governance/automation_registry.json"
-        automation = json.loads(automation_path.read_text())
-        controller = next(row for row in automation["actors"] if row["id"] == "AUTO-CONSTRUCTION-CONTROLLER-001")
-        controller["lifecycle"]["state"] = "DORMANT"
-        self.write_json(automation_path, automation)
+        self.stabilize(repo)
         gov.run(repo, verify_git=False)
 
     def test_stable_cannot_leave_zombie_active_node(self):
@@ -160,6 +178,7 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
 
     def test_terminal_handoff_cannot_leave_active_construction_receipt(self):
         repo = self.clone()
+        self.stabilize(repo)
         receipt_path = repo / "governance/active_receipt.json"
         receipt = json.loads(receipt_path.read_text())
         receipt["status"] = "ACTIVE"
