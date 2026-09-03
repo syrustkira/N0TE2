@@ -27,72 +27,36 @@ _DISTANCE_EXPLANATIONS = {
 # later attention/suppression contract can refer to the idea pattern without
 # persisting this read-only suggestion result itself.
 _CATALOG = {
-    "ARRANGEMENT": (
-        (
-            "arrangement:contrast-window",
-            "Create one contrast window",
-            {
-                "FAMILIAR": "Choose 4–8 bars before the strongest section and remove one supporting layer. Compare whether the arrival reads more clearly.",
-                "ADJACENT": "Choose one section boundary and change the density on only one side of it. Keep the musical material itself mostly intact.",
-                "WILDCARD": "Rebuild one short section around deliberate negative space, then compare it against the current version instead of replacing the Song outright.",
-            },
-        ),
-    ),
-    "RHYTHM": (
-        (
-            "rhythm:single-groove-variable",
-            "Change one groove variable",
-            {
-                "FAMILIAR": "Keep the pattern, but move or remove one recurring rhythmic event for one section. Listen for a clearer pocket before doing anything else.",
-                "ADJACENT": "Keep the harmony and melody fixed while changing one rhythmic subdivision or accent pattern in a single section.",
-                "WILDCARD": "Try one section at half-time, double-time, or with a deliberately sparse pulse, then compare the emotional effect before keeping it.",
-            },
-        ),
-    ),
-    "HARMONY": (
-        (
-            "harmony:one-chord-pressure-test",
-            "Pressure-test one chord moment",
-            {
-                "FAMILIAR": "Keep the progression, but change the voicing or inversion of one chord where the section feels most exposed.",
-                "ADJACENT": "Keep the melody and rhythm fixed while replacing one chord with a nearby functional or color alternative, then compare only that moment.",
-                "WILDCARD": "Try one deliberately outside-color chord at a section boundary and treat it as a reversible experiment, not a new harmonic rule.",
-            },
-        ),
-    ),
-    "MELODY": (
-        (
-            "melody:motif-variation",
-            "Vary one motif, not the whole topline",
-            {
-                "FAMILIAR": "Keep the motif shape and change only its ending on one repeat.",
-                "ADJACENT": "Keep the rhythm recognizable but alter the interval direction of one motif repeat.",
-                "WILDCARD": "Answer the existing motif with a contrasting short phrase in one section, then compare whether the contrast earns its space.",
-            },
-        ),
-    ),
-    "SOUND": (
-        (
-            "sound:role-preserving-swap",
-            "Swap a sound without changing its job",
-            {
-                "FAMILIAR": "Keep the part and role exactly the same, but audition one nearby timbral variation.",
-                "ADJACENT": "Keep the notes and rhythm fixed while changing the sound family for one supporting layer.",
-                "WILDCARD": "Replace one non-lead texture with a sharply contrasting source while preserving its musical role, then compare before committing.",
-            },
-        ),
-    ),
-    "DYNAMICS": (
-        (
-            "dynamics:section-energy-curve",
-            "Reshape one energy curve",
-            {
-                "FAMILIAR": "Change the level or density of one supporting element across a single section so the section has a clearer rise or fall.",
-                "ADJACENT": "Keep notes and arrangement fixed while exaggerating one section’s dynamic contrast against its neighbor.",
-                "WILDCARD": "Make one expected loud moment intentionally restrained, or one restrained moment unexpectedly large, then judge the contrast in context.",
-            },
-        ),
-    ),
+    "ARRANGEMENT": (("arrangement:contrast-window", "Create one contrast window", {
+        "FAMILIAR": "Choose 4–8 bars before the strongest section and remove one supporting layer. Compare whether the arrival reads more clearly.",
+        "ADJACENT": "Choose one section boundary and change the density on only one side of it. Keep the musical material itself mostly intact.",
+        "WILDCARD": "Rebuild one short section around deliberate negative space, then compare it against the current version instead of replacing the Song outright.",
+    }),),
+    "RHYTHM": (("rhythm:single-groove-variable", "Change one groove variable", {
+        "FAMILIAR": "Keep the pattern, but move or remove one recurring rhythmic event for one section. Listen for a clearer pocket before doing anything else.",
+        "ADJACENT": "Keep the harmony and melody fixed while changing one rhythmic subdivision or accent pattern in a single section.",
+        "WILDCARD": "Try one section at half-time, double-time, or with a deliberately sparse pulse, then compare the emotional effect before keeping it.",
+    }),),
+    "HARMONY": (("harmony:one-chord-pressure-test", "Pressure-test one chord moment", {
+        "FAMILIAR": "Keep the progression, but change the voicing or inversion of one chord where the section feels most exposed.",
+        "ADJACENT": "Keep the melody and rhythm fixed while replacing one chord with a nearby functional or color alternative, then compare only that moment.",
+        "WILDCARD": "Try one deliberately outside-color chord at a section boundary and treat it as a reversible experiment, not a new harmonic rule.",
+    }),),
+    "MELODY": (("melody:motif-variation", "Vary one motif, not the whole topline", {
+        "FAMILIAR": "Keep the motif shape and change only its ending on one repeat.",
+        "ADJACENT": "Keep the rhythm recognizable but alter the interval direction of one motif repeat.",
+        "WILDCARD": "Answer the existing motif with a contrasting short phrase in one section, then compare whether the contrast earns its space.",
+    }),),
+    "SOUND": (("sound:role-preserving-swap", "Swap a sound without changing its job", {
+        "FAMILIAR": "Keep the part and role exactly the same, but audition one nearby timbral variation.",
+        "ADJACENT": "Keep the notes and rhythm fixed while changing the sound family for one supporting layer.",
+        "WILDCARD": "Replace one non-lead texture with a sharply contrasting source while preserving its musical role, then compare before committing.",
+    }),),
+    "DYNAMICS": (("dynamics:section-energy-curve", "Reshape one energy curve", {
+        "FAMILIAR": "Change the level or density of one supporting element across a single section so the section has a clearer rise or fall.",
+        "ADJACENT": "Keep notes and arrangement fixed while exaggerating one section’s dynamic contrast against its neighbor.",
+        "WILDCARD": "Make one expected loud moment intentionally restrained, or one restrained moment unexpectedly large, then judge the contrast in context.",
+    }),),
 }
 
 
@@ -104,6 +68,7 @@ class CreativeSuggestionError(RuntimeError):
 class CreativeSuggestion:
     semantic_key: str
     song_id: str
+    session_id: str | None
     distance: str
     dimension: str
     title: str
@@ -153,13 +118,7 @@ class CreativeSuggestionService:
             normalized.add(dimension)
         return tuple(sorted(normalized))
 
-    def suggest(
-        self,
-        *,
-        distance: str,
-        locked_dimensions=(),
-        variation: int = 0,
-    ) -> CreativeSuggestion:
+    def suggest(self, *, distance: str, locked_dimensions=(), variation: int = 0) -> CreativeSuggestion:
         mode = self.normalize_distance(distance)
         locks = self.normalize_locks(locked_dimensions)
         if not isinstance(variation, int) or variation < 0 or variation > 1000:
@@ -170,14 +129,13 @@ class CreativeSuggestionService:
             raise CreativeSuggestionError("Start or select a Song before asking for a creative suggestion.")
         latest = self.sessions.latest_for_song(song.id)
         objective = None if latest is None else latest.objective
+        session_id = None if latest is None else latest.id
 
         available = [dimension for dimension in CREATIVE_DIMENSIONS if dimension not in locks]
         if not available:
             raise CreativeSuggestionError("Every creative dimension is locked. Unlock at least one dimension to vary the Song.")
 
-        material = "|".join(
-            (song.id, objective or "", mode, ",".join(locks), str(variation))
-        ).encode("utf-8")
+        material = "|".join((song.id, session_id or "", objective or "", mode, ",".join(locks), str(variation))).encode("utf-8")
         digest = hashlib.sha256(material).digest()
         dimension = available[int.from_bytes(digest[:4], "big") % len(available)]
         entries = _CATALOG[dimension]
@@ -186,6 +144,7 @@ class CreativeSuggestionService:
         return CreativeSuggestion(
             semantic_key=semantic_key,
             song_id=song.id,
+            session_id=session_id,
             distance=mode,
             dimension=dimension,
             title=title,
