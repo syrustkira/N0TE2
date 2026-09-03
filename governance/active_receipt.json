@@ -15,6 +15,7 @@
     "n0te2/creative_suggestions_shell.py",
     "n0te2/memory.py",
     "tests/ux/test_suggestion_deferral.py",
+    "tests/ux/test_suggestion_deferral_consumer.py",
     "tests/song/test_song_creative_suggestions_consumer.py"
   ],
   "allowed_prefixes": ["governance/"],
