@@ -4,7 +4,7 @@ import hashlib
 import sqlite3
 from dataclasses import dataclass
 
-from .lineage import LineageStore, ValidationError
+from .lineage import LineageCorruptionError, LineageStore, ValidationError
 from .session import SessionMemory
 
 SUGGESTION_DISTANCES = ("FAMILIAR", "ADJACENT", "WILDCARD")
@@ -17,6 +17,7 @@ CREATIVE_DIMENSIONS = (
     "DYNAMICS",
 )
 SUGGESTION_SOURCE_KIND = "DETERMINISTIC_LOCAL"
+SUGGESTION_DEFERRAL_SCHEMA_VERSION = 1
 
 _DISTANCE_EXPLANATIONS = {
     "FAMILIAR": "A small move around the current Song context. This does not claim to know your personal taste.",
@@ -103,7 +104,31 @@ class CreativeSuggestionService:
         self._ensure_deferral_schema()
 
     def _ensure_deferral_schema(self) -> None:
+        table = "creative_suggestion_deferrals"
         try:
+            exists = self.store._conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+                (table,),
+            ).fetchone() is not None
+            version_row = self.store._conn.execute(
+                "SELECT value FROM metadata WHERE key='creative_suggestion_deferral_schema_version'"
+            ).fetchone()
+            version = None if version_row is None else str(version_row["value"])
+            if exists:
+                self._validate_deferral_schema()
+                if version is None:
+                    # Admit the unversioned shape written by the immediately
+                    # preceding bounded increment only after structural proof.
+                    with self.store._tx():
+                        self.store._conn.execute(
+                            "INSERT INTO metadata(key,value) VALUES(?,?)",
+                            ("creative_suggestion_deferral_schema_version", str(SUGGESTION_DEFERRAL_SCHEMA_VERSION)),
+                        )
+                elif version != str(SUGGESTION_DEFERRAL_SCHEMA_VERSION):
+                    raise LineageCorruptionError("unsupported creative suggestion deferral schema version")
+                return
+            if version is not None:
+                raise LineageCorruptionError("creative suggestion deferral schema metadata/table mismatch")
             with self.store._tx():
                 self.store._conn.execute(
                     """CREATE TABLE IF NOT EXISTS creative_suggestion_deferrals (
@@ -113,8 +138,33 @@ class CreativeSuggestionService:
                         PRIMARY KEY(song_id, session_context, semantic_key)
                     )"""
                 )
+                self.store._conn.execute(
+                    "INSERT INTO metadata(key,value) VALUES(?,?)",
+                    ("creative_suggestion_deferral_schema_version", str(SUGGESTION_DEFERRAL_SCHEMA_VERSION)),
+                )
+            self._validate_deferral_schema()
+        except LineageCorruptionError:
+            raise
         except sqlite3.DatabaseError as exc:
             raise CreativeSuggestionError("Creative suggestion deferrals are unavailable.") from exc
+
+    def _validate_deferral_schema(self) -> None:
+        columns = tuple(
+            (str(row["name"]), str(row["type"]), int(row["notnull"]), int(row["pk"]))
+            for row in self.store._conn.execute("PRAGMA table_info(creative_suggestion_deferrals)")
+        )
+        expected = (
+            ("song_id", "TEXT", 1, 1),
+            ("session_context", "TEXT", 1, 2),
+            ("semantic_key", "TEXT", 1, 3),
+        )
+        foreign_keys = tuple(self.store._conn.execute("PRAGMA foreign_key_list(creative_suggestion_deferrals)"))
+        song_foreign_key = any(
+            str(row["table"]) == "songs" and str(row["from"]) == "song_id" and str(row["to"]) == "id"
+            for row in foreign_keys
+        )
+        if columns != expected or not song_foreign_key:
+            raise LineageCorruptionError("creative suggestion deferral schema is malformed")
 
     @staticmethod
     def _session_context(session_id: str | None) -> str:

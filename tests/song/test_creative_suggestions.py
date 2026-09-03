@@ -7,6 +7,7 @@ from n0te2.creative_suggestions import (
     CreativeSuggestionService,
 )
 from n0te2.memory import HeadquartersMemory
+from n0te2.lineage import LineageCorruptionError
 
 
 class CreativeSuggestionTests(unittest.TestCase):
@@ -140,6 +141,16 @@ class CreativeSuggestionTests(unittest.TestCase):
 
         with self.assertRaisesRegex(CreativeSuggestionError, "Every available suggestion"):
             self.service.suggest(distance="WILDCARD")
+
+    def test_malformed_deferral_schema_is_rejected_on_recomposition(self):
+        with self.hq.store._tx():
+            self.hq.store._conn.execute("DROP TABLE creative_suggestion_deferrals")
+            self.hq.store._conn.execute(
+                "CREATE TABLE creative_suggestion_deferrals (semantic_key TEXT)"
+            )
+
+        with self.assertRaisesRegex(LineageCorruptionError, "schema is malformed"):
+            CreativeSuggestionService(self.hq.store, self.hq.sessions)
 
 
 if __name__ == "__main__":
