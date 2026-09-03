@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import re
 from pathlib import Path
 from urllib.error import HTTPError
@@ -43,11 +45,12 @@ def get(shell: ConsumerShell, path: str) -> tuple[int, str]:
         return exc.code, exc.read().decode("utf-8")
 
 
-def post(shell: ConsumerShell, path: str, fields: dict[str, str]) -> tuple[int, str]:
+def post(shell: ConsumerShell, path: str, fields: dict[str, str], *, origin: str | None = None) -> tuple[int, str]:
     payload = urlencode(fields).encode("utf-8")
     req = Request(shell.address.origin + path, data=payload, method="POST")
     req.add_header("Content-Type", "application/x-www-form-urlencoded")
-    req.add_header("Origin", shell.address.origin)
+    if origin is not None:
+        req.add_header("Origin", origin)
     try:
         with build_opener().open(req, timeout=3.0) as response:
             return response.status, response.read().decode("utf-8")
@@ -61,13 +64,7 @@ def action_for(page: str, path: str) -> str:
         page,
         flags=re.DOTALL,
     )
-    assert match is not None
-    return match.group(1)
-
-
-def suggestion_title(page: str) -> str:
-    match = re.search(r'<h3>One prompt to try</h3>.*?<p><strong>([^<]+)</strong></p>', page, flags=re.DOTALL)
-    assert match is not None
+    assert match is not None, path
     return match.group(1)
 
 
@@ -75,15 +72,12 @@ def seed_song(data_root: Path) -> None:
     hq = HeadquartersMemory.create(data_root, "Not Now Consumer")
     try:
         song = hq.store.create_song("Signal Bloom")
-        hq.sessions.start_session(
-            song_id=song.id,
-            objective="Keep momentum without chasing every idea",
-        )
+        hq.sessions.start_session(song_id=song.id, objective="Strengthen the chorus lift")
     finally:
         hq.close()
 
 
-def request_suggestion(shell: ConsumerShell) -> str:
+def prepare(shell: ConsumerShell, *, distance: str = "ADJACENT") -> tuple[str, str]:
     _, page = get(shell, "/song")
     status, result = post(
         shell,
@@ -91,51 +85,171 @@ def request_suggestion(shell: ConsumerShell) -> str:
         {
             "csrf": shell._csrf,
             "action": action_for(page, "/suggestion/create"),
-            "distance": "ADJACENT",
+            "distance": distance,
         },
+        origin=shell.address.origin,
     )
     assert status == 200
     assert "One prompt to try" in result
-    return result
+    semantic_key = shell._creative_suggestion_result.semantic_key
+    title = shell._creative_suggestion_result.title
+    assert semantic_key not in result
+    return result, title
 
 
-def test_not_now_is_protected_durable_and_skips_same_key_after_relaunch(tmp_path: Path) -> None:
+def test_not_now_persists_across_relaunch_and_restore_is_reversible(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
     seed_song(data_root)
 
-    shell = new_shell(data_root, state_root, 13101, "not-now-first")
+    shell = new_shell(data_root, state_root, 13101, "not-now")
     try:
-        first = request_suggestion(shell)
-        first_title = suggestion_title(first)
-        assert "Not now · later this Song" in first
-        assert "semantic_key" not in first
-        not_now = action_for(first, "/suggestion/not-now")
+        result, title = prepare(shell)
+        assert "Later this Song" in result
+        assert "After release" in result
+        assert "Next Song" in result
+        assert "Someday" in result
+        assert "Never suggest this again" in result
+        assert "explicit Song-release evidence" in result
 
         status, deferred = post(
             shell,
-            "/suggestion/not-now",
-            {"csrf": shell._csrf, "action": not_now},
+            "/suggestion/defer",
+            {
+                "csrf": shell._csrf,
+                "action": action_for(result, "/suggestion/defer"),
+                "horizon": "NEXT_SONG",
+            },
+            origin=shell.address.origin,
         )
         assert status == 200
-        assert "Not now remembered for this Song work Session" in deferred
-        assert "One prompt to try" not in deferred
-
-        status, replay = post(
-            shell,
-            "/suggestion/not-now",
-            {"csrf": shell._csrf, "action": not_now},
-        )
-        assert status == 409
-        assert "already handled or expired" in replay
+        assert "Not Now remembered: Next Song" in deferred
+        assert "Deferred suggestions" in deferred
+        assert title in deferred
+        assert "Bring it back" in deferred
+        assert getattr(shell, "_creative_suggestion_result", None) is None
     finally:
         shell.stop()
 
     relaunched = new_shell(data_root, state_root, 13102, "not-now-relaunch")
     try:
-        second = request_suggestion(relaunched)
-        assert suggestion_title(second) != first_title
-        assert "Not now · later this Song" in second
-        assert "semantic_key" not in second
+        status, page = get(relaunched, "/song")
+        assert status == 200
+        assert "Deferred suggestions" in page
+        assert title in page
+        assert "Bring it back" in page
+
+        status, restored = post(
+            relaunched,
+            "/suggestion/restore",
+            {
+                "csrf": relaunched._csrf,
+                "action": action_for(page, "/suggestion/restore"),
+            },
+            origin=relaunched.address.origin,
+        )
+        assert status == 200
+        assert "can be suggested again" in restored
+        assert "Deferred suggestions" not in restored
     finally:
         relaunched.stop()
+
+
+def test_defer_rejects_foreign_origin_without_consuming_action(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed_song(data_root)
+    shell = new_shell(data_root, state_root, 13103, "not-now-origin")
+    try:
+        result, _ = prepare(shell)
+        token = action_for(result, "/suggestion/defer")
+        fields = {"csrf": shell._csrf, "action": token, "horizon": "SOMEDAY"}
+        status, _ = post(shell, "/suggestion/defer", fields, origin="https://example.invalid")
+        assert status == 403
+        status, valid = post(shell, "/suggestion/defer", fields, origin=shell.address.origin)
+        assert status == 200
+        assert "Not Now remembered: Someday" in valid
+    finally:
+        shell.stop()
+
+
+def test_stale_song_context_cannot_defer_old_suggestion(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed_song(data_root)
+    shell = new_shell(data_root, state_root, 13104, "not-now-stale")
+    try:
+        result, _ = prepare(shell)
+        defer_token = action_for(result, "/suggestion/defer")
+        start_action = shell._new_action("song-start")
+        status, _ = post(
+            shell,
+            "/song/start",
+            {"csrf": shell._csrf, "action": start_action, "song_title": "Different Song"},
+            origin=shell.address.origin,
+        )
+        assert status == 200
+        status, blocked = post(
+            shell,
+            "/suggestion/defer",
+            {"csrf": shell._csrf, "action": defer_token, "horizon": "SOMEDAY"},
+            origin=shell.address.origin,
+        )
+        assert status == 409
+        assert "already handled or expired" in blocked or "context changed" in blocked
+        status, current = get(shell, "/song")
+        assert status == 200
+        assert "Deferred suggestions" not in current
+    finally:
+        shell.stop()
+
+
+def test_never_suggest_again_changes_selection_but_remains_reversible(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed_song(data_root)
+    shell = new_shell(data_root, state_root, 13105, "not-now-never")
+    try:
+        result, title = prepare(shell, distance="WILDCARD")
+        first_key = shell._creative_suggestion_result.semantic_key
+        status, deferred = post(
+            shell,
+            "/suggestion/defer",
+            {
+                "csrf": shell._csrf,
+                "action": action_for(result, "/suggestion/defer"),
+                "horizon": "NEVER_SUGGEST_AGAIN",
+            },
+            origin=shell.address.origin,
+        )
+        assert status == 200
+        assert "Never suggest this again" in deferred
+
+        _, new_page = get(shell, "/song")
+        status, next_result = post(
+            shell,
+            "/suggestion/create",
+            {
+                "csrf": shell._csrf,
+                "action": action_for(new_page, "/suggestion/create"),
+                "distance": "WILDCARD",
+            },
+            origin=shell.address.origin,
+        )
+        assert status == 200
+        assert shell._creative_suggestion_result.semantic_key != first_key
+        assert title not in next_result or shell._creative_suggestion_result.title != title
+
+        status, restored = post(
+            shell,
+            "/suggestion/restore",
+            {
+                "csrf": shell._csrf,
+                "action": action_for(next_result, "/suggestion/restore"),
+            },
+            origin=shell.address.origin,
+        )
+        assert status == 200
+        assert "can be suggested again" in restored
+    finally:
+        shell.stop()

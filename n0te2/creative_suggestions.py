@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from typing import Iterable
 
 from .lineage import LineageStore, ValidationError
 from .session import SessionMemory
+from .suggestion_deferral import SuggestionDeferralMemory
 
 SUGGESTION_DISTANCES = ("FAMILIAR", "ADJACENT", "WILDCARD")
 CREATIVE_DIMENSIONS = (
@@ -23,9 +25,9 @@ _DISTANCE_EXPLANATIONS = {
     "WILDCARD": "Try a larger deliberate contrast in one unlocked dimension. It is an experiment, not a diagnosis.",
 }
 
-# Stable semantic keys are intentionally independent of Song/profile identity so a
-# later attention/suppression contract can refer to the idea pattern without
-# persisting this read-only suggestion result itself.
+# Stable semantic keys are intentionally independent of Song/profile identity so
+# canonical Attention state can refer to the idea pattern without persisting the
+# read-only suggestion result itself.
 _CATALOG = {
     "ARRANGEMENT": (("arrangement:contrast-window", "Create one contrast window", {
         "FAMILIAR": "Choose 4–8 bars before the strongest section and remove one supporting layer. Compare whether the arrival reads more clearly.",
@@ -82,22 +84,41 @@ class CreativeSuggestion:
     action_authority_granted: bool = False
 
 
-class CreativeSuggestionService:
-    """Pure deterministic creative prompts for the active Song.
+def suggestion_title(semantic_key: str) -> str:
+    key = str(semantic_key).strip().lower()
+    for entries in _CATALOG.values():
+        for candidate_key, title, _ in entries:
+            if candidate_key == key:
+                return title
+    raise ValidationError(f"unknown creative suggestion semantic key: {key}")
 
-    This service is deliberately smaller than an Artist World or recommendation
-    engine. It reads current Song/Session context, respects explicit dimension
-    locks, and returns one bounded prompt. It does not persist preferences,
-    infer taste, call AI/providers, mutate a DAW, or grant action authority.
+
+class CreativeSuggestionService:
+    """Deterministic local creative prompts for the active Song.
+
+    Suggestions remain provider-free and mutation-free. When the canonical
+    suggestion deferral ledger is supplied, semantically deferred ideas are
+    excluded before selection. With no applicable deferral, selection follows
+    the same deterministic path introduced by SONG-01-SUGGEST-01.
     """
 
-    def __init__(self, store: LineageStore, sessions: SessionMemory):
+    def __init__(
+        self,
+        store: LineageStore,
+        sessions: SessionMemory,
+        deferrals: SuggestionDeferralMemory | None = None,
+    ):
         if not isinstance(store, LineageStore):
             raise TypeError("CreativeSuggestionService requires LineageStore")
         if not isinstance(sessions, SessionMemory) or sessions.store is not store:
             raise TypeError("CreativeSuggestionService requires SessionMemory for the same LineageStore")
+        if deferrals is not None and (
+            not isinstance(deferrals, SuggestionDeferralMemory) or deferrals.store is not store
+        ):
+            raise TypeError("CreativeSuggestionService deferrals must use the same LineageStore")
         self.store = store
         self.sessions = sessions
+        self.deferrals = deferrals
 
     @staticmethod
     def normalize_distance(value: str) -> str:
@@ -118,7 +139,19 @@ class CreativeSuggestionService:
             normalized.add(dimension)
         return tuple(sorted(normalized))
 
-    def suggest(self, *, distance: str, locked_dimensions=(), variation: int = 0) -> CreativeSuggestion:
+    def _is_deferred(self, semantic_key: str, released_song_ids: Iterable[str]) -> bool:
+        if self.deferrals is None:
+            return False
+        return self.deferrals.applies(semantic_key, released_song_ids=released_song_ids)
+
+    def suggest(
+        self,
+        *,
+        distance: str,
+        locked_dimensions=(),
+        variation: int = 0,
+        released_song_ids: Iterable[str] = (),
+    ) -> CreativeSuggestion:
         mode = self.normalize_distance(distance)
         locks = self.normalize_locks(locked_dimensions)
         if not isinstance(variation, int) or variation < 0 or variation > 1000:
@@ -131,16 +164,37 @@ class CreativeSuggestionService:
         objective = None if latest is None else latest.objective
         session_id = None if latest is None else latest.id
 
-        available = [dimension for dimension in CREATIVE_DIMENSIONS if dimension not in locks]
-        if not available:
+        dimensions = [dimension for dimension in CREATIVE_DIMENSIONS if dimension not in locks]
+        if not dimensions:
             raise CreativeSuggestionError("Every creative dimension is locked. Unlock at least one dimension to vary the Song.")
 
-        material = "|".join((song.id, session_id or "", objective or "", mode, ",".join(locks), str(variation))).encode("utf-8")
+        material = "|".join(
+            (song.id, session_id or "", objective or "", mode, ",".join(locks), str(variation))
+        ).encode("utf-8")
         digest = hashlib.sha256(material).digest()
-        dimension = available[int.from_bytes(digest[:4], "big") % len(available)]
-        entries = _CATALOG[dimension]
-        semantic_key, title, prompts = entries[int.from_bytes(digest[4:8], "big") % len(entries)]
+        first_dimension_index = int.from_bytes(digest[:4], "big") % len(dimensions)
 
+        candidates = []
+        for dimension_offset in range(len(dimensions)):
+            dimension = dimensions[(first_dimension_index + dimension_offset) % len(dimensions)]
+            entries = _CATALOG[dimension]
+            first_entry_index = int.from_bytes(digest[4:8], "big") % len(entries)
+            for entry_offset in range(len(entries)):
+                semantic_key, title, prompts = entries[
+                    (first_entry_index + entry_offset) % len(entries)
+                ]
+                candidates.append((dimension, semantic_key, title, prompts))
+
+        selected = next(
+            (candidate for candidate in candidates if not self._is_deferred(candidate[1], released_song_ids)),
+            None,
+        )
+        if selected is None:
+            raise CreativeSuggestionError(
+                "Every available suggestion is deferred for this context. Restore one deferred idea, change the Song/session context, or continue without a suggestion."
+            )
+
+        dimension, semantic_key, title, prompts = selected
         return CreativeSuggestion(
             semantic_key=semantic_key,
             song_id=song.id,

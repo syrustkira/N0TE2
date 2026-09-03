@@ -11,31 +11,43 @@ from .creative_suggestions import (
     CreativeSuggestion,
     CreativeSuggestionError,
     CreativeSuggestionService,
+    suggestion_title,
 )
 from .lineage import ValidationError
+from .suggestion_deferral import SUGGESTION_DEFERRAL_HORIZONS
 
 _DISTANCE_LABELS = {
     "FAMILIAR": "Familiar · small move",
     "ADJACENT": "Adjacent · change one dimension",
     "WILDCARD": "Wildcard · deliberate contrast",
 }
+_HORIZON_LABELS = {
+    "LATER_THIS_SONG": "Later this Song",
+    "AFTER_RELEASE": "After release",
+    "NEXT_SONG": "Next Song",
+    "SOMEDAY": "Someday",
+    "NEVER_SUGGEST_AGAIN": "Never suggest this again",
+}
 
 
 def _service(shell: ConsumerShell) -> CreativeSuggestionService:
     hq = shell.runtime.headquarters
-    return CreativeSuggestionService(hq.store, hq.sessions)
+    return CreativeSuggestionService(hq.store, hq.sessions, hq.suggestion_deferrals)
 
 
 def _suggestion_action(shell: ConsumerShell, song_id: str) -> str:
     return shell._new_action("song-suggest", song_id)
 
 
-def _result_binding(result: CreativeSuggestion) -> str:
-    return "|".join((result.song_id, result.session_id or "", result.semantic_key))
+def _defer_action(shell: ConsumerShell, result: CreativeSuggestion) -> str:
+    return shell._new_action(
+        "suggestion-defer",
+        f"{result.song_id}|{result.session_id or ''}|{result.semantic_key}",
+    )
 
 
-def _not_now_action(shell: ConsumerShell, result: CreativeSuggestion) -> str:
-    return shell._new_action("suggestion-not-now", _result_binding(result))
+def _restore_action(shell: ConsumerShell, deferral_id: str) -> str:
+    return shell._new_action("suggestion-restore", deferral_id)
 
 
 def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> str:
@@ -48,12 +60,9 @@ def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> s
         + html.escape(result.session_objective)
         + "</p>"
     )
-    not_now = (
-        '<form method="post" action="/suggestion/not-now" aria-label="Defer this suggestion until later in this Song">'
-        + shell._hidden(_not_now_action(shell, result))
-        + '<button type="submit">Not now · later this Song</button>'
-        + '<p class="muted">N0TE will remember this choice through relaunch for the current work Session. A later Session can surface the idea again.</p>'
-        + '</form>'
+    horizon_options = "".join(
+        f'<option value="{horizon}">{html.escape(_HORIZON_LABELS[horizon])}</option>'
+        for horizon in SUGGESTION_DEFERRAL_HORIZONS
     )
     return (
         '<div class="stack" aria-live="polite">'
@@ -64,8 +73,38 @@ def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> s
         f'<p class="muted">{html.escape(result.distance_explanation)}</p>'
         f'{objective}'
         '<p class="muted">Generated locally and deterministically. No AI provider was called, no project was changed, and this is not a claim about what your Song needs.</p>'
-        f'{not_now}'
+        '<form class="stack" method="post" action="/suggestion/defer" aria-label="Defer this suggestion">'
+        f'{shell._hidden(_defer_action(shell, result))}'
+        '<div><label>Not Now until '
+        f'<select name="horizon" required>{horizon_options}</select></label></div>'
+        '<button type="submit">Not Now</button>'
+        '<p class="muted">This changes Attention memory, not your Song. “After release” stays hidden until N0TE has explicit Song-release evidence; it will not guess.</p>'
+        '</form>'
         '</div>'
+    )
+
+
+def _deferred_markup(shell: ConsumerShell) -> str:
+    items = shell.runtime.headquarters.suggestion_deferrals.active_deferrals()
+    if not items:
+        return ""
+    rows = []
+    for item in items:
+        rows.append(
+            '<div class="stack">'
+            f'<p><strong>{html.escape(suggestion_title(item.semantic_key))}</strong> · '
+            f'{html.escape(_HORIZON_LABELS[item.horizon])}</p>'
+            '<form method="post" action="/suggestion/restore">'
+            f'{shell._hidden(_restore_action(shell, item.deferral_id))}'
+            '<button type="submit">Bring it back</button>'
+            '</form>'
+            '</div>'
+        )
+    return (
+        '<div class="stack"><h3>Deferred suggestions</h3>'
+        '<p class="muted">These are remembered Attention choices, not forgotten dismissals. You can restore any one of them.</p>'
+        + "".join(rows)
+        + "</div>"
     )
 
 
@@ -111,7 +150,9 @@ def _suggestion_card(shell: ConsumerShell) -> str:
         '<button class="primary" type="submit">Suggest something</button>'
         '<p class="muted">The first suggestion layer is deliberately AI-off and non-personalized. “Familiar” means a smaller move around this Song, not a claim that N0TE already knows your taste.</p>'
         '</form>'
-        f'{_result_markup(shell, result)}</div>'
+        f'{_result_markup(shell, result)}'
+        f'{_deferred_markup(shell)}'
+        '</div>'
     )
 
 
@@ -128,99 +169,85 @@ def _locked_dimensions(form: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(locks)
 
 
-def _next_visible_suggestion(
-    shell: ConsumerShell, *, distance: str, locked_dimensions: tuple[str, ...]
-) -> CreativeSuggestion:
-    service = _service(shell)
-    deferrals = shell.runtime.headquarters.suggestion_deferrals
-    for variation in range(1001):
-        result = service.suggest(
-            distance=distance,
-            locked_dimensions=locked_dimensions,
-            variation=variation,
-        )
-        if not deferrals.is_deferred_now(result.semantic_key):
-            return result
-    raise CreativeSuggestionError(
-        "Every available local suggestion is deferred for this work Session. Start a later Session or change what is locked."
-    )
-
-
-def _post_suggestion(
-    shell: ConsumerShell,
-    handler: BaseHTTPRequestHandler,
-    form: Mapping[str, str],
-) -> None:
+def _post_suggestion(shell: ConsumerShell, handler: BaseHTTPRequestHandler, form: Mapping[str, str]) -> None:
     action = shell._consume_action(form.get("action", ""), "song-suggest")
     if action is None or action.value is None:
-        shell._send_html(
-            handler,
-            409,
-            shell._simple_error("That suggestion action was already handled or expired."),
-        )
+        shell._send_html(handler, 409, shell._simple_error("That suggestion action was already handled or expired."))
         return
     song = shell.runtime.headquarters.store.active_song()
     if song is None or song.id != action.value:
-        shell._send_html(
-            handler,
-            409,
-            shell._simple_error("The active Song changed. Reload the Song before asking for an idea."),
-        )
+        shell._send_html(handler, 409, shell._simple_error("The active Song changed. Reload the Song before asking for an idea."))
         return
-    result = _next_visible_suggestion(
-        shell,
+    result = _service(shell).suggest(
         distance=form.get("distance", ""),
         locked_dimensions=_locked_dimensions(form),
+        variation=0,
     )
     shell._creative_suggestion_result = result
     shell._consumer_notice = "Local creative prompt prepared. Nothing in the Song was changed."
     shell._redirect(handler, "/song")
 
 
-def _post_not_now(
-    shell: ConsumerShell,
-    handler: BaseHTTPRequestHandler,
-    form: Mapping[str, str],
-) -> None:
-    action = shell._consume_action(form.get("action", ""), "suggestion-not-now")
+def _post_defer(shell: ConsumerShell, handler: BaseHTTPRequestHandler, form: Mapping[str, str]) -> None:
+    action = shell._consume_action(form.get("action", ""), "suggestion-defer")
     if action is None or action.value is None:
-        shell._send_html(
-            handler,
-            409,
-            shell._simple_error("That Not now action was already handled or expired."),
-        )
+        shell._send_html(handler, 409, shell._simple_error("That Not Now action was already handled or expired."))
         return
+    parts = action.value.split("|", 2)
+    if len(parts) != 3:
+        shell._send_html(handler, 409, shell._simple_error("That Not Now action is no longer valid."))
+        return
+    song_id, session_id, semantic_key = parts
     result = getattr(shell, "_creative_suggestion_result", None)
-    if not isinstance(result, CreativeSuggestion) or action.value != _result_binding(result):
-        shell._send_html(
-            handler,
-            409,
-            shell._simple_error("That suggestion is no longer the current Song suggestion. Reload before deferring it."),
-        )
-        return
     hq = shell.runtime.headquarters
     song = hq.store.active_song()
     latest = None if song is None else hq.sessions.latest_for_song(song.id)
+    latest_session_id = None if latest is None else latest.id
+    result_session_id = session_id or None
     if (
-        song is None
-        or song.id != result.song_id
-        or latest is None
-        or latest.id != result.session_id
+        not isinstance(result, CreativeSuggestion)
+        or song is None
+        or song.id != song_id
+        or latest_session_id != result_session_id
+        or result.song_id != song_id
+        or result.session_id != result_session_id
+        or result.semantic_key != semantic_key
     ):
         shell._send_html(
             handler,
             409,
-            shell._simple_error("The Song work Session changed before that suggestion could be deferred."),
+            shell._simple_error("The Song or suggestion context changed. Reload before deferring this idea."),
         )
         return
-    hq.suggestion_deferrals.defer_later_this_song(result.semantic_key)
+    deferred = hq.suggestion_deferrals.defer(semantic_key, form.get("horizon", ""))
     shell._creative_suggestion_result = None
-    shell._consumer_notice = "Not now remembered for this Song work Session. A later Session can surface that idea again."
+    shell._consumer_notice = f"Not Now remembered: {_HORIZON_LABELS[deferred.horizon]}."
     shell._redirect(handler, "/song")
 
 
+def _post_restore(shell: ConsumerShell, handler: BaseHTTPRequestHandler, form: Mapping[str, str]) -> None:
+    action = shell._consume_action(form.get("action", ""), "suggestion-restore")
+    if action is None or action.value is None:
+        shell._send_html(handler, 409, shell._simple_error("That restore action was already handled or expired."))
+        return
+    restored = shell.runtime.headquarters.suggestion_deferrals.restore(action.value)
+    shell._consumer_notice = f"{suggestion_title(restored.semantic_key)} can be suggested again."
+    shell._redirect(handler, "/song")
+
+
+def _authorized_form(shell: ConsumerShell, handler: BaseHTTPRequestHandler) -> Mapping[str, str] | None:
+    if not shell._request_host_is_exact(handler) or not shell._post_origin_is_allowed(handler):
+        shell._send_html(handler, 403, shell._simple_error("That action did not come from this N0TE window."))
+        return None
+    form = shell._read_form(handler)
+    if form is None or not shell._form_authorized(form):
+        shell._send_html(handler, 403, shell._simple_error("That action expired. Reload N0TE and try again."))
+        return None
+    return form
+
+
 def install_song_creative_suggestions() -> None:
-    """Attach bounded creative suggestions and durable current-Session deferral."""
+    """Attach local suggestions plus the canonical five-horizon deferral controls."""
     if getattr(ConsumerShell, "_song_creative_suggestions_installed", False):
         return
 
@@ -231,36 +258,24 @@ def install_song_creative_suggestions() -> None:
         rendered = original_song(self, state)
         marker = "</section>"
         if not rendered.endswith(marker):
-            raise ConsumerShellError(
-                "Song page structure changed before creative suggestions could attach safely"
-            )
+            raise ConsumerShellError("Song page structure changed before creative suggestions could attach safely")
         return rendered[: -len(marker)] + _suggestion_card(self) + marker
 
     def with_suggestion_post(self: ConsumerShell, handler: BaseHTTPRequestHandler) -> None:
         path = self._path(handler)
-        if path not in {"/suggestion/create", "/suggestion/not-now"}:
+        handlers = {
+            "/suggestion/create": _post_suggestion,
+            "/suggestion/defer": _post_defer,
+            "/suggestion/restore": _post_restore,
+        }
+        if path not in handlers:
             original_post(self, handler)
             return
-        if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(handler):
-            self._send_html(
-                handler,
-                403,
-                self._simple_error("That action did not come from this N0TE window."),
-            )
-            return
-        form = self._read_form(handler)
-        if form is None or not self._form_authorized(form):
-            self._send_html(
-                handler,
-                403,
-                self._simple_error("That action expired. Reload N0TE and try again."),
-            )
+        form = _authorized_form(self, handler)
+        if form is None:
             return
         try:
-            if path == "/suggestion/not-now":
-                _post_not_now(self, handler, form)
-            else:
-                _post_suggestion(self, handler, form)
+            handlers[path](self, handler, form)
         except (ValidationError, CreativeSuggestionError, ConsumerShellError) as exc:
             self._consumer_notice = str(exc)
             self._redirect(handler, "/song")
@@ -268,9 +283,7 @@ def install_song_creative_suggestions() -> None:
             self._send_html(
                 handler,
                 500,
-                self._simple_error(
-                    "N0TE stopped that suggestion action before it could become an unclear consumer state."
-                ),
+                self._simple_error("N0TE stopped that suggestion action before it could become an unclear consumer state."),
             )
 
     ConsumerShell._song_content = with_suggestion_card
