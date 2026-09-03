@@ -63,7 +63,7 @@ class SuggestionDeferralTests(unittest.TestCase):
         self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(suggestion.semantic_key))
 
         other = self.hq.store.create_song("Other Song")
-        self.hq.store.set_active_song(other.id)
+        self.hq.store.select_song(other.id)
         self.hq.sessions.start_session(song_id=other.id, objective="Work on another Song")
         self.assertFalse(self.hq.suggestion_deferrals.is_deferred_now(suggestion.semantic_key))
 
