@@ -25,6 +25,7 @@ from .shadow import HostShadow
 from .skills import SkillMemory
 from .success import SuccessMemory
 from .suggestion_deferral import SuggestionDeferralMemory
+from .template_library import TemplateLibrary
 from .transactions import TransactionCoordinator
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
 from .workspace import WorkspaceMemory
@@ -55,6 +56,7 @@ class HeadquartersMemory:
         self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
         self.suggestion_deferrals = SuggestionDeferralMemory(store, self.sessions)
+        self.template_library = TemplateLibrary(store)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.learning = LearningMemory(store, self.sessions)
         self.success = SuccessMemory(self.learning)
@@ -83,9 +85,11 @@ class HeadquartersMemory:
         # to the same canonical memory composition root.
         from .creative_suggestions_shell import install_song_creative_suggestions
         from .retention_shell import install_song_retention
+        from .template_library_shell import install_song_template_library
 
         install_song_retention()
         install_song_creative_suggestions()
+        install_song_template_library()
 
     @classmethod
     def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
