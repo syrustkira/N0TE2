@@ -140,6 +140,11 @@ def build_runtime_handoff(repo: Path) -> dict:
     }
     lifecycle_state = lifecycle["state"]
     require(lifecycle_state in {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}, "current lifecycle state is invalid")
+    legacy_lifecycle = handoff.get("lifecycle", {})
+    require(isinstance(legacy_lifecycle, dict), "handoff lifecycle compatibility hook must be an object")
+    for key, label in (("state", "lifecycle"), ("active_node", "active node"), ("active_increment", "active increment")):
+        if key in legacy_lifecycle:
+            require(legacy_lifecycle.get(key) == lifecycle.get(key), f"handoff {label} is stale")
 
     canonical = requirements.get("canonical_scope", {})
     extensions = requirements.get("canonical_extensions", [])
