@@ -42,23 +42,30 @@ jobs:
           python -m pip show pywin32
           python -c "import pywintypes, win32api; print(f'pywintypes={pywintypes.__file__}'); print(f'win32api={win32api.__file__}'); print(f'windows_version={win32api.GetVersionEx()}')"
       - name: Verify exact event head checkout
+        id: exact_checkout
         env:
           EXPECTED_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: |
           python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['EXPECTED_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
       - name: Validate construction governance
+        id: construction_governance
         run: python governance/check_governance.py --repo .
       - name: Validate context lifecycle governance
+        id: context_lifecycle
         run: python governance/check_context_lifecycle.py --repo .
       - name: Inspect supervision graph
+        id: supervision_graph
         run: python governance/supervision.py --repo .
       - name: Build exact-head runtime handoff
+        id: runtime_handoff
         env:
           N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
         run: python governance/build_handoff.py --repo . --check --output governance-runtime-handoff.json
       - name: Governance and product regression tests
+        id: regression_tests
         run: python -m pytest -q tests --junitxml=pytest-results.xml
       - name: Stage consumer smoke
+        id: consumer_smoke
         run: python governance/smoke/consumer_smoke.py
       - name: Record supervision observation
         if: ${{ always() }}
@@ -66,6 +73,13 @@ jobs:
           N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           N0TE2_OBSERVATION_STATUS: ${{ job.status }}
           N0TE2_RUNNER_OS: ${{ runner.os }}
+          N0TE2_EXACT_CHECKOUT_OUTCOME: ${{ steps.exact_checkout.outcome }}
+          N0TE2_GOVERNANCE_OUTCOME: ${{ steps.construction_governance.outcome }}
+          N0TE2_CONTEXT_LIFECYCLE_OUTCOME: ${{ steps.context_lifecycle.outcome }}
+          N0TE2_SUPERVISION_OUTCOME: ${{ steps.supervision_graph.outcome }}
+          N0TE2_HANDOFF_OUTCOME: ${{ steps.runtime_handoff.outcome }}
+          N0TE2_REGRESSION_OUTCOME: ${{ steps.regression_tests.outcome }}
+          N0TE2_SMOKE_OUTCOME: ${{ steps.consumer_smoke.outcome }}
         run: python governance/build_handoff.py --repo . --output governance-runtime-handoff.json --observation-output governance-ci-observation.json
       - name: Upload supervision evidence
         if: ${{ always() }}
