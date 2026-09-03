@@ -29,6 +29,12 @@ def require(cond: bool, msg: str):
         raise HandoffError(msg)
 
 
+def _step_outcome(name: str) -> dict:
+    raw = str(os.environ.get(name, "")).strip().lower()
+    ran = raw in {"success", "failure", "cancelled"}
+    return {"ran": ran, "outcome": raw or "unreported", "passed": raw == "success"}
+
+
 def build_supervision_summary(repo: Path, current: dict) -> dict:
     registry = load_json(repo / "governance/automation_registry.json")
     context_policy = load_json(repo / "governance/context_lifecycle.json")
@@ -47,6 +53,7 @@ def build_supervision_summary(repo: Path, current: dict) -> dict:
         summarized.append(
             {
                 "id": actor.get("id"),
+                "role_class": actor.get("role_class"),
                 "state": actor.get("lifecycle", {}).get("state"),
                 "purpose": actor.get("purpose"),
                 "reason_running": actor.get("reason_running"),
@@ -61,7 +68,14 @@ def build_supervision_summary(repo: Path, current: dict) -> dict:
     expected_controller_state = "ACTIVE" if current.get("lifecycle_state") == "ACTIVE" else "DORMANT"
     require(controller.get("lifecycle", {}).get("state") == expected_controller_state, "construction controller lifecycle is stale")
     if current.get("lifecycle_state") != "ACTIVE":
-        require(controller.get("auto_spawn_successor") is False, "terminal construction cannot auto-spawn successor work")
+        build_roles = {"N0TE_BUILD_HARNESS_COORDINATOR", "N0TE_BUILD_HARNESS_EXECUTOR"}
+        for actor in actors:
+            if actor.get("role_class") in build_roles:
+                require(
+                    actor.get("lifecycle", {}).get("state") in {"DORMANT", "RETIRED", "QUARANTINED"},
+                    f"terminal construction left build actor active: {actor.get('id')}",
+                )
+                require(actor.get("auto_spawn_successor") is False, f"terminal construction build actor may not auto-spawn: {actor.get('id')}")
 
     remembrance = context_policy.get("remembrance_contract", {})
     retention = context_policy.get("retention_contract", {})
@@ -163,8 +177,15 @@ def build_runtime_handoff(repo: Path) -> dict:
 
 
 def build_observation(runtime: dict) -> dict:
+    exact_checkout = _step_outcome("N0TE2_EXACT_CHECKOUT_OUTCOME")
+    governance = _step_outcome("N0TE2_GOVERNANCE_OUTCOME")
+    context = _step_outcome("N0TE2_CONTEXT_LIFECYCLE_OUTCOME")
+    supervision = _step_outcome("N0TE2_SUPERVISION_OUTCOME")
+    handoff = _step_outcome("N0TE2_HANDOFF_OUTCOME")
+    regression = _step_outcome("N0TE2_REGRESSION_OUTCOME")
+    smoke = _step_outcome("N0TE2_SMOKE_OUTCOME")
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "automation_id": "AUTO-GH-GOVERNANCE-001",
         "supervision_parent": "N0TE-SUPERVISOR",
         "observed_head_sha": runtime["observed_head_sha"],
@@ -176,12 +197,23 @@ def build_observation(runtime: dict) -> dict:
         "ref": os.environ.get("GITHUB_REF"),
         "evidence": {
             "runtime_handoff": "governance-runtime-handoff.json",
-            "authority_checked": True,
-            "exact_head_checked": True,
-            "context_lifecycle_checked": True,
-            "supervision_graph_checked": True,
-            "action_receipt_contract_checked": True,
-            "acceptance_evidence_spine_checked": True,
+            "authority_checked": governance["ran"],
+            "exact_head_checked": exact_checkout["ran"],
+            "context_lifecycle_checked": context["ran"],
+            "supervision_graph_checked": supervision["ran"],
+            "action_receipt_contract_checked": handoff["ran"],
+            "acceptance_evidence_spine_checked": handoff["ran"],
+            "regression_tests_checked": regression["ran"],
+            "consumer_smoke_checked": smoke["ran"],
+            "step_outcomes": {
+                "exact_head": exact_checkout,
+                "construction_governance": governance,
+                "context_lifecycle": context,
+                "supervision": supervision,
+                "runtime_handoff": handoff,
+                "regression_tests": regression,
+                "consumer_smoke": smoke,
+            },
             "construction_receipt_status": runtime["construction_receipt_status"],
         },
     }
