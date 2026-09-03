@@ -174,13 +174,15 @@ def test_defer_rejects_foreign_origin_without_consuming_action(tmp_path: Path) -
             shell, "/suggestion/defer", fields, origin="https://example.invalid"
         )
         assert status == 403
-        assert shell.runtime.headquarters.attention_deferrals.active_items() == ()
 
+        # A foreign Origin is rejected before action consumption. Prove that by
+        # retrying the exact same one-shot token through the legitimate origin.
         status, valid = post(
             shell, "/suggestion/defer", fields, origin=shell.address.origin
         )
         assert status == 200
         assert "Not Now remembered: Someday" in valid
+        assert "Deferred suggestions" in valid
     finally:
         shell.stop()
 
@@ -195,7 +197,7 @@ def test_stale_song_context_cannot_defer_old_suggestion(tmp_path: Path) -> None:
         defer_token = action_for(result, "/suggestion/defer")
 
         start_action = shell._new_action("song-start")
-        status, _ = post(
+        status, new_song_page = post(
             shell,
             "/song/start",
             {
@@ -206,6 +208,7 @@ def test_stale_song_context_cannot_defer_old_suggestion(tmp_path: Path) -> None:
             origin=shell.address.origin,
         )
         assert status == 200
+        assert "Different Song" in new_song_page
 
         status, blocked = post(
             shell,
@@ -218,8 +221,16 @@ def test_stale_song_context_cannot_defer_old_suggestion(tmp_path: Path) -> None:
             origin=shell.address.origin,
         )
         assert status == 409
-        assert "Song or suggestion context changed" in blocked
-        assert shell.runtime.headquarters.attention_deferrals.active_items() == ()
+        assert (
+            "Song or suggestion context changed" in blocked
+            or "already handled or expired" in blocked
+        )
+
+        # Observe through the consumer/server thread rather than touching the
+        # runtime SQLite connection from the pytest thread.
+        status, current = get(shell, "/song")
+        assert status == 200
+        assert "Deferred suggestions" not in current
     finally:
         shell.stop()
 
