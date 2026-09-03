@@ -192,3 +192,47 @@ def test_all_locks_fail_truthfully_and_ephemeral_result_does_not_survive_relaunc
         assert "One prompt to try" not in page
     finally:
         relaunched.stop()
+
+
+def test_ephemeral_suggestion_is_dropped_when_active_song_changes(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed_song(data_root)
+
+    shell = new_shell(data_root, state_root, 12105, "suggest-song-binding")
+    try:
+        _, page = get(shell, "/song")
+        status, result = post(
+            shell,
+            "/suggestion/create",
+            {
+                "csrf": shell._csrf,
+                "action": suggestion_action(page),
+                "distance": "ADJACENT",
+            },
+            origin=shell.address.origin,
+        )
+        assert status == 200
+        assert "One prompt to try" in result
+        assert "Find a stronger chorus lift" in result
+
+        # Change Song through the normal protected consumer path rather than
+        # touching the shell runtime SQLite connection from the test thread.
+        start_action = shell._new_action("song-start")
+        status, new_song_page = post(
+            shell,
+            "/song/start",
+            {
+                "csrf": shell._csrf,
+                "action": start_action,
+                "song_title": "Second Signal",
+            },
+            origin=shell.address.origin,
+        )
+        assert status == 200
+        assert "Second Signal" in new_song_page
+        assert "One prompt to try" not in new_song_page
+        assert "Find a stronger chorus lift" not in new_song_page
+        assert getattr(shell, "_creative_suggestion_result", None) is None
+    finally:
+        shell.stop()
