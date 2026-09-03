@@ -20,6 +20,21 @@ def load_json(path: Path):
         raise HandoffError(f"cannot load {path}: {exc}") from exc
 
 
+def load_jsonl(path: Path):
+    rows = []
+    try:
+        for lineno, raw in enumerate(path.read_text().splitlines(), 1):
+            if not raw.strip():
+                continue
+            row = json.loads(raw)
+            if not isinstance(row, dict):
+                raise ValueError(f"line {lineno} is not an object")
+            rows.append(row)
+    except Exception as exc:
+        raise HandoffError(f"cannot load {path}: {exc}") from exc
+    return rows
+
+
 def git(repo: Path, *args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=repo, text=True, stderr=subprocess.STDOUT).strip()
 
@@ -104,6 +119,8 @@ def build_supervision_summary(repo: Path, current: dict) -> dict:
 def build_runtime_handoff(repo: Path) -> dict:
     handoff = load_json(repo / "governance/handoff.json")
     current = load_json(repo / "governance/current_state.json")
+    requirements = load_json(repo / "governance/requirements.json")
+    incidents = load_jsonl(repo / "governance/incidents.jsonl")
     receipt = load_json(repo / "governance/active_receipt.json")
     action_contract = load_json(repo / "governance/action_receipt_contract.json")
     acceptance_spine = load_json(repo / "governance/acceptance_evidence_spine.json")
@@ -116,11 +133,31 @@ def build_runtime_handoff(repo: Path) -> dict:
     if expected:
         require(head == expected, f"exact-head mismatch: expected {expected}, got {head}")
 
-    lifecycle = handoff["lifecycle"]
+    lifecycle = {
+        "state": current.get("lifecycle_state"),
+        "active_node": current.get("active_node"),
+        "active_increment": current.get("active_increment"),
+    }
     lifecycle_state = lifecycle["state"]
-    require(lifecycle_state == current.get("lifecycle_state"), "handoff lifecycle is stale")
-    require(lifecycle.get("active_node") == current.get("active_node"), "handoff active node is stale")
-    require(lifecycle.get("active_increment") == current.get("active_increment"), "handoff active increment is stale")
+    require(lifecycle_state in {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}, "current lifecycle state is invalid")
+
+    canonical = requirements.get("canonical_scope", {})
+    extensions = requirements.get("canonical_extensions", [])
+    require(canonical.get("retained_requirement_count"), "canonical retained scope count missing")
+    canonical_scope = {
+        "source": canonical.get("source"),
+        "range": f"REQ-SCOPE-{int(canonical.get('start')):03d}..REQ-SCOPE-{int(canonical.get('end')):03d}",
+        "retained_requirement_count": canonical.get("retained_requirement_count"),
+        "build_graph_is_product_scope_owner": False,
+        "canonical_extensions_unselected": [row.get("id") for row in extensions if row.get("selected") is False],
+    }
+    open_incidents = [
+        row.get("id")
+        for row in incidents
+        if str(row.get("status", "")).upper().startswith("OPEN") and row.get("id")
+    ]
+    next_admissible_action = current.get("next_admissible_action")
+    require(next_admissible_action, "current state lacks next_admissible_action")
 
     receipt_status = receipt.get("status")
     if lifecycle_state == "ACTIVE":
@@ -142,7 +179,7 @@ def build_runtime_handoff(repo: Path) -> dict:
     supervision = build_supervision_summary(repo, current)
 
     runtime = {
-        "schema_version": 3,
+        "schema_version": 4,
         "repository": handoff["repository"],
         "observed_head_sha": head,
         "head_binding": "RUNTIME_EXACT",
@@ -150,8 +187,9 @@ def build_runtime_handoff(repo: Path) -> dict:
         "lifecycle": lifecycle,
         "controller": handoff["controller"],
         "construction_receipt_status": receipt_status,
-        "open_incidents": handoff.get("open_incidents", []),
-        "next_admissible_action": handoff["next_admissible_action"],
+        "open_incidents": open_incidents,
+        "canonical_scope": canonical_scope,
+        "next_admissible_action": next_admissible_action,
         "required_refs": refs,
         "required_reconstruction_outcomes": reconstruction.get("required_outcomes", []),
         "fresh_agent_requires_prior_chat": False,
