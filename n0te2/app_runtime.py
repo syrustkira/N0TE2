@@ -53,6 +53,20 @@ class QuitResult:
             raise ApplicationRuntimeError(f"invalid quit status: {self.status}")
 
 
+@dataclass(frozen=True)
+class ContinuationState:
+    """Read-only durable state needed to continue useful work after cold start."""
+
+    profile_id: str
+    artist_id: str
+    artist_name: str
+    song_id: str | None
+    song_title: str | None
+    current_version_id: str | None
+    approved_version_id: str | None
+    context_projection: dict[str, object] | None
+
+
 class ApplicationRuntime:
     """Own one consumer runtime session for one existing N0TE profile.
 
@@ -99,6 +113,46 @@ class ApplicationRuntime:
         if self._state != "RUNNING" or self._headquarters is None:
             raise ApplicationRuntimeError("Headquarters is available only while RUNNING")
         return self._headquarters
+
+    def continuation_state(self) -> ContinuationState:
+        """Reconstruct the bounded durable continue-state for the running profile.
+
+        This is intentionally a projection over existing canonical stores, not a
+        second persistence layer. A cold process can call it immediately after a
+        successful launch to recover Artist identity, the active Song/version and
+        a read-only provenance-bearing Song context projection without relying on
+        prior RAM, caches or conversation history.
+        """
+        headquarters = self.headquarters
+        artist = headquarters.store.artist()
+        song = headquarters.store.active_song()
+        profile = headquarters.store.profile_id
+        if song is None:
+            return ContinuationState(
+                profile_id=profile,
+                artist_id=artist.id,
+                artist_name=artist.display_name,
+                song_id=None,
+                song_title=None,
+                current_version_id=None,
+                approved_version_id=None,
+                context_projection=None,
+            )
+
+        projection = headquarters.context_projection.projection_for_song(
+            song.id,
+            purpose="COLD_START_CONTINUATION",
+        )
+        return ContinuationState(
+            profile_id=profile,
+            artist_id=artist.id,
+            artist_name=artist.display_name,
+            song_id=song.id,
+            song_title=song.title,
+            current_version_id=song.current_version_id,
+            approved_version_id=song.approved_version_id,
+            context_projection=projection,
+        )
 
     def _clear(self) -> None:
         self._state = "STOPPED"
