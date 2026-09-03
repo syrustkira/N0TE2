@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "product_identity": "N0TE is one persistent Song-centered Artist Headquarters and operating intelligence for the active Artist.",
+  "canonical_semantic_authority": [
+    "N0TE - CANONICAL BLUEPRINT",
+    "N0TE_PRODUCT_DB / SCOPE_LEDGER"
+  ],
+  "one_n0te": {
+    "single_identity": true,
+    "persistent_identity_state_reasoning_decision_contract": true,
+    "remembers_across_interruptions": true,
+    "understands_artist_song_project_and_current_context": true,
+    "consults_durable_memory": true,
+    "selects_one_useful_next_action": true,
+    "acts_through_interchangeable_providers": true,
+    "observes_and_verifies_outcomes": true,
+    "journals_outcomes_into_memory": true,
+    "resumes_without_manual_reconstruction": true,
+    "explains_knowledge_evidence_and_reasoning": true,
+    "survives_provider_runtime_and_substrate_replacement": true,
+    "may_gain_new_functionality_without_changing_identity": true
+  },
+  "not_n0te": {
+    "builder": "construction, diagnosis, repair, migration and verification machinery",
+    "cloud_controller": "coordination and runtime control plane",
+    "drive_brain": "canonical durable knowledge/context substrate and code bay",
+    "github": "source, construction and evidence workshop",
+    "chatgpt_session": "replaceable cognition, consultation and engineering surface",
+    "daw": "creative workspace and execution provider"
+  },
+  "laws": {
+    "builder_must_not_become_product_identity": true,
+    "builder_must_not_own_artist_memory": true,
+    "builder_must_not_own_product_semantics": true,
+    "providers_are_replaceable": true,
+    "substrates_are_replaceable": true,
+    "drive_is_canonical_durable_brain_substrate_not_a_second_n0te": true,
+    "github_is_not_product_runtime_truth": true,
+    "chat_session_is_not_required_for_continuity": true,
+    "daw_is_beneath_song_and_n0te_headquarters": true,
+    "accepted_scope_must_be_machine_retained": true,
+    "accepted_scope_must_not_exist_only_in_conversation": true,
+    "semantic_graph_must_remain_whole_while_implementation_is_dependency_ordered": true,
+    "implementation_maturity_must_not_narrow_semantic_scope": true,
+    "newly_accepted_scope_requires_same_cycle_canonical_retention_and_executable_projection": true
+  },
+  "heartbeat_contract": [
+    "WAKE",
+    "IDENTIFY_ARTIST",
+    "RESOLVE_CURRENT_SONG_PROJECT_CONTEXT",
+    "CONSULT_DURABLE_MEMORY",
+    "DECIDE_USEFUL_ACTION",
+    "RESOLVE_PROVIDER",
+    "AUTHORIZE_AND_EXECUTE",
+    "OBSERVE_AND_VERIFY",
+    "JOURNAL_AND_REMEMBER",
+    "RESUME_LATER_WITHOUT_RECONSTRUCTION"
+  ],
+  "construction_rule": "Finish the complete known engine by dependency order. Do not shrink accepted N0TE scope to make construction appear simpler; fix missing retention, integration, evidence or reachability instead."
+}
