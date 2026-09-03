@@ -48,10 +48,49 @@ def require(cond: bool, msg: str):
         raise GovernanceError(msg)
 
 
+def check_constitution(repo: Path):
+    c = load_json(repo / "governance/constitution.json")
+    one = c["one_n0te"]
+    laws = c["laws"]
+    not_n0te = c["not_n0te"]
+    require(one["single_identity"] is True, "N0TE identity must remain singular")
+    require(one["persistent_identity_state_reasoning_decision_contract"] is True, "persistent N0TE contract missing")
+    require(one["remembers_across_interruptions"] is True, "N0TE continuity memory missing")
+    require(one["understands_artist_song_project_and_current_context"] is True, "artist/Song/project context contract missing")
+    require(one["consults_durable_memory"] is True, "durable memory consultation contract missing")
+    require(one["acts_through_interchangeable_providers"] is True, "provider interchangeability contract missing")
+    require(one["observes_and_verifies_outcomes"] is True, "outcome observation/verification contract missing")
+    require(one["journals_outcomes_into_memory"] is True, "outcome-to-memory contract missing")
+    require(one["resumes_without_manual_reconstruction"] is True, "resume-without-reconstruction contract missing")
+    require(one["survives_provider_runtime_and_substrate_replacement"] is True, "substrate survival contract missing")
+    require(set(not_n0te) == {"builder", "cloud_controller", "drive_brain", "github", "chatgpt_session", "daw"}, "N0TE substrate boundary set changed")
+    require(laws["builder_must_not_become_product_identity"] is True, "builder became N0TE identity")
+    require(laws["builder_must_not_own_artist_memory"] is True, "builder became artist-memory owner")
+    require(laws["builder_must_not_own_product_semantics"] is True, "builder became product-semantics owner")
+    require(laws["accepted_scope_must_be_machine_retained"] is True, "accepted scope may fall out of machine retention")
+    require(laws["accepted_scope_must_not_exist_only_in_conversation"] is True, "conversation-only accepted scope allowed")
+    require(laws["semantic_graph_must_remain_whole_while_implementation_is_dependency_ordered"] is True, "semantic completeness was confused with implementation order")
+    heartbeat = c["heartbeat_contract"]
+    expected_heartbeat = [
+        "WAKE",
+        "IDENTIFY_ARTIST",
+        "RESOLVE_CURRENT_SONG_PROJECT_CONTEXT",
+        "CONSULT_DURABLE_MEMORY",
+        "DECIDE_USEFUL_ACTION",
+        "RESOLVE_PROVIDER",
+        "AUTHORIZE_AND_EXECUTE",
+        "OBSERVE_AND_VERIFY",
+        "JOURNAL_AND_REMEMBER",
+        "RESUME_LATER_WITHOUT_RECONSTRUCTION",
+    ]
+    require(heartbeat == expected_heartbeat, "N0TE heartbeat contract changed")
+    return c
+
+
 def check_requirements(repo: Path):
     doc = load_json(repo / "governance/requirements.json")
     start, end = doc["sequence"]["start"], doc["sequence"]["end"]
-    require((start, end) == (2, 153), "requirement sequence must be exactly REQ-SCOPE-002..153")
+    require((start, end) == (2, 160), "requirement sequence must be exactly REQ-SCOPE-002..160")
     ids = [f"REQ-SCOPE-{n:03d}" for n in range(start, end + 1)]
     held = set(doc.get("held_or_boundary", []))
     superseded = set(doc.get("superseded", []))
@@ -134,8 +173,10 @@ def check_graph(repo: Path, requirements):
     cand = by_id["CAND-01"]
     require(set(cand["depends_on"]) == {"CONV-01", "DAW-TEST-READY", "PLATFORM-TEST-READY"}, "CAND-01 gate narrowed")
     require(by_id["TEST-01"]["depends_on"] == ["CAND-01"], "TEST-01 must never precede CAND-01")
-    require({"REQ-SCOPE-148", "REQ-SCOPE-150"}.issubset(set(expand_requirement_expr(by_id["DAW-07"]["requirements"]))), "DAW-07 lost Generic Other/plugin baseline")
+    require({"REQ-SCOPE-148", "REQ-SCOPE-150", "REQ-SCOPE-160"}.issubset(set(expand_requirement_expr(by_id["DAW-07"]["requirements"]))), "DAW-07 lost Generic Other/plugin/negotiated-interoperability baseline")
     require("AUDIO-02" in by_id["DAW-07"]["depends_on"], "DAW-07 flattened to manual-only: AUDIO-02 missing")
+    require({f"REQ-SCOPE-{n:03d}" for n in range(154, 161)}.issubset(set(expand_requirement_expr(by_id["CONV-01"]["requirements"]))), "CONV-01 dropped recovered canonical requirements 154..160")
+    require({f"REQ-SCOPE-{n:03d}" for n in range(154, 161)}.issubset(set(expand_requirement_expr(by_id["CAND-01"]["requirements"]))), "candidate gate dropped recovered canonical requirements 154..160")
 
     active_nodes = [n["id"] for n in nodes if n["state"] == "ACTIVE"]
     require(len(active_nodes) == 1, f"exactly one graph node must be ACTIVE, found {active_nodes}")
@@ -179,11 +220,16 @@ def check_authority(repo: Path):
     joined = "\n".join(a["current_authority_files"])
     for marker in a["forbidden_current_authority_markers"]:
         require(marker not in joined, f"stale authority reintroduced: {marker}")
+    require("governance/constitution.json" in a["current_authority_files"], "one-N0TE constitution missing from repo authority surface")
     require("governance/legacy_admission.json" in a["current_authority_files"], "LEGACY-01 admission manifest missing from repo authority surface")
     require(a["laws"]["implementation_maturity_must_not_mutate_scope"] is True, "anti-flattening law missing")
     require(a["laws"]["missing_acceptance_resource_stops_unrelated_construction"] is False, "resource-wait loop reintroduced")
     require(a["laws"]["legacy_classification_is_not_copy_authority"] is True, "classification became copy authority")
     require(a["laws"]["legacy_test_green_is_not_product_completion"] is True, "legacy tests became product-completion authority")
+    require(a["laws"]["one_n0te_identity_must_survive_substrate_replacement"] is True, "one-N0TE substrate survival law missing")
+    require(a["laws"]["builder_is_not_product_identity"] is True, "builder/product identity boundary missing")
+    require(a["laws"]["accepted_scope_must_be_machine_retained"] is True, "scope retention law missing")
+    require(a["laws"]["conversation_only_accepted_scope_is_forbidden"] is True, "conversation-only product scope allowed")
 
 
 def check_legacy_admission(repo: Path):
@@ -342,6 +388,7 @@ def check_stage(repo: Path, graph: dict):
 
 
 def run(repo: Path, verify_git: bool):
+    check_constitution(repo)
     requirements = check_requirements(repo)
     graph = check_graph(repo, requirements)
     check_platforms(repo)
