@@ -4,9 +4,9 @@
   "construction_phase": "3 PRODUCT SHELL",
   "lifecycle_state": "ACTIVE",
   "active_node": "UX-01",
-  "active_increment": "UX-01D-NOW-THREAD-01",
+  "active_increment": "UX-01-NOW-THREAD-01",
   "terminal_reason": null,
-  "wake_condition": "Implement, verify and close UX-01D-NOW-THREAD-01; stop or block rather than self-spawning adjacent UX work.",
+  "wake_condition": "Implement, verify and close UX-01-NOW-THREAD-01; stop or block rather than self-spawning adjacent UX work.",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -27,14 +27,14 @@
     "Canonical main baseline remains 649002eebc6e378026f324df5d04adb3653c8b64; PR #63 remains the single governed delivery lane.",
     "Terminal head 41e9b45286f4cdfb2ed59ff0ed1b0117e228cbe8 closed AUDIO-01-ENGINEERING-SNAPSHOT-01 with exact-head Linux, Windows and macOS governance/full-regression/consumer-smoke evidence. AUDIO-01 remains PRESERVED.",
     "The user explicitly continued N0TE after that STABLE checkpoint. Whole-graph selection now chooses UX-01 because UX-01 is dependency-ready and blocks SONG-01 and ART-01, while DAW-00A-G are already landed and their own graph contract forbids adjacency-driven extension.",
-    "Drive SELECTION_RECEIPT still labels UX-01-INTERACTION-01 as CURRENT even though PR #62 closed unmerged. That row is stale selection evidence and must be reconciled, not treated as live execution authority.",
-    "The UX-01-INTERACTION-01 product implementation itself is already present on the current PR #63 baseline: five DO IT / WITH ME / SHOW ME / EXPLAIN WHY / LET ME TRY modes are consumer-reachable and remain separate from action authority, with stale-binding/security/causal-humility regressions in the full suite.",
-    "UX-01D-NOW-THREAD-01 is the sole active bounded increment. It projects canonical active Song and latest Session continuity into /now without creating another task, attention or recommendation store.",
+    "Drive SELECTION_RECEIPT previously labeled UX-01-INTERACTION-01 as CURRENT even though PR #62 closed unmerged. That stale execution claim has been reconciled; its interaction-depth product implementation and regressions are already present on PR #63 and are not being rebuilt.",
+    "UX-01-NOW-THREAD-01 is the sole active bounded increment. It projects canonical active Song and latest Session continuity into /now without creating another task, attention or recommendation store.",
+    "Initial exact-head run 33706192636 proved governance/supervision activation valid and 726 product tests passed; the sole failure was the smoke contract rejecting the noncanonical increment identifier UX-01D-NOW-THREAD-01. The receipt is renamed to UX-01-NOW-THREAD-01 instead of weakening the binding invariant.",
     "The NOW continuation card is read-only: no GET may mutate Activity, Song, Session, Focus, evidence, approval, DAW, provider or external state.",
-    "Focus remains Headquarters attention state, distinct from DAW FocusContext. UX-01D does not change Focus semantics or mutation authority.",
+    "Focus remains Headquarters attention state, distinct from DAW FocusContext. This increment does not change Focus semantics or mutation authority.",
     "The live canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 159 requirements, REQ-SCOPE-002 through REQ-SCOPE-160. Foreground UX construction does not shrink that scope.",
     "REQ-SCOPE-154 through REQ-SCOPE-160 remain retained canonical mapped extensions and are not selected merely because they exist.",
     "One active construction claim is allowed. The persistent TellMeN0TE + N0TE Cloud Control Plane remains separate from the temporary active build harness.",
-    "After UX-01D closes or blocks, globally reselect. Do not extend NOW, UX, DAW or Audio merely because the touched files are nearby."
+    "After this increment closes or blocks, globally reselect. Do not extend NOW, UX, DAW or Audio merely because the touched files are nearby."
   ]
 }
