@@ -73,6 +73,7 @@ def inspect_supervision(repo: Path) -> dict:
             {
                 "id": actor_id,
                 "kind": actor.get("kind"),
+                "role_class": actor.get("role_class"),
                 "state": state,
                 "purpose": actor.get("purpose"),
                 "reason_running": actor.get("reason_running"),
@@ -89,19 +90,30 @@ def inspect_supervision(repo: Path) -> dict:
     controller = next((actor for actor in actors if actor.get("id") == "AUTO-CONSTRUCTION-CONTROLLER-001"), None)
     _require(controller is not None, "construction controller is not registered")
     construction_state = current.get("lifecycle_state")
+    build_actor_roles = {"N0TE_BUILD_HARNESS_COORDINATOR", "N0TE_BUILD_HARNESS_EXECUTOR"}
+    build_actors = [actor for actor in actors if actor.get("role_class") in build_actor_roles]
+    _require(build_actors, "no N0TE build-harness actors are registered")
+
     if construction_state == "ACTIVE":
         _require(controller["lifecycle"]["state"] == "ACTIVE", "active construction requires an active controller")
         _require(current.get("active_node"), "active construction requires active_node")
         _require(current.get("active_increment"), "active construction requires active_increment")
     else:
         _require(construction_state in {"STABLE", "WAITING", "BLOCKED"}, "unknown construction lifecycle state")
-        _require(controller["lifecycle"]["state"] == "DORMANT", "terminal construction must make controller dormant")
         _require(current.get("active_node") is None, "terminal construction cannot retain active_node")
         _require(current.get("active_increment") is None, "terminal construction cannot retain active_increment")
-        _require(controller.get("auto_spawn_successor") is False, "terminal construction cannot auto-spawn successor work")
+        for actor in build_actors:
+            _require(
+                actor.get("lifecycle", {}).get("state") in {"DORMANT", "RETIRED", "QUARANTINED"},
+                f"terminal construction cannot leave build actor ACTIVE: {actor.get('id')}",
+            )
+            _require(
+                actor.get("auto_spawn_successor") is False,
+                f"terminal construction cannot let build actor auto-spawn successor work: {actor.get('id')}",
+            )
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "supervisor": root,
         "construction": {
             "state": construction_state,
