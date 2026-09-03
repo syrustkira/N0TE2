@@ -22,6 +22,10 @@ ACQUIRE_STATUSES = {
     "UNCERTAIN",
     "REPLACED_STALE",
 }
+# One opaque marker per interpreter process. Callers may provide a stronger
+# launch marker, but omitting it must never collapse exact-launch identity into
+# a reusable workflow/start token.
+_PROCESS_LAUNCH_MARKER = uuid.uuid4().hex
 
 
 class InstanceLeaseError(RuntimeError):
@@ -86,8 +90,9 @@ class ProcessIdentity:
         start = _digest(self.start_token_fingerprint, "start_token_fingerprint")
         launch = self.launch_marker_fingerprint
         if launch is None:
-            # Schema-v1 compatibility: the reusable start marker was the only
-            # launch identity available, so it is the conservative exact marker.
+            # Direct construction without a v2 marker exists only for schema-v1
+            # compatibility. New callers should use from_start_token(), whose
+            # default is exact-process-launch scoped.
             launch = start
         launch = _digest(launch, "launch_marker_fingerprint")
         object.__setattr__(self, "start_token_fingerprint", start)
@@ -111,7 +116,11 @@ class ProcessIdentity:
         launch_marker: str | None = None,
     ) -> "ProcessIdentity":
         token = _text(start_token, "start_token")
-        launch = token if launch_marker is None else _text(launch_marker, "launch_marker")
+        launch = (
+            _PROCESS_LAUNCH_MARKER
+            if launch_marker is None
+            else _text(launch_marker, "launch_marker")
+        )
         return cls(
             platform=platform,
             pid=pid,
@@ -618,7 +627,10 @@ class InstanceLeaseManager:
                     self._remove_marker_exact(profile, marker)
                     return completed
             continue
-        raise InstanceLeaseError("could not acquire instance lease after bounded retries")
+        # Bounded contention/churn is an uncertainty condition, not an
+        # exceptional consumer crash. Preserve any currently visible owner and
+        # let ApplicationRuntime surface the existing fail-closed UNCERTAIN path.
+        return LeaseAcquireResult("UNCERTAIN", self.inspect(profile))
 
     def release(
         self,
