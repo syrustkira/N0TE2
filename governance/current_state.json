@@ -7,7 +7,7 @@
   "active_increment": "SONG-01-AB-DECIDE-01",
   "terminal_reason": null,
   "wake_condition": "Exact-head implementation or verification evidence changes SONG-01-AB-DECIDE-01 state.",
-  "next_admissible_action": "Implement and verify only the bounded exact Version-pair artist decision receipt. Preserve pair identity, one-shot stale-safe authority, append-only judgment memory, and strict separation from Version approval, execution and Learning promotion.",
+  "next_admissible_action": "Implement and verify only the bounded exact Version-pair artist decision receipt. Preserve pair identity, one-shot stale-safe authority, append-only judgment memory, and strict separation from Version approval, execution, loudness processing and Learning promotion.",
   "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -46,9 +46,15 @@
     "While PR #93 remained open, main advanced through disjoint career-role, People Headquarters, exact Song transaction-binding, and Song-bound songwriting case-history work to e4246d92403ddab05ecc58190639dbc2e9ef3739. The A/B delta was reconstructed over that live main rather than merging stale construction truth.",
     "SONG-01-AB-COMPARE-01 exact head cc1c5c3f5db5e9092a37267f39626e5bfe0b98a4 passed GitHub Actions run 33870035901 before PR #93 merged as 7a9ea14aaf042165a0718c1a94ba81429ca5d685.",
     "The merged A/B surface remains read-only, keeps RMS distinct from LUFS, applies no normalization, creates no artistic decision, and does not close full REQ-SCOPE-010.",
-    "The compare construction receipt was returned to INACTIVE, current_state returned to STABLE, SONG-01 returned to PRESERVED, and the construction controller returned to DORMANT before subsequent parallel merges. A later main push cancelled only the superseded Windows push-run while its regression was in progress; it did not report a product or governance test failure.",
-    "PR #111 then merged a separately exact-head-verified OPS-04 collaborator handoff increment as 65f7bede858a9cd415b3479b44838e28dec517e0 without modifying the compare product files or reopening compare construction truth.",
-    "Global reselection on main 65f7bede858a9cd415b3479b44838e28dec517e0 found that Version approval and Learning already preserve different meanings: approval changes the exact approved Version, while Learning preserves a deliberate change -> observation -> decision chain. Neither truthfully represents a post-listening judgment about one exact A/B pair.",
-    "Issue #114 durably claims SONG-01-AB-DECIDE-01 as the unowned pair-bound decision seam. The increment may persist KEEP / REVERT / REVISE / INCONCLUSIVE for the exact compared pair but must not execute revert, approve a Version, create a revision, promote Learning/taste, process audio, or call a provider/DAW."
+    "Post-merge governance closure returned SONG-01 to PRESERVED and the construction controller to STABLE/DORMANT on main 720f650b48cbbd12d163f28cb0893f98fce4f781.",
+    "OPS-04-COLLAB-HANDOFF-01 then merged as 65f7bede858a9cd415b3479b44838e28dec517e0 after exact-head cross-platform verification. Its two added collaboration-handoff files are disjoint from Audio Intelligence and do not alter governance state.",
+    "AUDIO-01-LOUDNESS-01 original exact implementation head a81a551be306853bcfc72cc931e60be1d0e25a3b passed GitHub Actions run 33844922712 on Ubuntu, Windows and macOS with dependency installation, governance, full regression and staged consumer smoke green.",
+    "That prior loudness run was treated as historical evidence only. The unchanged bounded product delta was reconstructed atomically onto current main 65f7bede858a9cd415b3479b44838e28dec517e0 so the merged A/B and collaboration-handoff implementations were both present during fresh exact-head verification.",
+    "AUDIO-01-LOUDNESS-01 exact head b00aa5f1fa5835d2b2a140f5263b96fc3199826d passed GitHub Actions run 33871372582 on Ubuntu, Windows and macOS with dependency installation, construction governance, context lifecycle, supervision, full regression and staged consumer smoke all green.",
+    "PR #94 merged that verified loudness-evidence delta as d2173505678b21303c6a942508afd32c2f840f38.",
+    "Integrated loudness is now exact read-only signal evidence in the Engineering Snapshot. It is not automatic normalization, true-peak certification, a mastering target, a mix score, or an artistic decision; AUDIO-01 remains PRESERVED and full REQ-SCOPE-010 remains open.",
+    "Loudness governance closure advanced stable main to 33a1777251c241f3b05a8c84ef91d35ed92cb556 with no active receipt and the construction controller dormant.",
+    "Issue #114 durably claims SONG-01-AB-DECIDE-01 because Version approval and general Learning preserve different meanings and neither owns post-listening judgment for one exact A/B pair; merged loudness evidence does not change that ownership boundary.",
+    "The decision product delta is reconstructed unchanged onto stable main 33a1777251c241f3b05a8c84ef91d35ed92cb556 because loudness modified Engineering Snapshot and dependency files but left the exact Version compare shell and pair semantics unchanged."
   ]
 }

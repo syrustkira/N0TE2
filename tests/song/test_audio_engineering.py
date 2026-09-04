@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import struct
 import tempfile
 import unittest
@@ -9,6 +10,11 @@ from pathlib import Path
 
 from n0te2.audio_engineering import (
     ANALYZER_VERSION,
+    LOUDNESS_BACKEND,
+    LOUDNESS_MEASURED,
+    LOUDNESS_SILENT,
+    LOUDNESS_STANDARD,
+    LOUDNESS_TOO_SHORT,
     CorruptEngineeringMedia,
     EngineeringEvidenceBinding,
     UnsupportedEngineeringMedia,
@@ -36,6 +42,23 @@ def _write_pcm16(path: Path, frames: list[tuple[int, ...]], *, rate: int = 8000)
         target.writeframes(
             b"".join(struct.pack("<" + "h" * channels, *frame) for frame in frames)
         )
+
+
+def _write_sine_pcm16(
+    path: Path,
+    *,
+    amplitude: int,
+    rate: int = 48000,
+    duration_seconds: float = 1.0,
+    channels: int = 2,
+    frequency_hz: float = 1000.0,
+) -> None:
+    frame_count = int(rate * duration_seconds)
+    frames: list[tuple[int, ...]] = []
+    for frame in range(frame_count):
+        sample = int(round(amplitude * math.sin(2.0 * math.pi * frequency_hz * frame / rate)))
+        frames.append(tuple(sample for _ in range(channels)))
+    _write_pcm16(path, frames, rate=rate)
 
 
 def _encode_signed(value: int, bits: int) -> bytes:
@@ -98,7 +121,44 @@ class AudioEngineeringTests(unittest.TestCase):
         self.assertAlmostEqual(result.crest_factor_db or 0.0, 3.010299957, places=6)
         self.assertAlmostEqual(result.dc_offset_percent, 0.0, places=12)
         self.assertAlmostEqual(result.stereo_correlation or 0.0, 1.0, places=12)
+        self.assertIsNone(result.integrated_lufs)
+        self.assertEqual(result.loudness_state, LOUDNESS_TOO_SHORT)
+        self.assertEqual(result.loudness_standard, LOUDNESS_STANDARD)
+        self.assertEqual(result.loudness_backend, LOUDNESS_BACKEND)
         self.assertEqual(path.read_bytes(), before)
+
+    def test_integrated_loudness_tracks_known_level_delta_for_same_signal(self) -> None:
+        louder = self.root / "louder.wav"
+        quieter = self.root / "quieter.wav"
+        _write_sine_pcm16(louder, amplitude=12000)
+        _write_sine_pcm16(quieter, amplitude=6000)
+
+        loud = analyze_pcm_wave(louder, binding=_binding(louder, asset="louder"))
+        quiet = analyze_pcm_wave(quieter, binding=_binding(quieter, asset="quieter"))
+
+        self.assertEqual(loud.loudness_state, LOUDNESS_MEASURED)
+        self.assertEqual(quiet.loudness_state, LOUDNESS_MEASURED)
+        self.assertIsNotNone(loud.integrated_lufs)
+        self.assertIsNotNone(quiet.integrated_lufs)
+        assert loud.integrated_lufs is not None
+        assert quiet.integrated_lufs is not None
+        self.assertTrue(math.isfinite(loud.integrated_lufs))
+        self.assertTrue(math.isfinite(quiet.integrated_lufs))
+        self.assertGreater(loud.integrated_lufs, quiet.integrated_lufs)
+        self.assertAlmostEqual(
+            loud.integrated_lufs - quiet.integrated_lufs,
+            20.0 * math.log10(2.0),
+            delta=0.05,
+        )
+
+    def test_long_silence_is_named_without_inventing_finite_lufs(self) -> None:
+        path = self.root / "silence.wav"
+        _write_pcm16(path, [(0,)] * 48000, rate=48000)
+        result = analyze_pcm_wave(path, binding=_binding(path))
+        self.assertEqual(result.loudness_state, LOUDNESS_SILENT)
+        self.assertIsNone(result.integrated_lufs)
+        self.assertIsNone(result.sample_peak_dbfs)
+        self.assertIsNone(result.rms_dbfs)
 
     def test_stereo_anticorrelation_is_measured_without_judgment(self) -> None:
         path = self.root / "anti.wav"
@@ -108,6 +168,7 @@ class AudioEngineeringTests(unittest.TestCase):
         )
         result = analyze_pcm_wave(path, binding=_binding(path))
         self.assertAlmostEqual(result.stereo_correlation or 0.0, -1.0, places=12)
+        self.assertEqual(result.loudness_state, LOUDNESS_TOO_SHORT)
 
     def test_24_bit_integer_pcm_is_supported(self) -> None:
         path = self.root / "pcm24.wav"
@@ -117,6 +178,7 @@ class AudioEngineeringTests(unittest.TestCase):
         self.assertEqual(result.channels, 1)
         self.assertAlmostEqual(result.sample_peak_dbfs or 0.0, -6.020599913, places=6)
         self.assertIsNone(result.stereo_correlation)
+        self.assertEqual(result.loudness_state, LOUDNESS_TOO_SHORT)
 
     def test_float_wav_is_rejected_instead_of_misreported_as_pcm(self) -> None:
         path = self.root / "float.wav"

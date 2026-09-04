@@ -4,7 +4,7 @@
   "receipt_id": "N0TE2-SONG-01-AB-DECIDE-01",
   "node_id": "SONG-01",
   "increment_id": "SONG-01-AB-DECIDE-01",
-  "baseline_sha": "65f7bede858a9cd415b3479b44838e28dec517e0",
+  "baseline_sha": "33a1777251c241f3b05a8c84ef91d35ed92cb556",
   "purpose": "Persist one explicit artist KEEP / REVERT / REVISE / INCONCLUSIVE judgment for the exact Reference and Current Song Versions shown in the existing A/B compare, without turning judgment into approval, execution, audio processing, or Learning promotion.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
@@ -26,7 +26,7 @@
     "requirements": ["REQ-SCOPE-010"],
     "increment": "SONG-01-AB-DECIDE-01"
   },
-  "why_now": "Global reselection on live main found the signature Song loop has exact Version lineage, safe local audition, A/B comparison, Version approval, and general Learning decision vocabulary, but no durable artist judgment bound specifically to the exact A/B pair just compared. Open work owns many adjacent foundations but no current claim owns this pair-bound decision seam.",
+  "why_now": "After exact standards-based loudness evidence merged and its receipt closed, global reselection still finds the signature Song loop missing one unowned semantic seam: N0TE can identify, verify, audition and compare an exact Version pair, but cannot yet persist the artist's explicit judgment about that exact pair. Loudness remains read-only signal evidence and explicitly does not own KEEP / REVERT / REVISE / INCONCLUSIVE.",
   "implementation_contract": {
     "decision_truth": "KEEP, REVERT, REVISE and INCONCLUSIVE are explicit artist judgments only. They do not imply approval, execution, preference promotion, causal Learning truth, or superiority.",
     "pair_binding": "The decision action is bound to the exact active Song, Reference Version and Current Version prepared for the artist. The shell re-prepares and re-verifies the pair before accepting the write; stale or partially auditionable state fails closed.",
