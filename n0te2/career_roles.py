@@ -329,13 +329,13 @@ def _missing_evidence(
     stage: RoleStageDefinition,
     verified: tuple[RoleEvidence, ...],
 ) -> tuple[EvidenceRequirement, ...]:
-    counts = {kind: 0 for kind in ROLE_EVIDENCE_KINDS}
+    sources = {kind: set() for kind in ROLE_EVIDENCE_KINDS}
     for item in verified:
-        counts[item.kind] += 1
+        sources[item.kind].add(item.source_ref)
     return tuple(
         requirement
         for requirement in stage.evidence_requirements
-        if counts[requirement.kind] < requirement.count
+        if len(sources[requirement.kind]) < requirement.count
     )
 
 
@@ -347,6 +347,9 @@ def assess_role(
 ) -> RoleAssessment:
     definition = get_role_definition(role_id)
     evidence_rows = tuple(evidence)
+    evidence_ids = tuple(item.id for item in evidence_rows)
+    if len(evidence_ids) != len(set(evidence_ids)):
+        raise ValidationError("role evidence IDs must be unique")
     verified = _verified_evidence_for_role(definition.id, evidence_rows)
     declared_or_inferred = tuple(
         item
