@@ -9,7 +9,6 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from n0te2.consumer_shell import ConsumerShell
 from n0te2.direct_fan import DirectFanService
-from n0te2.fan_journey import FanJourneyService
 from n0te2.instance import ProcessIdentity
 from n0te2.memory import HeadquartersMemory
 from n0te2.platforms import PlatformEnvironment
@@ -248,33 +247,33 @@ def test_audience_authority_rejects_foreign_origin_and_replayed_contact_actions(
 def test_stale_plan_token_cannot_record_intent_after_consent_revocation(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, _, person_id = seed_profile(data_root)
+    profile_id, _, person_id = seed_profile(data_root)
     shell = new_shell(data_root, state_root, 9983, "direct-fan-stale")
     try:
         _record_email_and_opt_in(shell)
         status, page = request(shell, "/audience")
         assert status == 200
         stale_plan = forms(page, "/audience/intent")[0]
-
-        hq = shell.runtime.headquarters
-        journey = FanJourneyService(hq.store, hq.people, hq.evidence)
-        journey.record_consent(
-            person_id,
-            "EMAIL",
-            "OPTED_OUT",
-            source_kind="USER_DECLARED",
-            note="Revoked before the rendered plan was submitted",
-        )
+        revoke = forms(page, "/audience/consent")[0]
+        revoke.values["channel"] = "EMAIL"
+        revoke.values["status"] = "OPTED_OUT"
+        revoke.values["note"] = "Revoked before the rendered plan was submitted"
+        assert post_form(shell, revoke)[0] == 303
 
         assert post_form(shell, stale_plan)[0] == 303
         status, page = request(shell, "/audience")
         assert status == 200
         assert "Consent changed" in page
-        direct = DirectFanService(hq.store, hq.people, hq.evidence)
-        assert direct.intents_for_person(person_id) == ()
         assert forms(page, "/audience/intent") == []
     finally:
         shell.stop()
+
+    reopened = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        direct = DirectFanService(reopened.store, reopened.people, reopened.evidence)
+        assert direct.intents_for_person(person_id) == ()
+    finally:
+        reopened.close()
 
 
 def test_opt_out_after_recorded_intent_blocks_old_plan_without_erasing_history(
