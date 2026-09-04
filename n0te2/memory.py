@@ -109,7 +109,7 @@ class HeadquartersMemory:
     def close(self) -> None:
         self.store.close()
 
-    def __enter__(self, exc_type, exc, tb) -> None:
+    def __enter__(self) -> "HeadquartersMemory":
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
