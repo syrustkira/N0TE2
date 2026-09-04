@@ -245,7 +245,7 @@ def test_home_job_entry_reuses_existing_origin_csrf_and_replay_authority(tmp_pat
         origin=shell.address.origin,
     )
     assert status == 403
-    assert "That N0TE action expired. Reload and try again." in rejected
+    assert "That action expired. Reload N0TE and try again." in rejected
     focus, _ = read_focus(data_root, profile_id)
     assert focus is None
 
