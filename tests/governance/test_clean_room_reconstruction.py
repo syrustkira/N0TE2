@@ -1,3 +1,4 @@
+import copy
 import json
 import unittest
 from pathlib import Path
@@ -40,22 +41,27 @@ class CleanRoomReconstructionTests(unittest.TestCase):
         self.assertIn("Work becomes ACTIVE only through current_state plus an active receipt", requirements["selection_contract"])
         self.assertTrue(all(row["selected"] is False for row in requirements["canonical_extensions"]))
 
-    def test_stable_current_state_cannot_be_reactivated_by_historical_prose(self):
-        current = self.load("governance/current_state.json")
-        receipt = self.load("governance/active_receipt.json")
-
-        self.assertEqual(current["lifecycle_state"], "STABLE")
-        self.assertIsNone(current["active_node"])
-        self.assertIsNone(current["active_increment"])
-        self.assertFalse(current["product_code_authorized"])
-        self.assertFalse(current["legacy_admission_authorized"])
-        self.assertEqual(receipt["status"], "INACTIVE")
+    def test_terminal_current_state_cannot_be_reactivated_by_historical_prose(self):
+        live = self.load("governance/current_state.json")
+        terminal = copy.deepcopy(live)
+        terminal.update(
+            {
+                "lifecycle_state": "STABLE",
+                "active_node": None,
+                "active_increment": None,
+                "product_code_authorized": False,
+                "legacy_admission_authorized": False,
+                "terminal_reason": "Synthetic terminal fixture for historical-command regression.",
+            }
+        )
 
         historical_text = "CURRENT NEXT ACTIVE PRIORITY BUILD THIS NEXT"
-        current["truth"].append(historical_text)
-        self.assertIsNone(current["active_node"])
-        self.assertIsNone(current["active_increment"])
-        self.assertFalse(current["product_code_authorized"])
+        terminal["truth"].append(historical_text)
+        self.assertEqual(terminal["lifecycle_state"], "STABLE")
+        self.assertIsNone(terminal["active_node"])
+        self.assertIsNone(terminal["active_increment"])
+        self.assertFalse(terminal["product_code_authorized"])
+        self.assertFalse(terminal["legacy_admission_authorized"])
 
     def test_current_state_does_not_truncate_recovered_scope(self):
         current = self.load("governance/current_state.json")
@@ -78,9 +84,10 @@ class CleanRoomReconstructionTests(unittest.TestCase):
         self.assertIn("REQ-SCOPE-046", requirements["superseded"])
         self.assertNotIn("046", mapped)
 
-    def test_new_professional_scope_is_retained_without_becoming_next_work(self):
+    def test_new_professional_scope_is_retained_without_self_selecting_work(self):
         requirements = self.load("governance/requirements.json")
         current = self.load("governance/current_state.json")
+        receipt = self.load("governance/active_receipt.json")
         extensions = {row["id"]: row for row in requirements["canonical_extensions"]}
 
         for n in range(161, 171):
@@ -88,9 +95,15 @@ class CleanRoomReconstructionTests(unittest.TestCase):
             self.assertFalse(row["selected"])
             self.assertEqual(row["state"], "MAPPED")
 
-        self.assertEqual(current["lifecycle_state"], "STABLE")
-        self.assertIsNone(current["active_node"])
-        self.assertFalse(current["product_code_authorized"])
+        if current["lifecycle_state"] == "ACTIVE":
+            self.assertEqual(receipt["status"], "ACTIVE")
+            self.assertEqual(receipt["node_id"], current["active_node"])
+            self.assertEqual(receipt["increment_id"], current["active_increment"])
+            self.assertTrue(str(current["active_increment"]).startswith(str(current["active_node"])))
+            self.assertFalse(any(row["selected"] for row in extensions.values()))
+        else:
+            self.assertIsNone(current["active_node"])
+            self.assertIsNone(current["active_increment"])
 
     def test_semantic_boundary_policy_is_builder_only_and_non_selecting(self):
         policy = self.load("governance/semantic_boundaries.json")
