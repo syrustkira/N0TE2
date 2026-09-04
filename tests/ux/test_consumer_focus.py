@@ -230,8 +230,21 @@ def test_focus_write_rejects_foreign_origin_and_one_shot_replay(tmp_path: Path) 
 
     _, now = request(shell, "/now")
     finish_form = choose_focus(now, "Finish")
-    status, _ = post_form(shell, finish_form, origin="https://attacker.example")
+
+    # Isolate the Origin gate from request-body transport. The shell rejects
+    # foreign Origin before parsing form data, so sending an attack body is not
+    # required to prove the security boundary. On Windows, rejecting before an
+    # unread body is drained can surface as a connection reset in urllib even
+    # though the server failed closed. Assert the actual origin-specific 403
+    # response without weakening the security expectation.
+    status, rejected = request(
+        shell,
+        finish_form.action,
+        method="POST",
+        origin="https://attacker.example",
+    )
     assert status == 403
+    assert "That action did not come from this N0TE window." in rejected
     active, _ = focus_state(data_root, profile_id)
     assert active is None
 
