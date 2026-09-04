@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "ACTIVE",
-  "active_node": "SONG-01",
-  "active_increment": "SONG-01-AB-COMPARE-01",
-  "terminal_reason": null,
-  "wake_condition": "Exact-head implementation or verification evidence changes SONG-01-AB-COMPARE-01 state.",
-  "next_admissible_action": "Implement and verify only the bounded exact local Version A/B compare receipt. Preserve read-only comparison semantics, keep RMS distinct from LUFS, and do not infer or record an artistic decision from passive listening.",
-  "product_code_authorized": true,
+  "lifecycle_state": "STABLE",
+  "active_node": null,
+  "active_increment": null,
+  "terminal_reason": "SONG-01-AB-COMPARE-01 is implemented, merged, and its exact implementation head is verified cross-platform; the bounded receipt is closed without claiming SONG-01 or REQ-SCOPE-010 complete.",
+  "wake_condition": "Global product reselection identifies the next dependency-valid unowned customer gap from live main and canonical retained scope.",
+  "next_admissible_action": "Refresh live main and open work, prove existing behavior, then globally select exactly one dependency-valid unowned product increment. Do not choose by adjacency; prefer work that unlocks the signature Song journey or closes multiple retained requirements through existing foundations and lightweight trusted reuse.",
+  "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -42,7 +42,9 @@
     "Global signature-loop reselection after clean-room reconciliation selected SONG-01-DIAGNOSIS-01 because the product already had Song identity, verified material evidence, bounded suggestions, audition and Learning decisions but lacked the consumer bridge that separates observation from inference and presents materially different intervention paths for the artist's stated Song problem.",
     "SONG-01-DIAGNOSIS-01 implementation head 88455ed09fc18015931b8f4c36e99a16e81d7c65 passed GitHub Actions run 33843511684 on Ubuntu, Windows and macOS with governance, context lifecycle, supervision, 773 regression tests and staged consumer smoke green.",
     "PR #84 merged the verified evidence-grounded Song diagnosis product delta to main as e9c32c9ded4965165f0eef2bf8863760122f83a3. The bounded increment does not mark SONG-01 complete and does not select its adjacent follow-up.",
-    "Global reselection from main 9ed5e5a0328dcbaeed43962577fc97f97fcf1651 found canonical REQ-SCOPE-010's Hear-to-Compare outcome consumer-incomplete while exact Version lineage, safe local audition and bounded PCM engineering evidence were already independently implemented. SONG-01-AB-COMPARE-01 is selected as a narrow consumer integration only; diagnosis remains out of scope and SONG-01 is not complete.",
-    "While PR #93 remained open, main advanced through disjoint career-role, People Headquarters, exact Song transaction-binding, and Song-bound songwriting case-history work to e4246d92403ddab05ecc58190639dbc2e9ef3739. The A/B delta is reconstructed over that live main, preserving those independent product increments while moving the active receipt baseline to the exact current main."
+    "Global reselection from main 9ed5e5a0328dcbaeed43962577fc97f97fcf1651 found canonical REQ-SCOPE-010's Hear-to-Compare outcome consumer-incomplete while exact Version lineage, safe local audition and bounded PCM engineering evidence were already independently implemented. SONG-01-AB-COMPARE-01 was selected as a narrow consumer integration only; diagnosis remained out of scope and SONG-01 was not complete.",
+    "While PR #93 remained open, main advanced through disjoint career-role, People Headquarters, exact Song transaction-binding, and Song-bound songwriting case-history work to e4246d92403ddab05ecc58190639dbc2e9ef3739. The A/B delta was reconstructed over that live main, preserving those independent product increments while moving the active receipt baseline to the exact current main.",
+    "GitHub Actions run 33870035901 verified exact implementation head cc1c5c3f5db5e9092a37267f39626e5bfe0b98a4 on Ubuntu, Windows and macOS with governance, context lifecycle, supervision, full regression and staged consumer smoke green.",
+    "PR #93 merged the verified exact local Song Version A/B compare delta to main as 7a9ea14aaf042165a0718c1a94ba81429ca5d685. The bounded increment closes only the Hear-to-Compare consumer gap; KEEP / REVERT / REVISE / INCONCLUSIVE remain a separate explicit artist decision step, and neither SONG-01 nor REQ-SCOPE-010 is claimed complete."
   ]
 }

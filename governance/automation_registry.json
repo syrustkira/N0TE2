@@ -38,7 +38,7 @@
       "reports_to": "N0TE-SUPERVISOR",
       "purpose": "Select and bound only currently justified N0TE construction work, then become dormant when construction is stable.",
       "boundary": "Temporary build harness machinery; not N0TE and not the persistent cloud coordination plane.",
-      "reason_running": "Canonical current_state selected SONG-01-AB-COMPARE-01 after global reselection found the exact local Hear-to-Compare outcome consumer-incomplete.",
+      "reason_running": "No bounded construction increment is currently selected; SONG-01-DIAGNOSIS-01 is closed and global product reselection is required before reactivation.",
       "mode": "ACCEPTANCE_BOUND",
       "authority": "SELECT_WITHIN_GOVERNED_SCOPE",
       "allowed_mutations": ["GOVERNANCE_SELECTION","RECEIPT_BOUNDED_REPOSITORY_PATHS"],
@@ -47,7 +47,7 @@
       "failure_policy": {"max_retries":8,"backoff":"BOUNDED_RESELECT_OR_BLOCK","terminal_states":["STABLE","WAITING","BLOCKED"],"on_exhaustion":"STOP_AND_REPORT_BLOCKER"},
       "escalation_target": "USER_ROOT",
       "auto_spawn_successor": false,
-      "lifecycle": {"state":"ACTIVE","last_observation":"SONG-01-AB-COMPARE-01 is the single active bounded product receipt.","next_wake_condition":"Exact-head implementation or verification evidence changes the active increment state.","health":"DERIVED_FROM_CURRENT_STATE"},
+      "lifecycle": {"state":"DORMANT","last_observation":"SONG-01-DIAGNOSIS-01 is closed after exact-head cross-platform verification and merge; no successor is selected by adjacency.","next_wake_condition":"Global reselection selects one dependency-valid unowned increment from fresh main.","health":"DERIVED_FROM_CURRENT_STATE"},
       "runtime_state_source": "REPOSITORY_GOVERNANCE_STATE",
       "observability": {"exact_head_required":true,"reactivation_is_event":true,"runtime_handoff_artifact":"governance-runtime-handoff.json","observation_artifact":"governance-ci-observation.json"}
     },
