@@ -112,7 +112,7 @@ def test_next_song_choice_is_token_bound_and_crossing_horizon_ends_suppression(
 ) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, source_song_id = seed(data_root, session=True)
+    profile_id, source_song_id = seed(data_root, session=True)
     shell = new_shell(data_root, state_root, 13201, "horizon-next")
     try:
         result = request_suggestion(shell)
@@ -133,19 +133,12 @@ def test_next_song_choice_is_token_bound_and_crossing_horizon_ends_suppression(
             {
                 "csrf": shell._csrf,
                 "action": next_action,
+                # Hostile client input must not upgrade the server-bound horizon.
                 "scope": NEVER_SUGGEST_AGAIN,
             },
         )
         assert status == 200
         assert "Saved until the next Song" in deferred
-        history = shell.runtime.headquarters.suggestion_deferrals.history()
-        assert len(history) == 1
-        record = history[0]
-        assert record.scope == NEXT_SONG
-        assert record.song_id == source_song_id
-        assert shell.runtime.headquarters.suggestion_deferrals.is_deferred_now(
-            record.semantic_key
-        )
 
         status, replay = post(
             shell,
@@ -154,21 +147,28 @@ def test_next_song_choice_is_token_bound_and_crossing_horizon_ends_suppression(
         )
         assert status == 409
         assert "already handled or expired" in replay
+    finally:
+        shell.stop()
 
-        other = shell.runtime.headquarters.store.create_song("Actually Next Song")
-        shell.runtime.headquarters.sessions.start_session(
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        history = hq.suggestion_deferrals.history()
+        assert len(history) == 1
+        record = history[0]
+        assert record.scope == NEXT_SONG
+        assert record.song_id == source_song_id
+        assert hq.suggestion_deferrals.is_deferred_now(record.semantic_key)
+
+        other = hq.store.create_song("Actually Next Song")
+        hq.sessions.start_session(
             song_id=other.id,
             objective="Cross the deferred horizon",
         )
-        assert not shell.runtime.headquarters.suggestion_deferrals.is_deferred_now(
-            record.semantic_key
-        )
-        shell.runtime.headquarters.store.select_song(source_song_id)
-        assert not shell.runtime.headquarters.suggestion_deferrals.is_deferred_now(
-            record.semantic_key
-        )
+        assert not hq.suggestion_deferrals.is_deferred_now(record.semantic_key)
+        hq.store.select_song(source_song_id)
+        assert not hq.suggestion_deferrals.is_deferred_now(record.semantic_key)
     finally:
-        shell.stop()
+        hq.close()
 
 
 def test_no_session_offers_next_song_and_never_but_not_session_horizon(
@@ -176,7 +176,7 @@ def test_no_session_offers_next_song_and_never_but_not_session_horizon(
 ) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    seed(data_root, session=False)
+    profile_id, _ = seed(data_root, session=False)
     shell = new_shell(data_root, state_root, 13202, "horizon-no-session")
     try:
         result = request_suggestion(shell)
@@ -197,27 +197,30 @@ def test_no_session_offers_next_song_and_never_but_not_session_horizon(
         )
         assert status == 200
         assert "Never suggest again remembered for this Artist" in deferred
-        history = shell.runtime.headquarters.suggestion_deferrals.history()
+    finally:
+        shell.stop()
+
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        history = hq.suggestion_deferrals.history()
         assert len(history) == 1
         record = history[0]
         assert record.scope == NEVER_SUGGEST_AGAIN
         assert record.session_id is None
 
-        other = shell.runtime.headquarters.store.create_song("Other Song")
+        other = hq.store.create_song("Other Song")
         assert other.id != record.song_id
-        assert shell.runtime.headquarters.suggestion_deferrals.is_deferred_now(
-            record.semantic_key
-        )
+        assert hq.suggestion_deferrals.is_deferred_now(record.semantic_key)
     finally:
-        shell.stop()
+        hq.close()
 
 
-def test_stale_never_action_cannot_promote_old_song_suggestion_to_artist_preference(
+def test_stale_never_action_cannot_promote_old_session_suggestion_to_artist_preference(
     tmp_path: Path,
 ) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    seed(data_root, session=True)
+    profile_id, _ = seed(data_root, session=True)
     shell = new_shell(data_root, state_root, 13203, "horizon-stale")
     try:
         result = request_suggestion(shell)
@@ -225,7 +228,31 @@ def test_stale_never_action_cannot_promote_old_song_suggestion_to_artist_prefere
             result,
             "Suppress this exact suggestion pattern across this Artist profile",
         )
-        shell.runtime.headquarters.store.create_song("Context Changed")
+
+        finish_action = action_for(result, "/session/finish")
+        status, finished = post(
+            shell,
+            "/session/finish",
+            {
+                "csrf": shell._csrf,
+                "action": finish_action,
+                "debrief": "Changed the work context before using the old suggestion action",
+                "next_action": "Start a fresh Session",
+            },
+        )
+        assert status == 200
+        start_action = action_for(finished, "/session/start")
+        status, restarted = post(
+            shell,
+            "/session/start",
+            {
+                "csrf": shell._csrf,
+                "action": start_action,
+                "objective": "Fresh work context",
+            },
+        )
+        assert status == 200
+        assert "Work Session started" in restarted
 
         status, rejected = post(
             shell,
@@ -234,6 +261,11 @@ def test_stale_never_action_cannot_promote_old_song_suggestion_to_artist_prefere
         )
         assert status == 409
         assert "work context changed" in rejected
-        assert shell.runtime.headquarters.suggestion_deferrals.history() == ()
     finally:
         shell.stop()
+
+    hq = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        assert hq.suggestion_deferrals.history() == ()
+    finally:
+        hq.close()
