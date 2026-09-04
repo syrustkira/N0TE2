@@ -32,8 +32,8 @@ _DEFERRAL_CHOICES = {
     ),
     NEXT_SONG: (
         "Save for next Song",
-        "Defer this suggestion away from the current Song",
-        "N0TE will keep this exact idea pattern out of this Song. Another Song can surface it. This does not create a broader taste rule.",
+        "Defer this suggestion until the Artist moves to another Song",
+        "N0TE will hold this exact idea pattern until you move to another Song. Once that horizon is crossed, the pattern can become eligible again. This does not create a broader taste rule.",
     ),
     NEVER_SUGGEST_AGAIN: (
         "Never suggest this again",
@@ -43,7 +43,7 @@ _DEFERRAL_CHOICES = {
 }
 _DEFERRAL_NOTICES = {
     LATER_THIS_SONG: "Not now remembered for this Song work Session. A later Session can surface that idea again.",
-    NEXT_SONG: "Saved for another Song. This exact idea pattern will stay out of the current Song.",
+    NEXT_SONG: "Saved until the next Song. This exact idea pattern is held until you move to another Song.",
     NEVER_SUGGEST_AGAIN: "Never suggest again remembered for this Artist. This exact idea pattern is now suppressed across Songs.",
 }
 
