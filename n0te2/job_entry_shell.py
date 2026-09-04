@@ -19,9 +19,8 @@ def _job_entry_section(shell: ConsumerShell, state) -> str:  # noqa: ANN001
     focus = shell.runtime.headquarters.attention.active_focus()
     active_song = shell.runtime.headquarters.store.active_song()
     active_song_id = None if active_song is None else active_song.id
-    forms: list[str] = []
+    cards: list[str] = []
     for mode in _JOB_ORDER:
-        token = shell._new_action("focus-set", mode)
         expected_song_id = (
             active_song_id if mode in _FOCUS_SONG_DEFAULT_MODES else None
         )
@@ -30,16 +29,23 @@ def _job_entry_section(shell: ConsumerShell, state) -> str:  # noqa: ANN001
             and focus.mode == mode
             and focus.song_id == expected_song_id
         )
-        button_class = "primary" if current else ""
-        pressed = "true" if current else "false"
-        forms.append(
+        if current:
+            action = (
+                f'<a class="button primary" href="/now">'
+                f'{html.escape("Continue " + mode.title())}</a>'
+            )
+        else:
+            token = shell._new_action("focus-set", mode)
+            action = (
+                f'<form method="post" action="/focus/set">{shell._hidden(token)}'
+                f'<button type="submit" aria-pressed="false">'
+                f'{html.escape("Choose " + mode.title())}</button></form>'
+            )
+        cards.append(
             '<div class="card stack">'
             f'<h2>{html.escape(mode.title())}</h2>'
             f'<p>{html.escape(_JOB_COPY[mode])}</p>'
-            f'<form method="post" action="/focus/set">{shell._hidden(token)}'
-            f'<button class="{button_class}" type="submit" aria-pressed="{pressed}">'
-            f'{html.escape("Continue" if current else "Choose " + mode.title())}</button>'
-            '</form></div>'
+            f'{action}</div>'
         )
 
     if state.song_title:
@@ -61,7 +67,7 @@ def _job_entry_section(shell: ConsumerShell, state) -> str:  # noqa: ANN001
         '<p class="status good">Choosing a job changes Focus only</p>'
         '<p class="muted">No DAW, AI provider, account, service, send, publish, purchase, or external write is required or authorized by this choice.</p>'
         '</div>'
-        f'<div class="grid">{"".join(forms)}</div>'
+        f'<div class="grid">{"".join(cards)}</div>'
         '</section>'
     )
 
