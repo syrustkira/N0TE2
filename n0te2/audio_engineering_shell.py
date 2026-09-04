@@ -7,6 +7,13 @@ from .audio_engineering import (
     AudioEngineeringError,
     EngineeringEvidenceBinding,
     EngineeringSnapshot,
+    LOUDNESS_BACKEND_ERROR,
+    LOUDNESS_BACKEND_UNAVAILABLE,
+    LOUDNESS_BOUNDED_OUT,
+    LOUDNESS_MEASURED,
+    LOUDNESS_SILENT,
+    LOUDNESS_TOO_SHORT,
+    LOUDNESS_UNSUPPORTED_CHANNEL_LAYOUT,
     UnsupportedEngineeringMedia,
     analyze_pcm_wave,
 )
@@ -45,6 +52,24 @@ def _format_crest(value: float | None) -> str:
     return "not defined for silence" if value is None else f"{value:.2f} dB"
 
 
+def _format_loudness(snapshot: EngineeringSnapshot) -> str:
+    if snapshot.loudness_state == LOUDNESS_MEASURED and snapshot.integrated_lufs is not None:
+        return f"{snapshot.integrated_lufs:.2f} LUFS"
+    if snapshot.loudness_state == LOUDNESS_TOO_SHORT:
+        return "not measured · shorter than the 400 ms integrated-loudness window"
+    if snapshot.loudness_state == LOUDNESS_SILENT:
+        return "silent · no finite integrated loudness"
+    if snapshot.loudness_state == LOUDNESS_BOUNDED_OUT:
+        return "not measured · exceeds the bounded loudness-analysis sample budget"
+    if snapshot.loudness_state == LOUDNESS_UNSUPPORTED_CHANNEL_LAYOUT:
+        return "not measured · this loudness slice currently supports mono or stereo"
+    if snapshot.loudness_state == LOUDNESS_BACKEND_UNAVAILABLE:
+        return "not measured · the standards loudness meter is unavailable"
+    if snapshot.loudness_state == LOUDNESS_BACKEND_ERROR:
+        return "not measured · the standards loudness meter could not produce a trustworthy result"
+    return "not measured · loudness evidence state is unknown"
+
+
 def _snapshot_metrics(snapshot: EngineeringSnapshot) -> str:
     correlation = ""
     if snapshot.channels == 2:
@@ -69,6 +94,9 @@ def _snapshot_metrics(snapshot: EngineeringSnapshot) -> str:
         f'{html.escape(_format_db(snapshot.sample_peak_dbfs))}</li>'
         '<li><strong>RMS</strong><br>'
         f'{html.escape(_format_db(snapshot.rms_dbfs))}</li>'
+        '<li><strong>Integrated loudness</strong><br>'
+        f'{html.escape(_format_loudness(snapshot))}<br>'
+        f'<span class="muted">{html.escape(snapshot.loudness_standard)} programme loudness</span></li>'
         '<li><strong>Crest factor</strong><br>'
         f'{html.escape(_format_crest(snapshot.crest_factor_db))}</li>'
         '<li><strong>DC offset</strong><br>'
@@ -165,7 +193,8 @@ def _engineering_card(shell: ConsumerShell) -> str:
         + "".join(rows)
         + '</ul>'
         '<p class="muted"><strong>Measurement boundary:</strong> Sample peak is not true peak. RMS is not LUFS. '
-        'No mastering approval, loudness target, mix score, or artistic recommendation is inferred here.</p>'
+        'Integrated loudness is measured separately as ITU-R BS.1770-4 programme loudness when this bounded mono/stereo contract can support it. '
+        'This is not a conformance certification, mastering target, mix score, or artistic recommendation.</p>'
         '</div>'
     )
 

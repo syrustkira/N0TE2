@@ -1,67 +1,72 @@
 {
   "schema_version": 7,
-  "status": "INACTIVE",
-  "receipt_id": "N0TE2-SONG-01-AB-COMPARE-01",
-  "node_id": "SONG-01",
-  "increment_id": "SONG-01-AB-COMPARE-01",
-  "baseline_sha": "e4246d92403ddab05ecc58190639dbc2e9ef3739",
-  "purpose": "Give the artist one read-only consumer A/B surface for two exact local Song Versions, with truthful whole-render level-bias evidence when available and no fabricated loudness match or artistic decision.",
-  "product_code_allowed": false,
+  "status": "ACTIVE",
+  "receipt_id": "N0TE2-AUDIO-01-LOUDNESS-01",
+  "node_id": "AUDIO-01",
+  "increment_id": "AUDIO-01-LOUDNESS-01",
+  "baseline_sha": "65f7bede858a9cd415b3479b44838e28dec517e0",
+  "purpose": "Add standards-based integrated loudness evidence for exact verified local integer-PCM WAV material and expose it through the existing read-only Engineering Snapshot without turning measurement into taste, mastering approval, a target, or a completed A/B decision loop.",
+  "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
   "allowed_exact_paths": [
-    "n0te2/version_compare.py",
-    "n0te2/version_compare_shell.py",
-    "n0te2/memory.py",
-    "tests/song/test_version_compare.py",
-    "tests/song/test_song_version_compare_consumer.py"
+    "requirements.txt",
+    "n0te2/audio_engineering.py",
+    "n0te2/audio_engineering_shell.py",
+    "tests/song/test_audio_engineering.py",
+    "tests/song/test_song_audio_engineering_consumer.py"
   ],
   "allowed_prefixes": ["governance/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can hear the exact current Song Version beside one exact lineage neighbor and see whether measured whole-render RMS level difference could bias the comparison, without N0TE applying gain or pretending a listening decision occurred.",
-    "journeys": ["J-IDEA-SONG", "J-TRUST"],
-    "capability": "Exact local Version A/B audition with bounded level-bias evidence",
-    "requirements": ["REQ-SCOPE-010"],
-    "increment": "SONG-01-AB-COMPARE-01"
+    "outcome": "The artist can inspect trustworthy integrated loudness evidence for the exact current local PCM Version inside the normal Song Engineering Snapshot, giving the merged Version A/B surface a standards-based measurement primitive for later loudness-aware convergence while preserving artist judgment.",
+    "journeys": ["J-IMPROVE-SECTION", "J-FINISH-RECORD", "J-TRUST"],
+    "capability": "Exact-Version standards-based integrated loudness evidence",
+    "requirements": ["REQ-SCOPE-009", "REQ-SCOPE-055"],
+    "increment": "AUDIO-01-LOUDNESS-01"
   },
-  "why_now": "Global reselection found REQ-SCOPE-010's Hear-to-Compare experience consumer-incomplete while exact Version lineage, managed local material, safe audition streaming and bounded PCM engineering evidence already existed. This bounded integration reused those foundations without modifying the diagnosis workline.",
+  "why_now": "AUDIO-01 remains dependency-ready and is a prerequisite of SONG-02, SONG-03 and the signature SONG-04 Try-Hear-Compare-Decide loop. The exact local Version A/B surface is merged and truthfully states RMS is not LUFS and applies no normalization. Existing Engineering Snapshot still lacks standards-based integrated loudness. A prior exact loudness implementation head proved this bounded product delta cross-platform. Main then advanced with disjoint work, most recently a verified local collaboration-handoff module with no audio or governance overlap, so the unchanged loudness delta is reconstructed atomically onto current main rather than merging stale construction truth.",
+  "instead_of_what": "Do not duplicate the merged Version A/B surface, do not activate dependency-blocked SONG-04, do not build another audition/version system, and do not add DAW-specific compare behavior.",
   "implementation_contract": {
-    "pair_binding": "Compare the active Song current Version with its exact canonical parent when available. Otherwise use the nearest earlier same-Song Version, or the nearest later same-Song Version when the artist has resumed the earliest Version; never manufacture a placeholder alternate.",
-    "audition_truth": "Only verified managed media accepted by the existing audition inspector receives an opaque local media grant; stale or tampered grants fail closed through existing shell checks.",
-    "level_truth": "When both sides are supported exact integer PCM WAVs, whole-render RMS difference may be shown only as signal-level bias evidence. RMS is explicitly not LUFS and unavailable evidence stays unavailable.",
-    "mutation": "Opening or hearing A/B creates no Song Version, approval, Learning episode, preference, provider call, DAW operation, gain processing or artistic decision.",
-    "artist_authority": "KEEP, REVERT, REVISE and INCONCLUSIVE remain separate explicit artist decisions outside this bounded increment."
+    "input_truth": "Only exact verified local integer-PCM WAV bytes already accepted by Engineering Snapshot are measured; Song, Version, Asset fingerprint and source-size binding remain mandatory and are reverified before and after analysis.",
+    "measurement_truth": "Integrated programme loudness is computed using a mature ITU-R BS.1770 implementation. Unsupported, too-short, silent, unavailable or inconsistent material produces an explicit non-measured state rather than invented LUFS.",
+    "consumer_truth": "The normal Song Engineering Snapshot distinguishes LUFS from RMS and sample peak, names the standards basis, and does not claim certification, mastering quality, a preferred target, or artistic superiority.",
+    "persistence": "The snapshot remains ephemeral read-only evidence. Rendering it creates no Version, approval, preference, Learning outcome or Artist World doctrine.",
+    "mutation": "No DAW, provider, audio file, Song Version, approval pointer, compare decision or source bytes are changed by this increment."
   },
   "completion_proof": [
-    "normal Song consumer path exposes one A/B compare entry point when at least two Versions exist",
-    "compare surface names exact human-readable Version ordinals and labels without leaking private IDs or local paths",
-    "comparison remains available after the artist resumes the earliest Version by selecting the nearest later same-Song peer rather than fabricating no-reference state",
-    "both verified auditionable sides use existing stale-safe opaque local media grants",
-    "supported exact PCM sides surface whole-render RMS/sample-peak evidence with explicit RMS-not-LUFS language",
-    "unsupported, unmeasured, silent or corrupted evidence never becomes fabricated loudness matching",
-    "rendering and media playback do not mutate current/approved Version, Version lineage, Activity or Learning state",
-    "full regression and staged consumer smoke pass at exact head"
+    "supported exact PCM WAV produces integrated loudness evidence through the normal Song consumer path",
+    "measurement is bound to the exact Song, Version, Asset fingerprint, source size and analyzer version",
+    "short or silent material reports a truthful non-measured loudness state rather than a fabricated number",
+    "corrupted or changed material still fails closed before stale loudness can surface",
+    "consumer copy separates integrated loudness from RMS/sample peak and rejects certification/taste/target claims",
+    "existing Engineering Snapshot metrics remain regression-compatible",
+    "merged Version A/B behavior remains regression-compatible and continues to make no automatic artistic decision",
+    "dependency and license footprint is explicit and cross-platform installable",
+    "full regression and staged consumer smoke pass at the reconstructed exact head"
   ],
-  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
+  "evidence_classification": "RECONSTRUCTED_IMPLEMENTATION_REQUIRES_EXACT_HEAD_PROOF",
   "evidence_snapshot": {
-    "observed_repository_head": "cc1c5c3f5db5e9092a37267f39626e5bfe0b98a4",
-    "workflow_run_id": 33870035901,
-    "result": "SUCCESS",
+    "historical_verified_head": "a81a551be306853bcfc72cc931e60be1d0e25a3b",
+    "historical_workflow_run_id": 33844922712,
+    "historical_result": "SUCCESS",
     "platforms": ["Linux", "Windows", "macOS"],
-    "execution_note": "Exact reconstructed implementation head passed the required N0TE2 Governance workflow before PR #93 merged as 7a9ea14aaf042165a0718c1a94ba81429ca5d685."
+    "note": "This proves the loudness product delta on its earlier baseline only. The current reconstructed head requires independent exact-head proof."
   },
   "non_scope": [
-    "automatic or rendered loudness normalization",
-    "claiming RMS is LUFS or perceptual loudness",
-    "provider or DAW mutation",
-    "new Song Version creation",
-    "automatic approval or artist decision",
-    "Learning or taste promotion from passive comparison",
-    "full REQ-SCOPE-010 completion",
-    "marking SONG-01 DONE"
+    "true-peak certification or conformance claims",
+    "automatic loudness normalization",
+    "rewriting or replacing the merged A/B compare surface",
+    "keep/revert/revise/inconclusive decisions",
+    "mastering target recommendations",
+    "DAW mutation",
+    "provider calls",
+    "marking AUDIO-01 DONE",
+    "marking REQ-SCOPE-010 complete"
   ],
-  "next_selection_rule": "This bounded A/B comparison increment is closed. Keep SONG-01 preserved, return construction to STABLE, and globally reselect from fresh main rather than automatically extending this feature by adjacency."
+  "dependencies": ["CORE-01", "CORE-03", "APP-01"],
+  "shared_integration_points": ["Existing Engineering Snapshot composition only; merged Version A/B, collaboration handoff, and HeadquartersMemory composition are preserved untouched"],
+  "next_selection_rule": "After exact-head proof and integration, close this bounded receipt, refresh all live product truth, and globally reselect. A later loudness-aware Compare integration may consume this primitive only if still unowned and dependency-valid."
 }
