@@ -27,9 +27,9 @@
     "requirements": ["REQ-SCOPE-010"],
     "increment": "SONG-01-AB-COMPARE-01"
   },
-  "why_now": "Global reselection found REQ-SCOPE-010's Hear → Compare experience consumer-incomplete while exact Version lineage, managed local material, safe audition streaming and bounded PCM engineering evidence already exist on main. This bounded integration reuses those foundations without depending on or modifying the diagnosis workline.",
+  "why_now": "Global reselection found REQ-SCOPE-010's Hear-to-Compare experience consumer-incomplete while exact Version lineage, managed local material, safe audition streaming and bounded PCM engineering evidence already exist on main. This bounded integration reuses those foundations without depending on or modifying the diagnosis workline.",
   "implementation_contract": {
-    "pair_binding": "Compare the active Song current Version with its exact canonical parent when available, otherwise the nearest earlier same-Song Version; never manufacture a placeholder alternate.",
+    "pair_binding": "Compare the active Song current Version with its exact canonical parent when available. Otherwise use the nearest earlier same-Song Version, or the nearest later same-Song Version when the artist has resumed the earliest Version; never manufacture a placeholder alternate.",
     "audition_truth": "Only verified managed media accepted by the existing audition inspector receives an opaque local media grant; stale or tampered grants fail closed through existing shell checks.",
     "level_truth": "When both sides are supported exact integer PCM WAVs, whole-render RMS difference may be shown only as signal-level bias evidence. RMS is explicitly not LUFS and unavailable evidence stays unavailable.",
     "mutation": "Opening or hearing A/B creates no Song Version, approval, Learning episode, preference, provider call, DAW operation, gain processing or artistic decision.",
@@ -38,6 +38,7 @@
   "completion_proof": [
     "normal Song consumer path exposes one A/B compare entry point when at least two Versions exist",
     "compare surface names the exact human-readable Version ordinals and labels without leaking private IDs or local paths",
+    "comparison remains available after the artist resumes the earliest Version by selecting the nearest later same-Song peer rather than fabricating no-reference state",
     "both verified auditionable sides use existing stale-safe opaque local media grants",
     "supported exact PCM sides surface whole-render RMS/sample-peak evidence with explicit RMS-not-LUFS language",
     "unsupported, unmeasured, silent or corrupted evidence never becomes fabricated loudness matching",
