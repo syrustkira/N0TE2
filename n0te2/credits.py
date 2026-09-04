@@ -755,10 +755,9 @@ class CreditsMemory:
             if person.id in seen:
                 raise ValidationError("a split participant may appear only once")
             seen.add(person.id)
-            try:
-                basis_points = int(raw_basis_points)
-            except (TypeError, ValueError) as exc:
-                raise ValidationError("split shares must be whole basis points") from exc
+            if type(raw_basis_points) is not int:
+                raise ValidationError("split shares must be whole basis points")
+            basis_points = raw_basis_points
             if basis_points <= 0 or basis_points > 10000:
                 raise ValidationError("split shares must be between 0.01 and 100 percent")
             normalized.append((person.id, basis_points))
