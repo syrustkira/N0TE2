@@ -15,7 +15,8 @@
     "n0te2/creative_diagnosis_shell.py",
     "n0te2/memory.py",
     "tests/song/test_creative_diagnosis.py",
-    "tests/song/test_song_creative_diagnosis_consumer.py"
+    "tests/song/test_song_creative_diagnosis_consumer.py",
+    "tests/governance/test_clean_room_reconstruction.py"
   ],
   "allowed_prefixes": ["governance/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
