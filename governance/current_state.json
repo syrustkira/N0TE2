@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "SONG-01-DIAGNOSIS-01 is implemented, merged, and its exact implementation head is verified cross-platform; the bounded receipt is closed without claiming SONG-01 complete.",
-  "wake_condition": "Global product reselection identifies the next dependency-valid unowned customer gap from live main and canonical retained scope.",
-  "next_admissible_action": "Refresh live main and open work, prove existing behavior, then globally select exactly one dependency-valid unowned product increment. Do not choose by adjacency; prefer work that unlocks the signature Song journey or closes multiple retained requirements through existing foundations and lightweight trusted reuse.",
-  "product_code_authorized": false,
+  "lifecycle_state": "ACTIVE",
+  "active_node": "DAW-00",
+  "active_increment": "DAW-00-INSTALLATIONS-01",
+  "terminal_reason": null,
+  "wake_condition": null,
+  "next_admissible_action": "Implement a bounded read-only peer-DAW installation inventory from standard local install locations. Positive observations may establish local installation evidence only; non-detection remains UNKNOWN and installation must not be promoted into adapter support, capability, health, process, or execution authority.",
+  "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -41,6 +41,7 @@
     "STABLE means no N0TE construction is currently justified or selected; it does not mean N0TE is complete.",
     "Global signature-loop reselection after clean-room reconciliation selected SONG-01-DIAGNOSIS-01 because the product already had Song identity, verified material evidence, bounded suggestions, audition and Learning decisions but lacked the consumer bridge that separates observation from inference and presents materially different intervention paths for the artist's stated Song problem.",
     "SONG-01-DIAGNOSIS-01 implementation head 88455ed09fc18015931b8f4c36e99a16e81d7c65 passed GitHub Actions run 33843511684 on Ubuntu, Windows and macOS with governance, context lifecycle, supervision, 773 regression tests and staged consumer smoke green.",
-    "PR #84 merged the verified evidence-grounded Song diagnosis product delta to main as e9c32c9ded4965165f0eef2bf8863760122f83a3. The bounded increment does not mark SONG-01 complete and does not select its adjacent follow-up."
+    "PR #84 merged the verified evidence-grounded Song diagnosis product delta to main as e9c32c9ded4965165f0eef2bf8863760122f83a3. The bounded increment does not mark SONG-01 complete and does not select its adjacent follow-up.",
+    "Fresh global reselection selected DAW-00-INSTALLATIONS-01 from live main because DAW-00 dependencies CORE-03 and CORE-04 are DONE, canonical REQ-SCOPE-012 retains peer-DAW continuity, no open PR or installation-inventory branch owns the work, and the product has host identity/capability evidence models but no bounded local installation observation that keeps detection separate from support."
   ]
 }
