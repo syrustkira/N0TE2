@@ -243,14 +243,14 @@ def test_approval_action_is_origin_csrf_and_replay_protected(tmp_path: Path) -> 
     assert status == 200
     approval = form_for_label(page, "Approve Version 1: Sketch")
 
-    blocked, _ = request(
+    blocked, body = request(
         shell,
         "/song/version/approve",
         method="POST",
-        fields=approval.values,
         origin="https://attacker.example",
     )
     assert blocked == 403
+    assert "That action did not come from this N0TE window." in body
 
     bad_csrf = dict(approval.values)
     bad_csrf["csrf"] = "wrong"

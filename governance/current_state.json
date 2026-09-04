@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "UX-01-NOT-NOW-01 is merged and cross-platform verified. Rebased closure head fff10a25455cb5f8d16a4b634b2463043ff7555a passed exact-head governance, context lifecycle, supervision, full regression and staged consumer smoke on Linux, macOS and Windows in run 33796984958, and PR #80 merged as d51608bc0aa665ad775cbff70eee1ff2a5bdc397. No adjacent UX or suggestion work is selected.",
+  "lifecycle_state": "ACTIVE",
+  "active_node": "SONG-01",
+  "active_increment": "SONG-01-DIAGNOSIS-01",
+  "terminal_reason": null,
   "wake_condition": null,
-  "next_admissible_action": "Globally compare dependency-ready retained outcomes against canonical scope and observed product evidence. First prove existing behavior; select a new bounded implementation receipt only for a demonstrated missing behavior. Do not extend Not Now horizons or suggestion controls by adjacency.",
-  "product_code_authorized": false,
+  "next_admissible_action": "Implement the first missing signature creative-loop bridge: turn the artist's bounded Song problem plus verified current Song evidence into an explicit, causally humble diagnosis with two materially different intervention paths. Verify automatically, then continue to the next dependency-valid break without requesting routine human acceptance.",
+  "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -38,6 +38,7 @@
     "UX-01 and SONG-01 remain retained product scope, and CONV-01 still requires both before final convergence.",
     "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 remains open as cross-cutting reliability evidence and is not automatically selected product work.",
     "Other Not Now horizons, never-suggest-again, More/Less Like This, Controlled Randomize, Templates, Artist World personalization and presence modes remain retained but unselected.",
-    "STABLE means no N0TE construction is currently justified or selected; it does not mean N0TE is complete."
+    "STABLE means no N0TE construction is currently justified or selected; it does not mean N0TE is complete.",
+    "Global signature-loop reselection after clean-room reconciliation selected SONG-01-DIAGNOSIS-01 because the current product already has Song identity, verified material evidence, bounded suggestions, audition and Learning decisions but lacks the consumer bridge that separates observation from inference and presents materially different intervention paths for the artist's stated Song problem."
   ]
 }
