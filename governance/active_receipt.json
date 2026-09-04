@@ -4,7 +4,7 @@
   "receipt_id": "N0TE2-SONG-01-AB-COMPARE-01",
   "node_id": "SONG-01",
   "increment_id": "SONG-01-AB-COMPARE-01",
-  "baseline_sha": "9ed5e5a0328dcbaeed43962577fc97f97fcf1651",
+  "baseline_sha": "174448ffd71e74d6ed00598b526daf911643b988",
   "purpose": "Give the artist one read-only consumer A/B surface for two exact local Song Versions, with truthful whole-render level-bias evidence when available and no fabricated loudness match or artistic decision.",
   "product_code_allowed": true,
   "legacy_admission_allowed": false,
