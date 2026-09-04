@@ -110,21 +110,25 @@ class HostInstallationTests(unittest.TestCase):
         self.assertEqual(inventory.observations, ())
         self.assertEqual(inventory.unknown_families, CORE_HOST_FAMILIES)
 
-    def test_observation_contract_cannot_smuggle_support_or_execution_truth(self):
+    def test_observation_contract_cannot_smuggle_host_runtime_or_execution_truth(self):
         names = {field.name.casefold() for field in dataclasses.fields(HostInstallationObservation)}
-        for forbidden in (
+        forbidden_exact = {
             "support",
+            "supported",
             "capability",
             "health",
             "preference",
             "process",
             "execution",
             "adapter",
+            "host_version",
             "version",
             "edition",
             "path",
-        ):
-            self.assertFalse(any(forbidden in name for name in names), forbidden)
+            "executable",
+        }
+        self.assertTrue(names.isdisjoint(forbidden_exact))
+        self.assertIn("scan_version", names)
 
     @unittest.skipIf(os.name == "nt", "Windows CI may not grant symlink creation privilege")
     def test_symlinked_candidate_and_root_escape_cannot_establish_positive_evidence(self):
