@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "SONG-01-AB-DECIDE-01 is implemented, exact-head verified cross-platform, and merged; the bounded receipt is closed without claiming SONG-01 or REQ-SCOPE-010 complete.",
-  "wake_condition": "Global product reselection identifies the next dependency-valid unowned customer gap from live main and canonical retained scope.",
-  "next_admissible_action": "Refresh live main and open work, prove existing behavior, then globally select exactly one dependency-valid unowned product increment. Prefer work that unlocks a real customer journey, connects already-built islands, or closes multiple retained requirements through existing foundations and lightweight trusted reuse.",
-  "product_code_authorized": false,
+  "lifecycle_state": "ACTIVE",
+  "active_node": "UX-01",
+  "active_increment": "UX-01-NOT-NOW-HORIZONS-01",
+  "terminal_reason": null,
+  "wake_condition": "Exact-head implementation or verification evidence changes UX-01-NOT-NOW-HORIZONS-01 state.",
+  "next_admissible_action": "Implement and verify only the bounded NEXT_SONG and NEVER_SUGGEST_AGAIN Not Now horizons. Preserve LATER_THIS_SONG exactly, migrate durable history without replay, bind horizon authority into the one-shot action token, and keep AFTER_RELEASE / SOMEDAY unavailable until truthful triggers exist.",
+  "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -57,6 +57,8 @@
     "Issue #114 durably claimed SONG-01-AB-DECIDE-01 because Version approval and general Learning preserve different meanings and neither truthfully represents post-listening judgment about one exact A/B pair.",
     "SONG-01-AB-DECIDE-01 exact head 431ce8598873ecd129b745723cf89154540e09e2 passed GitHub Actions run 33872628008 on Ubuntu, macOS and Windows with construction governance, context lifecycle, supervision, full regression and staged consumer smoke all green.",
     "PR #116 merged that verified exact-pair decision delta as be445e8d545a2cd9193c29f822afc336d5ee9f5b. KEEP remains judgment rather than approval, REVERT remains judgment rather than resume authority, REVISE creates no Version, INCONCLUSIVE stays uncertain, and no Learning/taste promotion occurs.",
-    "SONG-01-AB-DECIDE-01 closes only the bounded pair-decision seam. SONG-01 remains PRESERVED and full REQ-SCOPE-010 remains open for later dependency-valid convergence work."
+    "SONG-01-AB-DECIDE-01 closes only the bounded pair-decision seam. SONG-01 remains PRESERVED and full REQ-SCOPE-010 remains open for later dependency-valid convergence work.",
+    "Issue #125 claims only the remaining truthful REQ-SCOPE-097 Not Now horizons NEXT_SONG and NEVER_SUGGEST_AGAIN over the already-verified LATER_THIS_SONG system; Focus and LATER_THIS_SONG are preserved rather than rebuilt.",
+    "AFTER_RELEASE remains unavailable because live main has no canonical release-state witness, and SOMEDAY remains unavailable because no explicit resurfacing contract exists; neither may be rendered or persisted as fake completion in this increment."
   ]
 }
