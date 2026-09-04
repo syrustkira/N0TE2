@@ -4,6 +4,7 @@ import pytest
 
 from n0te2.creative_partner_presence import (
     PresenceContextBinding,
+    PresenceDecision,
     PresencePolicy,
     PresenceSignal,
     UnsupportedPresencePolicyError,
@@ -57,3 +58,23 @@ def test_relevance_boolean_and_alert_inputs_require_exact_semantic_types() -> No
         _signal(actionable_now="yes")
     with pytest.raises(ValidationError):
         _signal(required_alert_kind=1)
+
+
+def test_presence_decision_constructor_cannot_forge_action_authority() -> None:
+    common = {
+        "presence": "LEAD",
+        "outcome": "LEAD",
+        "should_interrupt": True,
+        "initiative": "STRUCTURE_NEXT_DECISION",
+        "reason_codes": ("MATERIAL_LEAD",),
+        "binding_fingerprint": "0" * 64,
+        "policy_version": 1,
+    }
+    with pytest.raises(TypeError):
+        PresenceDecision(**common, action_authority_granted=True)
+    with pytest.raises(TypeError):
+        PresenceDecision(**common, mutation_authorized=True)
+    with pytest.raises(TypeError):
+        PresenceDecision(**common, external_action_authorized=True)
+    with pytest.raises(TypeError):
+        PresenceDecision(**common, authority_effect="GRANTED")
