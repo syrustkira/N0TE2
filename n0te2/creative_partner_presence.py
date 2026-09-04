@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from hashlib import sha256
 import json
 
@@ -213,10 +213,10 @@ class PresenceDecision:
     reason_codes: tuple[str, ...]
     binding_fingerprint: str
     policy_version: int
-    authority_effect: str = "UNCHANGED"
-    action_authority_granted: bool = False
-    mutation_authorized: bool = False
-    external_action_authorized: bool = False
+    authority_effect: str = field(default="UNCHANGED", init=False)
+    action_authority_granted: bool = field(default=False, init=False)
+    mutation_authorized: bool = field(default=False, init=False)
+    external_action_authorized: bool = field(default=False, init=False)
 
     @property
     def leave_it_alone(self) -> bool:
