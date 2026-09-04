@@ -124,7 +124,7 @@ def _consent_form(shell: ConsumerShell, person: Person) -> str:
         + shell._hidden(_consent_action(shell, person))
         + '<label>Channel'
         + _select("channel", CONSENT_CHANNELS, _CHANNEL_LABELS)
-        + '</label><label>Status>'
+        + '</label><label>Status'
         + _select("status", CONSENT_STATES, status_labels)
         + '</label>'
         + f'<label>Basis/context <span class="muted">optional</span><input name="note" type="text" maxlength="{_MAX_NOTE}" autocomplete="off"></label>'
