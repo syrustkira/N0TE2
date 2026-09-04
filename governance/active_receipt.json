@@ -1,66 +1,61 @@
 {
   "schema_version": 7,
-  "status": "INACTIVE",
-  "receipt_id": "N0TE2-SONG-01-AB-DECIDE-01",
-  "node_id": "SONG-01",
-  "increment_id": "SONG-01-AB-DECIDE-01",
-  "baseline_sha": "3fa22cc3aa156043f5f94304aae723a63b072e4f",
-  "purpose": "Persist one explicit artist KEEP / REVERT / REVISE / INCONCLUSIVE judgment for the exact Reference and Current Song Versions shown in the existing A/B compare, without turning judgment into approval, execution, audio processing, or Learning promotion.",
-  "product_code_allowed": false,
+  "status": "ACTIVE",
+  "receipt_id": "N0TE2-UX-01-NOT-NOW-HORIZONS-01",
+  "node_id": "UX-01",
+  "increment_id": "UX-01-NOT-NOW-HORIZONS-01",
+  "baseline_sha": "307d4f0edecc6fc1c37d1fe281363c12fd396155",
+  "purpose": "Extend the existing consumer-reachable Not Now system with truthful NEXT_SONG and NEVER_SUGGEST_AGAIN horizons while preserving LATER_THIS_SONG exactly, migrating durable history safely, and keeping unavailable After Release / Someday horizons hidden until real triggers exist.",
+  "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
   "allowed_exact_paths": [
-    "n0te2/version_compare_decision.py",
-    "n0te2/version_compare_shell.py",
-    "tests/song/test_version_compare_decision.py",
-    "tests/song/test_song_version_compare_decision_consumer.py"
+    "n0te2/suggestion_deferral.py",
+    "n0te2/creative_suggestions_shell.py",
+    "tests/ux/test_suggestion_deferral_horizons.py",
+    "tests/ux/test_suggestion_deferral_horizons_consumer.py"
   ],
   "allowed_prefixes": ["governance/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "After hearing one exact local Version pair, the artist can explicitly record KEEP, REVERT, REVISE, or INCONCLUSIVE as durable judgment for that exact pair while current Version, approval, Learning, audio, provider, and DAW state remain unchanged.",
-    "journeys": ["J-IDEA-SONG", "J-TRUST"],
-    "capability": "Exact Version-pair artist decision memory",
-    "requirements": ["REQ-SCOPE-010"],
-    "increment": "SONG-01-AB-DECIDE-01"
+    "outcome": "From the normal Song creative-suggestion path, the artist can intentionally defer one exact suggestion pattern until the next Song or suppress that exact pattern across the Artist profile, while the existing later-this-Song choice remains intact and no unavailable horizon is faked.",
+    "journeys": ["J-IDEA-SONG", "J-WHAT-NEXT", "J-TRUST"],
+    "capability": "Explicit durable Not Now horizons",
+    "requirements": ["REQ-SCOPE-097"],
+    "increment": "UX-01-NOT-NOW-HORIZONS-01"
   },
-  "why_now": "The bounded pair-decision seam was selected after standards-based loudness evidence and Song credits/splits were integrated. Those adjacent systems remained separate from artistic decision authority.",
+  "why_now": "Fresh stable main retains REQ-SCOPE-097 as a partial consumer gap: Focus modes, Focus Sessions and LATER_THIS_SONG are already merged and verified, while NEXT_SONG and NEVER_SUGGEST_AGAIN remain unimplemented despite canonical Song-selection chronology and stable suggestion semantic keys already providing truthful activation boundaries. Issue #125 owns this exact unclaimed slice. AFTER_RELEASE lacks a canonical release-state witness and SOMEDAY lacks an explicit resurfacing contract, so neither is selected.",
   "implementation_contract": {
-    "decision_truth": "KEEP, REVERT, REVISE and INCONCLUSIVE are explicit artist judgments only. They do not imply approval, execution, preference promotion, causal Learning truth, or superiority.",
-    "pair_binding": "The decision action is bound to the exact active Song, Reference Version and Current Version prepared for the artist. The shell re-prepares and re-verifies the pair before accepting the write; stale or partially auditionable state fails closed.",
-    "persistence": "Decision history is append-only inside the canonical LineageStore database. GET inspection is read-only and does not create schema; the decision schema is initialized only behind an explicit authorized POST.",
-    "authority": "REVERT does not resume a Version, KEEP does not approve a Version, REVISE does not create a revision, and INCONCLUSIVE stays uncertain.",
-    "memory_boundary": "Recording this pair judgment creates no Learning episode or preference/taste promotion. Existing Learning remains the separate deliberate change -> observation -> decision memory."
+    "reuse": "Reuse canonical LineageStore, SessionMemory, Activity chronology, stable creative-suggestion semantic keys, the existing /suggestion/not-now route and its Host/Origin/CSRF/one-shot authority. Do not create a second attention, task, preference or persistence system.",
+    "later_this_song": "Preserve existing LATER_THIS_SONG semantics exactly: exact Song/current work Session/semantic key, durable through relaunch, naturally eligible in a distinct later Session.",
+    "next_song": "NEXT_SONG is a real horizon: suppress the exact semantic key until a later canonical SONG_SELECTED event moves the Artist to a different Song. Once crossed, the suppression stays expired even if the Artist later returns to the source Song; immutable history remains and the Artist may explicitly choose the horizon again.",
+    "never": "NEVER_SUGGEST_AGAIN is an explicit Artist-wide suppression of only the exact semantic suggestion key. It is never inferred from skips, engagement, genre, technique or broader taste.",
+    "migration": "Upgrade deferral schema v1 to v2 transactionally, preserving every existing LATER_THIS_SONG row and ID without re-emitting its already-recorded SUGGESTION_DEFERRED Activity event.",
+    "authority": "The chosen horizon is bound into the existing one-shot action token. Client form fields cannot upgrade NEXT_SONG or LATER_THIS_SONG into Artist-wide suppression. Deferral changes suggestion visibility only and grants no DAW/provider/spend/publication/action authority.",
+    "truthful_unavailability": "Do not render AFTER_RELEASE or SOMEDAY until a real release-state witness or resurfacing contract exists."
   },
   "completion_proof": [
-    "existing /compare surface presents all four canonical artist judgment options only for a safely prepared two-sided exact pair",
-    "the action token carries no private Version IDs into rendered HTML and stale pair/current-Song state is rejected",
-    "recorded judgment survives restart and is queryable for the exact ordered Version pair",
-    "opening /compare without deciding creates no decision schema, decision row, Song/Version mutation, Learning write, or Activity event",
-    "REVERT records judgment without changing current Version or approved Version",
-    "replaying the same one-shot decision action is rejected",
-    "partial or integrity-blocked comparison offers no decision write",
-    "exact-head governance, full regression and staged consumer smoke passed on Linux, Windows and macOS"
+    "existing LATER_THIS_SONG behavior and relaunch semantics remain regression-compatible after schema migration",
+    "v1 deferral rows migrate to v2 without duplicate SUGGESTION_DEFERRED Activity chronology",
+    "NEXT_SONG remains active through later Sessions of the same Song, expires after a later different-Song selection, does not resurrect on return, and may be explicitly selected again",
+    "NEVER_SUGGEST_AGAIN is Artist-wide, durable across Songs/relaunch and idempotent for the exact semantic key",
+    "without a work Session the consumer surface offers NEXT_SONG and NEVER_SUGGEST_AGAIN but not LATER_THIS_SONG",
+    "the normal Song suggestion surface does not advertise AFTER_RELEASE or SOMEDAY while their triggers are unavailable",
+    "a hostile client scope field cannot upgrade the horizon encoded in the one-shot action token",
+    "stale Song or Session context rejects an old horizon action before it can become an Artist-wide preference",
+    "no provider, DAW, publication, spend or other action authority is created",
+    "exact-head construction governance, context lifecycle, supervision, full regression and staged consumer smoke pass on Ubuntu, Windows and macOS"
   ],
-  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
-  "evidence_snapshot": {
-    "observed_repository_head": "431ce8598873ecd129b745723cf89154540e09e2",
-    "workflow_run_id": 33872628008,
-    "result": "SUCCESS",
-    "platforms": ["Linux", "Windows", "macOS"],
-    "execution_note": "Exact reconstructed implementation head passed construction governance, context lifecycle, supervision, full regression and staged consumer smoke on all three platforms before PR #116 merged as be445e8d545a2cd9193c29f822afc336d5ee9f5b."
-  },
   "non_scope": [
-    "automatic revert or Version resume",
-    "automatic Version approval",
-    "new Song Version creation",
-    "audio gain, normalization or loudness processing",
-    "Learning episode creation, causal inference, preference promotion or Artist World doctrine update",
-    "provider or DAW execution",
-    "full REQ-SCOPE-010 completion",
-    "marking SONG-01 DONE"
-  ],
-  "next_selection_rule": "This bounded exact-pair decision increment is closed. Keep SONG-01 preserved, return construction to STABLE, and globally reselect from fresh main rather than automatically extending the feature by adjacency."
+    "AFTER_RELEASE before a canonical release lifecycle witness exists",
+    "SOMEDAY before an explicit resurfacing contract exists",
+    "Focus mode or Focus Session redesign",
+    "new suggestion semantic-key catalog or recommendation engine",
+    "More/Less Like This, Controlled Randomize, Templates or Artist World personalization",
+    "provider, DAW, publication, spend or external execution",
+    "full REQ-SCOPE-097 completion",
+    "marking UX-01 DONE"
+  ]
 }
