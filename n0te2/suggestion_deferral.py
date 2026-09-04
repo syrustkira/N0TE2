@@ -37,9 +37,10 @@ class SuggestionDeferralMemory:
     * LATER_THIS_SONG hides a semantic suggestion key only for the exact work
       Session in which the artist deferred it. A distinct later Session for the
       same Song makes it eligible again.
-    * NEXT_SONG hides the key while the source Song remains active. Any other
-      Song may surface the pattern, while returning to the source Song keeps the
-      original deferral meaningful.
+    * NEXT_SONG hides the key until the Artist later selects a different Song.
+      Crossing that Song-selection horizon ends the active suppression even if
+      the Artist later returns to the source Song. The immutable decision stays
+      in history and the Artist may explicitly choose NEXT_SONG again.
     * NEVER_SUGGEST_AGAIN is an explicit Artist-wide suppression of that stable
       semantic key. It is not inferred from skips, taste, or engagement.
 
@@ -54,7 +55,7 @@ class SuggestionDeferralMemory:
     }
     _INDEXES = {
         "suggestion_deferral_unique_later",
-        "suggestion_deferral_unique_next",
+        "suggestion_deferral_next_lookup",
         "suggestion_deferral_unique_never",
     }
 
@@ -99,7 +100,7 @@ class SuggestionDeferralMemory:
             str(row["name"])
             for row in self._conn.execute(
                 "SELECT name FROM sqlite_master "
-                "WHERE type='index' AND name LIKE 'suggestion_deferral_unique_%'"
+                "WHERE type='index' AND name LIKE 'suggestion_deferral_%'"
             )
         }
 
@@ -153,8 +154,8 @@ class SuggestionDeferralMemory:
             "CREATE UNIQUE INDEX suggestion_deferral_unique_later "
             "ON suggestion_deferrals(artist_id,song_id,session_id,semantic_key) "
             "WHERE scope='LATER_THIS_SONG'",
-            "CREATE UNIQUE INDEX suggestion_deferral_unique_next "
-            "ON suggestion_deferrals(artist_id,song_id,semantic_key) "
+            "CREATE INDEX suggestion_deferral_next_lookup "
+            "ON suggestion_deferrals(artist_id,song_id,semantic_key,seq) "
             "WHERE scope='NEXT_SONG'",
             "CREATE UNIQUE INDEX suggestion_deferral_unique_never "
             "ON suggestion_deferrals(artist_id,semantic_key) "
@@ -328,7 +329,7 @@ class SuggestionDeferralMemory:
         missing_indexes = self._INDEXES - self._index_names()
         if missing_indexes:
             raise LineageCorruptionError(
-                "Suggestion deferral uniqueness hooks are incomplete: "
+                "Suggestion deferral index hooks are incomplete: "
                 f"{sorted(missing_indexes)}"
             )
         for row in self._conn.execute(
@@ -360,6 +361,28 @@ class SuggestionDeferralMemory:
                         "Suggestion deferral references invalid Session"
                     )
 
+    def _next_song_horizon_crossed(self, record: SuggestionDeferral) -> bool:
+        if record.scope != NEXT_SONG:
+            raise ValueError("next-Song horizon requires a NEXT_SONG deferral")
+        origin = self._conn.execute(
+            "SELECT seq FROM activity_events "
+            "WHERE artist_id=? AND event_type='SUGGESTION_DEFERRED' "
+            "AND object_type='SUGGESTION_DEFERRAL' AND object_id=? "
+            "ORDER BY seq LIMIT 1",
+            (record.artist_id, record.id),
+        ).fetchone()
+        if origin is None:
+            raise LineageCorruptionError(
+                "Next-Song suggestion deferral lost its Activity provenance"
+            )
+        crossed = self._conn.execute(
+            "SELECT 1 FROM activity_events "
+            "WHERE artist_id=? AND event_type='SONG_SELECTED' AND seq>? "
+            "AND song_id IS NOT NULL AND song_id<>? LIMIT 1",
+            (record.artist_id, int(origin["seq"]), record.song_id),
+        ).fetchone()
+        return crossed is not None
+
     def _existing(
         self,
         *,
@@ -384,25 +407,31 @@ class SuggestionDeferralMemory:
                     scope,
                 ),
             ).fetchone()
-        elif scope == NEXT_SONG:
-            row = self._conn.execute(
-                select + "AND song_id=? AND semantic_key=? AND scope=? LIMIT 1",
+            return None if row is None else self._record(row)
+        if scope == NEXT_SONG:
+            rows = self._conn.execute(
+                select
+                + "AND song_id=? AND semantic_key=? AND scope=? ORDER BY seq DESC",
                 (
                     self.store.primary_artist_id,
                     song_id,
                     semantic_key,
                     scope,
                 ),
-            ).fetchone()
-        else:
-            row = self._conn.execute(
-                select + "AND semantic_key=? AND scope=? LIMIT 1",
-                (
-                    self.store.primary_artist_id,
-                    semantic_key,
-                    scope,
-                ),
-            ).fetchone()
+            )
+            for row in rows:
+                record = self._record(row)
+                if not self._next_song_horizon_crossed(record):
+                    return record
+            return None
+        row = self._conn.execute(
+            select + "AND semantic_key=? AND scope=? LIMIT 1",
+            (
+                self.store.primary_artist_id,
+                semantic_key,
+                scope,
+            ),
+        ).fetchone()
         return None if row is None else self._record(row)
 
     def _defer(self, semantic_key: str, scope: str) -> SuggestionDeferral:
@@ -419,17 +448,20 @@ class SuggestionDeferralMemory:
                 "Start a work Session before deferring a suggestion until later this Song"
             )
         session_id = None if session is None else session.id
-        existing = self._existing(
-            semantic_key=key,
-            scope=scope,
-            song_id=song.id,
-            session_id=session_id,
-        )
-        if existing is not None:
-            return existing
         deferral_id = f"defer_{uuid.uuid4().hex}"
         try:
             with self.store._tx():
+                # BEGIN IMMEDIATE serializes the active-horizon check and insert.
+                # That matters for NEXT_SONG because completed historical rows
+                # are intentionally allowed while duplicate active horizons are not.
+                existing = self._existing(
+                    semantic_key=key,
+                    scope=scope,
+                    song_id=song.id,
+                    session_id=session_id,
+                )
+                if existing is not None:
+                    return existing
                 self._conn.execute(
                     "INSERT INTO suggestion_deferrals("
                     "id,artist_id,song_id,session_id,semantic_key,scope) "
@@ -444,9 +476,6 @@ class SuggestionDeferralMemory:
                     ),
                 )
         except sqlite3.IntegrityError:
-            # An equivalent explicit decision may have been recorded by a
-            # concurrent caller between the read and insert. Resolve only the
-            # exact scope binding; do not broaden a different decision.
             existing = self._existing(
                 semantic_key=key,
                 scope=scope,
@@ -484,13 +513,13 @@ class SuggestionDeferralMemory:
         for row in self._conn.execute(
             "SELECT seq,id,artist_id,song_id,session_id,semantic_key,scope "
             "FROM suggestion_deferrals WHERE artist_id=? AND semantic_key=? "
-            "ORDER BY seq",
+            "ORDER BY seq DESC",
             (self.store.primary_artist_id, key),
         ):
             record = self._record(row)
             if record.scope == NEVER_SUGGEST_AGAIN:
                 return True
-            if record.scope == NEXT_SONG and record.song_id == song.id:
+            if record.scope == NEXT_SONG and not self._next_song_horizon_crossed(record):
                 return True
             if (
                 record.scope == LATER_THIS_SONG
