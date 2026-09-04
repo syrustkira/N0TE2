@@ -215,9 +215,11 @@ class ApplicationRuntime:
         try:
             from .career_state_shell import install_career_state_headquarters
             from .credits_shell import install_credits_headquarters
+            from .direct_fan_shell import install_direct_fan_headquarters
 
             install_credits_headquarters()
             install_career_state_headquarters()
+            install_direct_fan_headquarters()
         except Exception as exc:
             try:
                 headquarters.close()
