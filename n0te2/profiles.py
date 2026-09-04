@@ -8,7 +8,6 @@ from pathlib import Path
 
 from .instance import InstanceLease, InstanceLeaseManager, ProcessIdentity, ProcessProbe
 from .lineage import LineageStore
-from .memory import HeadquartersMemory
 
 _PROFILE_ID = re.compile(r"^prf_[0-9a-f]{32}$")
 _BOOTSTRAP_LEASE_ID = "__profile_bootstrap__"
@@ -306,26 +305,26 @@ class ApplicationProfiles:
             if existing_after_lock is not None:
                 result = existing_after_lock
             else:
-                headquarters: HeadquartersMemory | None = None
+                store: LineageStore | None = None
                 created_profile: ApplicationProfile | None = None
                 creation_issues: list[ProfileIssue] = []
                 try:
-                    headquarters = HeadquartersMemory.create(self.data_root, artist)
+                    store = LineageStore.create(self.data_root, artist)
                     created_profile = ApplicationProfile(
-                        headquarters.store.profile_id,
-                        headquarters.store.artist().display_name,
+                        store.profile_id,
+                        store.artist().display_name,
                     )
                 except Exception as exc:
                     creation_issues.append(self._issue("profile-create", exc))
                 finally:
-                    if headquarters is not None:
+                    if store is not None:
                         try:
-                            headquarters.close()
+                            store.close()
                         except Exception as exc:
                             creation_issues.append(
                                 self._issue(
-                                    headquarters.store.profile_id,
-                                    f"Headquarters close failed after profile creation: {exc}",
+                                    store.profile_id,
+                                    f"Lineage store close failed after profile creation: {exc}",
                                 )
                             )
                 if creation_issues:
