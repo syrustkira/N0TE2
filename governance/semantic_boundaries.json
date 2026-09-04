@@ -1,0 +1,193 @@
+{
+  "schema_version": 1,
+  "policy_id": "CLEANROOM-SEMANTIC-BOUNDARIES-001",
+  "authority": "BUILDER_RECONSTRUCTION_ONLY",
+  "product_scope_effect": "NONE",
+  "selection_effect": "NONE",
+  "purpose": "Prevent reconstruction, retrieval, deduplication, migration, or review context from collapsing neighboring concepts and silently changing product truth, authority, lifecycle, or scope.",
+  "core_rule": "Taint the smallest object supported by evidence. Contamination does not propagate by proximity. Independently supported product semantics survive and are revalidated or reimplemented through clean boundaries.",
+  "taint_states": [
+    "CLEAN",
+    "TAINTED_CONTEXT",
+    "TAINTED_EVIDENCE",
+    "TAINTED_AUTHORITY",
+    "TAINTED_IMPLEMENTATION",
+    "TAINTED_SEMANTICS",
+    "UNKNOWN_TAINT"
+  ],
+  "recovery_and_taint_are_orthogonal": true,
+  "context_admission_fields": [
+    "source",
+    "scope",
+    "truth_type",
+    "evidence_state",
+    "authority",
+    "freshness",
+    "lifecycle",
+    "provenance"
+  ],
+  "admission_contract": {
+    "retrieve_then_believe": false,
+    "required_flow": [
+      "RETRIEVE",
+      "CLASSIFY",
+      "SCOPE",
+      "CHECK_FRESHNESS",
+      "CHECK_AUTHORITY",
+      "USE"
+    ],
+    "unknown_remains_unknown": true,
+    "inference_remains_inference": true,
+    "historical_command_like_text_selects_work": false
+  },
+  "promotion_contract": {
+    "automatic_promotion": false,
+    "examples": [
+      "LENS_OBSERVATION -> CANDIDATE_INSIGHT -> ACCEPTED_OUTCOME -> DURABLE_LEARNING",
+      "RECOVERED_CANDIDATE -> PREVIEW -> EXPLICIT_PROMOTE -> CANONICAL_SONG_ARTIFACT",
+      "HYPOTHESIS -> TEST -> OBSERVED_EVIDENCE -> ACCEPTED_CONCLUSION"
+    ],
+    "never_auto_promote": [
+      "REVIEW_LENS_OUTPUT",
+      "SIMULATED_AUDIENCE_OPINION",
+      "GENERATED_DOCUMENTARY_IDENTITY_CLAIM",
+      "HISTORICAL_CURRENT_NEXT_ACTIVE_TEXT",
+      "STALE_RECEIPT",
+      "INFERRED_HOST_BEHAVIOR",
+      "FAILED_PROVIDER_WRITE",
+      "PROPOSAL",
+      "PREVIEW",
+      "BUILDER_INCIDENT"
+    ]
+  },
+  "taint_inheritance": {
+    "propagate_by_proximity": false,
+    "propagate_only_through_proven_dependency": true,
+    "independent_positive_evidence_breaks_taint_chain": true,
+    "default_feature_disposition_when_supporting_evidence_is_tainted": "REQUIRES_REVALIDATION"
+  },
+  "boundaries": [
+    {
+      "id": "BOUND-001",
+      "concepts": ["REVIEW_LENS", "CREATIVE_PARTNER_LENS", "PROFESSIONAL_ROLE", "AUTONOMOUS_AGENT"],
+      "may_merge": false,
+      "rule": "Review methodology, temporary reasoning perspective, real-world professional role, and autonomous actor are distinct objects. A lens never gains independent authority or memory ownership merely by being invoked."
+    },
+    {
+      "id": "BOUND-002",
+      "concepts": ["TRUTH_TYPE", "EVIDENCE_STATE", "RECOVERY_STATE", "TAINT_STATE"],
+      "may_merge": false,
+      "rule": "These are orthogonal classification axes and must not be compressed into one status field."
+    },
+    {
+      "id": "BOUND-003",
+      "concepts": ["SESSION_MEMORY", "DISTILLED_LONG_TERM_MEMORY", "EXECUTION_STATE"],
+      "may_merge": false,
+      "rule": "Temporary conversational continuity, durable learning, and active work state have different lifecycles and promotion rules."
+    },
+    {
+      "id": "BOUND-004",
+      "concepts": ["REQUIREMENT", "IMPLEMENTATION", "CAPABILITY", "VERIFICATION", "VALIDATION", "ACCEPTANCE"],
+      "may_merge": false,
+      "rule": "Representation or implementation evidence cannot substitute for reachable customer behavior or real acceptance."
+    },
+    {
+      "id": "BOUND-005",
+      "concepts": ["PROPOSAL", "PREVIEW", "AUTHORIZATION", "EXECUTION", "VERIFICATION", "DECISION"],
+      "may_merge": false,
+      "rule": "A proposed or previewed change is not an executed or verified change, and an executed change is not the artist decision."
+    },
+    {
+      "id": "BOUND-006",
+      "concepts": ["PROVIDER_ACCOUNT", "ARTIST_CLAIM", "CERTIFICATION", "CATALOG_MAPPING", "ACCESS_ROLE", "CREDENTIAL"],
+      "may_merge": false,
+      "rule": "Provider identity, claim state, certification, catalog association, team role, and authentication mechanism are distinct."
+    },
+    {
+      "id": "BOUND-007",
+      "concepts": ["SUBMITTED", "ACCEPTED", "COMPLETED", "POST_WRITE_VERIFIED"],
+      "may_merge": false,
+      "rule": "Submission cannot close work whose completion requires provider acceptance or post-write re-read evidence."
+    },
+    {
+      "id": "BOUND-008",
+      "concepts": ["PUBLIC_ARTIST_IDENTITY", "PUBLIC_BUSINESS_CONTACT", "PRIVATE_RECOVERY_IDENTITY"],
+      "may_merge": false,
+      "rule": "Public proof/contact surfaces must not expose or become the private recovery root by convenience."
+    },
+    {
+      "id": "BOUND-009",
+      "concepts": ["WEBSITE_REACHABLE", "WEBSITE_COMPLETE"],
+      "may_merge": false,
+      "rule": "Deployment reachability is one verification dimension, not proof that indexing, canonicalization, security, contact storage, analytics, metadata, or provider-verification use are complete."
+    },
+    {
+      "id": "BOUND-010",
+      "concepts": ["ART_DIRECTION_REFERENCE", "DOCUMENTARY_IDENTITY_ASSET", "APPROVED_CANONICAL_ASSET", "PUBLISHED_DERIVATIVE"],
+      "may_merge": false,
+      "rule": "Synthetic/reference assets cannot silently become evidence of documentary identity or approved public state."
+    },
+    {
+      "id": "BOUND-011",
+      "concepts": ["MUSICAL_COMPOSITION", "SOUND_RECORDING"],
+      "may_merge": false,
+      "rule": "Rights, identifiers, registrations, ownership, claims, and evidence remain distinct for the work and the master."
+    },
+    {
+      "id": "BOUND-012",
+      "concepts": ["UNKNOWN", "MISSING", "FAILED", "NOT_APPLICABLE"],
+      "may_merge": false,
+      "rule": "Absence of evidence does not prove absence, failure, or non-applicability."
+    },
+    {
+      "id": "BOUND-013",
+      "concepts": ["WAITING", "BLOCKED", "FAILED"],
+      "may_merge": false,
+      "rule": "A legitimate external dependency or funding wait is not a technical or product failure."
+    },
+    {
+      "id": "BOUND-014",
+      "concepts": ["ARTIST_LEVEL_CAPABILITY", "DAW_ADAPTER", "HOST_EVIDENCE", "EXECUTION_ROUTE"],
+      "may_merge": false,
+      "rule": "Host-specific maturity or absence does not redefine the artist-level product capability; evidence remains scoped to host and environment."
+    },
+    {
+      "id": "BOUND-015",
+      "concepts": ["LOCAL_N0TE", "CLOUD_CONTROL", "OBSERVED_EXECUTION"],
+      "may_merge": false,
+      "rule": "Neither execution surface may claim to have observed or performed the other surface's action without structured evidence or receipt."
+    },
+    {
+      "id": "BOUND-016",
+      "concepts": ["PRODUCT_FEATURE", "BUILDER_MECHANISM"],
+      "may_merge": false,
+      "rule": "Reconstruction, contradiction, migration, replay, and governance machinery do not become customer features without independent user-outcome evidence."
+    },
+    {
+      "id": "BOUND-017",
+      "concepts": ["PROFESSIONAL_ROLE_KNOWLEDGE", "EXECUTION_AUTHORITY"],
+      "may_merge": false,
+      "rule": "Knowing how a professional role reasons or operates does not grant N0TE that role's legal, financial, account, or interpersonal authority."
+    },
+    {
+      "id": "BOUND-018",
+      "concepts": ["CURRENT_PRIORITY", "ACCEPTED_SCOPE"],
+      "may_merge": false,
+      "rule": "Narrow construction priority cannot silently retire or narrow broader accepted product scope."
+    },
+    {
+      "id": "BOUND-019",
+      "concepts": ["ENTITY", "ACCOUNT", "ROLE_RELATIONSHIP", "CREDENTIAL_AUTHORIZATION"],
+      "may_merge": false,
+      "rule": "The artist/entity, provider account, managed relationship, and authentication/authorization mechanism are distinct security and state objects."
+    }
+  ],
+  "feature_taint_rule": {
+    "context_taint_implies_feature_taint": false,
+    "evidence_taint_implies_feature_taint": false,
+    "implementation_taint_implies_feature_taint": false,
+    "semantic_taint_may_invalidate_feature": true,
+    "required_question": "Is the feature independently supported by positive product evidence after the contaminated dependency is removed?"
+  },
+  "builder_freeze_rule": "Once known corruption classes are represented by replay coverage and the clean migration path passes, this policy stops expanding unless a new observed same-class failure demonstrates a missing boundary."
+}
