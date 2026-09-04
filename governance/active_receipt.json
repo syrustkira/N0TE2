@@ -13,7 +13,8 @@
   "allowed_exact_paths": [
     "n0te2/job_entry_shell.py",
     "n0te2/__init__.py",
-    "tests/ux/test_progressive_job_entry.py"
+    "tests/ux/test_progressive_job_entry.py",
+    "tests/ux/test_progressive_job_entry_context.py"
   ],
   "allowed_prefixes": ["governance/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
@@ -25,11 +26,11 @@
     "requirements": ["REQ-SCOPE-096"],
     "increment": "UX-01-JOB-ENTRY-01"
   },
-  "why_now": "Canonical REQ-SCOPE-096 says fresh Artist creation/selection and start/resume Song are already proven, while Finish/Release/Manage-specific progressive entry remains unproven. The five Focus modes and their durable Song/Artist binding already exist, so the missing customer behavior can be closed by integration rather than another onboarding or state subsystem. Current open audio, DAW, Song compare, transport, career, territory, credits and professional-evidence worklines own separate product surfaces.",
+  "why_now": "Canonical REQ-SCOPE-096 says fresh Artist creation/selection and start/resume Song are already proven, while Finish/Release/Manage-specific progressive entry remains unproven. The five Focus modes and their durable Song/Artist binding already exist, so the missing customer behavior can be closed by integration rather than another onboarding or state subsystem. Current open audio, DAW, transport, career, territory, credits and professional-evidence worklines own separate product surfaces.",
   "implementation_contract": {
     "reuse": "Use the existing AttentionMemory Focus modes, existing focus-set one-shot action, existing CSRF/Origin/Host protections and current Song binding rules.",
     "entry": "Home presents Make, Finish, Manage, Release and Perform as direct artist-job choices with short outcome-oriented descriptions.",
-    "binding": "Make and Finish bind to the active Song when one exists under the existing Focus contract. Manage, Release and Perform remain Artist-wide unless a later exact context exists.",
+    "binding": "Make and Finish bind to the exact active Song when one exists under the existing Focus contract. A same-mode Focus bound to another Song is not presented as current; choosing it explicitly rebinds through canonical Focus switching. Manage, Release and Perform remain Artist-wide unless a later exact context exists.",
     "setup": "No DAW, provider, plugin, account, entitlement or network setup is required or implied merely to choose a job.",
     "persistence": "No new persistence is introduced. The selected Focus continues to use canonical AttentionMemory and existing relaunch semantics.",
     "authority": "Job selection changes only Focus state. It grants no DAW/provider/spend/publication/release authority.",
@@ -40,6 +41,7 @@
     "Manage, Release and Perform can begin Artist-wide from Home with the existing one-shot focus-set authority",
     "an active Song Home path exposes Finish and Make without losing Song context",
     "choosing Finish with an active Song binds the canonical Focus to that exact Song",
+    "a stale same-mode Focus bound to another Song is not labelled Continue and explicit selection rebinds to the exact active Song",
     "choosing an Artist-wide job does not create or mutate a Song",
     "Home copy explicitly keeps DAW, AI and service setup contextual rather than prerequisite",
     "foreign-Origin, bad-CSRF and replay protections remain governed by the existing focus-set action path",
