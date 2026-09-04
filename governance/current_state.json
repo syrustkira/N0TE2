@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "AUDIO-01-SONG-REFERENCES-01 is implemented, exact-head verified cross-platform and merged; the bounded first-class reference-evidence foundation is closed without marking AUDIO-01 DONE or claiming full REQ-SCOPE-115 complete.",
-  "wake_condition": "Global product reselection identifies the next dependency-valid unowned customer gap from live main and canonical retained scope.",
-  "next_admissible_action": "Refresh live main and open work, prove existing behavior, then globally select exactly one dependency-valid unowned product increment. Prefer work that unlocks a real customer journey, connects already-built islands, or closes multiple retained requirements through existing foundations and lightweight trusted reuse.",
-  "product_code_authorized": false,
+  "lifecycle_state": "ACTIVE",
+  "active_node": "UX-01",
+  "active_increment": "UX-01-CREATIVE-TENSION-CHALLENGER-01",
+  "terminal_reason": null,
+  "wake_condition": "Receipt-bounded Creative Tension and Challenger kernel repair, fresh exact-head proof, contradictory repository movement, or a truthful blocker.",
+  "next_admissible_action": "Implement only UX-01-CREATIVE-TENSION-CHALLENGER-01 inside its active receipt: preserve tension hypotheses, authenticate the exact canonical local Challenger suggestion, keep simulated and observed audience evidence separate, validate provenance/timestamps/numeric bounds, add adversarial tests, and grant no mutation or external authority.",
+  "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -82,6 +82,8 @@
     "AUDIO-01-SONG-REFERENCES-01 final integrated head fe856d26d0421ef71637602f39ed21ff8cd52e67 passed GitHub Actions run 33918811752 on Ubuntu, Windows and macOS with exact checkout, construction governance, context lifecycle governance, supervision, full regression, staged consumer smoke, evidence upload and exact-head success publication all green.",
     "PR #113 merged that verified Song Reference foundation as 413f82489974fada3578019bd2ba131105660660 and issue #105 closed as the bounded work claim. The merge does not mark full REQ-SCOPE-115 or AUDIO-01 complete.",
     "AUDIENCE-02 Direct Fan Contact then merged disjointly as 1bf7be00171768090dc7a52cfb77269b2af4e91e, touching only its owned product/test files and preserving Song Reference governance truth.",
-    "The bounded Song Reference foundation preserves exact Song and optional same-Song Version binding, explicit source provenance, comparison-policy metadata and immutable note/decision history. It performs no playback, loudness processing, rights verification, provider/DAW mutation or authority grant, and it does not claim full REQ-SCOPE-115 or AUDIO-01 complete."
+    "The bounded Song Reference foundation preserves exact Song and optional same-Song Version binding, explicit source provenance, comparison-policy metadata and immutable note/decision history. It performs no playback, loudness processing, rights verification, provider/DAW mutation or authority grant, and it does not claim full REQ-SCOPE-115 or AUDIO-01 complete.",
+    "Governance-only PR #168 merged as 6f473b1ceff8f71abc983d189feab3844f9970d9 after exact-head Ubuntu, macOS and Windows proof, recording AUDIO-01-SONG-REFERENCES-01 as closed and verified while keeping AUDIO-01 PRESERVED and full REQ-SCOPE-115 open.",
+    "Global reselection for Creative Tension remains valid on stable main 6f473b1ceff8f71abc983d189feab3844f9970d9 because REQ-SCOPE-158 is retained and consumer-incomplete, the hardened independent kernel is unmerged, and the intervening Evidence Freshness, Role Economics and Business Opportunity product merges do not own or alter this UX-01 reasoning seam."
   ]
 }
