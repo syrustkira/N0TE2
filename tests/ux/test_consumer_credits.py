@@ -258,7 +258,7 @@ def test_stale_split_form_cannot_replace_newer_draft_allocations(tmp_path: Path)
         assert status == 303
         status, page = request(shell, "/people")
         assert status == 200
-        assert "changed in another view" in page
+        assert "already handled or expired" in page
         assert 'value="70.00"' in page
         assert 'value="30.00"' in page
     finally:
@@ -298,8 +298,6 @@ def test_credit_write_rejects_foreign_origin_replay_and_changed_active_song(
         assert status == 403
         assert "did not come from this N0TE window" in denied
 
-        # Drive the existing first-party Song-start handler through the loopback
-        # server so the canonical SQLite connection remains on its owning thread.
         song_start = Form(
             "/song/start",
             {
