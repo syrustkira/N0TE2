@@ -121,7 +121,7 @@ def test_settings_exposes_positive_installation_truth_without_paths_support_or_a
             assert "DAWs on this machine" in page
             assert "Ableton Live" in page
             assert "REAPER" in page
-            assert page.count("Observed locally") == 2
+            assert page.count('<span class="status good">Observed locally</span>') == 2
             assert "FL Studio" in page and "UNKNOWN" in page
             assert "does not mean the DAW is open, healthy, adapter-tested, supported, or controllable" in page
             assert "not promoted into Artist or Song memory" in page
