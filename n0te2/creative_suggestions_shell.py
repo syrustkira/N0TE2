@@ -13,11 +13,38 @@ from .creative_suggestions import (
     CreativeSuggestionService,
 )
 from .lineage import ValidationError
+from .suggestion_deferral import (
+    LATER_THIS_SONG,
+    NEVER_SUGGEST_AGAIN,
+    NEXT_SONG,
+)
 
 _DISTANCE_LABELS = {
     "FAMILIAR": "Familiar · small move",
     "ADJACENT": "Adjacent · change one dimension",
     "WILDCARD": "Wildcard · deliberate contrast",
+}
+_DEFERRAL_CHOICES = {
+    LATER_THIS_SONG: (
+        "Not now · later this Song",
+        "Defer this suggestion until a later work Session in this Song",
+        "N0TE will remember this through relaunch for the current work Session. A later Session in this Song can surface the idea again.",
+    ),
+    NEXT_SONG: (
+        "Save for next Song",
+        "Defer this suggestion until the Artist moves to another Song",
+        "N0TE will hold this exact idea pattern until you move to another Song. Once that horizon is crossed, the pattern can become eligible again. This does not create a broader taste rule.",
+    ),
+    NEVER_SUGGEST_AGAIN: (
+        "Never suggest this again",
+        "Suppress this exact suggestion pattern across this Artist profile",
+        "N0TE will suppress this exact idea pattern across your Artist profile. This is an explicit choice, not an inferred dislike of a broader style or technique.",
+    ),
+}
+_DEFERRAL_NOTICES = {
+    LATER_THIS_SONG: "Not now remembered for this Song work Session. A later Session can surface that idea again.",
+    NEXT_SONG: "Saved until the next Song. This exact idea pattern is held until you move to another Song.",
+    NEVER_SUGGEST_AGAIN: "Never suggest again remembered for this Artist. This exact idea pattern is now suppressed across Songs.",
 }
 
 
@@ -34,8 +61,37 @@ def _result_binding(result: CreativeSuggestion) -> str:
     return "|".join((result.song_id, result.session_id or "", result.semantic_key))
 
 
-def _not_now_action(shell: ConsumerShell, result: CreativeSuggestion) -> str:
-    return shell._new_action("suggestion-not-now", _result_binding(result))
+def _deferral_binding(scope: str, result: CreativeSuggestion) -> str:
+    return scope + "|" + _result_binding(result)
+
+
+def _not_now_action(
+    shell: ConsumerShell, result: CreativeSuggestion, scope: str
+) -> str:
+    return shell._new_action("suggestion-not-now", _deferral_binding(scope, result))
+
+
+def _deferral_forms(shell: ConsumerShell, result: CreativeSuggestion) -> str:
+    scopes = [NEXT_SONG, NEVER_SUGGEST_AGAIN]
+    if result.session_id is not None:
+        scopes.insert(0, LATER_THIS_SONG)
+    forms = []
+    for scope in scopes:
+        label, aria_label, help_text = _DEFERRAL_CHOICES[scope]
+        forms.append(
+            '<form class="stack" method="post" action="/suggestion/not-now" '
+            f'aria-label="{html.escape(aria_label)}">'
+            + shell._hidden(_not_now_action(shell, result, scope))
+            + f'<button type="submit">{html.escape(label)}</button>'
+            + f'<p class="muted">{html.escape(help_text)}</p>'
+            + "</form>"
+        )
+    return (
+        '<fieldset class="stack"><legend>Not now</legend>'
+        '<p class="muted">Choose the horizon you actually mean. These choices change suggestion visibility only and grant no action authority.</p>'
+        + "".join(forms)
+        + "</fieldset>"
+    )
 
 
 def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> str:
@@ -48,13 +104,6 @@ def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> s
         + html.escape(result.session_objective)
         + "</p>"
     )
-    not_now = (
-        '<form method="post" action="/suggestion/not-now" aria-label="Defer this suggestion until later in this Song">'
-        + shell._hidden(_not_now_action(shell, result))
-        + '<button type="submit">Not now · later this Song</button>'
-        + '<p class="muted">N0TE will remember this choice through relaunch for the current work Session. A later Session can surface the idea again.</p>'
-        + '</form>'
-    )
     return (
         '<div class="stack" aria-live="polite">'
         '<h3>One prompt to try</h3>'
@@ -64,7 +113,7 @@ def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> s
         f'<p class="muted">{html.escape(result.distance_explanation)}</p>'
         f'{objective}'
         '<p class="muted">Generated locally and deterministically. No AI provider was called, no project was changed, and this is not a claim about what your Song needs.</p>'
-        f'{not_now}'
+        f'{_deferral_forms(shell, result)}'
         '</div>'
     )
 
@@ -142,7 +191,7 @@ def _next_visible_suggestion(
         if not deferrals.is_deferred_now(result.semantic_key):
             return result
     raise CreativeSuggestionError(
-        "Every available local suggestion is deferred for this work Session. Start a later Session or change what is locked."
+        "Every available local suggestion is currently suppressed by your Not Now choices."
     )
 
 
@@ -190,37 +239,56 @@ def _post_not_now(
             shell._simple_error("That Not now action was already handled or expired."),
         )
         return
+    scope, separator, _ = action.value.partition("|")
     result = getattr(shell, "_creative_suggestion_result", None)
-    if not isinstance(result, CreativeSuggestion) or action.value != _result_binding(result):
+    if (
+        not separator
+        or scope not in _DEFERRAL_CHOICES
+        or not isinstance(result, CreativeSuggestion)
+        or action.value != _deferral_binding(scope, result)
+    ):
         shell._send_html(
             handler,
             409,
-            shell._simple_error("That suggestion is no longer the current Song suggestion. Reload before deferring it."),
+            shell._simple_error(
+                "That suggestion or Not now horizon is no longer current. Reload before deferring it."
+            ),
         )
         return
     hq = shell.runtime.headquarters
     song = hq.store.active_song()
     latest = None if song is None else hq.sessions.latest_for_song(song.id)
+    latest_session_id = None if latest is None else latest.id
     if (
         song is None
         or song.id != result.song_id
-        or latest is None
-        or latest.id != result.session_id
+        or latest_session_id != result.session_id
     ):
         shell._send_html(
             handler,
             409,
-            shell._simple_error("The Song work Session changed before that suggestion could be deferred."),
+            shell._simple_error(
+                "The Song work context changed before that suggestion could be deferred."
+            ),
         )
         return
-    hq.suggestion_deferrals.defer_later_this_song(result.semantic_key)
+    if scope == LATER_THIS_SONG:
+        if result.session_id is None:
+            raise ValidationError(
+                "Start a work Session before deferring a suggestion until later this Song"
+            )
+        hq.suggestion_deferrals.defer_later_this_song(result.semantic_key)
+    elif scope == NEXT_SONG:
+        hq.suggestion_deferrals.defer_until_next_song(result.semantic_key)
+    else:
+        hq.suggestion_deferrals.never_suggest_again(result.semantic_key)
     shell._creative_suggestion_result = None
-    shell._consumer_notice = "Not now remembered for this Song work Session. A later Session can surface that idea again."
+    shell._consumer_notice = _DEFERRAL_NOTICES[scope]
     shell._redirect(handler, "/song")
 
 
 def install_song_creative_suggestions() -> None:
-    """Attach bounded creative suggestions and durable current-Session deferral."""
+    """Attach bounded creative suggestions and durable explicit deferral horizons."""
     if getattr(ConsumerShell, "_song_creative_suggestions_installed", False):
         return
 
