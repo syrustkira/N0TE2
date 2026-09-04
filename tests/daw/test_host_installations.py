@@ -104,6 +104,24 @@ class HostInstallationTests(unittest.TestCase):
             self.assertFalse(hasattr(inventory, "missing_families"))
             self.assertFalse(hasattr(inventory, "unsupported_families"))
 
+    def test_relative_root_cannot_masquerade_as_standard_installation_location(self):
+        with TemporaryDirectory() as tmp:
+            prior = Path.cwd()
+            try:
+                os.chdir(tmp)
+                applications = Path("Applications")
+                applications.mkdir()
+                self.app(applications, "Logic Pro.app")
+                inventory = scan_host_installations(
+                    self.platform("Darwin"),
+                    roots={"APPLICATIONS": applications, "USER_APPLICATIONS": applications},
+                )
+            finally:
+                os.chdir(prior)
+
+            self.assertFalse(inventory.observed("LOGIC_PRO"))
+            self.assertIn("LOGIC_PRO", inventory.unknown_families)
+
     def test_linux_has_no_claimed_standard_scan_and_preserves_every_family_as_unknown(self):
         inventory = scan_host_installations(self.platform("Linux"), roots={})
         self.assertEqual(inventory.scan_state, NO_STANDARD_SCAN)
