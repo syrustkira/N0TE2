@@ -1,12 +1,12 @@
 {
   "schema_version": 7,
-  "status": "ACTIVE",
+  "status": "INACTIVE",
   "receipt_id": "N0TE2-SONG-01-AB-DECIDE-01",
   "node_id": "SONG-01",
   "increment_id": "SONG-01-AB-DECIDE-01",
   "baseline_sha": "3fa22cc3aa156043f5f94304aae723a63b072e4f",
   "purpose": "Persist one explicit artist KEEP / REVERT / REVISE / INCONCLUSIVE judgment for the exact Reference and Current Song Versions shown in the existing A/B compare, without turning judgment into approval, execution, audio processing, or Learning promotion.",
-  "product_code_allowed": true,
+  "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
@@ -26,7 +26,7 @@
     "requirements": ["REQ-SCOPE-010"],
     "increment": "SONG-01-AB-DECIDE-01"
   },
-  "why_now": "After exact standards-based loudness evidence and Song credits/splits merged, global reselection still finds the signature Song loop missing one unowned semantic seam: N0TE can identify, verify, audition and compare an exact Version pair, but cannot yet persist the artist's explicit judgment about that exact pair. Loudness remains signal evidence and credits/splits remain rights metadata; neither owns KEEP / REVERT / REVISE / INCONCLUSIVE for A/B.",
+  "why_now": "The bounded pair-decision seam was selected after standards-based loudness evidence and Song credits/splits were integrated. Those adjacent systems remained separate from artistic decision authority.",
   "implementation_contract": {
     "decision_truth": "KEEP, REVERT, REVISE and INCONCLUSIVE are explicit artist judgments only. They do not imply approval, execution, preference promotion, causal Learning truth, or superiority.",
     "pair_binding": "The decision action is bound to the exact active Song, Reference Version and Current Version prepared for the artist. The shell re-prepares and re-verifies the pair before accepting the write; stale or partially auditionable state fails closed.",
@@ -42,8 +42,16 @@
     "REVERT records judgment without changing current Version or approved Version",
     "replaying the same one-shot decision action is rejected",
     "partial or integrity-blocked comparison offers no decision write",
-    "exact-head governance, full regression and staged consumer smoke pass on Linux, Windows and macOS"
+    "exact-head governance, full regression and staged consumer smoke passed on Linux, Windows and macOS"
   ],
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
+  "evidence_snapshot": {
+    "observed_repository_head": "431ce8598873ecd129b745723cf89154540e09e2",
+    "workflow_run_id": 33872628008,
+    "result": "SUCCESS",
+    "platforms": ["Linux", "Windows", "macOS"],
+    "execution_note": "Exact reconstructed implementation head passed construction governance, context lifecycle, supervision, full regression and staged consumer smoke on all three platforms before PR #116 merged as be445e8d545a2cd9193c29f822afc336d5ee9f5b."
+  },
   "non_scope": [
     "automatic revert or Version resume",
     "automatic Version approval",
@@ -53,5 +61,6 @@
     "provider or DAW execution",
     "full REQ-SCOPE-010 completion",
     "marking SONG-01 DONE"
-  ]
+  ],
+  "next_selection_rule": "This bounded exact-pair decision increment is closed. Keep SONG-01 preserved, return construction to STABLE, and globally reselect from fresh main rather than automatically extending the feature by adjacency."
 }
