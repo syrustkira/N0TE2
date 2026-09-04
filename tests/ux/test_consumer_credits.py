@@ -138,7 +138,7 @@ def test_people_surface_completes_credit_and_split_confirmation_journey(
     try:
         status, page = request(shell, "/people")
         assert status == 200
-        assert "Credits &amp; composition splits · Shared UX Song" in page
+        assert "Credits & composition splits · Shared UX Song" in page
         assert "local declarations into legal or provider truth" in page
         assert "No Song credits recorded yet" in page
         assert "person_" not in page
@@ -209,8 +209,12 @@ def test_people_surface_completes_credit_and_split_confirmation_journey(
         assert "person_" not in page
         assert "allocation_" not in page
         assert "confirmation_" not in page
+    finally:
+        shell.stop()
 
-        credits = CreditsMemory(shell.runtime.headquarters.store, shell.runtime.headquarters.people)
+    reopened = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        credits = CreditsMemory(reopened.store, reopened.people)
         roster = credits.credits_for_song(song_id)
         assert [(item.person_id, item.role) for item in roster] == [(maya_id, "Songwriter")]
         active = credits.active_split_for_song(song_id)
@@ -220,15 +224,6 @@ def test_people_surface_completes_credit_and_split_confirmation_journey(
             (alex_id, 4000),
         ]
         assert credits.all_recorded_confirmed(active.id) is True
-    finally:
-        shell.stop()
-
-    reopened = HeadquartersMemory.open(data_root, profile_id)
-    try:
-        credits = CreditsMemory(reopened.store, reopened.people)
-        active = credits.active_split_for_song(song_id)
-        assert active is not None
-        assert credits.all_recorded_confirmed(active.id) is True
         assert len(credits.confirmation_history(active.id)) == 2
     finally:
         reopened.close()
@@ -237,7 +232,7 @@ def test_people_surface_completes_credit_and_split_confirmation_journey(
 def test_stale_split_form_cannot_replace_newer_draft_allocations(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, song_id, maya_id, alex_id = new_profile(data_root)
+    profile_id, song_id, maya_id, alex_id = new_profile(data_root)
     shell = new_shell(data_root, state_root, 9962, "credits-stale")
     try:
         status, page = request(shell, "/people")
@@ -245,28 +240,41 @@ def test_stale_split_form_cannot_replace_newer_draft_allocations(tmp_path: Path)
         status, _ = post_form(shell, forms(page, "/credits/split/create")[0])
         assert status == 303
 
-        status, page = request(shell, "/people")
+        status, stale_page = request(shell, "/people")
         assert status == 200
-        stale = forms(page, "/credits/split/save")[0]
+        stale = forms(stale_page, "/credits/split/save")[0]
         stale.values["share_0"] = "50"
         stale.values["share_1"] = "50"
 
-        credits = CreditsMemory(shell.runtime.headquarters.store, shell.runtime.headquarters.people)
-        sheet = credits.active_split_for_song(song_id)
-        assert sheet is not None
-        credits.set_draft_allocations(sheet.id, {maya_id: 70_00, alex_id: 30_00})
+        status, fresh_page = request(shell, "/people")
+        assert status == 200
+        fresh = forms(fresh_page, "/credits/split/save")[0]
+        fresh.values["share_0"] = "70"
+        fresh.values["share_1"] = "30"
+        status, _ = post_form(shell, fresh)
+        assert status == 303
 
         status, _ = post_form(shell, stale)
         assert status == 303
         status, page = request(shell, "/people")
         assert status == 200
         assert "changed in another view" in page
+        assert 'value="70.00"' in page
+        assert 'value="30.00"' in page
+    finally:
+        shell.stop()
+
+    reopened = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        credits = CreditsMemory(reopened.store, reopened.people)
+        sheet = credits.active_split_for_song(song_id)
+        assert sheet is not None
         assert [(item.person_id, item.basis_points) for item in credits.split_allocations(sheet.id)] == [
             (maya_id, 7000),
             (alex_id, 3000),
         ]
     finally:
-        shell.stop()
+        reopened.close()
 
 
 def test_credit_write_rejects_foreign_origin_replay_and_changed_active_song(
@@ -274,7 +282,7 @@ def test_credit_write_rejects_foreign_origin_replay_and_changed_active_song(
 ) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, first_song_id, maya_id, _ = new_profile(data_root)
+    profile_id, first_song_id, maya_id, _ = new_profile(data_root)
     shell = new_shell(data_root, state_root, 9963, "credits-authority")
     try:
         status, page = request(shell, "/people")
@@ -290,43 +298,63 @@ def test_credit_write_rejects_foreign_origin_replay_and_changed_active_song(
         assert status == 403
         assert "did not come from this N0TE window" in denied
 
-        shell.runtime.headquarters.store.create_song("Different Active Song")
+        # Drive the existing first-party Song-start handler through the loopback
+        # server so the canonical SQLite connection remains on its owning thread.
+        song_start = Form(
+            "/song/start",
+            {
+                "csrf": shell._csrf,
+                "action": shell._new_action("song-start"),
+                "song_title": "Different Active Song",
+            },
+        )
+        status, _ = post_form(shell, song_start)
+        assert status == 303
+
         status, _ = post_form(shell, credit)
         assert status == 303
         status, page = request(shell, "/people")
         assert status == 200
         assert "active Song changed" in page
 
-        credits = CreditsMemory(shell.runtime.headquarters.store, shell.runtime.headquarters.people)
-        assert credits.credits_for_song(first_song_id) == ()
-
         replay_status, _ = post_form(shell, credit)
         assert replay_status == 303
         status, page = request(shell, "/people")
         assert status == 200
         assert "already handled or expired" in page
-        assert credits.credits_for_song(first_song_id) == ()
-        assert shell.runtime.headquarters.people.get_person(maya_id) is not None
     finally:
         shell.stop()
+
+    reopened = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        credits = CreditsMemory(reopened.store, reopened.people)
+        assert credits.credits_for_song(first_song_id) == ()
+        assert reopened.people.get_person(maya_id) is not None
+        assert reopened.store.active_song() is not None
+        assert reopened.store.active_song().title == "Different Active Song"
+    finally:
+        reopened.close()
 
 
 def test_void_keeps_prior_proposal_visible_and_allows_replacement(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    _, _, _, _ = new_profile(data_root)
+    new_profile(data_root)
     shell = new_shell(data_root, state_root, 9964, "credits-void")
     try:
         status, page = request(shell, "/people")
         assert status == 200
-        post_form(shell, forms(page, "/credits/split/create")[0])
+        status, _ = post_form(shell, forms(page, "/credits/split/create")[0])
+        assert status == 303
         status, page = request(shell, "/people")
         save = forms(page, "/credits/split/save")[0]
         save.values["share_0"] = "50"
         save.values["share_1"] = "50"
-        post_form(shell, save)
+        status, _ = post_form(shell, save)
+        assert status == 303
         status, page = request(shell, "/people")
-        post_form(shell, forms(page, "/credits/split/submit")[0])
+        status, _ = post_form(shell, forms(page, "/credits/split/submit")[0])
+        assert status == 303
 
         status, page = request(shell, "/people")
         void = forms(page, "/credits/split/void")[0]
