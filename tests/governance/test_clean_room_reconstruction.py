@@ -101,6 +101,21 @@ class CleanRoomReconstructionTests(unittest.TestCase):
         self.assertFalse(policy["admission_contract"]["retrieve_then_believe"])
         self.assertFalse(policy["promotion_contract"]["automatic_promotion"])
 
+    def test_semantic_boundary_policy_is_required_by_reconstruction_startup(self):
+        authority = self.load("governance/authority.json")
+        handoff = self.load("governance/handoff.json")
+        policy_ref = "governance/semantic_boundaries.json"
+
+        self.assertIn("SEMANTIC_BOUNDARY_TAINT_POLICY", authority["authority_order"])
+        self.assertIn(policy_ref, authority["current_authority_files"])
+        self.assertTrue(authority["laws"]["semantic_boundary_axes_must_not_be_collapsed"])
+        self.assertTrue(authority["laws"]["taint_does_not_propagate_by_proximity"])
+        self.assertTrue(authority["laws"]["independent_positive_evidence_breaks_taint_chain"])
+        self.assertTrue(authority["laws"]["review_lens_does_not_grant_product_scope_or_execution_authority"])
+        self.assertTrue(authority["laws"]["temporary_context_requires_explicit_promotion_to_durable_state"])
+        self.assertIn("SEMANTIC_BOUNDARY_TAINT_POLICY", handoff["reconstruction"]["required_outcomes"])
+        self.assertIn(policy_ref, handoff["reconstruction"]["required_refs"])
+
     def test_context_admission_keeps_truth_evidence_authority_and_lifecycle_explicit(self):
         policy = self.load("governance/semantic_boundaries.json")
         required = {
