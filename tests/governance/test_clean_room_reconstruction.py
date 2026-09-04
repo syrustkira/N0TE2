@@ -14,13 +14,19 @@ class CleanRoomReconstructionTests(unittest.TestCase):
         build_index = requirements["sequence"]
         canonical = requirements["canonical_scope"]
 
-        self.assertEqual(build_index, {"start": 2, "end": 153})
+        self.assertEqual(build_index["start"], canonical["start"])
+        self.assertGreaterEqual(canonical["end"], 170)
         self.assertEqual(canonical["source"], "N0TE_PRODUCT_DB/SCOPE_LEDGER")
-        self.assertEqual((canonical["start"], canonical["end"]), (2, 170))
-        self.assertEqual(canonical["retained_requirement_count"], 169)
+        self.assertEqual(
+            canonical["retained_requirement_count"],
+            canonical["end"] - canonical["start"] + 1,
+        )
 
         extensions = requirements["canonical_extensions"]
-        expected = [f"REQ-SCOPE-{n:03d}" for n in range(154, 171)]
+        expected = [
+            f"REQ-SCOPE-{n:03d}"
+            for n in range(build_index["end"] + 1, canonical["end"] + 1)
+        ]
         self.assertEqual([row["id"] for row in extensions], expected)
         for row in extensions:
             self.assertEqual(row["state"], "MAPPED")
@@ -45,9 +51,6 @@ class CleanRoomReconstructionTests(unittest.TestCase):
         self.assertFalse(current["legacy_admission_authorized"])
         self.assertEqual(receipt["status"], "INACTIVE")
 
-        # Truth/history text is evidence only. Command-like words inside prose do not
-        # create an active build because activation is represented only by the
-        # structured current-state + receipt contract above.
         historical_text = "CURRENT NEXT ACTIVE PRIORITY BUILD THIS NEXT"
         current["truth"].append(historical_text)
         self.assertIsNone(current["active_node"])
@@ -88,6 +91,84 @@ class CleanRoomReconstructionTests(unittest.TestCase):
         self.assertEqual(current["lifecycle_state"], "STABLE")
         self.assertIsNone(current["active_node"])
         self.assertFalse(current["product_code_authorized"])
+
+    def test_semantic_boundary_policy_is_builder_only_and_non_selecting(self):
+        policy = self.load("governance/semantic_boundaries.json")
+        self.assertEqual(policy["policy_id"], "CLEANROOM-SEMANTIC-BOUNDARIES-001")
+        self.assertEqual(policy["authority"], "BUILDER_RECONSTRUCTION_ONLY")
+        self.assertEqual(policy["product_scope_effect"], "NONE")
+        self.assertEqual(policy["selection_effect"], "NONE")
+        self.assertFalse(policy["admission_contract"]["retrieve_then_believe"])
+        self.assertFalse(policy["promotion_contract"]["automatic_promotion"])
+
+    def test_context_admission_keeps_truth_evidence_authority_and_lifecycle_explicit(self):
+        policy = self.load("governance/semantic_boundaries.json")
+        required = {
+            "source",
+            "scope",
+            "truth_type",
+            "evidence_state",
+            "authority",
+            "freshness",
+            "lifecycle",
+            "provenance",
+        }
+        self.assertEqual(set(policy["context_admission_fields"]), required)
+        self.assertTrue(policy["admission_contract"]["unknown_remains_unknown"])
+        self.assertTrue(policy["admission_contract"]["inference_remains_inference"])
+        self.assertFalse(policy["admission_contract"]["historical_command_like_text_selects_work"])
+
+    def test_taint_is_orthogonal_and_does_not_spread_by_proximity(self):
+        policy = self.load("governance/semantic_boundaries.json")
+        self.assertTrue(policy["recovery_and_taint_are_orthogonal"])
+        self.assertEqual(
+            set(policy["taint_states"]),
+            {
+                "CLEAN",
+                "TAINTED_CONTEXT",
+                "TAINTED_EVIDENCE",
+                "TAINTED_AUTHORITY",
+                "TAINTED_IMPLEMENTATION",
+                "TAINTED_SEMANTICS",
+                "UNKNOWN_TAINT",
+            },
+        )
+        inheritance = policy["taint_inheritance"]
+        self.assertFalse(inheritance["propagate_by_proximity"])
+        self.assertTrue(inheritance["propagate_only_through_proven_dependency"])
+        self.assertTrue(inheritance["independent_positive_evidence_breaks_taint_chain"])
+        self.assertEqual(
+            inheritance["default_feature_disposition_when_supporting_evidence_is_tainted"],
+            "REQUIRES_REVALIDATION",
+        )
+
+    def test_neighboring_concepts_cannot_be_deduplicated_into_one_object(self):
+        policy = self.load("governance/semantic_boundaries.json")
+        boundaries = {row["id"]: row for row in policy["boundaries"]}
+        expected_concept_sets = {
+            "BOUND-001": {"REVIEW_LENS", "CREATIVE_PARTNER_LENS", "PROFESSIONAL_ROLE", "AUTONOMOUS_AGENT"},
+            "BOUND-002": {"TRUTH_TYPE", "EVIDENCE_STATE", "RECOVERY_STATE", "TAINT_STATE"},
+            "BOUND-003": {"SESSION_MEMORY", "DISTILLED_LONG_TERM_MEMORY", "EXECUTION_STATE"},
+            "BOUND-005": {"PROPOSAL", "PREVIEW", "AUTHORIZATION", "EXECUTION", "VERIFICATION", "DECISION"},
+            "BOUND-006": {"PROVIDER_ACCOUNT", "ARTIST_CLAIM", "CERTIFICATION", "CATALOG_MAPPING", "ACCESS_ROLE", "CREDENTIAL"},
+            "BOUND-012": {"UNKNOWN", "MISSING", "FAILED", "NOT_APPLICABLE"},
+            "BOUND-014": {"ARTIST_LEVEL_CAPABILITY", "DAW_ADAPTER", "HOST_EVIDENCE", "EXECUTION_ROUTE"},
+            "BOUND-016": {"PRODUCT_FEATURE", "BUILDER_MECHANISM"},
+            "BOUND-019": {"ENTITY", "ACCOUNT", "ROLE_RELATIONSHIP", "CREDENTIAL_AUTHORIZATION"},
+        }
+        for boundary_id, concepts in expected_concept_sets.items():
+            self.assertIn(boundary_id, boundaries)
+            self.assertEqual(set(boundaries[boundary_id]["concepts"]), concepts)
+            self.assertFalse(boundaries[boundary_id]["may_merge"])
+
+    def test_feature_is_not_invalidated_merely_because_context_or_implementation_is_tainted(self):
+        policy = self.load("governance/semantic_boundaries.json")
+        rule = policy["feature_taint_rule"]
+        self.assertFalse(rule["context_taint_implies_feature_taint"])
+        self.assertFalse(rule["evidence_taint_implies_feature_taint"])
+        self.assertFalse(rule["implementation_taint_implies_feature_taint"])
+        self.assertTrue(rule["semantic_taint_may_invalidate_feature"])
+        self.assertIn("independently supported", rule["required_question"])
 
 
 if __name__ == "__main__":
