@@ -17,6 +17,7 @@
     "tests/song/test_creative_diagnosis.py",
     "tests/song/test_song_creative_diagnosis_consumer.py",
     "tests/song/test_song_skill_model_consumer.py",
+    "tests/song/test_song_version_approval_consumer.py",
     "tests/governance/test_clean_room_reconstruction.py"
   ],
   "allowed_prefixes": ["governance/"],
