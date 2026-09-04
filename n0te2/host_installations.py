@@ -140,6 +140,8 @@ def _location_fingerprint(path: Path) -> str:
 
 
 def _safe_root(root: Path) -> Path | None:
+    if not root.is_absolute():
+        return None
     try:
         info = os.lstat(root)
     except (FileNotFoundError, NotADirectoryError, OSError):
