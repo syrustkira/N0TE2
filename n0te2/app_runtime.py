@@ -76,6 +76,14 @@ class ApplicationRuntime:
             raise ApplicationRuntimeError("state_root must be absolute")
         if not callable(memory_opener):
             raise TypeError("memory_opener must be callable")
+        try:
+            from .direct_fan_shell import install_direct_fan_headquarters
+
+            install_direct_fan_headquarters()
+        except Exception as exc:
+            raise ApplicationRuntimeError(
+                f"Direct Fan consumer installation failed before runtime launch: {exc}"
+            ) from exc
         self.data_root = data
         self.state_root = state
         self._memory_opener = memory_opener
@@ -215,11 +223,9 @@ class ApplicationRuntime:
         try:
             from .career_state_shell import install_career_state_headquarters
             from .credits_shell import install_credits_headquarters
-            from .direct_fan_shell import install_direct_fan_headquarters
 
             install_credits_headquarters()
             install_career_state_headquarters()
-            install_direct_fan_headquarters()
         except Exception as exc:
             try:
                 headquarters.close()
