@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 
 _JOB_ORDER = ("MAKE", "FINISH", "MANAGE", "RELEASE", "PERFORM")
+_SONG_BOUND_MODES = {"MAKE", "FINISH"}
 _JOB_COPY = {
     "MAKE": "Create, explore, or get the musical idea moving.",
     "FINISH": "Protect the decisions that move the current work toward done.",
@@ -14,10 +15,17 @@ _JOB_COPY = {
 
 def _job_entry_section(shell, state) -> str:  # noqa: ANN001
     focus = shell.runtime.headquarters.attention.active_focus()
+    active_song = shell.runtime.headquarters.store.active_song()
+    active_song_id = None if active_song is None else active_song.id
     forms: list[str] = []
     for mode in _JOB_ORDER:
         token = shell._new_action("focus-set", mode)
-        current = focus is not None and focus.mode == mode
+        expected_song_id = active_song_id if mode in _SONG_BOUND_MODES else None
+        current = (
+            focus is not None
+            and focus.mode == mode
+            and focus.song_id == expected_song_id
+        )
         button_class = "primary" if current else ""
         pressed = "true" if current else "false"
         forms.append(
