@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "ACTIVE",
-  "active_node": "AUDIO-01",
-  "active_increment": "AUDIO-01-LOUDNESS-01",
-  "terminal_reason": null,
-  "wake_condition": "AUDIO-01-LOUDNESS-01 remains active until the current-main reconstructed exact head passes cross-platform governance, full regression and staged consumer smoke or a truthful blocker terminates it.",
-  "next_admissible_action": "Verify the exact-Version standards-based integrated loudness evidence delta on current main, repair only within its bounded receipt if needed, and integrate only after exact-head proof.",
-  "product_code_authorized": true,
+  "lifecycle_state": "STABLE",
+  "active_node": null,
+  "active_increment": null,
+  "terminal_reason": "AUDIO-01-LOUDNESS-01 is implemented, exact-head verified cross-platform, and merged; the bounded receipt is closed without claiming AUDIO-01 or REQ-SCOPE-010 complete.",
+  "wake_condition": "Global product reselection identifies the next dependency-valid unowned customer gap from live main and canonical retained scope.",
+  "next_admissible_action": "Refresh live main and open work, prove existing behavior, then globally select exactly one dependency-valid unowned product increment. Prefer work that unlocks a real customer journey, connects already-built islands, or closes multiple retained requirements through existing foundations and lightweight trusted reuse.",
+  "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -49,7 +49,9 @@
     "Post-merge governance closure returned SONG-01 to PRESERVED and the construction controller to STABLE/DORMANT on main 720f650b48cbbd12d163f28cb0893f98fce4f781.",
     "OPS-04-COLLAB-HANDOFF-01 then merged as 65f7bede858a9cd415b3479b44838e28dec517e0 after exact-head cross-platform verification. Its two added collaboration-handoff files are disjoint from Audio Intelligence and do not alter governance state.",
     "AUDIO-01-LOUDNESS-01 original exact implementation head a81a551be306853bcfc72cc931e60be1d0e25a3b passed GitHub Actions run 33844922712 on Ubuntu, Windows and macOS with dependency installation, governance, full regression and staged consumer smoke green.",
-    "That prior loudness run is historical evidence only. The unchanged bounded product delta is reconstructed atomically onto current main 65f7bede858a9cd415b3479b44838e28dec517e0 so the merged A/B and collaboration-handoff implementations are both present during fresh exact-head verification.",
-    "AUDIO-01-LOUDNESS-01 remains a bounded Audio Intelligence increment. It does not rewrite the merged compare surface, normalize audio, make an artistic decision, mark AUDIO-01 DONE, or claim REQ-SCOPE-010 complete."
+    "That prior loudness run was treated as historical evidence only. The unchanged bounded product delta was reconstructed atomically onto current main 65f7bede858a9cd415b3479b44838e28dec517e0 so the merged A/B and collaboration-handoff implementations were both present during fresh exact-head verification.",
+    "AUDIO-01-LOUDNESS-01 exact head b00aa5f1fa5835d2b2a140f5263b96fc3199826d passed GitHub Actions run 33871372582 on Ubuntu, Windows and macOS with dependency installation, construction governance, context lifecycle, supervision, full regression and staged consumer smoke all green.",
+    "PR #94 merged that verified loudness-evidence delta as d2173505678b21303c6a942508afd32c2f840f38.",
+    "Integrated loudness is now exact read-only signal evidence in the Engineering Snapshot. It is not automatic normalization, true-peak certification, a mastering target, a mix score, or an artistic decision; AUDIO-01 remains PRESERVED and full REQ-SCOPE-010 remains open."
   ]
 }
