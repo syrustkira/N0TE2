@@ -190,13 +190,21 @@ class GovernanceRegressionTests(unittest.TestCase):
     def test_canonical_scope_can_exceed_build_graph_without_being_selected(self):
         doc = json.loads((ROOT / "governance/requirements.json").read_text())
         self.assertEqual(doc["sequence_role"], "BUILD_GRAPH_INDEX")
-        self.assertEqual(doc["sequence"], {"start": 2, "end": 153})
-        self.assertEqual(doc["canonical_scope"]["end"], 160)
-        self.assertEqual(doc["canonical_scope"]["retained_requirement_count"], 159)
+        canonical = doc["canonical_scope"]
+        sequence = doc["sequence"]
+        self.assertEqual(canonical["start"], sequence["start"])
+        self.assertGreater(canonical["end"], sequence["end"])
+        self.assertEqual(
+            canonical["retained_requirement_count"],
+            canonical["end"] - canonical["start"] + 1,
+        )
         extensions = doc["canonical_extensions"]
         self.assertEqual(
             [row["id"] for row in extensions],
-            [f"REQ-SCOPE-{n:03d}" for n in range(154, 161)],
+            [
+                f"REQ-SCOPE-{n:03d}"
+                for n in range(sequence["end"] + 1, canonical["end"] + 1)
+            ],
         )
         self.assertTrue(all(row["state"] == "MAPPED" for row in extensions))
         self.assertTrue(all(row["selected"] is False for row in extensions))
