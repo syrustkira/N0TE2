@@ -202,9 +202,11 @@ def _engineering_card(shell: ConsumerShell) -> str:
 def install_song_audio_engineering() -> None:
     """Attach the read-only current-Version Engineering Snapshot exactly once."""
     from .mix_relationship_shell import install_song_mix_relationships
+    from .performance_timing_shell import install_song_performance_timing
 
     if getattr(ConsumerShell, "_song_audio_engineering_installed", False):
         install_song_mix_relationships()
+        install_song_performance_timing()
         return
 
     original_song: Callable[[ConsumerShell, object], str] = ConsumerShell._song_content
@@ -224,3 +226,4 @@ def install_song_audio_engineering() -> None:
     ConsumerShell._song_content = with_engineering_card
     ConsumerShell._song_audio_engineering_installed = True
     install_song_mix_relationships()
+    install_song_performance_timing()
