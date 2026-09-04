@@ -104,12 +104,13 @@ class VersionComparison:
 class VersionCompareService:
     """Prepare a truthful, read-only A/B view for two exact local Song Versions.
 
-    The current Version is compared with its canonical parent when possible, or
-    otherwise with the nearest earlier Version in the same Song. Managed audio
-    may be locally auditioned. Integer PCM WAV measurements are reused only as
-    whole-render engineering evidence. RMS is never called LUFS and this service
-    performs no gain processing, Song mutation, approval, Learning write, DAW
-    action, provider call, or artistic decision.
+    The current Version is compared with its canonical parent when possible. If
+    that relationship does not yield a peer, the nearest same-Song Version by
+    ordinal is used. Managed audio may be locally auditioned. Integer PCM WAV
+    measurements are reused only as whole-render engineering evidence. RMS is
+    never called LUFS and this service performs no gain processing, Song
+    mutation, approval, Learning write, DAW action, provider call, or artistic
+    decision.
     """
 
     def __init__(self, store: LineageStore, materials: SongMaterialMemory) -> None:
@@ -125,12 +126,18 @@ class VersionCompareService:
             parent = self.store.get_version(current.parent_version_id)
             if parent is not None and parent.song_id == current.song_id:
                 return parent
-        earlier = [
+        peers = [
             version
             for version in self.store.versions_for_song(current.song_id)
-            if version.ordinal < current.ordinal
+            if version.id != current.id
         ]
-        return None if not earlier else max(earlier, key=lambda item: item.ordinal)
+        if not peers:
+            return None
+        earlier = [version for version in peers if version.ordinal < current.ordinal]
+        if earlier:
+            return max(earlier, key=lambda item: item.ordinal)
+        later = [version for version in peers if version.ordinal > current.ordinal]
+        return None if not later else min(later, key=lambda item: item.ordinal)
 
     def _side(self, version: Version) -> VersionCompareSide:
         integrity_blocked = False
@@ -243,7 +250,7 @@ class VersionCompareService:
                 status="NO_REFERENCE_VERSION",
                 rms_delta_db=None,
                 limitations=(
-                    "A/B needs an earlier Version of this Song; the current Version is the first available Version.",
+                    "A/B needs another Version of this Song; only one Version is available.",
                     "Preparing comparison performs no Song or external mutation.",
                 ),
             )
