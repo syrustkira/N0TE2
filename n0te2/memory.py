@@ -16,6 +16,7 @@ from .learning import LearningMemory
 from .lineage import LineageStore
 from .material import SongMaterialMemory
 from .operations import OperationJournal
+from .people import PeopleMemory
 from .provenance import ProvenanceLedger
 from .reconcile import ReconciliationService
 from .recovery import RecoveryManager
@@ -39,6 +40,7 @@ class HeadquartersMemory:
         self.twins = TwinEvidenceService(self.evidence)
         self.activity = ActivityLog(store)
         self.attention = AttentionMemory(store)
+        self.people = PeopleMemory(store)
         self.workspaces = WorkspaceMemory(store)
         self.capability_evidence = CapabilityEvidenceMemory(store, self.workspaces)
         self.shadow = HostShadow(store, self.workspaces)
@@ -83,11 +85,13 @@ class HeadquartersMemory:
         # to the same canonical memory composition root.
         from .creative_diagnosis_shell import install_song_creative_diagnosis
         from .creative_suggestions_shell import install_song_creative_suggestions
+        from .people_shell import install_people_headquarters
         from .retention_shell import install_song_retention
 
         install_song_retention()
         install_song_creative_suggestions()
         install_song_creative_diagnosis()
+        install_people_headquarters()
 
     @classmethod
     def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
