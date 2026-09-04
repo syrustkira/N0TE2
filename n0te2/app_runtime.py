@@ -213,9 +213,11 @@ class ApplicationRuntime:
             )
 
         try:
+            from .career_state_shell import install_career_state_headquarters
             from .credits_shell import install_credits_headquarters
 
             install_credits_headquarters()
+            install_career_state_headquarters()
         except Exception as exc:
             try:
                 headquarters.close()
@@ -230,7 +232,7 @@ class ApplicationRuntime:
                     profile,
                     lease,
                     acquired.previous_lease,
-                    f"Credits consumer installation failed and Headquarters could not close safely: {close_exc}",
+                    f"Headquarters consumer installation failed and Headquarters could not close safely: {close_exc}",
                 )
             try:
                 self._leases.release(
@@ -249,14 +251,14 @@ class ApplicationRuntime:
                     profile,
                     lease,
                     acquired.previous_lease,
-                    f"Credits consumer installation failed and lease cleanup also failed: {cleanup_exc}",
+                    f"Headquarters consumer installation failed and lease cleanup also failed: {cleanup_exc}",
                 )
             return LaunchResult(
                 "START_FAILED",
                 profile,
                 None,
                 acquired.previous_lease,
-                f"Credits consumer installation failed: {exc}",
+                f"Headquarters consumer installation failed: {exc}",
             )
 
         self._state = "RUNNING"
