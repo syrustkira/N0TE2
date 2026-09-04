@@ -21,7 +21,11 @@
     "supervisor": "N0TE-SUPERVISOR",
     "boundary": "Temporary N0TE construction machinery; not N0TE and not the persistent TellMeN0TE + N0TE cloud coordination plane."
   },
-  "lifecycle": {},
+  "lifecycle": {
+    "state": "ACTIVE",
+    "active_node": "UX-01",
+    "active_increment": "UX-01-JOB-ENTRY-01"
+  },
   "derived_runtime_truth": {
     "lifecycle_source": "governance/current_state.json",
     "next_admissible_action_source": "governance/current_state.json",
