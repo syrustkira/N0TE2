@@ -30,52 +30,61 @@ class SuggestionDeferralHorizonTests(unittest.TestCase):
     def tearDown(self):
         self.hq.close()
 
-    def test_next_song_is_source_song_scoped_and_idempotent_across_sessions(self):
-        key = self.suggestions.suggest(distance="ADJACENT").semantic_key
-        before = len(self.hq.activity.for_profile())
-
-        first = self.hq.suggestion_deferrals.defer_until_next_song(key)
-        self.assertEqual(first.scope, NEXT_SONG)
-        self.assertEqual(first.song_id, self.song.id)
-        self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(key))
-
-        self.hq.sessions.close_session(
-            self.session.id,
-            debrief_summary="Deferred this pattern away from the current Song",
-            next_action="Continue the Song without that idea",
-        )
-        later = self.hq.sessions.start_session(
-            song_id=self.song.id,
-            objective="Return to the same Song in a new Session",
-        )
-        second = self.hq.suggestion_deferrals.defer_until_next_song(key)
-        self.assertEqual(second, first)
-        self.assertNotEqual(later.id, first.session_id)
-        self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(key))
-
-        other = self.hq.store.create_song("Next Song")
-        self.hq.sessions.start_session(
-            song_id=other.id,
-            objective="Let deferred patterns become eligible on another Song",
-        )
-        self.assertFalse(self.hq.suggestion_deferrals.is_deferred_now(key))
-
-        self.hq.store.select_song(self.song.id)
-        self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(key))
-        after = self.hq.activity.for_profile()
-        self.assertEqual(len(after), before + 3)
-        deferred = [event for event in after if event.event_type == "SUGGESTION_DEFERRED"]
-        self.assertEqual(len(deferred), 1)
-
-    def test_never_suggest_again_is_artist_wide_and_idempotent_across_songs(self):
-        key = self.suggestions.suggest(distance="WILDCARD").semantic_key
-        before_deferred = len(
+    def _deferred_activity_count(self) -> int:
+        return len(
             [
                 event
                 for event in self.hq.activity.for_profile()
                 if event.event_type == "SUGGESTION_DEFERRED"
             ]
         )
+
+    def test_next_song_horizon_expires_after_different_song_and_can_be_chosen_again(self):
+        key = self.suggestions.suggest(distance="ADJACENT").semantic_key
+        before_deferred = self._deferred_activity_count()
+
+        first = self.hq.suggestion_deferrals.defer_until_next_song(key)
+        self.assertEqual(first.scope, NEXT_SONG)
+        self.assertEqual(first.song_id, self.song.id)
+        self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(key))
+
+        # Merely starting a later Session in the same Song does not cross the
+        # NEXT_SONG horizon, so repeated explicit calls remain idempotent.
+        self.hq.sessions.close_session(
+            self.session.id,
+            debrief_summary="Keep this pattern parked until another Song",
+            next_action="Continue this Song without that suggestion",
+        )
+        later = self.hq.sessions.start_session(
+            song_id=self.song.id,
+            objective="Return to the same Song in a new Session",
+        )
+        same_horizon = self.hq.suggestion_deferrals.defer_until_next_song(key)
+        self.assertEqual(same_horizon, first)
+        self.assertNotEqual(later.id, first.session_id)
+        self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(key))
+
+        # Selecting a different Song crosses the horizon. The immutable record
+        # remains history, but its suppression effect is finished.
+        other = self.hq.store.create_song("Next Song")
+        self.hq.sessions.start_session(
+            song_id=other.id,
+            objective="Cross the next-Song horizon",
+        )
+        self.assertFalse(self.hq.suggestion_deferrals.is_deferred_now(key))
+
+        # Returning to the source Song does not resurrect an already-satisfied
+        # horizon. The artist can explicitly choose NEXT_SONG again instead.
+        self.hq.store.select_song(self.song.id)
+        self.assertFalse(self.hq.suggestion_deferrals.is_deferred_now(key))
+        second = self.hq.suggestion_deferrals.defer_until_next_song(key)
+        self.assertNotEqual(second.id, first.id)
+        self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(key))
+        self.assertEqual(self._deferred_activity_count(), before_deferred + 2)
+
+    def test_never_suggest_again_is_artist_wide_and_idempotent_across_songs(self):
+        key = self.suggestions.suggest(distance="WILDCARD").semantic_key
+        before_deferred = self._deferred_activity_count()
 
         first = self.hq.suggestion_deferrals.never_suggest_again(key)
         self.assertEqual(first.scope, NEVER_SUGGEST_AGAIN)
@@ -94,14 +103,7 @@ class SuggestionDeferralHorizonTests(unittest.TestCase):
         self.hq.close()
         self.hq = HeadquartersMemory.open(self.tmp.name, profile_id)
         self.assertTrue(self.hq.suggestion_deferrals.is_deferred_now(key))
-        after_deferred = len(
-            [
-                event
-                for event in self.hq.activity.for_profile()
-                if event.event_type == "SUGGESTION_DEFERRED"
-            ]
-        )
-        self.assertEqual(after_deferred, before_deferred + 1)
+        self.assertEqual(self._deferred_activity_count(), before_deferred + 1)
 
     def test_next_song_and_never_are_available_without_a_work_session(self):
         other_tmp = tempfile.TemporaryDirectory()
@@ -140,6 +142,43 @@ class SuggestionDeferralMigrationTests(unittest.TestCase):
                 )
                 deferral_id = "defer_" + "a" * 32
                 semantic_key = "melody:motif-variation"
+                v1_triggers = (
+                    """CREATE TRIGGER suggestion_deferral_binding_valid
+                    BEFORE INSERT ON suggestion_deferrals
+                    WHEN NOT EXISTS (
+                        SELECT 1 FROM songs s
+                        JOIN sessions x ON x.song_id=s.id
+                        WHERE s.id=NEW.song_id
+                          AND s.artist_id=NEW.artist_id
+                          AND x.id=NEW.session_id
+                    )
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Suggestion deferral binding is invalid');
+                    END""",
+                    """CREATE TRIGGER suggestion_deferral_immutable
+                    BEFORE UPDATE ON suggestion_deferrals
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Suggestion deferral history is immutable');
+                    END""",
+                    """CREATE TRIGGER suggestion_deferral_delete_immutable
+                    BEFORE DELETE ON suggestion_deferrals
+                    BEGIN
+                        SELECT RAISE(ABORT, 'Suggestion deferral history is immutable');
+                    END""",
+                    """CREATE TRIGGER suggestion_deferral_activity
+                    AFTER INSERT ON suggestion_deferrals
+                    BEGIN
+                        INSERT INTO activity_events(
+                            id,event_type,artist_id,song_id,version_id,
+                            object_type,object_id,payload_json
+                        ) VALUES(
+                            'act_'||lower(hex(randomblob(16))),
+                            'SUGGESTION_DEFERRED',NEW.artist_id,NEW.song_id,NULL,
+                            'SUGGESTION_DEFERRAL',NEW.id,
+                            '{\"scope\":\"LATER_THIS_SONG\"}'
+                        );
+                    END""",
+                )
                 with store._tx():
                     store._conn.execute(
                         """CREATE TABLE suggestion_deferrals (
@@ -153,45 +192,8 @@ class SuggestionDeferralMigrationTests(unittest.TestCase):
                             UNIQUE(artist_id,song_id,session_id,semantic_key,scope)
                         )"""
                     )
-                    store._conn.executescript(
-                        """
-                        CREATE TRIGGER suggestion_deferral_binding_valid
-                        BEFORE INSERT ON suggestion_deferrals
-                        WHEN NOT EXISTS (
-                            SELECT 1 FROM songs s
-                            JOIN sessions x ON x.song_id=s.id
-                            WHERE s.id=NEW.song_id
-                              AND s.artist_id=NEW.artist_id
-                              AND x.id=NEW.session_id
-                        )
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Suggestion deferral binding is invalid');
-                        END;
-                        CREATE TRIGGER suggestion_deferral_immutable
-                        BEFORE UPDATE ON suggestion_deferrals
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Suggestion deferral history is immutable');
-                        END;
-                        CREATE TRIGGER suggestion_deferral_delete_immutable
-                        BEFORE DELETE ON suggestion_deferrals
-                        BEGIN
-                            SELECT RAISE(ABORT, 'Suggestion deferral history is immutable');
-                        END;
-                        CREATE TRIGGER suggestion_deferral_activity
-                        AFTER INSERT ON suggestion_deferrals
-                        BEGIN
-                            INSERT INTO activity_events(
-                                id,event_type,artist_id,song_id,version_id,
-                                object_type,object_id,payload_json
-                            ) VALUES(
-                                'act_'||lower(hex(randomblob(16))),
-                                'SUGGESTION_DEFERRED',NEW.artist_id,NEW.song_id,NULL,
-                                'SUGGESTION_DEFERRAL',NEW.id,
-                                '{"scope":"LATER_THIS_SONG"}'
-                            );
-                        END;
-                        """
-                    )
+                    for statement in v1_triggers:
+                        store._conn.execute(statement)
                     store._conn.execute(
                         "INSERT INTO metadata(key,value) VALUES(?,?)",
                         ("suggestion_deferral_schema_version", "1"),
