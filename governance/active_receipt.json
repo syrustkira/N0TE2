@@ -21,7 +21,7 @@
     "requirements": ["REQ-SCOPE-115"],
     "increment": "AUDIO-01-SONG-REFERENCES-01"
   },
-  "why_now": "Issue #105 and PR #113 retain bounded ownership of canonical REQ-SCOPE-115's first-class Song Reference evidence seam. The unchanged reference product/test delta has repeatedly passed exact-head Linux, Windows and macOS proof while main advanced through independently owned work. The immediately prior integrated candidate c3adef90a6f8475bb47a89513aeb87fadd54c0db passed GitHub Actions run 33917739157 on Ubuntu, Windows and macOS. Main then advanced only through disjoint first-profile bootstrap, Territory and Entitlement product/test work to 01c688a747d2cfb2608a8ccad3fc0ed12db35f58 without touching governance or Song Reference files. This reconstruction preserves those verified additions and requires fresh exact-head proof of the latest combined composition before merge.",
+  "why_now": "Issue #105 and PR #113 carried the bounded REQ-SCOPE-115 Song Reference evidence claim through repeated disjoint main advancement. Final integrated head fe856d26d0421ef71637602f39ed21ff8cd52e67, directly parented by main 01c688a747d2cfb2608a8ccad3fc0ed12db35f58, passed exact-head cross-platform run 33918811752. PR #113 then merged as 413f82489974fada3578019bd2ba131105660660 and issue #105 closed. AUDIENCE-02 Direct Fan Contact subsequently merged disjointly as 1bf7be00171768090dc7a52cfb77269b2af4e91e without touching governance or Song Reference files, so this governance-only closure preserves that newer product truth.",
   "implementation_contract": {
     "reference_truth": "A Song Reference is evidence for comparison, not a target, quality score, genre-average commandment, mastering instruction or automatic artistic decision.",
     "provenance": "Reference source provenance records how source identity was established. USER_DECLARED, OBSERVED and PROVIDER_VERIFIED remain distinct, and observed/provider evidence requires an explicit source_ref. Provenance does not verify copyright, rights or license status.",
@@ -40,15 +40,16 @@
     "artist notes and decisions remain append-only and bind the exact reference revision that informed them",
     "malformed or conflicting active reference evidence fails closed rather than selecting an arbitrary truth",
     "public reference shape contains no target, rating, rights-verification, loudness-processing or execution-authority fields",
-    "prior exact integrated candidate c3adef90a6f8475bb47a89513aeb87fadd54c0db passed run 33917739157 on Linux, Windows and macOS; latest-main composition must independently pass exact-head verification before merge"
+    "exact integrated head fe856d26d0421ef71637602f39ed21ff8cd52e67 passed run 33918811752 on Linux, Windows and macOS with governance, full regression and staged consumer smoke green before PR #113 merged"
   ],
-  "evidence_classification": "HISTORICAL_VERIFIED_HEAD_REQUIRES_CURRENT_BASE_PROOF",
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
   "evidence_snapshot": {
-    "observed_repository_head": "c3adef90a6f8475bb47a89513aeb87fadd54c0db",
-    "workflow_run_id": 33917739157,
+    "observed_repository_head": "fe856d26d0421ef71637602f39ed21ff8cd52e67",
+    "workflow_run_id": 33918811752,
     "result": "SUCCESS",
     "platforms": ["Linux", "Windows", "macOS"],
-    "execution_note": "The prior integrated Song Reference candidate passed exact checkout, governance, context lifecycle governance, supervision, full regression, staged consumer smoke, evidence upload and exact-head success publication on Ubuntu, Windows and macOS. Main later advanced disjointly through first-profile bootstrap, Territory and Entitlement work, so the prior run is retained as historical evidence and the latest-main reconstruction requires fresh proof."
+    "implementation_merge_sha": "413f82489974fada3578019bd2ba131105660660",
+    "execution_note": "Exact integrated head passed dependency installation, exact checkout, construction governance, context lifecycle governance, supervision, full regression, staged consumer smoke, evidence upload and exact-head success publication on Ubuntu, Windows and macOS. PR #113 then merged that proven bounded product delta as 413f82489974fada3578019bd2ba131105660660 and issue #105 closed."
   },
   "non_scope": [
     "consumer shell integration",
@@ -63,6 +64,6 @@
     "marking AUDIO-01 DONE"
   ],
   "dependencies": ["CORE-01", "CORE-03", "APP-01"],
-  "shared_integration_points": ["Canonical LineageStore and EvidenceMemory only; Performance Timing, Mix Relationship, Engineering Snapshot, Version A/B decision, ConsumerShell, Windows loopback reliability, Career State, Capture Opportunity Bank, Professional Evidence, Rights Evidence, Professional Ethics/Handoff, first-profile bootstrap, Territory, Entitlements, package initialization and provider/DAW mutation remain untouched"],
-  "next_selection_rule": "This bounded reference-evidence foundation is closed. Keep AUDIO-01 PRESERVED and globally reselect from fresh main after exact-head verification and merge; do not automatically add consumer integration by adjacency."
+  "shared_integration_points": ["Canonical LineageStore and EvidenceMemory only; Performance Timing, Mix Relationship, Engineering Snapshot, Version A/B decision, ConsumerShell, Windows loopback reliability, Career State, Capture Opportunity Bank, Professional Evidence, Rights Evidence, Professional Ethics/Handoff, first-profile bootstrap, Territory, Entitlements, Direct Fan Contact, package initialization and provider/DAW mutation remain untouched"],
+  "next_selection_rule": "This bounded reference-evidence foundation is verified, merged and closed. Keep AUDIO-01 PRESERVED and globally reselect from fresh main; do not automatically add consumer integration by adjacency."
 }
