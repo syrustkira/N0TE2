@@ -119,6 +119,8 @@ def test_next_song_choice_is_token_bound_and_crossing_horizon_ends_suppression(
         assert "Not now · later this Song" in result
         assert "Save for next Song" in result
         assert "Never suggest this again" in result
+        assert "After release" not in result
+        assert "Someday" not in result
         assert "These choices change suggestion visibility only and grant no action authority." in result
 
         next_action = action_for_aria(
@@ -183,6 +185,8 @@ def test_no_session_offers_next_song_and_never_but_not_session_horizon(
         assert "Not now · later this Song" not in result
         assert "Save for next Song" in result
         assert "Never suggest this again" in result
+        assert "After release" not in result
+        assert "Someday" not in result
 
         never_action = action_for_aria(
             result,
