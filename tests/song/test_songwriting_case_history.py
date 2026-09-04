@@ -132,7 +132,6 @@ class SongwritingCaseHistoryTests(unittest.TestCase):
         )
 
         self.hq.close()
-        self._cleanups = [cleanup for cleanup in self._cleanups if cleanup[0] != self.hq.close]
         reopened = HeadquartersMemory.open(self.root, profile_id)
         self.addCleanup(reopened.close)
         service = SongwritingCaseHistoryService(reopened.store, reopened.sessions)
