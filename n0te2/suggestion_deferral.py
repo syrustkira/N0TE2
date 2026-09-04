@@ -52,7 +52,11 @@ class SuggestionDeferralMemory:
         "suggestion_deferral_delete_immutable",
         "suggestion_deferral_activity",
     }
-    _INDEX = "suggestion_deferral_unique_binding"
+    _INDEXES = {
+        "suggestion_deferral_unique_later",
+        "suggestion_deferral_unique_next",
+        "suggestion_deferral_unique_never",
+    }
 
     def __init__(self, store: LineageStore, sessions: SessionMemory):
         if not isinstance(store, LineageStore):
@@ -87,6 +91,15 @@ class SuggestionDeferralMemory:
             for row in self._conn.execute(
                 "SELECT name FROM sqlite_master "
                 "WHERE type='trigger' AND name LIKE 'suggestion_deferral_%'"
+            )
+        }
+
+    def _index_names(self) -> set[str]:
+        return {
+            str(row["name"])
+            for row in self._conn.execute(
+                "SELECT name FROM sqlite_master "
+                "WHERE type='index' AND name LIKE 'suggestion_deferral_unique_%'"
             )
         }
 
@@ -135,6 +148,20 @@ class SuggestionDeferralMemory:
         )"""
 
     @staticmethod
+    def _index_statements() -> tuple[str, ...]:
+        return (
+            "CREATE UNIQUE INDEX suggestion_deferral_unique_later "
+            "ON suggestion_deferrals(artist_id,song_id,session_id,semantic_key) "
+            "WHERE scope='LATER_THIS_SONG'",
+            "CREATE UNIQUE INDEX suggestion_deferral_unique_next "
+            "ON suggestion_deferrals(artist_id,song_id,semantic_key) "
+            "WHERE scope='NEXT_SONG'",
+            "CREATE UNIQUE INDEX suggestion_deferral_unique_never "
+            "ON suggestion_deferrals(artist_id,semantic_key) "
+            "WHERE scope='NEVER_SUGGEST_AGAIN'",
+        )
+
+    @staticmethod
     def _trigger_statements() -> tuple[str, ...]:
         return (
             """CREATE TRIGGER suggestion_deferral_binding_valid
@@ -178,15 +205,13 @@ class SuggestionDeferralMemory:
             END""",
         )
 
-    def _create_v2_schema(self) -> None:
+    def _create_v2_schema(self, *, create_triggers: bool = True) -> None:
         self._conn.execute(self._table_statement())
-        self._conn.execute(
-            "CREATE UNIQUE INDEX suggestion_deferral_unique_binding "
-            "ON suggestion_deferrals("
-            "artist_id,song_id,COALESCE(session_id,''),semantic_key,scope)"
-        )
-        for statement in self._trigger_statements():
+        for statement in self._index_statements():
             self._conn.execute(statement)
+        if create_triggers:
+            for statement in self._trigger_statements():
+                self._conn.execute(statement)
 
     def _migrate_v1_to_v2(self) -> None:
         self._validate_v1_before_migration()
@@ -197,7 +222,10 @@ class SuggestionDeferralMemory:
                 self._conn.execute(
                     "ALTER TABLE suggestion_deferrals RENAME TO suggestion_deferrals_v1"
                 )
-                self._create_v2_schema()
+                # Historical v1 rows already emitted Activity when the artist
+                # created them. Copy before installing v2 triggers so migration
+                # preserves history without duplicating those events.
+                self._create_v2_schema(create_triggers=False)
                 self._conn.execute(
                     "INSERT INTO suggestion_deferrals("
                     "seq,id,artist_id,song_id,session_id,semantic_key,scope) "
@@ -205,6 +233,8 @@ class SuggestionDeferralMemory:
                     "FROM suggestion_deferrals_v1 ORDER BY seq"
                 )
                 self._conn.execute("DROP TABLE suggestion_deferrals_v1")
+                for statement in self._trigger_statements():
+                    self._conn.execute(statement)
                 changed = self._conn.execute(
                     "UPDATE metadata SET value=? "
                     "WHERE key='suggestion_deferral_schema_version'",
@@ -289,18 +319,17 @@ class SuggestionDeferralMemory:
             raise LineageCorruptionError(
                 "unsupported suggestion deferral schema version"
             )
-        missing = self._TRIGGERS - self._trigger_names()
-        if missing:
+        missing_triggers = self._TRIGGERS - self._trigger_names()
+        if missing_triggers:
             raise LineageCorruptionError(
-                f"Suggestion deferral integrity hooks are incomplete: {sorted(missing)}"
+                "Suggestion deferral integrity hooks are incomplete: "
+                f"{sorted(missing_triggers)}"
             )
-        index = self._conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='index' AND name=?",
-            (self._INDEX,),
-        ).fetchone()
-        if index is None:
+        missing_indexes = self._INDEXES - self._index_names()
+        if missing_indexes:
             raise LineageCorruptionError(
-                "Suggestion deferral uniqueness hook is missing"
+                "Suggestion deferral uniqueness hooks are incomplete: "
+                f"{sorted(missing_indexes)}"
             )
         for row in self._conn.execute(
             "SELECT seq,id,artist_id,song_id,session_id,semantic_key,scope "
@@ -331,6 +360,51 @@ class SuggestionDeferralMemory:
                         "Suggestion deferral references invalid Session"
                     )
 
+    def _existing(
+        self,
+        *,
+        semantic_key: str,
+        scope: str,
+        song_id: str,
+        session_id: str | None,
+    ) -> SuggestionDeferral | None:
+        select = (
+            "SELECT seq,id,artist_id,song_id,session_id,semantic_key,scope "
+            "FROM suggestion_deferrals WHERE artist_id=? "
+        )
+        if scope == LATER_THIS_SONG:
+            row = self._conn.execute(
+                select
+                + "AND song_id=? AND session_id=? AND semantic_key=? AND scope=? LIMIT 1",
+                (
+                    self.store.primary_artist_id,
+                    song_id,
+                    session_id,
+                    semantic_key,
+                    scope,
+                ),
+            ).fetchone()
+        elif scope == NEXT_SONG:
+            row = self._conn.execute(
+                select + "AND song_id=? AND semantic_key=? AND scope=? LIMIT 1",
+                (
+                    self.store.primary_artist_id,
+                    song_id,
+                    semantic_key,
+                    scope,
+                ),
+            ).fetchone()
+        else:
+            row = self._conn.execute(
+                select + "AND semantic_key=? AND scope=? LIMIT 1",
+                (
+                    self.store.primary_artist_id,
+                    semantic_key,
+                    scope,
+                ),
+            ).fetchone()
+        return None if row is None else self._record(row)
+
     def _defer(self, semantic_key: str, scope: str) -> SuggestionDeferral:
         key = self._normalize_key(semantic_key)
         scope = self._normalize_scope(scope)
@@ -345,20 +419,14 @@ class SuggestionDeferralMemory:
                 "Start a work Session before deferring a suggestion until later this Song"
             )
         session_id = None if session is None else session.id
-        existing = self._conn.execute(
-            "SELECT seq,id,artist_id,song_id,session_id,semantic_key,scope "
-            "FROM suggestion_deferrals WHERE artist_id=? AND song_id=? "
-            "AND session_id IS ? AND semantic_key=? AND scope=? LIMIT 1",
-            (
-                self.store.primary_artist_id,
-                song.id,
-                session_id,
-                key,
-                scope,
-            ),
-        ).fetchone()
+        existing = self._existing(
+            semantic_key=key,
+            scope=scope,
+            song_id=song.id,
+            session_id=session_id,
+        )
         if existing is not None:
-            return self._record(existing)
+            return existing
         deferral_id = f"defer_{uuid.uuid4().hex}"
         try:
             with self.store._tx():
@@ -375,8 +443,19 @@ class SuggestionDeferralMemory:
                         scope,
                     ),
                 )
-        except sqlite3.IntegrityError as exc:
-            raise ValidationError(f"cannot defer suggestion: {exc}") from exc
+        except sqlite3.IntegrityError:
+            # An equivalent explicit decision may have been recorded by a
+            # concurrent caller between the read and insert. Resolve only the
+            # exact scope binding; do not broaden a different decision.
+            existing = self._existing(
+                semantic_key=key,
+                scope=scope,
+                song_id=song.id,
+                session_id=session_id,
+            )
+            if existing is not None:
+                return existing
+            raise ValidationError("cannot persist suggestion deferral safely")
         row = self._conn.execute(
             "SELECT seq,id,artist_id,song_id,session_id,semantic_key,scope "
             "FROM suggestion_deferrals WHERE id=?",
