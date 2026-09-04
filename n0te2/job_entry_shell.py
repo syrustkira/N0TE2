@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import html
+from typing import Callable
+
+from .consumer_shell import ConsumerShell, _FOCUS_SONG_DEFAULT_MODES
 
 _JOB_ORDER = ("MAKE", "FINISH", "MANAGE", "RELEASE", "PERFORM")
-_SONG_BOUND_MODES = {"MAKE", "FINISH"}
 _JOB_COPY = {
     "MAKE": "Create, explore, or get the musical idea moving.",
     "FINISH": "Protect the decisions that move the current work toward done.",
@@ -13,14 +15,16 @@ _JOB_COPY = {
 }
 
 
-def _job_entry_section(shell, state) -> str:  # noqa: ANN001
+def _job_entry_section(shell: ConsumerShell, state) -> str:  # noqa: ANN001
     focus = shell.runtime.headquarters.attention.active_focus()
     active_song = shell.runtime.headquarters.store.active_song()
     active_song_id = None if active_song is None else active_song.id
     forms: list[str] = []
     for mode in _JOB_ORDER:
         token = shell._new_action("focus-set", mode)
-        expected_song_id = active_song_id if mode in _SONG_BOUND_MODES else None
+        expected_song_id = (
+            active_song_id if mode in _FOCUS_SONG_DEFAULT_MODES else None
+        )
         current = (
             focus is not None
             and focus.mode == mode
@@ -64,13 +68,12 @@ def _job_entry_section(shell, state) -> str:  # noqa: ANN001
 
 def install_progressive_job_entry() -> None:
     """Attach artist-first job selection to Home without owning Focus semantics."""
-
-    from .consumer_shell import ConsumerShell
-
     if getattr(ConsumerShell, "_progressive_job_entry_installed", False):
         return
 
-    original_state_content = ConsumerShell._state_content
+    original_state_content: Callable[[ConsumerShell, object], str] = (
+        ConsumerShell._state_content
+    )
 
     def with_progressive_job_entry(self: ConsumerShell, state) -> str:  # noqa: ANN001
         rendered = original_state_content(self, state)
