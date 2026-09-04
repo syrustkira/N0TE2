@@ -37,7 +37,7 @@ def _job_entry_section(shell, state) -> str:  # noqa: ANN001
         )
     else:
         binding = (
-            'You can choose an Artist-wide job now. Make or Finish can bind to the Song after you start or select one.'
+            'You can choose any Artist-wide job now. Start or select a Song before choosing Make or Finish if you want that Focus bound to the Song.'
         )
 
     return (
