@@ -163,7 +163,8 @@ def test_home_starts_artist_wide_jobs_without_song_or_setup(tmp_path: Path) -> N
     assert home.count("What are you here to do?") == 1
     assert all(f"Choose {label}" in home for label in ("Make", "Finish", "Manage", "Release", "Perform"))
     assert "No DAW, AI provider, account, service, send, publish, purchase, or external write is required or authorized by this choice." in home
-    assert "You can choose an Artist-wide job now." in home
+    assert "You can choose any Artist-wide job now." in home
+    assert "Start or select a Song before choosing Make or Finish if you want that Focus bound to the Song." in home
 
     status, _ = post_form(shell, choose_job(home, "Choose Manage"))
     assert status == 303
