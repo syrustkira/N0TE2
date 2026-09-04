@@ -212,10 +212,6 @@ class ApplicationRuntime:
                 f"Headquarters open failed: {exc}",
             )
 
-        # Credits extends the already-installed People consumer surface, so it
-        # must be installed only after the canonical Headquarters composition
-        # has completed its lazy shell installers. Keep this out of memory.py
-        # while parallel Song work owns that shared composition seam.
         try:
             from .credits_shell import install_credits_headquarters
 
