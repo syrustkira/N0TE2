@@ -38,7 +38,7 @@
       "reports_to": "N0TE-SUPERVISOR",
       "purpose": "Select and bound only currently justified N0TE construction work, then become dormant when construction is stable.",
       "boundary": "Temporary build harness machinery; not N0TE and not the persistent cloud coordination plane.",
-      "reason_running": "AUDIO-01-PERFORMANCE-TIMING-01 is the single selected bounded increment after global reselection found canonical REQ-SCOPE-121 Performance Intelligence consumer-incomplete, provider-independent and unowned on stable main 4e8190c38d3ab81bd2f564e54118714c4a284c99.",
+      "reason_running": "No bounded construction increment is currently selected; AUDIO-01-PERFORMANCE-TIMING-01 is closed after exact-head proof and merge, and global product reselection is required before reactivation.",
       "mode": "ACCEPTANCE_BOUND",
       "authority": "SELECT_WITHIN_GOVERNED_SCOPE",
       "allowed_mutations": ["GOVERNANCE_SELECTION","RECEIPT_BOUNDED_REPOSITORY_PATHS"],
@@ -47,7 +47,7 @@
       "failure_policy": {"max_retries":8,"backoff":"BOUNDED_RESELECT_OR_BLOCK","terminal_states":["STABLE","WAITING","BLOCKED"],"on_exhaustion":"STOP_AND_REPORT_BLOCKER"},
       "escalation_target": "USER_ROOT",
       "auto_spawn_successor": false,
-      "lifecycle": {"state":"ACTIVE","last_observation":"Issue #147 durably claimed AUDIO-01-PERFORMANCE-TIMING-01 on stable main; product implementation and exact-head cross-platform proof are not yet complete.","next_wake_condition":"Receipt-bounded implementation, fresh exact-head CI evidence, contradictory repository movement, or a truthful blocker.","health":"DERIVED_FROM_CURRENT_STATE"},
+      "lifecycle": {"state":"DORMANT","last_observation":"AUDIO-01-PERFORMANCE-TIMING-01 is closed after exact-head cross-platform verification and merge; AUDIO-01 remains preserved and the bounded timing lens does not claim full REQ-SCOPE-121 completion.","next_wake_condition":"Global reselection selects one dependency-valid unowned increment from fresh main.","health":"DERIVED_FROM_CURRENT_STATE"},
       "runtime_state_source": "REPOSITORY_GOVERNANCE_STATE",
       "observability": {"exact_head_required":true,"reactivation_is_event":true,"runtime_handoff_artifact":"governance-runtime-handoff.json","observation_artifact":"governance-ci-observation.json"}
     },
