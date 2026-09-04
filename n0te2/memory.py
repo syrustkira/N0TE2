@@ -83,13 +83,11 @@ class HeadquartersMemory:
         # to the same canonical memory composition root.
         from .creative_diagnosis_shell import install_song_creative_diagnosis
         from .creative_suggestions_shell import install_song_creative_suggestions
-        from .host_installations_shell import install_host_installation_inventory
         from .retention_shell import install_song_retention
 
         install_song_retention()
         install_song_creative_suggestions()
         install_song_creative_diagnosis()
-        install_host_installation_inventory()
 
     @classmethod
     def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
