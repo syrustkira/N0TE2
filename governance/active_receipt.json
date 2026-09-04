@@ -1,12 +1,12 @@
 {
   "schema_version": 7,
-  "status": "ACTIVE",
+  "status": "INACTIVE",
   "receipt_id": "N0TE2-SONG-01-DIAGNOSIS-01",
   "node_id": "SONG-01",
   "increment_id": "SONG-01-DIAGNOSIS-01",
   "baseline_sha": "c5a50c56b5a1bc434ba7e3e05c29041905946174",
   "purpose": "Connect a real Song problem to the evidence N0TE can actually verify, keep observations separate from inferences, and present two materially different bounded intervention paths without pretending that N0TE heard, changed or approved the Song.",
-  "product_code_allowed": true,
+  "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
@@ -30,7 +30,7 @@
     "requirements": ["REQ-SCOPE-006", "REQ-SCOPE-140"],
     "increment": "SONG-01-DIAGNOSIS-01"
   },
-  "why_now": "The current Song surface already proves identity, Session objective, managed material, exact local signal evidence, bounded suggestions, audition, Learning decisions and relaunch continuity. The earliest missing signature-loop link is the explicit bridge from the artist's stated problem plus verified evidence to a causally humble diagnosis and materially different alternatives.",
+  "why_now": "Global signature-loop reselection found that the Song surface already had identity, Session objective, managed material, exact local signal evidence, bounded suggestions, audition, Learning decisions and relaunch continuity, while the explicit bridge from the artist's stated problem plus verified evidence to a causally humble diagnosis and materially different alternatives was missing.",
   "implementation_contract": {
     "input_truth": "Artist-entered problem text and current Song/Session context are USER_DECLARED. Exact supported current-Version PCM measurements are OBSERVED. Unsupported or unavailable material remains unavailable.",
     "diagnosis_truth": "Diagnosis statements are bounded hypotheses, never observations and never claims that N0TE subjectively heard the Song.",
@@ -47,8 +47,18 @@
     "no diagnosis result persists as canonical Song state merely by rendering",
     "Song/session changes invalidate the prepared diagnosis",
     "Host/Origin/CSRF/one-shot action protections remain intact",
-    "full regression and staged consumer smoke pass at exact head"
+    "full regression and staged consumer smoke pass at the exact implementation head"
   ],
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
+  "evidence_snapshot": {
+    "observed_repository_head": "88455ed09fc18015931b8f4c36e99a16e81d7c65",
+    "workflow_run_id": 33843511684,
+    "result": "SUCCESS",
+    "platforms": ["Linux", "Windows", "macOS"],
+    "merged_main_sha": "e9c32c9ded4965165f0eef2bf8863760122f83a3",
+    "merged_pull_request": 84,
+    "execution_note": "Exact implementation head passed construction governance, context lifecycle governance, supervision, full regression, staged consumer smoke, observation publication and exact-head status publication on Linux, Windows and macOS before PR #84 merged."
+  },
   "non_scope": [
     "remote AI calls",
     "DAW mutation",
@@ -58,5 +68,6 @@
     "full Musical Object Model",
     "full section-aware audio segmentation",
     "marking SONG-01 DONE"
-  ]
+  ],
+  "next_selection_rule": "This increment is closed. Keep SONG-01 PRESERVED and globally reselect only after proving existing behavior against canonical scope. Create another implementation receipt only for a demonstrated missing behavior; do not extend diagnosis behavior by adjacency."
 }
