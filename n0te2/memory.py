@@ -84,10 +84,12 @@ class HeadquartersMemory:
         from .creative_diagnosis_shell import install_song_creative_diagnosis
         from .creative_suggestions_shell import install_song_creative_suggestions
         from .retention_shell import install_song_retention
+        from .version_compare_shell import install_song_version_compare
 
         install_song_retention()
         install_song_creative_suggestions()
         install_song_creative_diagnosis()
+        install_song_version_compare()
 
     @classmethod
     def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
