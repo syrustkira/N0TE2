@@ -400,9 +400,9 @@ def _next_step(assessment: RoleAssessment) -> str | None:
         )
     requirement = assessment.missing_evidence[0]
     return (
-        f"Capture {requirement.count} verified {requirement.kind} evidence item"
-        f"{'s' if requirement.count != 1 else ''} for {assessment.next_stage_id}; "
-        "keep artist declaration separate until the evidence is observed or externally verified."
+        f"Capture one verified {requirement.kind} evidence item toward "
+        f"{assessment.next_stage_id}; keep artist declaration separate until "
+        "the evidence is observed or externally verified."
     )
 
 
