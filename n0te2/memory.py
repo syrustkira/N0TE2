@@ -89,6 +89,7 @@ class HeadquartersMemory:
         from .creative_suggestions_shell import install_song_creative_suggestions
         from .people_shell import install_people_headquarters
         from .retention_shell import install_song_retention
+        from .rights_evidence_chain_shell import install_rights_evidence_chain
         from .suggestion_feedback_shell import install_song_suggestion_feedback
         from .version_compare_shell import install_song_version_compare
 
@@ -97,6 +98,7 @@ class HeadquartersMemory:
         install_song_suggestion_feedback()
         install_song_creative_diagnosis()
         install_people_headquarters()
+        install_rights_evidence_chain()
         install_song_version_compare()
 
     @classmethod
