@@ -212,6 +212,53 @@ class ApplicationRuntime:
                 f"Headquarters open failed: {exc}",
             )
 
+        try:
+            from .credits_shell import install_credits_headquarters
+
+            install_credits_headquarters()
+        except Exception as exc:
+            try:
+                headquarters.close()
+            except Exception as close_exc:
+                self._state = "RECOVERY_REQUIRED"
+                self._profile_id = profile
+                self._process = process
+                self._lease = lease
+                self._headquarters = headquarters
+                return LaunchResult(
+                    "RECOVERY_REQUIRED",
+                    profile,
+                    lease,
+                    acquired.previous_lease,
+                    f"Credits consumer installation failed and Headquarters could not close safely: {close_exc}",
+                )
+            try:
+                self._leases.release(
+                    profile,
+                    process=process,
+                    lease_nonce=lease.lease_nonce,
+                )
+            except Exception as cleanup_exc:
+                self._state = "RECOVERY_REQUIRED"
+                self._profile_id = profile
+                self._process = process
+                self._lease = lease
+                self._headquarters = None
+                return LaunchResult(
+                    "RECOVERY_REQUIRED",
+                    profile,
+                    lease,
+                    acquired.previous_lease,
+                    f"Credits consumer installation failed and lease cleanup also failed: {cleanup_exc}",
+                )
+            return LaunchResult(
+                "START_FAILED",
+                profile,
+                None,
+                acquired.previous_lease,
+                f"Credits consumer installation failed: {exc}",
+            )
+
         self._state = "RUNNING"
         self._profile_id = profile
         self._process = process
