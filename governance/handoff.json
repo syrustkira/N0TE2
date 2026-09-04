@@ -1,5 +1,5 @@
 {
-  "schema_version": 11,
+  "schema_version": 12,
   "repository": "syrustkira/N0TE2",
   "delivery": {
     "type": "pull_request",
@@ -35,8 +35,8 @@
   "reconstruction": {
     "handoff_first": true,
     "fresh_agent_requires_prior_chat": false,
-    "required_outcomes": ["OPERATING_LAYER_BOUNDARIES","CURRENT_LIFECYCLE","ACTIVE_SELECTION_OR_TERMINAL_STATE","CURRENT_AUTHORITY","OPEN_INCIDENTS","CANONICAL_PRODUCT_SCOPE","AUTOMATION_SUPERVISION","EXTERNAL_EXECUTOR_CAPABILITIES","CONTEXT_POLICY","REMEMBRANCE_RETENTION_CONSULTATION","ACTION_RECEIPT_TRACE","ACCEPTANCE_EVIDENCE_SPINE","CONTINUITY_ACCEPTANCE","DISCOVERY_CLOSURE","UNFINISHED_WORK_CONTINUITY","NEXT_ADMISSIBLE_ACTION"],
-    "required_refs": ["governance/operating_layers.json","governance/executor_capabilities.json","governance/authority.json","governance/invariants.json","governance/context_lifecycle.json","governance/action_receipt_contract.json","governance/acceptance_evidence_spine.json","governance/continuity_acceptance.json","governance/discovery_closure.json","governance/work_continuity.json","governance/external_coordination.py","governance/supervision.py","governance/current_state.json","governance/active_receipt.json","governance/completion_graph.json","governance/requirements.json","governance/automation_registry.json","governance/decisions.jsonl","governance/incidents.jsonl","governance/controller_versions.jsonl","governance/provenance.jsonl","governance/definitions.jsonl","governance/trajectory_audits.jsonl","governance/merge_policy.json","governance/platform_support.json","governance/held_scope.json"],
+    "required_outcomes": ["OPERATING_LAYER_BOUNDARIES","CURRENT_LIFECYCLE","ACTIVE_SELECTION_OR_TERMINAL_STATE","CURRENT_AUTHORITY","OPEN_INCIDENTS","CANONICAL_PRODUCT_SCOPE","AUTOMATION_SUPERVISION","EXTERNAL_EXECUTOR_CAPABILITIES","CONTEXT_POLICY","SEMANTIC_BOUNDARY_TAINT_POLICY","REMEMBRANCE_RETENTION_CONSULTATION","ACTION_RECEIPT_TRACE","ACCEPTANCE_EVIDENCE_SPINE","CONTINUITY_ACCEPTANCE","DISCOVERY_CLOSURE","UNFINISHED_WORK_CONTINUITY","NEXT_ADMISSIBLE_ACTION"],
+    "required_refs": ["governance/operating_layers.json","governance/executor_capabilities.json","governance/authority.json","governance/invariants.json","governance/context_lifecycle.json","governance/semantic_boundaries.json","governance/action_receipt_contract.json","governance/acceptance_evidence_spine.json","governance/continuity_acceptance.json","governance/discovery_closure.json","governance/work_continuity.json","governance/external_coordination.py","governance/supervision.py","governance/current_state.json","governance/active_receipt.json","governance/completion_graph.json","governance/requirements.json","governance/automation_registry.json","governance/decisions.jsonl","governance/incidents.jsonl","governance/controller_versions.jsonl","governance/provenance.jsonl","governance/definitions.jsonl","governance/trajectory_audits.jsonl","governance/merge_policy.json","governance/platform_support.json","governance/held_scope.json"],
     "archaeology_fallback": {
       "normal_startup": false,
       "allowed_only_for": ["MISSING_DURABLE_AUTHORITY","CONTRADICTORY_DURABLE_AUTHORITY"],
