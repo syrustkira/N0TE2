@@ -121,6 +121,13 @@ def test_diagnosis_binding_expires_when_session_or_version_changes(tmp_path: Pat
         assert service(hq).is_current(diagnosis) is True
 
         song = hq.store.active_song()
+        open_session = hq.sessions.latest_for_song(song.id)
+        assert open_session is not None
+        hq.sessions.close_session(
+            open_session.id,
+            debrief_summary="Close the original work Session before starting another.",
+            next_action="Start the newer work Session.",
+        )
         hq.sessions.start_session(song_id=song.id, objective="A newer work Session")
         assert service(hq).is_current(diagnosis) is False
 
