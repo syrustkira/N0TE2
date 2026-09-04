@@ -241,7 +241,7 @@ def test_diagnosis_result_is_ephemeral_across_relaunch(tmp_path: Path) -> None:
 def test_new_session_invalidates_prepared_diagnosis(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    profile_id, song_id, _, _ = seed(data_root)
+    profile_id, song_id, session_id, _ = seed(data_root)
     shell = shell_for(data_root, state_root, 13105, "diagnosis-stale")
     try:
         _, page = get(shell, "/song")
@@ -258,6 +258,11 @@ def test_new_session_invalidates_prepared_diagnosis(tmp_path: Path) -> None:
 
         changer = HeadquartersMemory.open(data_root, profile_id)
         try:
+            changer.sessions.close_session(
+                session_id,
+                debrief_summary="Close the prior Session before changing diagnosis context.",
+                next_action="Start the newer Session objective.",
+            )
             changer.sessions.start_session(song_id=song_id, objective="A newer Session objective")
         finally:
             changer.close()
