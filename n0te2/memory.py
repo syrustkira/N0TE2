@@ -26,6 +26,7 @@ from .shadow import HostShadow
 from .skills import SkillMemory
 from .success import SuccessMemory
 from .suggestion_deferral import SuggestionDeferralMemory
+from .suggestion_feedback import SuggestionFeedbackMemory
 from .transactions import TransactionCoordinator
 from .twins import TwinAwareSongKnowledgeMapService, TwinEvidenceService
 from .workspace import WorkspaceMemory
@@ -57,6 +58,7 @@ class HeadquartersMemory:
         self.transactions = TransactionCoordinator(self.operations)
         self.sessions = SessionMemory(store, self.evidence)
         self.suggestion_deferrals = SuggestionDeferralMemory(store, self.sessions)
+        self.suggestion_feedback = SuggestionFeedbackMemory(store, self.sessions)
         self.skills = SkillMemory(store, self.evidence, self.sessions)
         self.learning = LearningMemory(store, self.sessions)
         self.success = SuccessMemory(self.learning)
@@ -87,10 +89,12 @@ class HeadquartersMemory:
         from .creative_suggestions_shell import install_song_creative_suggestions
         from .people_shell import install_people_headquarters
         from .retention_shell import install_song_retention
+        from .suggestion_feedback_shell import install_song_suggestion_feedback
         from .version_compare_shell import install_song_version_compare
 
         install_song_retention()
         install_song_creative_suggestions()
+        install_song_suggestion_feedback()
         install_song_creative_diagnosis()
         install_people_headquarters()
         install_song_version_compare()
