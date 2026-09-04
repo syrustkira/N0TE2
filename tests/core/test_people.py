@@ -96,10 +96,11 @@ def test_followup_binding_and_close_are_one_way_truth(tmp_path: Path) -> None:
         )
 
         with pytest.raises(sqlite3.IntegrityError):
-            hq.store._conn.execute(
-                "UPDATE people_followups SET summary='silently rewritten' WHERE id=?",
-                (followup.id,),
-            )
+            with hq.store._tx():
+                hq.store._conn.execute(
+                    "UPDATE people_followups SET summary='silently rewritten' WHERE id=?",
+                    (followup.id,),
+                )
 
         canceled = hq.people.cancel_followup(
             followup.id,
