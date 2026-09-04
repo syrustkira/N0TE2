@@ -5,10 +5,22 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
-ANALYZER_VERSION = "AUDIO_ENGINEERING_SNAPSHOT_V2"
+ANALYZER_VERSION = "AUDIO_ENGINEERING_SNAPSHOT_V3"
+LOUDNESS_STANDARD = "ITU-R BS.1770-4"
+LOUDNESS_BACKEND = "pyloudnorm 0.2.0"
+MIN_LOUDNESS_DURATION_SECONDS = 0.4
+MAX_LOUDNESS_SAMPLE_VALUES = 30_000_000
+LOUDNESS_MEASURED = "MEASURED"
+LOUDNESS_TOO_SHORT = "TOO_SHORT"
+LOUDNESS_SILENT = "SILENT"
+LOUDNESS_BOUNDED_OUT = "BOUNDED_OUT"
+LOUDNESS_UNSUPPORTED_CHANNEL_LAYOUT = "UNSUPPORTED_CHANNEL_LAYOUT"
+LOUDNESS_BACKEND_UNAVAILABLE = "BACKEND_UNAVAILABLE"
+LOUDNESS_BACKEND_ERROR = "BACKEND_ERROR"
 MAX_ENGINEERING_BYTES = 256 * 1024 * 1024
 _MAX_DATA_CHUNKS = 64
 _SUPPORTED_BITS = {8, 16, 24, 32}
+_LOUDNESS_SUPPORTED_CHANNELS = {1, 2}
 
 
 class AudioEngineeringError(RuntimeError):
@@ -57,6 +69,10 @@ class EngineeringSnapshot:
     crest_factor_db: float | None
     dc_offset_percent: float
     stereo_correlation: float | None
+    integrated_lufs: float | None
+    loudness_state: str
+    loudness_standard: str
+    loudness_backend: str
 
     @property
     def evidence_only(self) -> bool:
@@ -204,6 +220,38 @@ def _to_dbfs(value: float) -> float | None:
     return 20.0 * math.log10(value)
 
 
+def _prepare_loudness_buffer(layout: _WaveLayout):
+    minimum_frames = math.ceil(layout.sample_rate_hz * MIN_LOUDNESS_DURATION_SECONDS)
+    if layout.frame_count < minimum_frames:
+        return None, LOUDNESS_TOO_SHORT
+    if layout.channels not in _LOUDNESS_SUPPORTED_CHANNELS:
+        return None, LOUDNESS_UNSUPPORTED_CHANNEL_LAYOUT
+    sample_values = layout.frame_count * layout.channels
+    if sample_values > MAX_LOUDNESS_SAMPLE_VALUES:
+        return None, LOUDNESS_BOUNDED_OUT
+    try:
+        import numpy as np
+    except ImportError:
+        return None, LOUDNESS_BACKEND_UNAVAILABLE
+    return np.empty(sample_values, dtype=np.float32), "PENDING"
+
+
+def _measure_integrated_loudness(buffer, *, layout: _WaveLayout) -> tuple[float | None, str]:
+    try:
+        import pyloudnorm as pyln
+    except ImportError:
+        return None, LOUDNESS_BACKEND_UNAVAILABLE
+    try:
+        samples = buffer if layout.channels == 1 else buffer.reshape((layout.frame_count, layout.channels))
+        meter = pyln.Meter(layout.sample_rate_hz)
+        measured = float(meter.integrated_loudness(samples))
+    except (ValueError, RuntimeError, TypeError, FloatingPointError, OverflowError):
+        return None, LOUDNESS_BACKEND_ERROR
+    if not math.isfinite(measured):
+        return None, LOUDNESS_BACKEND_ERROR
+    return measured, LOUDNESS_MEASURED
+
+
 def analyze_pcm_wave(
     path: str | Path,
     *,
@@ -211,8 +259,11 @@ def analyze_pcm_wave(
 ) -> EngineeringSnapshot:
     """Measure one exact verified PCM WAV without mutating or persisting anything.
 
-    This is deliberately a signal-evidence primitive. It does not estimate LUFS,
-    true peak, mastering quality, taste, or a preferred artistic decision.
+    The snapshot reports signal evidence only. Integrated programme loudness uses
+    ITU-R BS.1770-4 through the pinned pyloudnorm backend when the material is
+    inside this increment's bounded mono/stereo contract. It does not measure
+    true peak, certify standards conformance, infer mastering quality, choose a
+    loudness target, or make an artistic decision.
     """
 
     media_path = Path(path)
@@ -233,6 +284,8 @@ def analyze_pcm_wave(
     peaks = [0.0] * channels
     stereo_product = 0.0
     frames_seen = 0
+    sample_values_seen = 0
+    loudness_buffer, loudness_state = _prepare_loudness_buffer(layout)
 
     with media_path.open("rb") as source:
         for offset, chunk_size in layout.data_chunks:
@@ -259,11 +312,14 @@ def analyze_pcm_wave(
                         sums[channel] += value
                         sums_sq[channel] += value * value
                         peaks[channel] = max(peaks[channel], abs(value))
+                        if loudness_buffer is not None:
+                            loudness_buffer[sample_values_seen] = value
+                        sample_values_seen += 1
                     if channels == 2:
                         stereo_product += values[0] * values[1]
                     frames_seen += 1
 
-    if frames_seen != layout.frame_count:
+    if frames_seen != layout.frame_count or sample_values_seen != sample_count:
         raise CorruptEngineeringMedia("PCM frame count changed during engineering analysis")
     if media_path.stat().st_size != binding.source_size_bytes:
         raise CorruptEngineeringMedia("engineering material size changed during engineering analysis")
@@ -290,6 +346,21 @@ def analyze_pcm_wave(
         if denominator > 0.0:
             correlation = max(-1.0, min(1.0, covariance / denominator))
 
+    integrated_lufs = None
+    if loudness_buffer is not None:
+        if sample_peak <= 0.0:
+            loudness_state = LOUDNESS_SILENT
+        else:
+            integrated_lufs, loudness_state = _measure_integrated_loudness(
+                loudness_buffer,
+                layout=layout,
+            )
+
+    if media_path.stat().st_size != binding.source_size_bytes:
+        raise CorruptEngineeringMedia("engineering material size changed before evidence return")
+    if _sha256_file(media_path) != binding.sha256:
+        raise CorruptEngineeringMedia("engineering material fingerprint changed before evidence return")
+
     return EngineeringSnapshot(
         binding=binding,
         analyzer_version=ANALYZER_VERSION,
@@ -303,4 +374,8 @@ def analyze_pcm_wave(
         crest_factor_db=crest,
         dc_offset_percent=dc_offset,
         stereo_correlation=correlation,
+        integrated_lufs=integrated_lufs,
+        loudness_state=loudness_state,
+        loudness_standard=LOUDNESS_STANDARD,
+        loudness_backend=LOUDNESS_BACKEND,
     )

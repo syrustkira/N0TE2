@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+import re
 import struct
 from io import BytesIO
 from pathlib import Path
@@ -45,6 +47,17 @@ def pcm16_stereo_wav() -> bytes:
     data = b"".join(struct.pack("<hh", *frame) for frame in frames)
     fmt = struct.pack("<HHIIHH", 1, 2, 8000, 8000 * 4, 4, 16)
     payload = b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data
+    return b"RIFF" + struct.pack("<I", 4 + len(payload)) + b"WAVE" + payload
+
+
+def pcm16_sine_wav(*, amplitude: int = 12000, rate: int = 48000, duration_seconds: float = 1.0) -> bytes:
+    frame_count = int(rate * duration_seconds)
+    data = bytearray()
+    for frame in range(frame_count):
+        sample = int(round(amplitude * math.sin(2.0 * math.pi * 1000.0 * frame / rate)))
+        data.extend(struct.pack("<hh", sample, sample))
+    fmt = struct.pack("<HHIIHH", 1, 2, rate, rate * 4, 4, 16)
+    payload = b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + bytes(data)
     return b"RIFF" + struct.pack("<I", 4 + len(payload)) + b"WAVE" + payload
 
 
@@ -111,12 +124,16 @@ def test_current_verified_wav_exposes_read_only_engineering_evidence_without_ide
         assert "-6.02 dBFS" in page
         assert "RMS" in page
         assert "-9.03 dBFS" in page
+        assert "Integrated loudness" in page
+        assert "not measured · shorter than the 400 ms integrated-loudness window" in page
+        assert "ITU-R BS.1770-4 programme loudness" in page
         assert "Crest factor" in page
         assert "3.01 dB" in page
         assert "DC offset" in page
         assert "Stereo correlation" in page
         assert "+1.000" in page
         assert "Sample peak is not true peak. RMS is not LUFS." in page
+        assert "not a conformance certification, mastering target, mix score, or artistic recommendation" in page
         assert "Measurements can help an engineer inspect the signal; they do not decide whether the music is good or finished." in page
         for forbidden in (
             profile_id,
@@ -144,6 +161,30 @@ def test_current_verified_wav_exposes_read_only_engineering_evidence_without_ide
         reopened.close()
 
 
+def test_normal_song_surface_exposes_finite_bs1770_loudness_for_supported_programme(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    seed(data_root, payload=pcm16_sine_wav(), filename="loudness-proof.wav")
+    shell = shell_for(data_root, state_root, pid=9975, token="engineering-loudness")
+    try:
+        status, page = get(shell, "/song")
+        assert status == 200
+        assert "loudness-proof.wav" in page
+        assert "<strong>Integrated loudness</strong>" in page
+        match = re.search(r"(-?\d+\.\d{2}) LUFS", page)
+        assert match is not None
+        measured = float(match.group(1))
+        assert math.isfinite(measured)
+        assert measured < 0.0
+        assert "ITU-R BS.1770-4 programme loudness" in page
+        assert "not a conformance certification" in page
+        assert "mastering target" in page
+        assert "mix score" in page
+        assert "artistic recommendation" in page
+    finally:
+        shell.stop()
+
+
 def test_unsupported_float_wav_is_truthful_and_does_not_invent_metrics(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
@@ -158,6 +199,7 @@ def test_unsupported_float_wav_is_truthful_and_does_not_invent_metrics(tmp_path:
         assert "N0TE shows no invented substitute measurements." in page
         assert "<strong>Sample peak</strong>" not in page
         assert "<strong>RMS</strong>" not in page
+        assert "<strong>Integrated loudness</strong>" not in page
     finally:
         shell.stop()
 
@@ -179,6 +221,7 @@ def test_corrupted_managed_wav_never_surfaces_stale_engineering_numbers(tmp_path
         assert "Protected integrity problem" in page
         assert "<h2>Engineering Snapshot</h2>" not in page
         assert "-6.02 dBFS" not in page
+        assert " LUFS" not in page
     finally:
         shell.stop()
 
