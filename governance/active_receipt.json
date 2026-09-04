@@ -1,67 +1,77 @@
 {
   "schema_version": 7,
   "status": "INACTIVE",
-  "receipt_id": "N0TE2-SONG-01-AB-COMPARE-01",
-  "node_id": "SONG-01",
-  "increment_id": "SONG-01-AB-COMPARE-01",
-  "baseline_sha": "e4246d92403ddab05ecc58190639dbc2e9ef3739",
-  "purpose": "Give the artist one read-only consumer A/B surface for two exact local Song Versions, with truthful whole-render level-bias evidence when available and no fabricated loudness match or artistic decision.",
+  "receipt_id": "N0TE2-UX-01-WINDOWS-LOOPBACK-01",
+  "node_id": "UX-01",
+  "increment_id": "UX-01-WINDOWS-LOOPBACK-01",
+  "baseline_sha": "720f650b48cbbd12d163f28cb0893f98fce4f781",
+  "purpose": "Repair the recurring Windows loopback POST transport failure without weakening Host, Origin, CSRF, replay or action-binding protections: normal-sized request bytes rejected before parsing are drained at the existing shell response boundary so Windows can deliver the intended HTTP rejection instead of aborting the local TCP connection.",
   "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
   "allowed_exact_paths": [
-    "n0te2/version_compare.py",
-    "n0te2/version_compare_shell.py",
-    "n0te2/memory.py",
-    "tests/song/test_version_compare.py",
-    "tests/song/test_song_version_compare_consumer.py"
+    "n0te2/__init__.py",
+    "n0te2/loopback_transport_shell.py",
+    "tests/ux/test_windows_loopback_transport.py"
   ],
   "allowed_prefixes": ["governance/"],
   "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The artist can hear the exact current Song Version beside one exact lineage neighbor and see whether measured whole-render RMS level difference could bias the comparison, without N0TE applying gain or pretending a listening decision occurred.",
-    "journeys": ["J-IDEA-SONG", "J-TRUST"],
-    "capability": "Exact local Version A/B audition with bounded level-bias evidence",
-    "requirements": ["REQ-SCOPE-010"],
-    "increment": "SONG-01-AB-COMPARE-01"
+    "outcome": "A local N0TE action that is correctly rejected by security policy still returns its truthful HTTP rejection reliably on Windows instead of intermittently collapsing into a socket abort, while rejected actions remain unauthorized and unconsumed.",
+    "journeys": ["J-TRUST", "J-WHAT-NEXT"],
+    "capability": "Cross-platform local consumer-shell transport reliability for bounded rejected POST requests",
+    "requirements": ["REQ-SCOPE-149", "REQ-SCOPE-145"],
+    "increment": "UX-01-WINDOWS-LOOPBACK-01"
   },
-  "why_now": "Global reselection found REQ-SCOPE-010's Hear-to-Compare experience consumer-incomplete while exact Version lineage, managed local material, safe audition streaming and bounded PCM engineering evidence already existed. This bounded integration reused those foundations without modifying the diagnosis workline.",
+  "why_now": "INC-2026-09-03-WINDOWS-LOOPBACK-RECURRENCE-001 explicitly reopened this transport class after repeated Windows-only loopback failures. The same WinError 10053 signature recurred during later exact-head verification of unrelated Song work. No other workline owned loopback transport reliability when this bounded repair was selected.",
+  "reuse": {
+    "mode": "EXISTING_SHELL_EXTENSION_PATTERN_PLUS_PYTHON_STDLIB_BOUNDED_DRAIN",
+    "n0te2_dependencies": ["ConsumerShell", "BaseHTTPRequestHandler", "existing shell installer pattern", "existing exact Host/Origin/CSRF/one-shot action checks"],
+    "direct_copy": false,
+    "new_dependency": false,
+    "new_server_framework": false
+  },
   "implementation_contract": {
-    "pair_binding": "Compare the active Song current Version with its exact canonical parent when available. Otherwise use the nearest earlier same-Song Version, or the nearest later same-Song Version when the artist has resumed the earliest Version; never manufacture a placeholder alternate.",
-    "audition_truth": "Only verified managed media accepted by the existing audition inspector receives an opaque local media grant; stale or tampered grants fail closed through existing shell checks.",
-    "level_truth": "When both sides are supported exact integer PCM WAVs, whole-render RMS difference may be shown only as signal-level bias evidence. RMS is explicitly not LUFS and unavailable evidence stays unavailable.",
-    "mutation": "Opening or hearing A/B creates no Song Version, approval, Learning episode, preference, provider call, DAW operation, gain processing or artistic decision.",
-    "artist_authority": "KEEP, REVERT, REVISE and INCONCLUSIVE remain separate explicit artist decisions outside this bounded increment."
+    "security_order": "Existing handlers decide rejection before cleanup. The extension only drains raw bounded bytes after the response decision and never parses, authorizes or consumes an action token.",
+    "bounded_drain": "Only POST bodies with a non-negative Content-Length within the existing form-size ceiling and no Transfer-Encoding are eligible. Unknown, malformed, chunked or oversized bodies are never trusted as normal form input.",
+    "response_semantics": "Existing HTTP status codes, response bodies and user-visible security meaning remain unchanged.",
+    "action_semantics": "A hostile-Origin attempt does not consume its one-shot action; a later valid request may still use the exact action once, after which replay remains rejected.",
+    "composition": "Install through N0TE's existing shell-extension composition pattern so base and later-added POST routes share one transport cleanup behavior without duplicating route dispatch.",
+    "platform_semantics": "The repair is platform-neutral product code. Windows recurrence motivated the repair but did not create a Windows-specific N0TE semantic fork."
   },
   "completion_proof": [
-    "normal Song consumer path exposes one A/B compare entry point when at least two Versions exist",
-    "compare surface names exact human-readable Version ordinals and labels without leaking private IDs or local paths",
-    "comparison remains available after the artist resumes the earliest Version by selecting the nearest later same-Song peer rather than fabricating no-reference state",
-    "both verified auditionable sides use existing stale-safe opaque local media grants",
-    "supported exact PCM sides surface whole-render RMS/sample-peak evidence with explicit RMS-not-LUFS language",
-    "unsupported, unmeasured, silent or corrupted evidence never becomes fabricated loudness matching",
-    "rendering and media playback do not mutate current/approved Version, Version lineage, Activity or Learning state",
-    "full regression and staged consumer smoke pass at exact head"
+    "real loopback regression repeats bounded hostile-Origin POST rejection 64 times without socket abort and receives HTTP 403",
+    "real loopback regression repeats bounded unknown-route rejection 16 times and receives HTTP 404",
+    "real loopback regression repeats unsupported normal-sized media rejection 16 times and receives HTTP 403",
+    "all rejected requests leave the exact one-shot profile action untouched; the valid local Origin consumes it once and replay remains 409",
+    "no profile or action authority is created by rejected request bytes",
+    "full regression and staged consumer smoke pass at exact heads on Linux, Windows and macOS"
   ],
-  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
+  "evidence_classification": "VERIFIED_RECONSTRUCTED_CROSS_PLATFORM",
   "evidence_snapshot": {
-    "observed_repository_head": "cc1c5c3f5db5e9092a37267f39626e5bfe0b98a4",
-    "workflow_run_id": 33870035901,
+    "original_implementation_head": "ddb89fa7d67d3fe98c984675d04b16713ae2a6eb",
+    "original_workflow_run_id": 33845222028,
+    "original_closure_head": "e751c7226937cf19189d2574e8ba478f87948c46",
+    "original_closure_workflow_run_id": 33845572974,
+    "rebased_verified_head": "ccb9b8a16d744426fa03e86dca35e21bb9807704",
+    "rebased_workflow_run_id": 33870124869,
     "result": "SUCCESS",
     "platforms": ["Linux", "Windows", "macOS"],
-    "execution_note": "Exact reconstructed implementation head passed the required N0TE2 Governance workflow before PR #93 merged as 7a9ea14aaf042165a0718c1a94ba81429ca5d685."
+    "execution_note": "The bounded repair passed first-attempt exact-head governance, full regression and staged consumer smoke on all three peer platforms at the original implementation, closure, and a later disjoint-main reconstruction. This receipt is reconstructed over stable main 720f650b48cbbd12d163f28cb0893f98fce4f781 after the A/B owner retired its construction controller; the final integration head must independently pass the same cross-platform workflow before merge."
   },
   "non_scope": [
-    "automatic or rendered loudness normalization",
-    "claiming RMS is LUFS or perceptual loudness",
-    "provider or DAW mutation",
-    "new Song Version creation",
-    "automatic approval or artist decision",
-    "Learning or taste promotion from passive comparison",
-    "full REQ-SCOPE-010 completion",
-    "marking SONG-01 DONE"
+    "creative diagnosis behavior",
+    "Try/Hear/Compare/Decide",
+    "career role ladders",
+    "DAW or provider execution",
+    "threaded HTTP serving",
+    "the separate historical valid profile-create timeout",
+    "weakening hostile-Origin or CSRF assertions",
+    "changing action authority semantics",
+    "new network dependencies",
+    "marking UX-01 or REQ-SCOPE-149 complete"
   ],
-  "next_selection_rule": "This bounded A/B comparison increment is closed. Keep SONG-01 preserved, return construction to STABLE, and globally reselect from fresh main rather than automatically extending this feature by adjacency."
+  "next_selection_rule": "This bounded rejected-POST transport repair is closed. Keep the broader Windows loopback recurrence incident monitored for the separately observed valid profile-create timeout, and globally reselect without extending transport work by adjacency."
 }

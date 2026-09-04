@@ -431,3 +431,7 @@ install_song_audio_engineering()
 from .now_thread_shell import install_now_thread
 
 install_now_thread()
+
+from .loopback_transport_shell import install_loopback_transport_reliability
+
+install_loopback_transport_reliability()
