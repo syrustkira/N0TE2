@@ -72,6 +72,26 @@ def test_compare_uses_exact_current_parent_and_reports_only_rms_level_delta(tmp_
         hq.close()
 
 
+def test_resumed_earliest_version_compares_to_nearest_later_peer(tmp_path: Path) -> None:
+    hq = HeadquartersMemory.create(tmp_path / "data", "Compare Artist")
+    try:
+        song = hq.store.create_song("Compare Song")
+        first = ingest(hq, song.id, "first.wav", pcm16_mono_wav(5000))
+        second = ingest(hq, song.id, "second.wav", pcm16_mono_wav(7000))
+        ingest(hq, song.id, "third.wav", pcm16_mono_wav(9000))
+        hq.store.set_current_version(song.id, first.version.id)
+
+        comparison = service(hq).prepare()
+
+        assert comparison.status == "READY"
+        assert comparison.current is not None and comparison.reference is not None
+        assert comparison.current.version_id == first.version.id
+        assert comparison.reference.version_id == second.version.id
+        assert comparison.reference.ordinal == 2
+    finally:
+        hq.close()
+
+
 def test_auditionable_unmeasured_audio_never_becomes_fake_loudness_evidence(tmp_path: Path) -> None:
     hq = HeadquartersMemory.create(tmp_path / "data", "Compare Artist")
     try:
