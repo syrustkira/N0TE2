@@ -1,12 +1,12 @@
 {
   "schema_version": 7,
-  "status": "ACTIVE",
+  "status": "INACTIVE",
   "receipt_id": "N0TE2-AUDIO-01-MIX-RELATIONSHIPS-01",
   "node_id": "AUDIO-01",
   "increment_id": "AUDIO-01-MIX-RELATIONSHIPS-01",
   "baseline_sha": "d47849e8978e0bf285a3ad23bf1c8a8b08586681",
   "purpose": "Give the artist one read-only current-Version Mix Relationships view over exact verified local PCM Assets, exposing level, dynamics, stereo and bounded sampled spectral-overlap evidence without duplicating a DAW mixer or converting engineering evidence into artistic judgment.",
-  "product_code_allowed": true,
+  "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
@@ -27,7 +27,7 @@
     "requirements": ["REQ-SCOPE-056"],
     "increment": "AUDIO-01-MIX-RELATIONSHIPS-01"
   },
-  "why_now": "Global reselection found REQ-SCOPE-056 unowned and consumer-incomplete while exact current-Version material identity, verified managed PCM bytes, whole-render Engineering Snapshot metrics and standards-based loudness evidence already exist. The unchanged relationship delta has already passed exact-head cross-platform proof on earlier reconstructed baselines, but main continued to advance through disjoint occupational-safety, Person-identity, Fan Journey, Monitoring Context, Obligation Graph and suggestion-feedback work. It is therefore reconstructed atomically once more onto current stable main d47849e8978e0bf285a3ad23bf1c8a8b08586681 so every newly merged independent foundation is present during fresh exact-head proof.",
+  "why_now": "Global reselection found REQ-SCOPE-056 unowned and consumer-incomplete while exact current-Version material identity, verified managed PCM bytes, whole-render Engineering Snapshot metrics and standards-based loudness evidence already existed. The unchanged relationship delta was repeatedly reconstructed over disjoint main advances rather than merging stale governance state, then received fresh exact-head proof on current main before integration.",
   "instead_of_what": "Do not build mixer controls, a second audio store, a masking score, an automatic EQ/pan/compression engine, or another Version/A-B system. Reuse current canonical Version Assets and existing exact engineering evidence.",
   "implementation_contract": {
     "pair_binding": "Every relationship compares two distinct canonical Assets attached to the exact same active Song current Version. Existing Song/Version/Asset fingerprints and managed-byte size checks are reused and reverified around analysis.",
@@ -45,9 +45,16 @@
     "spectral overlap is described only as a sampled broad-band screening cue and never as a masking verdict, mix score or required processing move",
     "rendered consumer output leaks no private IDs, managed URIs or local paths and mutates no product state",
     "existing Engineering Snapshot and merged Version A/B decision behavior remain regression-compatible",
-    "full regression and staged consumer smoke pass at the reconstructed exact head on Linux, Windows and macOS"
+    "full regression and staged consumer smoke passed at the exact integrated implementation head on Linux, Windows and macOS"
   ],
-  "evidence_classification": "RECONSTRUCTED_IMPLEMENTATION_REQUIRES_EXACT_HEAD_PROOF",
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
+  "evidence_snapshot": {
+    "observed_repository_head": "8f5b302b94147b36052916b01cbb3f7b2c5385c5",
+    "workflow_run_id": 33878838307,
+    "result": "SUCCESS",
+    "platforms": ["Linux", "Windows", "macOS"],
+    "execution_note": "Exact implementation head passed dependency installation, construction governance, context lifecycle governance, supervision, full regression, staged consumer smoke, evidence upload and exact-head success publication on Ubuntu, Windows and macOS before PR #127 merged as c77a6a9126abe4043b1bc53fede616af61d819d7."
+  },
   "non_scope": [
     "DAW mixer controls or redundant mixer UI",
     "automatic EQ, pan, gain, compression, limiting or mastering moves",
@@ -61,5 +68,5 @@
   ],
   "dependencies": ["CORE-01", "CORE-03", "APP-01"],
   "shared_integration_points": ["Existing audio_engineering_shell Song-card composition only; package initialization, HeadquartersMemory, Version compare/decision and persistence schemas remain untouched"],
-  "next_selection_rule": "After exact-head proof and integration, close this bounded receipt, return AUDIO-01 to PRESERVED, refresh live product truth and globally reselect rather than extending Audio Intelligence by adjacency."
+  "next_selection_rule": "This bounded relationship-evidence increment is closed. Keep AUDIO-01 PRESERVED and globally reselect from fresh main; do not automatically extend Audio Intelligence by adjacency."
 }
