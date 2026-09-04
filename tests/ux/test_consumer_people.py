@@ -174,7 +174,7 @@ def test_artist_can_add_person_track_song_bound_followup_and_resolve_it(
         assert "I owe this" in page
         assert "Due 2026-09-12" in page
         assert "Song: People UX Song" in page
-        assert "did not message anyone" not in page
+        assert "did not message anyone or create an external reminder" in page
         assert "person_" not in page
         assert "followup_" not in page
 
