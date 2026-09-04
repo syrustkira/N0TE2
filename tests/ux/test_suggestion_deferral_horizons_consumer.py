@@ -260,7 +260,7 @@ def test_stale_never_action_cannot_promote_old_session_suggestion_to_artist_pref
             {"csrf": shell._csrf, "action": never_action},
         )
         assert status == 409
-        assert "work context changed" in rejected
+        assert "already handled or expired" in rejected
     finally:
         shell.stop()
 
