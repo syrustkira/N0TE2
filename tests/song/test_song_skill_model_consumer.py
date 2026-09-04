@@ -318,14 +318,17 @@ def test_skill_actions_enforce_origin_csrf_replay_and_stale_correction(tmp_path:
             assistance="SOME",
             confidence="MEDIUM",
         )
-        status, _, _ = request(
+        # The Origin gate runs before form-body consumption. A bodyless attack
+        # request isolates that security boundary and avoids a Windows socket
+        # reset caused by rejecting while urllib is still transmitting a body.
+        status, body, _ = request(
             shell,
             "/skill/declare",
             method="POST",
-            fields=foreign,
             origin="https://attacker.example",
         )
         assert status == 403
+        assert "That action did not come from this N0TE window." in body
         assert skill_state(data_root, profile_id, "EQ").latest_assessment is None
 
         bad_csrf = dict(foreign)
