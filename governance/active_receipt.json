@@ -13,7 +13,6 @@
   "allowed_exact_paths": [
     "n0te2/host_installations.py",
     "n0te2/host_installations_shell.py",
-    "n0te2/memory.py",
     "tests/daw/test_host_installations.py",
     "tests/ux/test_host_installations_consumer.py"
   ],
@@ -27,9 +26,9 @@
     "requirements": ["REQ-SCOPE-012"],
     "increment": "DAW-00-INSTALLATIONS-01"
   },
-  "why_now": "DAW-00 is dependency-ready because CORE-03 and CORE-04 are DONE. Canonical REQ-SCOPE-012 requires peer-DAW continuity and explicitly separates detection from support. Current host identity and capability evidence foundations accept supplied observations but do not provide a consumer-reachable bounded local installation inventory.",
+  "why_now": "DAW-00 is dependency-ready because CORE-03 and CORE-04 are DONE. Canonical REQ-SCOPE-012 requires peer-DAW continuity and explicitly separates detection from support. Current host identity and capability evidence foundations accept supplied observations but do not provide a bounded local installation inventory. The shared Headquarters composition root remains unclaimed here while PR #93 owns it; integration will occur only after that workline releases the file.",
   "implementation_contract": {
-    "positive_truth": "Only a safe regular installation entry found inside a bounded standard root may be reported as OBSERVED local installation evidence.",
+    "positive_truth": "Only a safe regular installation entry found inside a bounded absolute standard root may be reported as OBSERVED local installation evidence.",
     "negative_truth": "No match is UNKNOWN, never proof that a DAW is absent or unsupported.",
     "support_boundary": "Installation observation never creates HostRuntimeIdentity, CapabilityObservation, adapter support, process liveness, preference, or execution eligibility.",
     "privacy": "The consumer surface names the DAW family and observation class but never exposes local filesystem paths.",
@@ -39,12 +38,12 @@
   "completion_proof": [
     "bounded standard-location scanner reports positive peer-DAW installation observations on supported platform layouts",
     "non-detection remains explicitly UNKNOWN rather than MISSING or UNSUPPORTED",
-    "symlink or root-escape candidates cannot establish positive installation evidence",
+    "relative, symlink or root-escape candidates cannot establish positive installation evidence",
     "installation observations carry no support, capability, health, preference, process or execution fields",
-    "Settings exposes the inventory read-only without private filesystem paths",
+    "Settings exposes the inventory read-only without private filesystem paths after the shared integration point is free",
     "consumer copy states that detected installation is not adapter support or control",
     "rendering or rescanning creates no durable Artist/Song/capability state and launches nothing",
-    "full regression and staged consumer smoke pass at exact head"
+    "full regression and staged consumer smoke pass at exact integrated head"
   ],
   "non_scope": [
     "DAW launch or process detection",
