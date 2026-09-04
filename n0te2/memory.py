@@ -81,11 +81,13 @@ class HeadquartersMemory:
         # constructed only after package import, avoiding a consumer_shell <->
         # memory import cycle while keeping artist-facing projections attached
         # to the same canonical memory composition root.
+        from .creative_diagnosis_shell import install_song_creative_diagnosis
         from .creative_suggestions_shell import install_song_creative_suggestions
         from .retention_shell import install_song_retention
 
         install_song_retention()
         install_song_creative_suggestions()
+        install_song_creative_diagnosis()
 
     @classmethod
     def _compose_owned_store(cls, store: LineageStore) -> "HeadquartersMemory":
@@ -107,7 +109,7 @@ class HeadquartersMemory:
     def close(self) -> None:
         self.store.close()
 
-    def __enter__(self) -> "HeadquartersMemory":
+    def __enter__(self, exc_type, exc, tb) -> None:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
