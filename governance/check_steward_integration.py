@@ -84,6 +84,15 @@ def git(repo: Path, *args: str) -> str:
     ).strip()
 
 
+def git_json(repo: Path, ref: str, path: str) -> dict:
+    try:
+        value = json.loads(git(repo, "show", f"{ref}:{path}"))
+    except Exception as exc:
+        raise StewardIntegrationError(f"cannot load {path} from base {ref}: {exc}") from exc
+    require(isinstance(value, dict), f"{path} at base {ref} must contain a JSON object")
+    return value
+
+
 def check_canonical_extensions(repo: Path) -> None:
     doc = load_json(repo / "governance/requirements.json")
     graph_doc = load_json(repo / "governance/completion_graph.json")
@@ -221,6 +230,53 @@ def candidate_changed_paths(repo: Path) -> list[str]:
     return [path for path in changed.splitlines() if path]
 
 
+def check_terminal_graph_resequencing(repo: Path, verify_git: bool) -> None:
+    if not verify_git:
+        return
+    current = load_json(repo / "governance/current_state.json")
+    if current.get("lifecycle_state") not in TERMINAL_LIFECYCLE_STATES:
+        return
+    changed = candidate_changed_paths(repo)
+    if "governance/completion_graph.json" not in changed:
+        return
+    base = candidate_base(repo)
+    require(base is not None, "terminal completion-graph change has no verifiable base")
+    base_current = git_json(repo, base, "governance/current_state.json")
+    require(
+        base_current.get("lifecycle_state") == "ACTIVE",
+        "terminal candidate cannot resequence completion graph from a non-ACTIVE base; reactivate construction with a bounded receipt first",
+    )
+    base_graph = git_json(repo, base, "governance/completion_graph.json")
+    candidate_graph = load_json(repo / "governance/completion_graph.json")
+    require(
+        base_graph.get("schema_version") == candidate_graph.get("schema_version"),
+        "terminal closure cannot change completion-graph schema",
+    )
+    base_nodes = {row.get("id"): row for row in base_graph.get("nodes", []) if isinstance(row, dict)}
+    candidate_nodes = {row.get("id"): row for row in candidate_graph.get("nodes", []) if isinstance(row, dict)}
+    require(base_nodes.keys() == candidate_nodes.keys(), "terminal closure cannot add or remove completion nodes")
+    active_base = [node_id for node_id, row in base_nodes.items() if row.get("state") == "ACTIVE"]
+    require(len(active_base) == 1, "terminal graph closure requires exactly one ACTIVE base node")
+    for node_id, base_row in base_nodes.items():
+        candidate_row = candidate_nodes[node_id]
+        base_structure = {key: value for key, value in base_row.items() if key != "state"}
+        candidate_structure = {key: value for key, value in candidate_row.items() if key != "state"}
+        require(
+            base_structure == candidate_structure,
+            f"terminal closure cannot change completion-graph dependencies or semantics: {node_id}",
+        )
+        if node_id == active_base[0]:
+            require(
+                candidate_row.get("state") in {"PRESERVED", "DONE"},
+                "terminal closure must close the previously ACTIVE node",
+            )
+        else:
+            require(
+                candidate_row.get("state") == base_row.get("state"),
+                f"terminal closure changed unrelated node state: {node_id}",
+            )
+
+
 def check_terminal_construction_gate(repo: Path, verify_git: bool) -> None:
     current = load_json(repo / "governance/current_state.json")
     lifecycle = current.get("lifecycle_state")
@@ -276,6 +332,10 @@ def check_merge_policy(repo: Path) -> None:
         steward_gate.get("receipt_prefix_contract") == "NORMALIZED_DIRECTORY_BOUNDARY",
         "receipt prefixes must remain normalized directory boundaries",
     )
+    require(
+        steward_gate.get("terminal_graph_resequencing") == "ACTIVE_TRANSITION_REQUIRED",
+        "terminal completion-graph resequencing must require an ACTIVE bounded transition",
+    )
 
 
 def check_steward_actor(repo: Path) -> None:
@@ -301,6 +361,7 @@ def run(repo: Path, verify_git: bool = True) -> None:
     check_receipt_path_boundaries(repo)
     check_blocking_incidents(repo)
     check_handoff_lifecycle_contract(repo)
+    check_terminal_graph_resequencing(repo, verify_git)
     check_terminal_construction_gate(repo, verify_git)
     print("N0TE2 STEWARD INTEGRATION STRUCTURE: GREEN")
     print("merge_authorization=LIVE_MAIN_STEWARD_ONLY")
