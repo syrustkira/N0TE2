@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -15,6 +16,8 @@ SPEC = importlib.util.spec_from_file_location(
 )
 gate = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(gate)
+
+INCIDENT_206 = "INC-2026-09-05-STEWARD-INTEGRATION-206"
 
 
 class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
@@ -53,6 +56,21 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         subprocess.run(["git", "commit", "-m", message], cwd=repo, check=True, stdout=subprocess.DEVNULL)
         return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
 
+    @staticmethod
+    def resolve_206_for_fixture(repo):
+        path = repo / "governance/incidents.jsonl"
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        rows.append(
+            {
+                "id": INCIDENT_206,
+                "recorded_at": "2026-09-05",
+                "status": "RESOLVED_TEST_FIXTURE",
+                "severity": "TEST_ONLY",
+                "summary": "Test fixture closes #206 so another gate can be isolated.",
+            }
+        )
+        path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
+
     def run_gate(self, repo, baseline, **extra_env):
         env = {
             "N0TE2_BASE_SHA": baseline,
@@ -60,6 +78,7 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
             "N0TE2_EVENT_MODE": "",
             "N0TE2_DIFF_MODE": "PR_MERGE_BASE",
             "N0TE2_PR_NUMBER": "",
+            "N0TE2_META_GOVERNANCE_REOPEN": "",
         }
         env.update(extra_env)
         with mock.patch.dict(os.environ, env, clear=False):
@@ -85,6 +104,16 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
             gate.run(repo, verify_git=False)
         self.assertIn("selection contract", str(cm.exception))
 
+    def test_requirements_shadow_authority_field_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/requirements.json"
+        doc = json.loads(path.read_text())
+        doc["shadow_selected_scope"] = ["REQ-SCOPE-170"]
+        self.write_json(path, doc)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("authority surface", str(cm.exception))
+
     def test_unknown_lifecycle_fails_before_diff_gate(self):
         repo = self.clone()
         path = repo / "governance/current_state.json"
@@ -104,6 +133,17 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
         self.assertIn("must not be a symlink", str(cm.exception))
+
+    @unittest.skipIf(os.name == "nt", "symlink creation is not portable on Windows runners")
+    def test_symlinked_governance_ancestor_fails_closed(self):
+        repo = self.clone()
+        original = repo / "governance"
+        real = repo / "governance-real"
+        original.rename(real)
+        original.symlink_to(real, target_is_directory=True)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("path component must not be a symlink", str(cm.exception))
 
     def test_lowercase_open_incident_cannot_bypass_scope_requirement(self):
         repo = self.clone()
@@ -136,7 +176,10 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
             self.run_gate(repo, baseline)
         self.assertIn("café.py", str(cm.exception))
 
-    @unittest.skipIf(os.name == "nt", "case-variant directory cannot be represented independently on Windows")
+    @unittest.skipIf(
+        os.name == "nt" or sys.platform == "darwin",
+        "case-variant directory requires a case-sensitive filesystem",
+    )
     def test_case_variant_product_directory_is_construction_sensitive(self):
         repo = self.clone()
         baseline = self.init_git(repo)
@@ -177,6 +220,16 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
             gate.run(repo, verify_git=False)
         self.assertIn("lifecycle ownership declaration changed", str(cm.exception))
 
+    def test_handoff_derived_truth_shadow_field_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/handoff.json"
+        handoff = json.loads(path.read_text())
+        handoff["derived_runtime_truth"]["shadow_lifecycle_source"] = "governance/handoff.json"
+        self.write_json(path, handoff)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("shadow fields", str(cm.exception))
+
     def test_steward_actor_allowed_mutations_cannot_expand(self):
         repo = self.clone()
         path = repo / "governance/automation_registry.json"
@@ -190,13 +243,43 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
 
     def test_ordinary_pr_cannot_mutate_trusted_gate_artifact(self):
         repo = self.clone()
+        self.resolve_206_for_fixture(repo)
         baseline = self.init_git(repo)
         path = repo / ".github/workflows/governance.yml"
         path.write_text(path.read_text() + "\n# unauthorized gate mutation\n")
         self.commit(repo, "change trusted workflow")
         with self.assertRaises(gate.StewardIntegrationError) as cm:
-            self.run_gate(repo, baseline, N0TE2_EVENT_MODE="PR", N0TE2_PR_NUMBER="211")
+            self.run_gate(repo, baseline, N0TE2_EVENT_MODE="PR", N0TE2_PR_NUMBER="999")
         self.assertIn("trusted gate artifact changed", str(cm.exception))
+
+    def test_trusted_meta_governance_signal_allows_explicit_gate_evolution(self):
+        repo = self.clone()
+        self.resolve_206_for_fixture(repo)
+        baseline = self.init_git(repo)
+        path = repo / ".github/workflows/governance.yml"
+        path.write_text(path.read_text() + "\n# explicit meta-governance evolution\n")
+        self.commit(repo, "authorized trusted workflow evolution")
+        self.run_gate(
+            repo,
+            baseline,
+            N0TE2_EVENT_MODE="PR",
+            N0TE2_PR_NUMBER="999",
+            N0TE2_META_GOVERNANCE_REOPEN="MAIN_STEWARD_LABEL",
+        )
+
+    def test_candidate_truthy_meta_governance_string_is_not_authority(self):
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_META_GOVERNANCE_REOPEN": "true"},
+            clear=False,
+        ):
+            self.assertFalse(gate._meta_governance_reopen_authorized())
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_META_GOVERNANCE_REOPEN": "MAIN_STEWARD_LABEL"},
+            clear=False,
+        ):
+            self.assertTrue(gate._meta_governance_reopen_authorized())
 
     def test_blocking_206_rejects_unrelated_pr(self):
         repo = self.clone()
@@ -222,6 +305,19 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         self.assertIn("n0te2-governance-Linux", workflow)
         self.assertIn("n0te2-governance-Windows", workflow)
         self.assertIn("n0te2-governance-macOS", workflow)
+
+    def test_trusted_workflow_resets_status_and_uses_runtime_unique_base_path(self):
+        workflow = (ROOT / ".github/workflows/steward-integration.yml").read_text()
+        self.assertIn("pull_request_target:", workflow)
+        self.assertIn("STATUS_STATE: pending", workflow)
+        self.assertIn("Reset trusted structural status to pending", workflow)
+        self.assertIn("steward-meta-governance-reopen", workflow)
+        self.assertIn(
+            "TRUSTED_PATH: .steward-trusted-${{ github.run_id }}-${{ github.run_attempt }}",
+            workflow,
+        )
+        self.assertIn("$TRUSTED_PATH/governance/check_steward_integration.py", workflow)
+        self.assertIn("persist-credentials: false", workflow)
 
 
 if __name__ == "__main__":
