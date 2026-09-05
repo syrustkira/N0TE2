@@ -15,6 +15,11 @@ ACTIVE_REPAIR_KIND = "INCIDENT_REPAIR"
 CLOSURE_REPAIR_KIND = "INCIDENT_REPAIR_CLOSURE"
 TARGET_KINDS = {"GOVERNANCE", "MERGED_PRODUCT"}
 META_TOKEN = "MAIN_STEWARD_LABEL"
+CLOSURE_PATHS = {
+    "governance/active_receipt.json",
+    "governance/current_state.json",
+    "governance/incidents.jsonl",
+}
 PROTECTED_CANDIDATE_GOVERNANCE = {
     "governance/build_handoff.py",
     "governance/check_context_lifecycle.py",
@@ -250,10 +255,16 @@ def validate_active_repair(
         or (path.startswith("tests/") and not path.startswith("tests/governance/"))
         or path in {"requirements.txt", "pyproject.toml", "setup.py", "setup.cfg"}
     ]
+    broad_product_paths = [path for path in construction_paths if path not in set(allowed_exact)]
+    require(
+        not broad_product_paths,
+        "MERGED_PRODUCT repair must name every construction path in allowed_exact_paths: "
+        + ", ".join(broad_product_paths),
+    )
     new_paths = [path for path in construction_paths if not path_exists_at(repo, target_sha, path)]
     require(
         not new_paths,
-        "MERGED_PRODUCT repair introduced construction paths absent from target merge: "
+        "MERGED_PRODUCT repair introduced construction paths absent from the target merge: "
         + ", ".join(new_paths),
     )
 
@@ -276,6 +287,8 @@ def validate_closure(
     require(receipt.get("baseline_sha") == base_sha, "repair closure receipt must bind exact active-repair base")
     closed_receipt_id = receipt.get("closed_repair_receipt_id")
     require(isinstance(closed_receipt_id, str) and closed_receipt_id.strip(), "repair closure requires closed_repair_receipt_id")
+    require(set(receipt.get("allowed_exact_paths", [])) == CLOSURE_PATHS, "repair closure must bind exactly the three durable closure paths")
+    require(receipt.get("allowed_prefixes", []) == [], "repair closure cannot authorize path prefixes")
 
     base_current = git_json_at(repo, base_sha, "governance/current_state.json")
     base_receipt = git_json_at(repo, base_sha, "governance/active_receipt.json")
@@ -291,17 +304,10 @@ def validate_closure(
 
     validate_incidents_resolved(repo, incident_ids)
 
-    paths = changed_paths(repo, base_sha)
-    bad = [
-        path
-        for path in paths
-        if not (
-            path.startswith("governance/")
-            or path.startswith("tests/governance/")
-            or path == ".github/workflows/steward-integration.yml"
-        )
-    ]
-    require(not bad, "repair closure may change governance only: " + ", ".join(bad))
+    paths = set(changed_paths(repo, base_sha))
+    require(CLOSURE_PATHS.issubset(paths), "repair closure must change current_state, active_receipt and incidents")
+    bad = sorted(paths - CLOSURE_PATHS)
+    require(not bad, "repair closure changed paths outside its exact terminal surfaces: " + ", ".join(bad))
 
 
 def run(repo: Path) -> None:
