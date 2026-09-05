@@ -251,6 +251,7 @@ def validate_active_repair(
 
     if target_kind == "GOVERNANCE":
         require(not allowed_prefixes, "GOVERNANCE repair must enumerate exact allowed paths; broad prefixes are not repair authority")
+        require(set(allowed_exact) == set(paths), "GOVERNANCE repair allowed_exact_paths must exactly equal changed paths")
         require(receipt.get("product_code_allowed") is False, "GOVERNANCE repair cannot authorize product code")
         bad = [
             path
