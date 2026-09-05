@@ -165,6 +165,72 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
             receipt["repair_target_merge_sha"] = target_merge_sha
         self.write_json(receipt_path, receipt)
 
+    def close_repair(self, repo: Path, *, baseline_sha: str, resolve_incident: bool) -> None:
+        active_receipt = self.read_json(repo / "governance/active_receipt.json")
+        active_receipt_id = active_receipt["receipt_id"]
+        active_incident_ids = list(active_receipt["incident_repair_ids"])
+
+        if resolve_incident:
+            incidents_path = repo / "governance/incidents.jsonl"
+            rows = [
+                json.loads(line)
+                for line in incidents_path.read_text().splitlines()
+                if line.strip()
+            ]
+            rows.append(
+                {
+                    "id": INCIDENT_206,
+                    "recorded_at": "2026-09-05",
+                    "status": "RESOLVED_TEST_FIXTURE",
+                    "severity": "TEST_ONLY",
+                    "summary": "Append-only test event resolves the exact incident repair.",
+                }
+            )
+            incidents_path.write_text(
+                "\n".join(json.dumps(row, separators=(",", ":")) for row in rows)
+                + "\n"
+            )
+
+        state_path = repo / "governance/current_state.json"
+        state = self.read_json(state_path)
+        state.update(
+            {
+                "lifecycle_state": "STABLE",
+                "active_node": None,
+                "active_increment": None,
+                "terminal_reason": "Exact incident repair is closed in the test fixture.",
+                "wake_condition": None,
+                "next_admissible_action": "Refresh live authority before selecting further work.",
+                "product_code_authorized": False,
+                "legacy_admission_authorized": False,
+            }
+        )
+        self.write_json(state_path, state)
+
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = self.read_json(receipt_path)
+        receipt.update(
+            {
+                "status": "INACTIVE",
+                "receipt_id": f"{active_receipt_id}-CLOSURE",
+                "node_id": None,
+                "increment_id": None,
+                "baseline_sha": baseline_sha,
+                "product_code_allowed": False,
+                "legacy_admission_allowed": False,
+                "legacy_source_copy_allowed": False,
+                "legacy_test_text_copy_allowed": False,
+                "repair_kind": "INCIDENT_REPAIR_CLOSURE",
+                "incident_repair_ids": active_incident_ids,
+                "closed_repair_receipt_id": active_receipt_id,
+                "allowed_exact_paths": [],
+                "allowed_prefixes": ["governance/", "tests/governance/"],
+            }
+        )
+        receipt.pop("repair_target_kind", None)
+        receipt.pop("repair_target_merge_sha", None)
+        self.write_json(receipt_path, receipt)
+
     @staticmethod
     def init_git(repo: Path) -> str:
         subprocess.run(["git", "init", "-b", "main"], cwd=repo, check=True, stdout=subprocess.DEVNULL)
@@ -287,6 +353,35 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
             with self.assertRaises(authority.RepairAuthorityError) as cm:
                 authority.run(repo)
         self.assertIn("absent from target merge", str(cm.exception))
+
+    def test_repair_closure_fails_while_named_incident_is_still_open(self) -> None:
+        repo = self.clone()
+        base = self.init_git(repo)
+        self.close_repair(repo, baseline_sha=base, resolve_incident=False)
+        self.commit(repo, "attempt closure while incident remains open")
+
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_BASE_SHA": base, "N0TE2_EVENT_MODE": "PR", "N0TE2_META_GOVERNANCE_REOPEN": ""},
+            clear=False,
+        ):
+            with self.assertRaises(authority.RepairAuthorityError) as cm:
+                authority.run(repo)
+        self.assertIn("requires durable RESOLVED incident truth", str(cm.exception))
+
+    def test_repair_closure_accepts_append_only_resolution_event(self) -> None:
+        repo = self.clone()
+        base = self.init_git(repo)
+        self.close_repair(repo, baseline_sha=base, resolve_incident=True)
+        self.commit(repo, "close repair with append-only incident resolution")
+
+        gov.run(repo, verify_git=False)
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_BASE_SHA": base, "N0TE2_EVENT_MODE": "PR", "N0TE2_META_GOVERNANCE_REOPEN": ""},
+            clear=False,
+        ):
+            authority.run(repo)
 
 
 if __name__ == "__main__":
