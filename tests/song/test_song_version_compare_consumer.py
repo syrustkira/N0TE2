@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import struct
 from dataclasses import dataclass
 from html.parser import HTMLParser
@@ -31,6 +32,17 @@ def pcm16_mono_wav(amplitude: int) -> bytes:
     samples = (-amplitude, -(amplitude // 2), 0, amplitude // 2, amplitude)
     data = b"".join(struct.pack("<h", sample) for sample in samples)
     fmt = struct.pack("<HHIIHH", 1, 1, 8000, 8000 * 2, 2, 16)
+    payload = b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data
+    return b"RIFF" + struct.pack("<I", 4 + len(payload)) + b"WAVE" + payload
+
+
+def pcm16_mono_loudness_wav(amplitude: int, *, sample_rate: int = 48000) -> bytes:
+    samples = (
+        int(round(amplitude * math.sin(2.0 * math.pi * 440.0 * frame / sample_rate)))
+        for frame in range(sample_rate)
+    )
+    data = b"".join(struct.pack("<h", sample) for sample in samples)
+    fmt = struct.pack("<HHIIHH", 1, 1, sample_rate, sample_rate * 2, 2, 16)
     payload = b"fmt " + struct.pack("<I", len(fmt)) + fmt + b"data" + struct.pack("<I", len(data)) + data
     return b"RIFF" + struct.pack("<I", 4 + len(payload)) + b"WAVE" + payload
 
@@ -102,7 +114,27 @@ def seed(data_root: Path, *, current_payload: bytes | None = None):
     return hq, song, reference, current
 
 
-def test_song_compare_is_exact_read_only_and_level_bias_aware(tmp_path: Path) -> None:
+def seed_loudness_pair(data_root: Path):
+    hq = HeadquartersMemory.create(data_root, "Compare Artist")
+    song = hq.store.create_song("Compare Song")
+    reference_payload = pcm16_mono_loudness_wav(6000)
+    reference = hq.materials.ingest_stream(
+        song.id,
+        filename="reference-loudness.wav",
+        stream=BytesIO(reference_payload),
+        declared_size=len(reference_payload),
+    )
+    current_payload = pcm16_mono_loudness_wav(12000)
+    current = hq.materials.ingest_stream(
+        song.id,
+        filename="current-loudness.wav",
+        stream=BytesIO(current_payload),
+        declared_size=len(current_payload),
+    )
+    return hq, song, reference, current
+
+
+def test_song_compare_is_exact_read_only_and_falls_back_to_rms_when_integrated_loudness_is_unavailable(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
     hq, song, reference, current = seed(data_root)
@@ -126,13 +158,18 @@ def test_song_compare_is_exact_read_only_and_level_bias_aware(tmp_path: Path) ->
     parser.feed(song_page)
     assert "/compare" in parser.links
     assert "Open A/B compare" in song_page
+    assert "integrated loudness difference" in song_page
 
     status, page = get_text(shell, "/compare")
     assert status == 200
     assert "Compare Versions" in page
     assert "Reference" in page and "Current" in page
+    assert "Integrated programme loudness" in page
+    assert "render is too short" in page
+    assert "Comparable integrated programme loudness is unavailable for this exact pair" in page
+    assert "Use that only as a fallback signal-level cue" in page
     assert "RMS is not LUFS" in page
-    assert "applied no gain or normalization" in page
+    assert "N0TE applies no gain, loudness normalization, crossfade, processing or DAW change" in page
     assert "Nothing has been chosen" in page
     assert "KEEP, REVERT, REVISE, or INCONCLUSIVE remains a separate explicit decision step" in page
     assert "Version 1: Imported reference.wav" in page
@@ -166,6 +203,47 @@ def test_song_compare_is_exact_read_only_and_level_bias_aware(tmp_path: Path) ->
     shell.stop()
 
 
+def test_song_compare_surfaces_integrated_loudness_as_primary_level_bias_cue_when_measured(tmp_path: Path) -> None:
+    data_root = (tmp_path / "data").resolve()
+    state_root = (tmp_path / "state").resolve()
+    hq, song, _, _ = seed_loudness_pair(data_root)
+    profile_id = hq.store.profile_id
+    song_before = hq.store.get_song(song.id)
+    versions_before = hq.store.versions_for_song(song.id)
+    learning_before = hq.learning.episodes_for_song(song.id)
+    activity_before = hq.activity.for_song(song.id)
+    hq.close()
+
+    shell = ConsumerShell(
+        data_root=data_root,
+        state_root=state_root,
+        process=process(9703, "version-compare-loudness"),
+        probe=Probe(),
+    )
+    shell.start()
+    status, page = get_text(shell, "/compare")
+    assert status == 200
+    assert "Integrated programme loudness" in page
+    assert "LUFS" in page
+    assert "ITU-R BS.1770-4" in page
+    assert "Current Version integrated loudness is" in page
+    assert "LU higher than the Reference Version" in page
+    assert "Secondary RMS context" in page
+    assert "RMS is not LUFS" in page
+    assert "N0TE has applied no gain or normalization" in page
+    assert "loudness target" not in page.lower()
+
+    check = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        assert check.store.get_song(song.id) == song_before
+        assert check.store.versions_for_song(song.id) == versions_before
+        assert check.learning.episodes_for_song(song.id) == learning_before
+        assert check.activity.for_song(song.id) == activity_before
+    finally:
+        check.close()
+    shell.stop()
+
+
 def test_compare_does_not_invent_loudness_match_when_pcm_measurement_is_unavailable(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
@@ -181,10 +259,9 @@ def test_compare_does_not_invent_loudness_match_when_pcm_measurement_is_unavaila
     shell.start()
     status, page = get_text(shell, "/compare")
     assert status == 200
-    assert "Verified local audio · level evidence unavailable" in page
-    assert "No trustworthy whole-render RMS difference is available for this pair" in page
-    assert "N0TE will not invent a loudness match" in page
-    assert "RMS is not LUFS" in page
+    assert "Verified local audio · engineering evidence unavailable" in page
+    assert "No trustworthy pair-level difference is available for this exact pair" in page
+    assert "N0TE will not invent integrated loudness, RMS, or a loudness match" in page
     parser = CompareParser()
     parser.feed(page)
     assert len(parser.sources) == 2
