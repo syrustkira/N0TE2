@@ -25,17 +25,17 @@
   "steward_gate": {
     "required": true,
     "structural_status_context": "n0te2-steward-structure",
-    "bootstrap_status_context": "n0te2-steward-bootstrap-structure",
     "status_is_merge_authorization": false,
     "live_authorization_owner": "MAIN_STEWARD",
     "trusted_checker_source": "PR_BASE",
     "trusted_workflow_event": "pull_request_target",
     "bootstrap_requires_manual_steward_review": true,
     "bootstrap_pr": 211,
+    "bootstrap_publishes_trusted_status": false,
     "pending_review_blocks_merge": true,
     "review_must_bind_exact_head": true,
     "post_merge_review_opens_fix_order": true,
-    "rule": "Structural CI proves only that the exact candidate satisfies the trusted repository-side Steward structure contract. It never authorizes merge by itself. The single Main Steward must independently refresh live main, exact candidate head, required platform statuses, substantive exact-head review completion, unresolved findings and incident state immediately before an expected-head guarded merge, then verify resulting main. The first Steward-gate bootstrap cannot trust a base checker that does not yet exist and therefore requires explicit live Steward review rather than treating candidate-controlled bootstrap status as merge authority."
+    "rule": "Structural CI proves only that the exact candidate satisfies the trusted repository-side Steward structure contract. It never authorizes merge by itself. The single Main Steward must independently refresh live main, exact candidate head, required platform statuses, substantive exact-head review completion, unresolved findings and incident state immediately before an expected-head guarded merge, then verify resulting main. The first Steward-gate bootstrap cannot trust a base checker or base-owned workflow that does not yet exist, publishes no trusted Steward status, and therefore requires explicit live Steward review plus the ordinary exact-head platform proof."
   },
   "external_enforcement": {
     "desired": "After Steward-gate bootstrap, GitHub branch protection or a repository ruleset should require the three exact-head platform contexts plus the trusted n0te2-steward-structure context where administratively available.",
