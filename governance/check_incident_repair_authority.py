@@ -314,9 +314,14 @@ def run(repo: Path) -> None:
 
     validate_meta_protection(repo, base_sha)
 
-    if receipt.get("status") == "ACTIVE":
-        require(active_ids, "ACTIVE incident repair receipt requires incident_repair_ids")
-        require(receipt.get("repair_kind") == ACTIVE_REPAIR_KIND, "ACTIVE incident repair receipt requires repair_kind=INCIDENT_REPAIR")
+    active_repair_signaled = (
+        current.get("active_node") == INCIDENT_REPAIR_NODE
+        or receipt.get("repair_kind") == ACTIVE_REPAIR_KIND
+        or bool(active_ids)
+    )
+    if active_repair_signaled:
+        require(receipt.get("status") == "ACTIVE", "INACTIVE receipt cannot carry active incident_repair_ids")
+        require(active_ids, "ACTIVE incident repair requires incident_repair_ids")
         validate_active_repair(repo, base_sha, current, receipt, active_ids)
         print(
             "N0TE2 INCIDENT REPAIR AUTHORITY: GREEN "
@@ -324,8 +329,8 @@ def run(repo: Path) -> None:
         )
         return
 
-    require(not active_ids, "INACTIVE receipt cannot carry active incident_repair_ids")
-    if receipt.get("repair_kind") == CLOSURE_REPAIR_KIND or closed_ids:
+    closure_signaled = receipt.get("repair_kind") == CLOSURE_REPAIR_KIND or bool(closed_ids)
+    if closure_signaled:
         require(closed_ids, "INCIDENT_REPAIR_CLOSURE requires closed_incident_repair_ids")
         validate_closure(repo, base_sha, current, receipt, closed_ids)
         print(
@@ -334,9 +339,9 @@ def run(repo: Path) -> None:
         )
         return
 
+    require(not active_ids, "incident_repair_ids cannot exist outside active incident repair")
     require(not closed_ids, "closed incident history cannot exist outside INCIDENT_REPAIR_CLOSURE")
-    require(current.get("active_node") != INCIDENT_REPAIR_NODE, "INCIDENT-REPAIR requires an ACTIVE receipt")
-    require(receipt.get("repair_kind") != ACTIVE_REPAIR_KIND, "repair_kind cannot exist without active incident_repair_ids")
+    require(receipt.get("repair_kind") not in {ACTIVE_REPAIR_KIND, CLOSURE_REPAIR_KIND}, "repair_kind cannot exist without matching repair metadata")
     print("N0TE2 INCIDENT REPAIR AUTHORITY: GREEN mode=NONE")
 
 
