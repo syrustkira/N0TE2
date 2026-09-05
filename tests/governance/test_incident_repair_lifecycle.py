@@ -226,8 +226,8 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
                 "repair_kind": "INCIDENT_REPAIR_CLOSURE",
                 "closed_incident_repair_ids": active_incident_ids,
                 "closed_repair_receipt_id": active_receipt_id,
-                "allowed_exact_paths": [],
-                "allowed_prefixes": ["governance/", "tests/governance/"],
+                "allowed_exact_paths": sorted(authority.CLOSURE_PATHS),
+                "allowed_prefixes": [],
             }
         )
         receipt.pop("incident_repair_ids", None)
@@ -388,6 +388,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
             runtime = handoff.build_runtime_handoff(repo)
         self.assertEqual(runtime["lifecycle"]["mode"], "TERMINAL")
         self.assertIsNone(runtime["incident_repair"])
+        self.assertNotIn(INCIDENT_206, runtime["open_incidents"])
         with mock.patch.dict(
             os.environ,
             {"N0TE2_BASE_SHA": base, "N0TE2_EVENT_MODE": "PR", "N0TE2_META_GOVERNANCE_REOPEN": ""},
