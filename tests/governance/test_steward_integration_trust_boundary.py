@@ -155,6 +155,16 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
             gate.run(repo, verify_git=False)
         self.assertIn("lacks blocking_scope", str(cm.exception))
 
+    def test_unrecognized_incident_status_cannot_hide_obligation(self):
+        repo = self.clone()
+        path = repo / "governance/incidents.jsonl"
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        rows.append({"id": "INC-INVALID-STATUS", "status": "BANANA", "summary": "invalid status"})
+        path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("unrecognized status", str(cm.exception))
+
     def test_base_incident_history_cannot_be_mutated(self):
         repo = self.clone()
         baseline = self.init_git(repo)
@@ -166,6 +176,26 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             self.run_gate(repo, baseline)
         self.assertIn("mutated durable incident history", str(cm.exception))
+
+    def test_blocking_incident_cannot_be_falsely_resolved_without_repair_contract(self):
+        repo = self.clone()
+        baseline = self.init_git(repo)
+        path = repo / "governance/incidents.jsonl"
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        rows.append(
+            {
+                "id": INCIDENT_206,
+                "recorded_at": "2026-09-05",
+                "status": "RESOLVED_FAKE",
+                "severity": "TEST_ONLY",
+                "summary": "Attempt to erase the integration freeze without repair authority.",
+            }
+        )
+        path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
+        self.commit(repo, "fake incident resolution")
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            self.run_gate(repo, baseline, N0TE2_EVENT_MODE="PR", N0TE2_PR_NUMBER="999")
+        self.assertIn("cannot transition to resolved", str(cm.exception))
 
     def test_unicode_product_path_is_detected_without_git_quoting_escape(self):
         repo = self.clone()
@@ -210,6 +240,26 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
             gate.run(repo, verify_git=False)
         self.assertIn("platform contexts changed", str(cm.exception))
 
+    def test_merge_policy_shadow_authority_field_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/merge_policy.json"
+        policy = json.loads(path.read_text())
+        policy["shadow_merge_authorization"] = True
+        self.write_json(path, policy)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("merge policy authority surface", str(cm.exception))
+
+    def test_steward_gate_shadow_authority_field_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/merge_policy.json"
+        policy = json.loads(path.read_text())
+        policy["steward_gate"]["shadow_status_is_authorization"] = True
+        self.write_json(path, policy)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("Steward gate authority surface", str(cm.exception))
+
     def test_handoff_rule_cannot_reclaim_lifecycle_authority(self):
         repo = self.clone()
         path = repo / "governance/handoff.json"
@@ -240,6 +290,17 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
         self.assertIn("authority contract drifted", str(cm.exception))
+
+    def test_steward_actor_shadow_authority_field_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/automation_registry.json"
+        registry = json.loads(path.read_text())
+        actor = next(row for row in registry["actors"] if row["id"] == "AUTO-STEWARD-INTEGRATION-GATE-001")
+        actor["shadow_merge_authority"] = True
+        self.write_json(path, registry)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("Steward actor authority surface", str(cm.exception))
 
     def test_ordinary_pr_cannot_mutate_trusted_gate_artifact(self):
         repo = self.clone()
@@ -302,6 +363,9 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         self.assertNotIn("statuses: write", workflow)
         self.assertNotIn("checks: write", workflow)
         self.assertIn("persist-credentials: false", workflow)
+        self.assertIn("actions/checkout@11d5960a326750d5838078e36cf38b85af677262", workflow)
+        self.assertIn("actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065", workflow)
+        self.assertIn("actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02", workflow)
         self.assertIn("n0te2-governance-Linux", workflow)
         self.assertIn("n0te2-governance-Windows", workflow)
         self.assertIn("n0te2-governance-macOS", workflow)
