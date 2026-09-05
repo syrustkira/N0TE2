@@ -14,17 +14,20 @@ permissions:
 
 jobs:
   governance:
-    name: n0te2-governance-${{ matrix.platform }}
+    name: ${{ matrix.context }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             platform: Linux
+            context: n0te2-governance-Linux
           - os: windows-latest
             platform: Windows
+            context: n0te2-governance-Windows
           - os: macos-latest
             platform: macOS
+            context: n0te2-governance-macOS
     runs-on: ${{ matrix.os }}
     env:
       N0TE2_RUN_ID: ${{ github.run_id }}
