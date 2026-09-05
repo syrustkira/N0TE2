@@ -1,26 +1,23 @@
-"""Governance-test process configuration.
+"""Governance-test Git fixture isolation.
 
-Synthetic Git repositories are created by several governance regression tests.
-On macOS, Git's automatic maintenance can briefly continue touching `.git`
-after an assertion has completed, racing `TemporaryDirectory` cleanup and
-turning a passing governance test into an infrastructure-only teardown error.
+Synthetic Git repositories are created by governance regression tests. On
+macOS, Git automatic maintenance can briefly continue touching `.git` after an
+assertion completes, racing `TemporaryDirectory` cleanup.
 
-Disable only automatic Git maintenance for Git subprocesses spawned by this
-pytest process. Explicit Git operations remain unchanged, and production/runtime
-Git behavior is untouched.
+Apply the maintenance suppression only while tests under `tests/governance`
+are executing. Explicit Git operations remain unchanged, and the environment
+is restored after each governance test.
 """
 
 from __future__ import annotations
 
-import os
+import pytest
 
 
-def _append_git_config(key: str, value: str) -> None:
-    count = int(os.environ.get("GIT_CONFIG_COUNT", "0"))
-    os.environ[f"GIT_CONFIG_KEY_{count}"] = key
-    os.environ[f"GIT_CONFIG_VALUE_{count}"] = value
-    os.environ["GIT_CONFIG_COUNT"] = str(count + 1)
-
-
-_append_git_config("gc.auto", "0")
-_append_git_config("maintenance.auto", "false")
+@pytest.fixture(autouse=True)
+def _disable_git_auto_maintenance(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "2")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "gc.auto")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "0")
+    monkeypatch.setenv("GIT_CONFIG_KEY_1", "maintenance.auto")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_1", "false")
