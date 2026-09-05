@@ -91,6 +91,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
             "repair_target_merge_sha",
             "closed_repair_receipt_id",
             "incident_repair_ids",
+            "closed_incident_repair_ids",
         ):
             receipt.pop(key, None)
         receipt.update(
@@ -139,6 +140,8 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
 
         receipt_path = repo / "governance/active_receipt.json"
         receipt = self.read_json(receipt_path)
+        receipt.pop("closed_incident_repair_ids", None)
+        receipt.pop("closed_repair_receipt_id", None)
         receipt.update(
             {
                 "status": "ACTIVE",
@@ -221,12 +224,13 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
                 "legacy_source_copy_allowed": False,
                 "legacy_test_text_copy_allowed": False,
                 "repair_kind": "INCIDENT_REPAIR_CLOSURE",
-                "incident_repair_ids": active_incident_ids,
+                "closed_incident_repair_ids": active_incident_ids,
                 "closed_repair_receipt_id": active_receipt_id,
                 "allowed_exact_paths": [],
                 "allowed_prefixes": ["governance/", "tests/governance/"],
             }
         )
+        receipt.pop("incident_repair_ids", None)
         receipt.pop("repair_target_kind", None)
         receipt.pop("repair_target_merge_sha", None)
         self.write_json(receipt_path, receipt)
@@ -303,7 +307,11 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
         ):
             with self.assertRaises(authority.RepairAuthorityError) as cm:
                 authority.run(repo)
-        self.assertIn("INCIDENT_REPAIR_CLOSURE", str(cm.exception))
+        self.assertIn("INACTIVE receipt cannot carry active incident_repair_ids", str(cm.exception))
+        with mock.patch.object(handoff, "git", return_value="a" * 40):
+            with self.assertRaises(handoff.HandoffError) as handoff_cm:
+                handoff.build_runtime_handoff(repo)
+        self.assertIn("INACTIVE receipt cannot carry incident repair authority", str(handoff_cm.exception))
 
     def test_protected_ordinary_checker_requires_meta_governance_reopen(self) -> None:
         repo = self.clone()
@@ -376,6 +384,10 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
         self.commit(repo, "close repair with append-only incident resolution")
 
         gov.run(repo, verify_git=False)
+        with mock.patch.object(handoff, "git", return_value="b" * 40):
+            runtime = handoff.build_runtime_handoff(repo)
+        self.assertEqual(runtime["lifecycle"]["mode"], "TERMINAL")
+        self.assertIsNone(runtime["incident_repair"])
         with mock.patch.dict(
             os.environ,
             {"N0TE2_BASE_SHA": base, "N0TE2_EVENT_MODE": "PR", "N0TE2_META_GOVERNANCE_REOPEN": ""},
