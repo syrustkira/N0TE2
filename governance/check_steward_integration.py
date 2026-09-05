@@ -18,6 +18,129 @@ CONSTRUCTION_SENSITIVE_EXACT = {
     "setup.py",
     "setup.cfg",
 }
+CANONICAL_SOURCE = "N0TE_PRODUCT_DB/SCOPE_LEDGER"
+CANONICAL_SOURCE_REVISION = "524"
+CANONICAL_EXTENSION_ROWS = [
+    {
+        "id": "REQ-SCOPE-154",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["UX-01", "CORE-02", "CORE-03", "CORE-04"],
+        "summary": "Creative Partner professional-lens selection and bounded multi-perspective synthesis.",
+    },
+    {
+        "id": "REQ-SCOPE-155",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["UX-01", "CORE-04"],
+        "summary": "Creative Partner presence, initiative and silence policy including explicit no-action posture.",
+    },
+    {
+        "id": "REQ-SCOPE-156",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["UX-01", "CORE-01", "CORE-02"],
+        "summary": "Relevance brokerage and lens-sensitive bounded context projection.",
+    },
+    {
+        "id": "REQ-SCOPE-157",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["UX-01", "CORE-01", "CORE-02", "CORE-04"],
+        "summary": "Versioned backward-readable Creative Partner InteractionPolicy with ephemeral-first lifecycle and stale-state safety.",
+    },
+    {
+        "id": "REQ-SCOPE-158",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["UX-01", "CORE-02"],
+        "summary": "Creative tension, tradeoff and Challenger reasoning with simulated-versus-observed audience truth.",
+    },
+    {
+        "id": "REQ-SCOPE-159",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["CONV-01", "CORE-01", "CORE-02", "CORE-04"],
+        "summary": "Stable semantic keys and versioned definition-lineage evolution.",
+    },
+    {
+        "id": "REQ-SCOPE-160",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["DAW-07", "CORE-03", "CORE-04", "CONV-01"],
+        "summary": "Provider/host/protocol-neutral negotiated capability with versioned adapters, fidelity truth and route receipts.",
+    },
+    {
+        "id": "REQ-SCOPE-161",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["ART-01", "OPS-04", "OPS-06", "CORE-02"],
+        "summary": "Canonical Music Professional Master Map role ontology across the music value network.",
+    },
+    {
+        "id": "REQ-SCOPE-162",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["OPS-05", "CORE-04", "CONV-01"],
+        "summary": "Occupational music safety across role-specific hearing, physical, service and operational risks.",
+    },
+    {
+        "id": "REQ-SCOPE-163",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["OPS-04", "OPS-06", "CORE-02"],
+        "summary": "Professional portfolio, credits, reputation and referral evidence.",
+    },
+    {
+        "id": "REQ-SCOPE-164",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["OPS-06", "CORE-02"],
+        "summary": "Role-specific economics for music-professional jobs and career decisions.",
+    },
+    {
+        "id": "REQ-SCOPE-165",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["OPS-04", "CORE-04"],
+        "summary": "Cross-role handoff contracts that preserve responsibility, artifacts, authority and next-owner clarity.",
+    },
+    {
+        "id": "REQ-SCOPE-166",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["CORE-04", "OPS-04", "OPS-05"],
+        "summary": "Professional ethics and duty-of-care boundaries for role-aware work.",
+    },
+    {
+        "id": "REQ-SCOPE-167",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["OPS-06", "CORE-02", "ART-01"],
+        "summary": "Role development, skill progression and transitions across music careers.",
+    },
+    {
+        "id": "REQ-SCOPE-168",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["APP-01", "PLATFORM-00", "CORE-04", "OPS-05"],
+        "summary": "Physical and service resilience for professional music workflows.",
+    },
+    {
+        "id": "REQ-SCOPE-169",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["OPS-04", "OPS-02", "CONV-01"],
+        "summary": "Territory, international and cultural context for professional music work.",
+    },
+    {
+        "id": "REQ-SCOPE-170",
+        "state": "MAPPED",
+        "selected": False,
+        "construction_affinity": ["LATER-01", "OPS-02", "OPS-06"],
+        "summary": "Legacy, catalog and career succession continuity; accepted but dependency-gated/later.",
+    },
+]
 
 
 class StewardIntegrationError(RuntimeError):
@@ -57,36 +180,22 @@ def check_canonical_extensions(repo: Path) -> None:
     canonical = doc.get("canonical_scope", {})
     require(doc.get("sequence_role") == "BUILD_GRAPH_INDEX", "requirement sequence role changed")
     require(sequence.get("start") == 2 and sequence.get("end") == 153, "build-graph requirement index changed unexpectedly")
-    require(canonical.get("source") == "N0TE_PRODUCT_DB/SCOPE_LEDGER", "canonical requirement source changed")
-    require(canonical.get("start") == sequence.get("start"), "canonical scope start must match build-graph index start")
-
-    canonical_end = canonical.get("end")
-    require(type(canonical_end) is int and canonical_end >= 170, "canonical retained scope cannot shrink below REQ-SCOPE-170")
-    retained = canonical_end - int(canonical["start"]) + 1
-    require(canonical.get("retained_requirement_count") == retained, "canonical retained requirement count is inconsistent")
+    require(canonical.get("source") == CANONICAL_SOURCE, "canonical requirement source changed")
+    require(canonical.get("source_revision") == CANONICAL_SOURCE_REVISION, "canonical requirement source revision changed without a reviewed Steward manifest update")
+    require(canonical.get("start") == 2 and canonical.get("end") == 170, "canonical retained scope changed without a reviewed Steward manifest update")
+    require(canonical.get("retained_requirement_count") == 169, "canonical retained requirement count is inconsistent")
 
     extensions = doc.get("canonical_extensions")
     require(isinstance(extensions, list), "canonical_extensions must be a list")
-    expected_ids = [
-        f"REQ-SCOPE-{number:03d}"
-        for number in range(int(sequence["end"]) + 1, canonical_end + 1)
-    ]
-    actual_ids = [row.get("id") if isinstance(row, dict) else None for row in extensions]
-    require(actual_ids == expected_ids, "canonical extension IDs must remain contiguous, ordered, unique, and complete")
+    require(extensions == CANONICAL_EXTENSION_ROWS, "canonical extension semantics or construction affinities changed without a reviewed Steward manifest update")
 
     for row in extensions:
         requirement_id = row["id"]
-        require(row.get("state") == "MAPPED", f"{requirement_id} must remain MAPPED")
-        require(row.get("selected") is False, f"{requirement_id} cannot self-select construction")
-        summary = row.get("summary")
-        require(isinstance(summary, str) and summary.strip(), f"{requirement_id} requires a retained summary")
-        affinity = row.get("construction_affinity")
-        require(isinstance(affinity, list) and affinity, f"{requirement_id} requires construction affinity")
+        affinity = row["construction_affinity"]
         require(
-            all(isinstance(node_id, str) and node_id in graph_ids for node_id in affinity),
+            all(node_id in graph_ids for node_id in affinity),
             f"{requirement_id} references an unknown construction-affinity node",
         )
-        require(len(affinity) == len(set(affinity)), f"{requirement_id} contains duplicate construction-affinity nodes")
 
 
 def construction_sensitive(path: str) -> bool:
@@ -98,10 +207,11 @@ def construction_sensitive(path: str) -> bool:
 
 
 def candidate_base(repo: Path) -> str | None:
-    supplied = str(os.environ.get("N0TE2_BASE_SHA") or "").strip().lower()
-    if supplied and supplied != ZERO_SHA:
-        require(HEX40.match(supplied) is not None, "N0TE2_BASE_SHA must be an exact lowercase 40-character SHA")
-        return supplied
+    supplied_raw = str(os.environ.get("N0TE2_BASE_SHA") or "").strip().lower()
+    if supplied_raw:
+        require(HEX40.match(supplied_raw) is not None, "N0TE2_BASE_SHA must be an exact lowercase 40-character SHA")
+        require(supplied_raw != ZERO_SHA, "all-zero candidate base is unverifiable; refuse to publish a Steward structural pass")
+        return supplied_raw
     try:
         return git(repo, "rev-parse", "HEAD^")
     except subprocess.CalledProcessError:
@@ -111,13 +221,17 @@ def candidate_base(repo: Path) -> str | None:
 def candidate_changed_paths(repo: Path) -> list[str]:
     base = candidate_base(repo)
     if base is None:
-        return []
-    try:
-        changed = git(repo, "diff", "--name-only", f"{base}...HEAD")
-    except subprocess.CalledProcessError as exc:
-        raise StewardIntegrationError(
-            f"cannot derive candidate diff from base {base}: {exc.output}"
-        ) from exc
+        try:
+            changed = git(repo, "diff-tree", "--root", "--no-commit-id", "--no-renames", "--name-only", "-r", "HEAD")
+        except subprocess.CalledProcessError as exc:
+            raise StewardIntegrationError(f"cannot derive full root candidate diff: {exc.output}") from exc
+    else:
+        try:
+            changed = git(repo, "diff", "--no-renames", "--name-only", f"{base}...HEAD")
+        except subprocess.CalledProcessError as exc:
+            raise StewardIntegrationError(
+                f"cannot derive candidate diff from base {base}: {exc.output}"
+            ) from exc
     return [path for path in changed.splitlines() if path]
 
 
@@ -165,17 +279,43 @@ def check_merge_policy(repo: Path) -> None:
 
     steward_gate = policy.get("steward_gate", {})
     require(steward_gate.get("required") is True, "Steward integration gate must be required")
-    require(steward_gate.get("status_context") == "n0te2-steward-integration", "unexpected Steward status context")
+    require(steward_gate.get("structural_status_context") == "n0te2-steward-structure", "unexpected trusted Steward structural status context")
+    require(steward_gate.get("bootstrap_status_context") == "n0te2-steward-bootstrap-structure", "unexpected Steward bootstrap status context")
+    require(steward_gate.get("status_is_merge_authorization") is False, "a static Steward status must never be represented as live merge authorization")
+    require(steward_gate.get("live_authorization_owner") == "MAIN_STEWARD", "live merge authorization must remain owned by the Main Steward")
+    require(steward_gate.get("trusted_checker_source") == "PR_BASE", "future PR enforcement must execute a checker from the trusted PR base")
+    require(steward_gate.get("trusted_workflow_event") == "pull_request_target", "future trusted Steward enforcement must run from the base-owned workflow")
+    require(steward_gate.get("bootstrap_requires_manual_steward_review") is True, "Steward gate bootstrap must require manual live Steward review")
     require(steward_gate.get("pending_review_blocks_merge") is True, "pending substantive review must block Steward merge authorization")
     require(steward_gate.get("review_must_bind_exact_head") is True, "substantive review must bind exact candidate head")
     require(steward_gate.get("post_merge_review_opens_fix_order") is True, "late review must create a durable post-merge repair obligation")
 
 
+def check_steward_actor(repo: Path) -> None:
+    registry = load_json(repo / "governance/automation_registry.json")
+    actors = registry.get("actors", [])
+    actor = next(
+        (row for row in actors if isinstance(row, dict) and row.get("id") == "AUTO-STEWARD-INTEGRATION-GATE-001"),
+        None,
+    )
+    require(actor is not None, "Steward integration workflow is missing from the supervision graph")
+    require(actor.get("path") == ".github/workflows/steward-integration.yml", "Steward integration actor path changed")
+    require(actor.get("authority") == "VERIFY_STRUCTURE_ONLY", "Steward workflow must not claim live merge authority")
+    require(actor.get("parent") == "N0TE-SUPERVISOR", "Steward workflow escaped supervision parent")
+    observability = actor.get("observability", {})
+    require(observability.get("exact_head_required") is True, "Steward workflow lacks exact-head observability")
+    require(observability.get("reactivation_is_event") is True, "Steward workflow may reactivate silently")
+    require(observability.get("trusted_status_context") == "n0te2-steward-structure", "Steward workflow trusted status context changed")
+    require(observability.get("bootstrap_status_context") == "n0te2-steward-bootstrap-structure", "Steward workflow bootstrap status context changed")
+
+
 def run(repo: Path, verify_git: bool = True) -> None:
     check_canonical_extensions(repo)
     check_merge_policy(repo)
+    check_steward_actor(repo)
     check_terminal_construction_gate(repo, verify_git)
-    print("N0TE2 STEWARD INTEGRATION: GREEN")
+    print("N0TE2 STEWARD INTEGRATION STRUCTURE: GREEN")
+    print("merge_authorization=LIVE_MAIN_STEWARD_ONLY")
 
 
 if __name__ == "__main__":
@@ -186,5 +326,5 @@ if __name__ == "__main__":
     try:
         run(Path(args.repo).resolve(), verify_git=not args.no_git)
     except StewardIntegrationError as exc:
-        print(f"N0TE2 STEWARD INTEGRATION: RED: {exc}", file=sys.stderr)
+        print(f"N0TE2 STEWARD INTEGRATION STRUCTURE: RED: {exc}", file=sys.stderr)
         sys.exit(1)
