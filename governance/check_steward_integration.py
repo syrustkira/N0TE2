@@ -16,6 +16,7 @@ VALID_LIFECYCLE_STATES = {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}
 TERMINAL_LIFECYCLE_STATES = {"STABLE", "WAITING", "BLOCKED"}
 VALID_INCIDENT_STATUS_PREFIXES = ("OPEN", "RESOLVED")
 ZERO_SHA = "0" * 40
+PRIVILEGED_WORKFLOW_PREFIX = ".github/workflows/"
 
 CONSTRUCTION_SENSITIVE_EXACT = {
     "requirements.txt",
@@ -32,6 +33,8 @@ REQUIRED_PLATFORM_CONTEXTS = [
 
 TRUSTED_GATE_ARTIFACTS = [
     "governance/check_steward_integration.py",
+    "governance/merge_policy.json",
+    "governance/automation_registry.json",
     ".github/workflows/steward-integration.yml",
     ".github/workflows/governance.yml",
 ]
@@ -1000,6 +1003,17 @@ def check_trusted_artifact_immutability(repo: Path, verify_git: bool) -> None:
     pr_number = str(os.environ.get("N0TE2_PR_NUMBER") or "").strip()
     bootstrap = pr_number == BOOTSTRAP_PR_NUMBER
     meta_reopen = _meta_governance_reopen_authorized()
+
+    workflow_changes = [
+        path
+        for path in candidate_changed_paths(repo)
+        if path.casefold().startswith(PRIVILEGED_WORKFLOW_PREFIX.casefold())
+    ]
+    require(
+        not workflow_changes or bootstrap or meta_reopen,
+        "ordinary PR changed privileged workflow surface without explicit Main Steward meta-governance reopen: "
+        + ", ".join(workflow_changes),
+    )
 
     for relative in TRUSTED_GATE_ARTIFACTS:
         try:
