@@ -16,7 +16,6 @@ from .monitoring_context import (
 
 _MONITORING_ACTION_KIND = "monitoring-context-record"
 _MAX_MONITORING_VALUE = 500
-_ALLOWED_SCOPES = ("VERSION", "SONG", "ARTIST", "PROFILE")
 _KEY_LABELS = {
     "monitoring.output_path": "Monitoring path",
     "monitoring.listening_environment": "Listening environment",
@@ -78,7 +77,10 @@ def _display_value(value: object) -> str:
 def _source_summary(context_fact) -> str:
     labels = tuple(
         dict.fromkeys(
-            _SOURCE_LABELS.get(claim.source_kind, claim.source_kind.replace("_", " ").title())
+            _SOURCE_LABELS.get(
+                claim.source_kind,
+                claim.source_kind.replace("_", " ").title(),
+            )
             for claim in context_fact.claims
         )
     )
@@ -102,7 +104,11 @@ def _fact_markup(fact) -> str:
             '</li>'
             for claim in fact.claims
         )
-        scope = "" if fact.scope_kind is None else _SCOPE_LABELS.get(fact.scope_kind, fact.scope_kind.title())
+        scope = (
+            ""
+            if fact.scope_kind is None
+            else _SCOPE_LABELS.get(fact.scope_kind, fact.scope_kind.title())
+        )
         return (
             '<li class="stack">'
             f'<p><strong>{label}</strong></p>'
@@ -111,7 +117,11 @@ def _fact_markup(fact) -> str:
             f'<ul class="stack" aria-label="Conflicting {label} evidence">{competing}</ul>'
             '</li>'
         )
-    scope = "" if fact.scope_kind is None else _SCOPE_LABELS.get(fact.scope_kind, fact.scope_kind.title())
+    scope = (
+        ""
+        if fact.scope_kind is None
+        else _SCOPE_LABELS.get(fact.scope_kind, fact.scope_kind.title())
+    )
     return (
         '<li class="stack">'
         f'<p><strong>{label}</strong></p>'
@@ -121,10 +131,11 @@ def _fact_markup(fact) -> str:
     )
 
 
-def _binding(context: MonitoringContext) -> str:
+def _binding(context: MonitoringContext, key: str) -> str:
     return json.dumps(
         {
             "fingerprint": context.fingerprint,
+            "key": key,
             "song_id": context.song_id,
             "version_id": context.version_id,
         },
@@ -134,31 +145,26 @@ def _binding(context: MonitoringContext) -> str:
 
 
 def _record_form(shell: ConsumerShell, context: MonitoringContext) -> str:
-    token = shell._new_action(_MONITORING_ACTION_KIND, _binding(context))
-    key_options = "".join(
-        f'<option value="{html.escape(key, quote=True)}">{html.escape(_KEY_LABELS[key])}</option>'
+    buttons = "".join(
+        '<button type="submit" name="action" '
+        f'value="{html.escape(shell._new_action(_MONITORING_ACTION_KIND, _binding(context, key)), quote=True)}">'
+        f'{html.escape(_KEY_LABELS[key])}</button>'
         for key in DEFAULT_MONITORING_KEYS
-    )
-    scope_options = "".join(
-        f'<option value="{scope}">{html.escape(_SCOPE_LABELS[scope])}</option>'
-        for scope in _ALLOWED_SCOPES
     )
     return (
         '<form class="stack" method="post" action="/monitoring/context">'
-        f'{shell._hidden(token)}'
-        '<div><label for="monitoring-key">What are you describing?</label>'
-        f'<select id="monitoring-key" name="key" required>{key_options}</select></div>'
-        '<div><label for="monitoring-scope">Where should this declaration apply?</label>'
-        f'<select id="monitoring-scope" name="scope" required>{scope_options}</select></div>'
-        '<div><label for="monitoring-value">Monitoring context</label>'
+        f'{shell._csrf_hidden()}'
+        '<div><label for="monitoring-value">What is true about this exact current Version while you are listening?</label>'
         f'<textarea id="monitoring-value" name="value" maxlength="{_MAX_MONITORING_VALUE}" rows="3" required></textarea></div>'
-        '<div class="row"><button type="submit">Record monitoring context</button></div>'
-        '<p class="muted">This form records only what you tell N0TE. It does not turn your description into a measurement, calibration certificate, hearing-safety judgment, room-correction instruction, or processing authority.</p>'
+        f'<div class="row" aria-label="Monitoring fact to record">{buttons}</div>'
+        '<p class="muted">Choose the fact this statement describes. Each button is a one-shot action bound to that exact fact, Song, current Version, and listening-context snapshot. This form records only what you tell N0TE. It does not turn your description into a measurement, calibration certificate, hearing-safety judgment, room-correction instruction, or processing authority.</p>'
         '</form>'
     )
 
 
-def _current_context(shell: ConsumerShell) -> tuple[MonitoringContextService, MonitoringContext] | None:
+def _current_context(
+    shell: ConsumerShell,
+) -> tuple[MonitoringContextService, MonitoringContext] | None:
     if shell.runtime.state != "RUNNING":
         return None
     store = shell.runtime.headquarters.store
@@ -197,24 +203,17 @@ def _decode_binding(raw: str) -> dict[str, str]:
         payload = json.loads(raw)
     except (TypeError, json.JSONDecodeError) as exc:
         raise MonitoringContextError("monitoring action binding is invalid") from exc
-    if not isinstance(payload, dict) or set(payload) != {"fingerprint", "song_id", "version_id"}:
+    expected = {"fingerprint", "key", "song_id", "version_id"}
+    if not isinstance(payload, dict) or set(payload) != expected:
         raise MonitoringContextError("monitoring action binding is incomplete")
-    if not all(isinstance(payload.get(key), str) and payload[key] for key in payload):
+    if not all(
+        isinstance(payload.get(key), str) and payload[key]
+        for key in expected
+    ):
         raise MonitoringContextError("monitoring action binding is invalid")
+    if payload["key"] not in _KEY_LABELS:
+        raise MonitoringContextError("monitoring fact is not supported")
     return payload
-
-
-def _scope_id(shell: ConsumerShell, scope: str, *, song_id: str, version_id: str) -> str:
-    store = shell.runtime.headquarters.store
-    if scope == "VERSION":
-        return version_id
-    if scope == "SONG":
-        return song_id
-    if scope == "ARTIST":
-        return store.primary_artist_id
-    if scope == "PROFILE":
-        return store.profile_id
-    raise MonitoringContextError("monitoring scope is not supported")
 
 
 def _post_monitoring(
@@ -226,25 +225,38 @@ def _post_monitoring(
         shell._send_html(
             handler,
             409,
-            shell._simple_error("Open an Artist workspace before recording monitoring context."),
+            shell._simple_error(
+                "Open an Artist workspace before recording monitoring context."
+            ),
         )
         return
-    action = shell._consume_action(form.get("action", ""), _MONITORING_ACTION_KIND)
+    action = shell._consume_action(
+        form.get("action", ""),
+        _MONITORING_ACTION_KIND,
+    )
     if action is None or action.value is None:
         shell._send_html(
             handler,
             409,
-            shell._simple_error("That monitoring action was already handled or expired."),
+            shell._simple_error(
+                "That monitoring action was already handled or expired."
+            ),
         )
         return
     binding = _decode_binding(action.value)
     store = shell.runtime.headquarters.store
     song = store.active_song()
-    if song is None or song.id != binding["song_id"] or song.current_version_id != binding["version_id"]:
+    if (
+        song is None
+        or song.id != binding["song_id"]
+        or song.current_version_id != binding["version_id"]
+    ):
         shell._send_html(
             handler,
             409,
-            shell._simple_error("The active Song or current Version changed. Reload the Song before recording monitoring context."),
+            shell._simple_error(
+                "The active Song or current Version changed. Reload the Song before recording monitoring context."
+            ),
         )
         return
     version = store.get_version(binding["version_id"])
@@ -252,7 +264,9 @@ def _post_monitoring(
         shell._send_html(
             handler,
             409,
-            shell._simple_error("That Version no longer belongs to the active Song."),
+            shell._simple_error(
+                "That Version no longer belongs to the active Song."
+            ),
         )
         return
 
@@ -262,31 +276,26 @@ def _post_monitoring(
         shell._send_html(
             handler,
             409,
-            shell._simple_error("The listening context changed. Reload the Song before recording another monitoring fact."),
+            shell._simple_error(
+                "The listening context changed. Reload the Song before recording another monitoring fact."
+            ),
         )
         return
 
-    key = form.get("key", "")
-    if not isinstance(key, str) or key not in _KEY_LABELS:
-        raise MonitoringContextError("monitoring fact is not supported")
-    scope = form.get("scope", "")
-    if not isinstance(scope, str) or scope not in _ALLOWED_SCOPES:
-        raise MonitoringContextError("monitoring scope is not supported")
+    key = binding["key"]
     value = _clean_value(form.get("value", ""))
-    target_id = _scope_id(
-        shell,
-        scope,
-        song_id=song.id,
-        version_id=version.id,
-    )
     supersedes = tuple(
         claim.id
-        for claim in shell.runtime.headquarters.evidence.active_claims(scope, target_id, key)
+        for claim in shell.runtime.headquarters.evidence.active_claims(
+            "VERSION",
+            version.id,
+            key,
+        )
         if claim.source_kind == "USER_DECLARED"
     )
     service.record_fact(
-        scope_kind=scope,
-        scope_id=target_id,
+        scope_kind="VERSION",
+        scope_id=version.id,
         key=key,
         value=value,
         source_kind="USER_DECLARED",
@@ -294,7 +303,7 @@ def _post_monitoring(
         supersedes=supersedes,
     )
     shell._consumer_notice = (
-        f"{_KEY_LABELS[key]} updated as your declaration for {_SCOPE_LABELS[scope].lower()}. "
+        f"{_KEY_LABELS[key]} updated as your declaration for this exact Version. "
         "No measurement, certification, or processing authority was created."
     )
     shell._redirect(handler, "/song")
@@ -307,7 +316,9 @@ def install_song_monitoring_context() -> None:
         return
 
     original_song: Callable[[ConsumerShell, object], str] = ConsumerShell._song_content
-    original_post: Callable[[ConsumerShell, BaseHTTPRequestHandler], None] = ConsumerShell._handle_post
+    original_post: Callable[
+        [ConsumerShell, BaseHTTPRequestHandler], None
+    ] = ConsumerShell._handle_post
 
     def with_monitoring_card(self: ConsumerShell, state) -> str:
         rendered = original_song(self, state)
@@ -321,15 +332,22 @@ def install_song_monitoring_context() -> None:
             )
         return rendered[: -len(marker)] + card + marker
 
-    def with_monitoring_post(self: ConsumerShell, handler: BaseHTTPRequestHandler) -> None:
+    def with_monitoring_post(
+        self: ConsumerShell,
+        handler: BaseHTTPRequestHandler,
+    ) -> None:
         if self._path(handler) != "/monitoring/context":
             original_post(self, handler)
             return
-        if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(handler):
+        if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(
+            handler
+        ):
             self._send_html(
                 handler,
                 403,
-                self._simple_error("That monitoring action did not come from this N0TE window."),
+                self._simple_error(
+                    "That monitoring action did not come from this N0TE window."
+                ),
             )
             return
         form = self._read_form(handler)
@@ -337,7 +355,9 @@ def install_song_monitoring_context() -> None:
             self._send_html(
                 handler,
                 403,
-                self._simple_error("That monitoring action expired. Reload the Song and try again."),
+                self._simple_error(
+                    "That monitoring action expired. Reload the Song and try again."
+                ),
             )
             return
         try:
