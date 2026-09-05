@@ -2,13 +2,13 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "AUDIO-02-PLUGIN-DISCOVERY-01 is implemented, exact-head verified cross-platform and merged; the bounded package-discovery foundation is closed without marking AUDIO-02 DONE or claiming full REQ-SCOPE-150 complete.",
-  "wake_condition": "Global product reselection identifies the next dependency-valid unowned customer gap from live main and canonical retained scope.",
-  "next_admissible_action": "Refresh live main and open work, prove existing behavior, then globally select exactly one dependency-valid unowned product increment. Prefer work that unlocks a real customer journey, connects already-built islands, or closes multiple retained requirements through existing foundations and lightweight trusted reuse.",
-  "product_code_authorized": false,
+  "lifecycle_state": "ACTIVE",
+  "active_node": "AUDIO-01",
+  "active_increment": "AUDIO-01-MONITORING-CONTEXT-SURFACE-01",
+  "terminal_reason": null,
+  "wake_condition": "AUDIO-01-MONITORING-CONTEXT-SURFACE-01 remains active until its bounded consumer integration is exact-head verified and integrated or a concrete blocker requires WAITING/BLOCKED truth.",
+  "next_admissible_action": "Implement and adversarially verify only the receipt-bounded MonitoringContext consumer surface on the exact selected baseline. Do not expand into hardware discovery, calibration, provider verification, broader-scope browser writes, audio processing or another persistence owner.",
+  "product_code_authorized": true,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
@@ -87,6 +87,9 @@
     "Issue #157 bounded AUDIO-02-PLUGIN-DISCOVERY-01 to standard/specification-defined and caller-explicit package discovery while existing Tool semantics remain the semantic identity boundary and entitlement remains a separate access boundary.",
     "AUDIO-02-PLUGIN-DISCOVERY-01 exact head 524948aa43255158bcb3ed0a36ffdf95d83a6079 passed GitHub Actions run 33925194048 on Ubuntu, macOS and Windows with dependency installation, exact checkout, construction governance, context lifecycle governance, supervision, full regression, staged consumer smoke, evidence upload and exact-head success publication all green.",
     "PR #171 merged that verified bounded cross-format plug-in discovery substrate as 4dc0d5dc9e2ea6b0584bd4fe179d32bd0c65f51c. Filesystem presence remains DISCOVERED evidence only; it does not establish entitlement, hostability, compatibility, parameter/state control, successful loading or semantic Tool identity.",
-    "AUDIO-02-PLUGIN-DISCOVERY-01 closes only bounded package discovery. AUDIO-02 remains PRESERVED and full REQ-SCOPE-150 remains open for custom-path persistence and UI, semantic Tool identity, entitlement integration, hosting, DAW-native routing, parameter/state control, isolation or bridging, and consumer-complete Workspaces or Health."
+    "AUDIO-02-PLUGIN-DISCOVERY-01 closes only bounded package discovery. AUDIO-02 remains PRESERVED and full REQ-SCOPE-150 remains open for custom-path persistence and UI, semantic Tool identity, entitlement integration, hosting, DAW-native routing, parameter/state control, isolation or bridging, and consumer-complete Workspaces or Health.",
+    "Canonical N0TE_PRODUCT_DB SCOPE_LEDGER marks REQ-SCOPE-057 MonitoringContext as a Gate-B blocker with RECONCILE / IMPLEMENT work class on Song / Produce / Learn. The requirement binds listening environment, monitoring path and translation context to engineering judgments rather than allowing local conditions to become universal truth.",
+    "PR #107 previously merged the exact Song/Version MonitoringContextService foundation over canonical EvidenceMemory. That foundation preserves source kind, scope specificity, conflict, freshness fingerprint and EVIDENCE_ONLY authority but explicitly deferred normal consumer wiring.",
+    "Issue #183 durably claims AUDIO-01-MONITORING-CONTEXT-SURFACE-01 on baseline f471b19401f8cc0c58bab29e701f42cb5225c2ba. The bounded consumer slice reads canonical monitoring evidence and permits exact current-Version USER_DECLARED writes only; it does not mint measured/provider truth or claim all REQ-SCOPE-057 complete."
   ]
 }
