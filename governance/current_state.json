@@ -2,12 +2,12 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "SONG-01-AB-LOUDNESS-BIAS-01 is implemented, exact-head verified cross-platform and merged; the bounded standards-aware exact Version A/B level-bias evidence bridge is closed without marking SONG-01 DONE or claiming full REQ-SCOPE-010 complete.",
-  "wake_condition": "Global product reselection identifies the next dependency-valid unowned customer gap from live main and canonical retained scope.",
-  "next_admissible_action": "Refresh live main and open work, prove existing behavior, then globally select exactly one dependency-valid unowned product increment. Prefer work that unlocks a real customer journey, connects already-built islands, or closes multiple retained requirements through existing foundations and lightweight trusted reuse.",
+  "lifecycle_state": "ACTIVE",
+  "active_node": "INCIDENT-REPAIR",
+  "active_increment": "INCIDENT-REPAIR-247-248-GOVERNANCE-01",
+  "terminal_reason": null,
+  "wake_condition": "This bounded #206 governance incident repair is active; no product construction or unrelated integration may be selected until it reaches a truthful terminal disposition.",
+  "next_admissible_action": "Implement and prove only the first-class incident-repair lifecycle plus the current_state/automation-registry ownership correction owned by issues #247 and #248, then return to a truthful terminal state without selecting product work.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -26,6 +26,8 @@
     "Historical SONG-01-AB-LOUDNESS-BIAS-01 heads 380c09bc7536a4635b57948776fa9f969065ad01, db705ef259ab24c498e0c64bb480b38b91895d01 and 94141bc01fead98fbdf5978f0c67275bacdb4a8a each passed complete first-attempt Ubuntu/macOS/Windows matrices before disjoint main movement made those proofs historical.",
     "SONG-01-AB-LOUDNESS-BIAS-01 exact implementation head 4f146f2b5cf23c689ca56b63f0bb100a0dba5928 passed GitHub Actions run 33946401600 on Ubuntu, Windows and macOS with exact checkout, construction governance, context lifecycle governance, supervision/runtime handoff, full regression, staged consumer smoke, evidence upload and exact-head success publication all green.",
     "PR #141 merged that verified bounded standards-aware A/B level-bias bridge as ab1bb8f87a3d5b021d352a215302b14114312021. The surface may expose exact measured integrated loudness and pair difference as evidence with truthful RMS fallback, but it does not normalize audio, infer quality, choose an artist decision, mutate Song/Version/Learning, grant execution authority, mark SONG-01 DONE, or complete full REQ-SCOPE-010.",
-    "Governance-only issue #191 closes the merged SONG-01-AB-LOUDNESS-BIAS-01 construction receipt, returning SONG-01 to PRESERVED and construction to STABLE/DORMANT without selecting adjacent product work."
+    "Governance-only issue #191 closed the merged SONG-01-AB-LOUDNESS-BIAS-01 construction receipt, returning SONG-01 to PRESERVED and construction to STABLE/DORMANT without selecting adjacent product work.",
+    "PR #211 merged the trusted Main Steward gate as 25801563ba8865941f1214ba83d9ea8a346912bf and was post-merge verified by trusted structure plus ordinary Linux, Windows and macOS governance run #1619.",
+    "Issues #247 and #248 are the sole active governance incident-repair work. INCIDENT-REPAIR is not a product completion node and grants no product construction authority."
   ]
 }
