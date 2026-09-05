@@ -824,7 +824,10 @@ def check_workflow_contracts(repo: Path) -> None:
     require("--depth=1" not in steward, "trusted base fetch must not truncate merge-base history")
     require("N0TE2_DIFF_MODE: PR_MERGE_BASE" in steward, "trusted PR workflow must request merge-base diff semantics")
     require("N0TE2_DIFF_MODE: EXACT_TREE" in steward, "main push workflow must request exact base-to-head tree diff semantics")
-    require("state: 'pending'" in steward, "trusted structural context must reset to pending before evaluation")
+    require(
+        "STATUS_STATE: pending" in steward and "Reset trusted structural status to pending" in steward,
+        "trusted structural context must reset to pending before evaluation",
+    )
     require(META_GOVERNANCE_REOPEN_LABEL in steward, "trusted workflow lost the manual meta-governance reopen label")
     require(
         "TRUSTED_PATH: .steward-trusted-${{ github.run_id }}-${{ github.run_attempt }}" in steward,
