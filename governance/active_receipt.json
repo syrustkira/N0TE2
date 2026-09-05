@@ -26,6 +26,7 @@
     "governance/supervision.py",
     "tests/governance/conftest.py",
     "tests/governance/test_incident_event_history.py",
+    "tests/governance/test_incident_repair_exact_paths.py",
     "tests/governance/test_incident_repair_lifecycle.py",
     "tests/governance/test_incident_repair_meta_protection.py",
     "tests/governance/test_incident_repair_noninterference.py",
