@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "target_branch": "main",
   "required_exact_head_status_contexts": [
     "n0te2-governance-Linux",
@@ -24,15 +24,22 @@
   },
   "steward_gate": {
     "required": true,
-    "status_context": "n0te2-steward-integration",
+    "structural_status_context": "n0te2-steward-structure",
+    "bootstrap_status_context": "n0te2-steward-bootstrap-structure",
+    "status_is_merge_authorization": false,
+    "live_authorization_owner": "MAIN_STEWARD",
+    "trusted_checker_source": "PR_BASE",
+    "trusted_workflow_event": "pull_request_target",
+    "bootstrap_requires_manual_steward_review": true,
+    "bootstrap_pr": 211,
     "pending_review_blocks_merge": true,
     "review_must_bind_exact_head": true,
     "post_merge_review_opens_fix_order": true,
-    "rule": "The Main Steward must refresh live main, exact candidate head, required statuses, substantive review completion and unresolved findings immediately before guarded merge. A review still pending is not a completed review. Any substantive review arriving after merge creates a durable post-merge incident/FIX_ORDER rather than becoming historical noise."
+    "rule": "Structural CI proves only that the exact candidate satisfies the trusted repository-side Steward structure contract. It never authorizes merge by itself. The single Main Steward must independently refresh live main, exact candidate head, required platform statuses, substantive exact-head review completion, unresolved findings and incident state immediately before an expected-head guarded merge, then verify resulting main. The first Steward-gate bootstrap cannot trust a base checker that does not yet exist and therefore requires explicit live Steward review rather than treating candidate-controlled bootstrap status as merge authority."
   },
   "external_enforcement": {
-    "desired": "GitHub branch protection or repository ruleset requiring the three exact-head platform contexts plus the Steward integration status where administratively available",
+    "desired": "After Steward-gate bootstrap, GitHub branch protection or a repository ruleset should require the three exact-head platform contexts plus the trusted n0te2-steward-structure context where administratively available.",
     "repository_file_cannot_prevent_direct_push_by_itself": true,
-    "current_truth": "Repository policy files define the required contract, while the single active Main Steward remains responsible for atomic review/race/expected-head enforcement unless external branch protection or ruleset evidence proves those controls are enforced by GitHub."
+    "current_truth": "Repository policy and trusted structural CI define evidence requirements, while the single active Main Steward remains the live merge-authorization owner unless external branch protection or ruleset evidence proves equivalent atomic enforcement. A structural status, including green, is not a merge receipt."
   }
 }
