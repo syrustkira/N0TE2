@@ -15,22 +15,26 @@ HEX40 = re.compile(r"^[0-9a-f]{40}$")
 VALID_LIFECYCLE_STATES = {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}
 TERMINAL_LIFECYCLE_STATES = {"STABLE", "WAITING", "BLOCKED"}
 ZERO_SHA = "0" * 40
+
 CONSTRUCTION_SENSITIVE_EXACT = {
     "requirements.txt",
     "pyproject.toml",
     "setup.py",
     "setup.cfg",
 }
+
 REQUIRED_PLATFORM_CONTEXTS = [
     "n0te2-governance-Linux",
     "n0te2-governance-Windows",
     "n0te2-governance-macOS",
 ]
+
 TRUSTED_GATE_ARTIFACTS = [
     "governance/check_steward_integration.py",
     ".github/workflows/steward-integration.yml",
     ".github/workflows/governance.yml",
 ]
+
 CRITICAL_CANDIDATE_INPUTS = [
     "governance/requirements.json",
     "governance/completion_graph.json",
@@ -42,8 +46,37 @@ CRITICAL_CANDIDATE_INPUTS = [
     "governance/automation_registry.json",
     *TRUSTED_GATE_ARTIFACTS,
 ]
+
 CANONICAL_SOURCE = "N0TE_PRODUCT_DB/SCOPE_LEDGER"
 CANONICAL_SOURCE_REVISION = "524"
+CANONICAL_SCOPE_ROW = {
+    "source": CANONICAL_SOURCE,
+    "start": 2,
+    "end": 170,
+    "retained_requirement_count": 169,
+    "source_revision": CANONICAL_SOURCE_REVISION,
+    "rule": (
+        "The canonical product ledger owns full accepted N0TE scope. "
+        "The temporary build graph is a construction-selection index and must not expand "
+        "into a second product database merely because canonical scope grows. "
+        "Canonical extensions preserve accepted scope without selecting work by themselves."
+    ),
+}
+REQUIREMENTS_TOP_LEVEL_KEYS = {
+    "schema_version",
+    "sequence",
+    "sequence_role",
+    "canonical_scope",
+    "canonical_extensions",
+    "held_or_boundary",
+    "superseded",
+    "default_classification",
+    "known_blocks_candidate",
+    "known_selects_work",
+    "non_active_blocks_candidate",
+    "selection_contract",
+}
+
 CANONICAL_EXTENSION_ROWS = [
     {"id":"REQ-SCOPE-154","state":"MAPPED","selected":False,"construction_affinity":["UX-01","CORE-02","CORE-03","CORE-04"],"summary":"Creative Partner professional-lens selection and bounded multi-perspective synthesis."},
     {"id":"REQ-SCOPE-155","state":"MAPPED","selected":False,"construction_affinity":["UX-01","CORE-04"],"summary":"Creative Partner presence, initiative and silence policy including explicit no-action posture."},
@@ -63,6 +96,7 @@ CANONICAL_EXTENSION_ROWS = [
     {"id":"REQ-SCOPE-169","state":"MAPPED","selected":False,"construction_affinity":["OPS-04","OPS-02","CONV-01"],"summary":"Territory, international and cultural context for professional music work."},
     {"id":"REQ-SCOPE-170","state":"MAPPED","selected":False,"construction_affinity":["LATER-01","OPS-02","OPS-06"],"summary":"Legacy, catalog and career succession continuity; accepted but dependency-gated/later."},
 ]
+
 CANONICAL_SELECTION_FIELDS = {
     "held_or_boundary": [
         "REQ-SCOPE-044","REQ-SCOPE-045","REQ-SCOPE-047","REQ-SCOPE-062",
@@ -74,17 +108,49 @@ CANONICAL_SELECTION_FIELDS = {
     "known_blocks_candidate": True,
     "known_selects_work": False,
     "non_active_blocks_candidate": False,
-    "selection_contract": "A requirement may be known and still unfinished without being selected. Work becomes ACTIVE only through current_state plus an active receipt after global dependency-ready selection. Canonical extensions remain retained even when the build graph does not yet index them as construction nodes.",
+    "selection_contract": (
+        "A requirement may be known and still unfinished without being selected. "
+        "Work becomes ACTIVE only through current_state plus an active receipt after global "
+        "dependency-ready selection. Canonical extensions remain retained even when the "
+        "build graph does not yet index them as construction nodes."
+    ),
 }
-HANDOFF_LIFECYCLE_CONTRACT = {
+
+HANDOFF_TOP_LEVEL_KEYS = {
+    "schema_version",
+    "repository",
+    "delivery",
+    "head_binding",
+    "controller",
+    "lifecycle",
+    "derived_runtime_truth",
+    "reconstruction",
+}
+HANDOFF_COMPATIBILITY_KEYS = {"state", "active_node", "active_increment"}
+HANDOFF_RUNTIME_TRUTH_CONTRACT = {
     "lifecycle_source": "governance/current_state.json",
     "next_admissible_action_source": "governance/current_state.json",
     "canonical_scope_source": "governance/requirements.json",
     "open_incidents_source": "governance/incidents.jsonl",
-    "legacy_lifecycle_copy_policy": "The empty lifecycle object carries no canonical state. It exists only as a compatibility/adversarial hook: any supplied legacy lifecycle fields must match current_state or validation fails.",
-    "rule": "Handoff is a reconstruction recipe, not the owner of mutable runtime truth. Lifecycle, delivery state, executor liveness, next action, canonical scope and open incidents are derived from their canonical owners.",
+    "delivery_state_source": "GITHUB_RUNTIME",
+    "executor_liveness_sources": ["GITHUB_ACTIONS_RUNTIME", "CHATGPT_AUTOMATIONS_RUNTIME"],
+    "legacy_lifecycle_copy_policy": (
+        "The empty lifecycle object carries no canonical state. It exists only as a "
+        "compatibility/adversarial hook: any supplied legacy lifecycle fields must match "
+        "current_state or validation fails."
+    ),
+    "rule": (
+        "Handoff is a reconstruction recipe, not the owner of mutable runtime truth. "
+        "Lifecycle, delivery state, executor liveness, next action, canonical scope and open "
+        "incidents are derived from their canonical owners."
+    ),
 }
+
 BLOCKING_REPAIR_SCOPE = "BLOCKING_EXCEPT_EXPLICIT_INCIDENT_REPAIR"
+BOOTSTRAP_PR_NUMBER = "211"
+META_GOVERNANCE_REOPEN_ENV = "N0TE2_META_GOVERNANCE_REOPEN"
+META_GOVERNANCE_REOPEN_VALUE = "MAIN_STEWARD_LABEL"
+META_GOVERNANCE_REOPEN_LABEL = "steward-meta-governance-reopen"
 
 
 class StewardIntegrationError(RuntimeError):
@@ -111,10 +177,7 @@ def _typed_json(value: Any) -> Any:
     if type(value) is list:
         return ("list", tuple(_typed_json(item) for item in value))
     if type(value) is dict:
-        return (
-            "dict",
-            tuple((key, _typed_json(value[key])) for key in sorted(value)),
-        )
+        return ("dict", tuple((key, _typed_json(value[key])) for key in sorted(value)))
     raise StewardIntegrationError(f"unsupported JSON value type: {type(value).__name__}")
 
 
@@ -126,6 +189,24 @@ def _require_regular_file(path: Path) -> None:
     require(path.exists(), f"required candidate file is missing: {path}")
     require(not path.is_symlink(), f"candidate governance input must not be a symlink: {path}")
     require(path.is_file(), f"candidate governance input must be a regular file: {path}")
+
+
+def _require_repo_path_without_symlink_ancestors(repo: Path, relative: str) -> None:
+    cursor = repo
+    parts = Path(relative).parts
+    require(parts, f"candidate governance path is empty: {relative!r}")
+    for index, part in enumerate(parts):
+        cursor = cursor / part
+        require(
+            not cursor.is_symlink(),
+            f"candidate governance path component must not be a symlink: {relative} at {cursor}",
+        )
+        if index < len(parts) - 1:
+            require(
+                cursor.exists() and cursor.is_dir(),
+                f"candidate governance ancestor is missing or not a directory: {cursor}",
+            )
+    _require_regular_file(cursor)
 
 
 def load_json(path: Path) -> dict:
@@ -146,10 +227,7 @@ def load_jsonl(path: Path) -> list[dict]:
             if not raw.strip():
                 continue
             value = json.loads(raw)
-            require(
-                isinstance(value, dict),
-                f"{path} line {line_number} must contain a JSON object",
-            )
+            require(isinstance(value, dict), f"{path} line {line_number} must contain a JSON object")
             rows.append(value)
     except StewardIntegrationError:
         raise
@@ -165,9 +243,7 @@ def git(repo: Path, *args: str) -> str:
 
 
 def git_bytes(repo: Path, *args: str) -> bytes:
-    return subprocess.check_output(
-        ["git", *args], cwd=repo, stderr=subprocess.STDOUT
-    )
+    return subprocess.check_output(["git", *args], cwd=repo, stderr=subprocess.STDOUT)
 
 
 def git_show_bytes(repo: Path, ref: str, path: str) -> bytes:
@@ -204,7 +280,7 @@ def git_jsonl(repo: Path, ref: str, path: str) -> list[dict]:
 
 def check_candidate_inputs_are_regular(repo: Path) -> None:
     for relative in CRITICAL_CANDIDATE_INPUTS:
-        _require_regular_file(repo / relative)
+        _require_repo_path_without_symlink_ancestors(repo, relative)
 
 
 def check_canonical_extensions(repo: Path) -> None:
@@ -215,24 +291,49 @@ def check_canonical_extensions(repo: Path) -> None:
         for row in graph_doc.get("nodes", [])
         if isinstance(row, dict) and isinstance(row.get("id"), str)
     }
-    sequence = doc.get("sequence", {})
-    canonical = doc.get("canonical_scope", {})
+
+    require(
+        set(doc.keys()) == REQUIREMENTS_TOP_LEVEL_KEYS,
+        "requirements authority surface changed or gained unreviewed shadow fields",
+    )
     require(doc.get("schema_version") == 5, "requirements schema changed without Steward manifest review")
     require(doc.get("sequence_role") == "BUILD_GRAPH_INDEX", "requirement sequence role changed")
-    require(sequence.get("start") == 2 and sequence.get("end") == 153, "build-graph requirement index changed unexpectedly")
+    require(
+        exact_json_equal(doc.get("sequence"), {"start": 2, "end": 153}),
+        "build-graph requirement index changed unexpectedly",
+    )
+    canonical = doc.get("canonical_scope", {})
     require(canonical.get("source") == CANONICAL_SOURCE, "canonical requirement source changed")
-    require(canonical.get("source_revision") == CANONICAL_SOURCE_REVISION, "canonical requirement source revision changed without a reviewed Steward manifest update")
-    require(canonical.get("start") == 2 and canonical.get("end") == 170, "canonical retained scope changed without a reviewed Steward manifest update")
-    require(canonical.get("retained_requirement_count") == 169, "canonical retained requirement count is inconsistent")
+    require(
+        canonical.get("source_revision") == CANONICAL_SOURCE_REVISION,
+        "canonical requirement source revision changed without a reviewed Steward manifest update",
+    )
+    require(
+        canonical.get("start") == 2 and canonical.get("end") == 170,
+        "canonical retained scope changed without a reviewed Steward manifest update",
+    )
+    require(
+        canonical.get("retained_requirement_count") == 169,
+        "canonical retained requirement count is inconsistent",
+    )
+    require(
+        exact_json_equal(canonical, CANONICAL_SCOPE_ROW),
+        "canonical retained scope contract gained unreviewed fields or semantics",
+    )
+
     extensions = doc.get("canonical_extensions")
     require(isinstance(extensions, list), "canonical_extensions must be a list")
-    require(exact_json_equal(extensions, CANONICAL_EXTENSION_ROWS), "canonical extension semantics, JSON types, or construction affinities changed without a reviewed Steward manifest update")
+    require(
+        exact_json_equal(extensions, CANONICAL_EXTENSION_ROWS),
+        "canonical extension semantics, JSON types, or construction affinities changed without a reviewed Steward manifest update",
+    )
     for row in extensions:
         require(row.get("selected") is False, f"{row.get('id')} selected must remain the JSON boolean false")
         require(
             all(node_id in graph_ids for node_id in row["construction_affinity"]),
             f"{row['id']} references an unknown construction-affinity node",
         )
+
     for key, expected in CANONICAL_SELECTION_FIELDS.items():
         require(
             exact_json_equal(doc.get(key), expected),
@@ -248,9 +349,7 @@ def _valid_directory_prefix(prefix: object) -> bool:
     if not prefix.endswith("/"):
         return False
     components = prefix[:-1].split("/")
-    return bool(components) and all(
-        component not in {"", ".", ".."} for component in components
-    )
+    return bool(components) and all(component not in {"", ".", ".."} for component in components)
 
 
 def _valid_relative_path(path: object) -> bool:
@@ -282,6 +381,109 @@ def _normalized_status(value: object) -> str:
     return value.strip().upper() if isinstance(value, str) else ""
 
 
+def candidate_base(repo: Path) -> str | None:
+    supplied_raw = str(os.environ.get("N0TE2_BASE_SHA") or "").strip().lower()
+    if supplied_raw:
+        require(HEX40.match(supplied_raw) is not None, "N0TE2_BASE_SHA must be an exact lowercase 40-character SHA")
+        require(supplied_raw != ZERO_SHA, "all-zero candidate base is unverifiable; refuse to publish a Steward structural pass")
+        return supplied_raw
+    try:
+        return git(repo, "rev-parse", "HEAD^")
+    except subprocess.CalledProcessError:
+        return None
+
+
+def candidate_changed_paths(repo: Path) -> list[str]:
+    base = candidate_base(repo)
+    if base is None:
+        try:
+            changed = git_bytes(
+                repo,
+                "diff-tree",
+                "--root",
+                "--no-commit-id",
+                "--no-renames",
+                "--name-only",
+                "-z",
+                "-r",
+                "HEAD",
+            )
+        except subprocess.CalledProcessError as exc:
+            raise StewardIntegrationError(
+                f"cannot derive full root candidate diff: {exc.output.decode(errors='replace')}"
+            ) from exc
+    else:
+        mode = str(os.environ.get("N0TE2_DIFF_MODE") or "PR_MERGE_BASE").strip().upper()
+        if mode == "EXACT_TREE":
+            diff_range = (base, "HEAD")
+        else:
+            require(mode == "PR_MERGE_BASE", f"unknown N0TE2_DIFF_MODE: {mode}")
+            diff_range = (f"{base}...HEAD",)
+        try:
+            changed = git_bytes(repo, "diff", "--no-renames", "--name-only", "-z", *diff_range)
+        except subprocess.CalledProcessError as exc:
+            raise StewardIntegrationError(
+                f"cannot derive candidate diff from base {base}: {exc.output.decode(errors='replace')}"
+            ) from exc
+    return [os.fsdecode(raw) for raw in changed.split(b"\0") if raw]
+
+
+def construction_sensitive(path: str) -> bool:
+    folded = path.casefold()
+    if folded.startswith("n0te2/"):
+        return True
+    if folded.startswith("tests/") and not folded.startswith("tests/governance/"):
+        return True
+    return folded in {item.casefold() for item in CONSTRUCTION_SENSITIVE_EXACT}
+
+
+def _path_allowed_by_receipt(receipt: dict, path: str) -> bool:
+    exact_paths = receipt.get("allowed_exact_paths", [])
+    prefixes = receipt.get("allowed_prefixes", [])
+    if path in exact_paths:
+        return True
+    return any(isinstance(prefix, str) and path.startswith(prefix) for prefix in prefixes)
+
+
+def check_lifecycle_and_active_receipt(repo: Path, verify_git: bool) -> None:
+    current = load_json(repo / "governance/current_state.json")
+    receipt = load_json(repo / "governance/active_receipt.json")
+    lifecycle = current.get("lifecycle_state")
+
+    require(lifecycle in VALID_LIFECYCLE_STATES, f"unrecognized lifecycle_state: {lifecycle!r}")
+    require(type(current.get("product_code_authorized")) is bool, "current_state product_code_authorized must be a JSON boolean")
+    require(type(receipt.get("product_code_allowed")) is bool, "active receipt product_code_allowed must be a JSON boolean")
+
+    if lifecycle == "ACTIVE":
+        require(isinstance(current.get("active_node"), str) and current["active_node"].strip(), "ACTIVE lifecycle requires active_node")
+        require(isinstance(current.get("active_increment"), str) and current["active_increment"].strip(), "ACTIVE lifecycle requires active_increment")
+        require(receipt.get("status") == "ACTIVE", "ACTIVE lifecycle requires an ACTIVE bounded receipt")
+        require(receipt.get("node_id") == current.get("active_node"), "ACTIVE receipt node does not match current_state")
+        require(receipt.get("increment_id") == current.get("active_increment"), "ACTIVE receipt increment does not match current_state")
+        require(receipt.get("product_code_allowed") == current.get("product_code_authorized"), "ACTIVE receipt/current_state product authority mismatch")
+        if verify_git:
+            base = candidate_base(repo)
+            if base is not None:
+                require(receipt.get("baseline_sha") == base, "ACTIVE receipt baseline_sha must bind the exact candidate base")
+            changed = candidate_changed_paths(repo)
+            construction = [path for path in changed if construction_sensitive(path)]
+            if construction:
+                require(receipt.get("product_code_allowed") is True, "construction-sensitive ACTIVE repair lacks product-code authority")
+            unauthorized = [path for path in construction if not _path_allowed_by_receipt(receipt, path)]
+            require(
+                not unauthorized,
+                "ACTIVE candidate changed construction-sensitive paths outside its bounded receipt: "
+                + ", ".join(unauthorized),
+            )
+    else:
+        require(current.get("active_node") is None, f"{lifecycle} cannot retain active_node")
+        require(current.get("active_increment") is None, f"{lifecycle} cannot retain active_increment")
+        require(current.get("product_code_authorized") is False, f"{lifecycle} cannot authorize product construction")
+        require(receipt.get("status") == "INACTIVE", f"{lifecycle} requires an INACTIVE receipt")
+        require(receipt.get("product_code_allowed") is False, f"{lifecycle} receipt cannot authorize product code")
+        require(receipt.get("legacy_admission_allowed") is False, f"{lifecycle} receipt cannot authorize legacy admission")
+
+
 def check_incident_history(repo: Path, verify_git: bool) -> list[dict]:
     incidents = load_jsonl(repo / "governance/incidents.jsonl")
     if not verify_git:
@@ -290,10 +492,7 @@ def check_incident_history(repo: Path, verify_git: bool) -> list[dict]:
     if base is None:
         return incidents
     base_rows = git_jsonl(repo, base, "governance/incidents.jsonl")
-    require(
-        len(incidents) >= len(base_rows),
-        "candidate removed durable incident history",
-    )
+    require(len(incidents) >= len(base_rows), "candidate removed durable incident history")
     for index, base_row in enumerate(base_rows):
         require(
             exact_json_equal(incidents[index], base_row),
@@ -318,7 +517,10 @@ def _explicit_incident_repair(repo: Path, incident: dict) -> bool:
     incident_id = incident["id"]
     contract = incident.get("repair_contract", {})
     require(isinstance(contract, dict), f"blocking incident {incident_id} lacks repair_contract")
-    require(contract.get("future_receipt_field") == "incident_repair_ids", f"blocking incident {incident_id} has an unknown repair receipt contract")
+    require(
+        contract.get("future_receipt_field") == "incident_repair_ids",
+        f"blocking incident {incident_id} has an unknown repair receipt contract",
+    )
     pr_number = str(os.environ.get("N0TE2_PR_NUMBER") or "").strip()
     bootstrap_pr = str(contract.get("bootstrap_pr") or "").strip()
     if bootstrap_pr and pr_number == bootstrap_pr:
@@ -336,134 +538,76 @@ def check_blocking_incidents(repo: Path, verify_git: bool) -> None:
         require(status, f"incident {incident.get('id', '<unknown>')} has no durable status")
         if not status.startswith("OPEN"):
             continue
+
         blocking_scope = incident.get("blocking_scope")
-        require(isinstance(blocking_scope, str) and blocking_scope.strip(), f"open incident {incident['id']} lacks blocking_scope")
+        require(
+            isinstance(blocking_scope, str) and blocking_scope.strip(),
+            f"open incident {incident['id']} lacks blocking_scope",
+        )
         normalized_scope = blocking_scope.strip().upper()
         if normalized_scope.startswith("NON_BLOCKING"):
             continue
+
         require(
             normalized_scope == BLOCKING_REPAIR_SCOPE,
-            f"open incident {incident['id']} blocks merge unless its durable record declares NON_BLOCKING or {BLOCKING_REPAIR_SCOPE}",
+            f"open incident {incident['id']} blocks merge unless its durable record declares "
+            f"NON_BLOCKING or {BLOCKING_REPAIR_SCOPE}",
         )
         contract = incident.get("repair_contract", {})
-        require(contract.get("unrelated_merges_blocked") is True, f"blocking incident {incident['id']} repair contract must keep unrelated merges blocked")
-        require(contract.get("future_receipt_field") == "incident_repair_ids", f"blocking incident {incident['id']} must bind future repairs to incident_repair_ids")
+        require(
+            contract.get("unrelated_merges_blocked") is True,
+            f"blocking incident {incident['id']} repair contract must keep unrelated merges blocked",
+        )
+        require(
+            contract.get("future_receipt_field") == "incident_repair_ids",
+            f"blocking incident {incident['id']} must bind future repairs to incident_repair_ids",
+        )
         if verify_git and event_mode == "PR":
             require(
                 _explicit_incident_repair(repo, incident),
-                f"blocking incident {incident['id']} permits only its explicit bootstrap or an ACTIVE receipt naming the incident",
+                f"blocking incident {incident['id']} permits only its explicit bootstrap "
+                "or an ACTIVE receipt naming the incident",
             )
 
 
 def check_handoff_lifecycle_contract(repo: Path) -> None:
     handoff = load_json(repo / "governance/handoff.json")
     current = load_json(repo / "governance/current_state.json")
-    if "lifecycle" in handoff:
-        lifecycle = handoff["lifecycle"]
-        require(
-            isinstance(lifecycle, dict),
-            "handoff lifecycle compatibility hook must be an object when present",
-        )
-        key_map = {
-            "state": "lifecycle_state",
-            "active_node": "active_node",
-            "active_increment": "active_increment",
-        }
-        for legacy_key, current_key in key_map.items():
-            if legacy_key in lifecycle:
-                require(
-                    exact_json_equal(lifecycle.get(legacy_key), current.get(current_key)),
-                    f"handoff compatibility {legacy_key} contradicts current_state",
-                )
-    derived = handoff.get("derived_runtime_truth", {})
-    for key, expected in HANDOFF_LIFECYCLE_CONTRACT.items():
+
+    require(
+        set(handoff.keys()) == HANDOFF_TOP_LEVEL_KEYS,
+        "handoff authority surface changed or gained unreviewed shadow fields",
+    )
+    lifecycle = handoff.get("lifecycle")
+    require(isinstance(lifecycle, dict), "handoff lifecycle compatibility hook must be an object when present")
+    require(
+        set(lifecycle.keys()).issubset(HANDOFF_COMPATIBILITY_KEYS),
+        "handoff lifecycle compatibility hook contains unreviewed shadow fields",
+    )
+
+    key_map = {
+        "state": "lifecycle_state",
+        "active_node": "active_node",
+        "active_increment": "active_increment",
+    }
+    for legacy_key, current_key in key_map.items():
+        if legacy_key in lifecycle:
+            require(
+                exact_json_equal(lifecycle.get(legacy_key), current.get(current_key)),
+                f"handoff compatibility {legacy_key} contradicts current_state",
+            )
+
+    derived = handoff.get("derived_runtime_truth")
+    require(isinstance(derived, dict), "handoff derived_runtime_truth must be an object")
+    require(
+        set(derived.keys()) == set(HANDOFF_RUNTIME_TRUTH_CONTRACT.keys()),
+        "handoff derived runtime authority surface changed or gained shadow fields",
+    )
+    for key, expected in HANDOFF_RUNTIME_TRUTH_CONTRACT.items():
         require(
             exact_json_equal(derived.get(key), expected),
             f"handoff lifecycle ownership declaration changed: {key}",
         )
-
-
-def construction_sensitive(path: str) -> bool:
-    folded = path.casefold()
-    if folded.startswith("n0te2/"):
-        return True
-    if folded.startswith("tests/") and not folded.startswith("tests/governance/"):
-        return True
-    return folded in {item.casefold() for item in CONSTRUCTION_SENSITIVE_EXACT}
-
-
-def candidate_base(repo: Path) -> str | None:
-    supplied_raw = str(os.environ.get("N0TE2_BASE_SHA") or "").strip().lower()
-    if supplied_raw:
-        require(HEX40.match(supplied_raw) is not None, "N0TE2_BASE_SHA must be an exact lowercase 40-character SHA")
-        require(supplied_raw != ZERO_SHA, "all-zero candidate base is unverifiable; refuse to publish a Steward structural pass")
-        return supplied_raw
-    try:
-        return git(repo, "rev-parse", "HEAD^")
-    except subprocess.CalledProcessError:
-        return None
-
-
-def candidate_changed_paths(repo: Path) -> list[str]:
-    base = candidate_base(repo)
-    if base is None:
-        try:
-            changed = git_bytes(repo, "diff-tree", "--root", "--no-commit-id", "--no-renames", "--name-only", "-z", "-r", "HEAD")
-        except subprocess.CalledProcessError as exc:
-            raise StewardIntegrationError(f"cannot derive full root candidate diff: {exc.output.decode(errors='replace')}") from exc
-    else:
-        mode = str(os.environ.get("N0TE2_DIFF_MODE") or "PR_MERGE_BASE").strip().upper()
-        if mode == "EXACT_TREE":
-            diff_range = (base, "HEAD")
-        else:
-            require(mode == "PR_MERGE_BASE", f"unknown N0TE2_DIFF_MODE: {mode}")
-            diff_range = (f"{base}...HEAD",)
-        try:
-            changed = git_bytes(repo, "diff", "--no-renames", "--name-only", "-z", *diff_range)
-        except subprocess.CalledProcessError as exc:
-            raise StewardIntegrationError(f"cannot derive candidate diff from base {base}: {exc.output.decode(errors='replace')}") from exc
-    return [os.fsdecode(raw) for raw in changed.split(b"\0") if raw]
-
-
-def _path_allowed_by_receipt(receipt: dict, path: str) -> bool:
-    exact_paths = receipt.get("allowed_exact_paths", [])
-    prefixes = receipt.get("allowed_prefixes", [])
-    if path in exact_paths:
-        return True
-    return any(isinstance(prefix, str) and path.startswith(prefix) for prefix in prefixes)
-
-
-def check_lifecycle_and_active_receipt(repo: Path, verify_git: bool) -> None:
-    current = load_json(repo / "governance/current_state.json")
-    receipt = load_json(repo / "governance/active_receipt.json")
-    lifecycle = current.get("lifecycle_state")
-    require(lifecycle in VALID_LIFECYCLE_STATES, f"unrecognized lifecycle_state: {lifecycle!r}")
-    require(type(current.get("product_code_authorized")) is bool, "current_state product_code_authorized must be a JSON boolean")
-    require(type(receipt.get("product_code_allowed")) is bool, "active receipt product_code_allowed must be a JSON boolean")
-    if lifecycle == "ACTIVE":
-        require(isinstance(current.get("active_node"), str) and current["active_node"].strip(), "ACTIVE lifecycle requires active_node")
-        require(isinstance(current.get("active_increment"), str) and current["active_increment"].strip(), "ACTIVE lifecycle requires active_increment")
-        require(receipt.get("status") == "ACTIVE", "ACTIVE lifecycle requires an ACTIVE bounded receipt")
-        require(receipt.get("node_id") == current.get("active_node"), "ACTIVE receipt node does not match current_state")
-        require(receipt.get("increment_id") == current.get("active_increment"), "ACTIVE receipt increment does not match current_state")
-        require(receipt.get("product_code_allowed") == current.get("product_code_authorized"), "ACTIVE receipt/current_state product authority mismatch")
-        if verify_git:
-            base = candidate_base(repo)
-            if base is not None:
-                require(receipt.get("baseline_sha") == base, "ACTIVE receipt baseline_sha must bind the exact candidate base")
-            changed = candidate_changed_paths(repo)
-            construction = [path for path in changed if construction_sensitive(path)]
-            if construction:
-                require(receipt.get("product_code_allowed") is True, "construction-sensitive ACTIVE repair lacks product-code authority")
-            unauthorized = [path for path in construction if not _path_allowed_by_receipt(receipt, path)]
-            require(not unauthorized, f"ACTIVE candidate changed construction-sensitive paths outside its bounded receipt: {', '.join(unauthorized)}")
-    else:
-        require(current.get("active_node") is None, f"{lifecycle} cannot retain active_node")
-        require(current.get("active_increment") is None, f"{lifecycle} cannot retain active_increment")
-        require(current.get("product_code_authorized") is False, f"{lifecycle} cannot authorize product construction")
-        require(receipt.get("status") == "INACTIVE", f"{lifecycle} requires an INACTIVE receipt")
-        require(receipt.get("product_code_allowed") is False, f"{lifecycle} receipt cannot authorize product code")
-        require(receipt.get("legacy_admission_allowed") is False, f"{lifecycle} receipt cannot authorize legacy admission")
 
 
 def check_terminal_graph_resequencing(repo: Path, verify_git: bool) -> None:
@@ -472,27 +616,42 @@ def check_terminal_graph_resequencing(repo: Path, verify_git: bool) -> None:
     current = load_json(repo / "governance/current_state.json")
     if current.get("lifecycle_state") not in TERMINAL_LIFECYCLE_STATES:
         return
+
     changed = candidate_changed_paths(repo)
     if "governance/completion_graph.json" not in changed:
         return
+
     base = candidate_base(repo)
     require(base is not None, "terminal completion-graph change has no verifiable base")
     base_current = git_json(repo, base, "governance/current_state.json")
     require(
         base_current.get("lifecycle_state") == "ACTIVE",
-        "terminal candidate cannot resequence completion graph from a non-ACTIVE base; reactivate construction with a bounded receipt first",
+        "terminal candidate cannot resequence completion graph from a non-ACTIVE base; "
+        "reactivate construction with a bounded receipt first",
     )
+
     base_graph = git_json(repo, base, "governance/completion_graph.json")
     candidate_graph = load_json(repo / "governance/completion_graph.json")
     require(
         exact_json_equal(base_graph.get("schema_version"), candidate_graph.get("schema_version")),
         "terminal closure cannot change completion-graph schema",
     )
-    base_nodes = {row.get("id"): row for row in base_graph.get("nodes", []) if isinstance(row, dict)}
-    candidate_nodes = {row.get("id"): row for row in candidate_graph.get("nodes", []) if isinstance(row, dict)}
+
+    base_nodes = {
+        row.get("id"): row
+        for row in base_graph.get("nodes", [])
+        if isinstance(row, dict)
+    }
+    candidate_nodes = {
+        row.get("id"): row
+        for row in candidate_graph.get("nodes", [])
+        if isinstance(row, dict)
+    }
     require(base_nodes.keys() == candidate_nodes.keys(), "terminal closure cannot add or remove completion nodes")
+
     active_base = [node_id for node_id, row in base_nodes.items() if row.get("state") == "ACTIVE"]
     require(len(active_base) == 1, "terminal graph closure requires exactly one ACTIVE base node")
+
     for node_id, base_row in base_nodes.items():
         candidate_row = candidate_nodes[node_id]
         base_structure = {key: value for key, value in base_row.items() if key != "state"}
@@ -502,9 +661,15 @@ def check_terminal_graph_resequencing(repo: Path, verify_git: bool) -> None:
             f"terminal closure cannot change completion-graph dependencies or semantics: {node_id}",
         )
         if node_id == active_base[0]:
-            require(candidate_row.get("state") in {"PRESERVED", "DONE"}, "terminal closure must close the previously ACTIVE node")
+            require(
+                candidate_row.get("state") in {"PRESERVED", "DONE"},
+                "terminal closure must close the previously ACTIVE node",
+            )
         else:
-            require(exact_json_equal(candidate_row.get("state"), base_row.get("state")), f"terminal closure changed unrelated node state: {node_id}")
+            require(
+                exact_json_equal(candidate_row.get("state"), base_row.get("state")),
+                f"terminal closure changed unrelated node state: {node_id}",
+            )
 
 
 def check_terminal_construction_gate(repo: Path, verify_git: bool) -> None:
@@ -512,20 +677,31 @@ def check_terminal_construction_gate(repo: Path, verify_git: bool) -> None:
     lifecycle = current.get("lifecycle_state")
     if lifecycle not in TERMINAL_LIFECYCLE_STATES or not verify_git:
         return
+
     require(git(repo, "rev-parse", "--is-inside-work-tree") == "true", "not a git worktree")
     expected_head = str(os.environ.get("N0TE2_HEAD_SHA") or "").strip().lower()
     if expected_head:
         require(HEX40.match(expected_head) is not None, "N0TE2_HEAD_SHA must be an exact lowercase 40-character SHA")
         actual_head = git(repo, "rev-parse", "HEAD")
         require(actual_head == expected_head, f"exact-head mismatch: expected {expected_head}, got {actual_head}")
+
     changed = candidate_changed_paths(repo)
     construction = [path for path in changed if construction_sensitive(path)]
-    require(not construction, f"{lifecycle} candidate changed construction-sensitive paths without ACTIVE bounded receipt: {', '.join(construction)}")
+    require(
+        not construction,
+        f"{lifecycle} candidate changed construction-sensitive paths without ACTIVE bounded receipt: "
+        + ", ".join(construction),
+    )
 
 
 def check_merge_policy(repo: Path) -> None:
     policy = load_json(repo / "governance/merge_policy.json")
-    require(exact_json_equal(policy.get("required_exact_head_status_contexts"), REQUIRED_PLATFORM_CONTEXTS), "required exact-head platform contexts changed")
+    require(policy.get("schema_version") == 5, "merge policy schema changed without Main Steward review")
+    require(
+        exact_json_equal(policy.get("required_exact_head_status_contexts"), REQUIRED_PLATFORM_CONTEXTS),
+        "required exact-head platform contexts changed",
+    )
+
     requirements = policy.get("requirements", {})
     for key in (
         "exact_head_only",
@@ -544,6 +720,7 @@ def check_merge_policy(repo: Path) -> None:
         "late_review_creates_post_merge_incident",
     ):
         require(requirements.get(key) is True, f"merge policy missing required Steward gate: {key}")
+
     steward_gate = policy.get("steward_gate", {})
     expected = {
         "required": True,
@@ -566,16 +743,31 @@ def check_merge_policy(repo: Path) -> None:
         "pr_diff_mode": "MERGE_BASE_TO_HEAD",
         "main_push_diff_mode": "EXACT_BASE_TO_HEAD_TREE",
         "incident_history_contract": "APPEND_PRESERVE_BASE",
+        "trusted_status_reset_before_evaluation": True,
+        "trusted_checkout_path_mode": "RUNTIME_UNIQUE",
+        "meta_governance_reopen_label": META_GOVERNANCE_REOPEN_LABEL,
+        "meta_governance_reopen_env_value": META_GOVERNANCE_REOPEN_VALUE,
     }
     for key, value in expected.items():
-        require(exact_json_equal(steward_gate.get(key), value), f"Steward gate policy drifted: {key}")
+        require(
+            exact_json_equal(steward_gate.get(key), value),
+            f"Steward gate policy drifted: {key}",
+        )
 
 
 def check_steward_actor(repo: Path) -> None:
     registry = load_json(repo / "governance/automation_registry.json")
     actors = registry.get("actors", [])
-    actor = next((row for row in actors if isinstance(row, dict) and row.get("id") == "AUTO-STEWARD-INTEGRATION-GATE-001"), None)
+    actor = next(
+        (
+            row
+            for row in actors
+            if isinstance(row, dict) and row.get("id") == "AUTO-STEWARD-INTEGRATION-GATE-001"
+        ),
+        None,
+    )
     require(actor is not None, "Steward integration workflow is missing from the supervision graph")
+
     expected_fields = {
         "kind": "GITHUB_ACTIONS",
         "role_class": "CI_STRUCTURAL_VERIFIER",
@@ -590,7 +782,11 @@ def check_steward_actor(repo: Path) -> None:
         "auto_spawn_successor": False,
     }
     for key, expected in expected_fields.items():
-        require(exact_json_equal(actor.get(key), expected), f"Steward actor authority contract drifted: {key}")
+        require(
+            exact_json_equal(actor.get(key), expected),
+            f"Steward actor authority contract drifted: {key}",
+        )
+
     observability = actor.get("observability", {})
     expected_observability = {
         "exact_head_required": True,
@@ -602,25 +798,46 @@ def check_steward_actor(repo: Path) -> None:
         "merge_authorization_owner": "MAIN_STEWARD",
     }
     for key, expected in expected_observability.items():
-        require(exact_json_equal(observability.get(key), expected), f"Steward actor observability/authority contract drifted: {key}")
+        require(
+            exact_json_equal(observability.get(key), expected),
+            f"Steward actor observability/authority contract drifted: {key}",
+        )
 
 
 def check_workflow_contracts(repo: Path) -> None:
     ordinary = (repo / ".github/workflows/governance.yml").read_text()
     require("\n  pull_request:\n" in ordinary, "ordinary exact-head governance must remain a pull_request workflow")
-    require("statuses: write" not in ordinary and "checks: write" not in ordinary, "candidate-executing governance workflow must not hold status/check write authority")
+    require(
+        "statuses: write" not in ordinary and "checks: write" not in ordinary,
+        "candidate-executing governance workflow must not hold status/check write authority",
+    )
     require("persist-credentials: false" in ordinary, "candidate checkout must not persist GitHub credentials")
     for context in REQUIRED_PLATFORM_CONTEXTS:
         require(context in ordinary, f"ordinary workflow lost canonical platform job name: {context}")
+
     steward = (repo / ".github/workflows/steward-integration.yml").read_text()
     require("pull_request_target:" in steward, "trusted Steward workflow must be base-owned pull_request_target")
+    require("labeled" in steward and "unlabeled" in steward, "trusted Steward workflow must re-run on meta-governance label changes")
     require("edited" in steward, "trusted Steward workflow must re-run when PR base metadata is edited")
     require("\n  pull_request:\n" not in steward, "trusted Steward workflow must not execute from candidate pull_request definition")
     require("persist-credentials: false" in steward, "trusted Steward checkout must not persist credentials into candidate worktree")
     require("--depth=1" not in steward, "trusted base fetch must not truncate merge-base history")
     require("N0TE2_DIFF_MODE: PR_MERGE_BASE" in steward, "trusted PR workflow must request merge-base diff semantics")
     require("N0TE2_DIFF_MODE: EXACT_TREE" in steward, "main push workflow must request exact base-to-head tree diff semantics")
-    require(".steward-trusted/governance/check_steward_integration.py" in steward, "trusted workflow must execute the PR-base checker copy")
+    require("state: 'pending'" in steward, "trusted structural context must reset to pending before evaluation")
+    require(META_GOVERNANCE_REOPEN_LABEL in steward, "trusted workflow lost the manual meta-governance reopen label")
+    require(
+        "TRUSTED_PATH: .steward-trusted-${{ github.run_id }}-${{ github.run_attempt }}" in steward,
+        "trusted base checkout path must be runtime-unique",
+    )
+    require(
+        "$TRUSTED_PATH/governance/check_steward_integration.py" in steward,
+        "trusted workflow must execute the PR-base checker from the runtime-unique trusted path",
+    )
+
+
+def _meta_governance_reopen_authorized() -> bool:
+    return str(os.environ.get(META_GOVERNANCE_REOPEN_ENV) or "").strip() == META_GOVERNANCE_REOPEN_VALUE
 
 
 def check_trusted_artifact_immutability(repo: Path, verify_git: bool) -> None:
@@ -628,18 +845,29 @@ def check_trusted_artifact_immutability(repo: Path, verify_git: bool) -> None:
         return
     if str(os.environ.get("N0TE2_EVENT_MODE") or "").strip().upper() != "PR":
         return
+
     base = candidate_base(repo)
     require(base is not None, "trusted PR artifact comparison has no base")
+    pr_number = str(os.environ.get("N0TE2_PR_NUMBER") or "").strip()
+    bootstrap = pr_number == BOOTSTRAP_PR_NUMBER
+    meta_reopen = _meta_governance_reopen_authorized()
+
     for relative in TRUSTED_GATE_ARTIFACTS:
         try:
             base_bytes = git_show_bytes(repo, base, relative)
         except StewardIntegrationError:
-            # The one bootstrap repair is manually reviewed because the trusted base artifacts do not yet exist.
+            if bootstrap:
+                continue
+            raise
+
+        candidate_bytes = git_show_bytes(repo, "HEAD", relative)
+        if candidate_bytes == base_bytes:
             continue
-        candidate_bytes = (repo / relative).read_bytes()
+
         require(
-            candidate_bytes == base_bytes,
-            f"trusted gate artifact changed in an ordinary PR: {relative}; use explicit manual meta-governance reopen",
+            bootstrap or meta_reopen,
+            f"trusted gate artifact changed in an ordinary PR: {relative}; "
+            f"apply trusted label {META_GOVERNANCE_REOPEN_LABEL} for an explicit Main Steward meta-governance reopen",
         )
 
 
