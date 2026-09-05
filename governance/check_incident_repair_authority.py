@@ -296,6 +296,8 @@ def validate_active_repair(
         "MERGED_PRODUCT repair introduced construction paths absent from the target merge: "
         + ", ".join(new_paths),
     )
+    require(not allowed_prefixes, "MERGED_PRODUCT repair must enumerate exact allowed paths; broad prefixes are not repair authority")
+    require(set(allowed_exact) == set(paths), "MERGED_PRODUCT repair allowed_exact_paths must exactly equal changed paths")
 
 
 def validate_closure(
