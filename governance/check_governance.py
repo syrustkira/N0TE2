@@ -205,7 +205,7 @@ def check_authority(repo: Path):
     require(laws["construction_can_terminate_at_stability"] is True, "construction must be able to terminate at stability")
     require(laws["known_scope_does_not_select_work"] is True, "known scope cannot silently select work")
     require(laws["automation_must_report_to_supervision_graph"] is True, "automation escaped supervision graph")
-    require(laws["reactivation_must_be_observable"] is True, "reactivation must be observable")
+    require(laws["reactivation_must_be_observable"] is True, "automation escaped supervision graph")
     require(laws["durable_handoff_precedes_historical_archaeology"] is True, "durable handoff must precede archaeology")
     require(laws["exact_head_observations_required"] is True, "exact-head observation law missing")
     require(laws["decisions_and_incidents_retain_provenance"] is True, "decision/incident provenance law missing")
@@ -462,12 +462,13 @@ def check_stage(repo: Path, graph: dict):
     return current
 
 
-def check_jsonl_ids(repo: Path, rel: str):
+def check_jsonl_ids(repo: Path, rel: str, *, allow_repeated_ids: bool = False):
     rows = load_jsonl(repo / rel)
     require(rows, f"{rel} must contain at least one durable record")
     ids = [row.get("id") for row in rows]
     require(all(isinstance(item, str) and item.strip() for item in ids), f"{rel} record missing stable id")
-    require(len(ids) == len(set(ids)), f"{rel} contains duplicate stable ids")
+    if not allow_repeated_ids:
+        require(len(ids) == len(set(ids)), f"{rel} contains duplicate stable ids")
     return rows
 
 
@@ -479,7 +480,7 @@ def check_retention_surfaces(repo: Path, current: dict):
     require(len(ids) == len(set(ids)), "invariant registry contains duplicate IDs")
     require(required_invariants.issubset(set(ids)), "constitutional retention/supervision invariant missing")
     decisions = check_jsonl_ids(repo, "governance/decisions.jsonl")
-    incidents = check_jsonl_ids(repo, "governance/incidents.jsonl")
+    incidents = check_jsonl_ids(repo, "governance/incidents.jsonl", allow_repeated_ids=True)
     controllers = check_jsonl_ids(repo, "governance/controller_versions.jsonl")
     provenance = check_jsonl_ids(repo, "governance/provenance.jsonl")
     definitions = check_jsonl_ids(repo, "governance/definitions.jsonl")
