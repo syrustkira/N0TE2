@@ -507,9 +507,5 @@ def test_missing_integrity_hook_fails_closed_on_relaunch(tmp_path: Path) -> None
     finally:
         hq.close()
 
-    reopened = HeadquartersMemory.open(root, profile_id)
-    try:
-        with pytest.raises(LineageCorruptionError, match="integrity hooks are incomplete"):
-            _service(reopened)
-    finally:
-        reopened.close()
+    with pytest.raises(LineageCorruptionError, match="integrity hooks are incomplete"):
+        HeadquartersMemory.open(root, profile_id)
