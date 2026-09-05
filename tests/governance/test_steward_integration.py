@@ -340,7 +340,9 @@ class StewardIntegrationGateTests(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/steward-integration.yml").read_text()
         self.assertIn("pull_request_target:", workflow)
         self.assertNotIn("\n  pull_request:\n", workflow)
-        self.assertIn(".steward-trusted/governance/check_steward_integration.py", workflow)
+        self.assertIn("$TRUSTED_PATH/governance/check_steward_integration.py", workflow)
+        self.assertIn("STATUS_STATE: pending", workflow)
+        self.assertIn("steward-meta-governance-reopen", workflow)
         self.assertIn("not merge authorization", workflow)
 
 
