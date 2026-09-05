@@ -168,9 +168,17 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
             receipt["repair_target_merge_sha"] = target_merge_sha
         self.write_json(receipt_path, receipt)
 
-    def close_repair(self, repo: Path, *, baseline_sha: str, resolve_incident: bool) -> None:
+    def close_repair(
+        self,
+        repo: Path,
+        *,
+        baseline_sha: str,
+        resolve_incident: bool,
+        evidence_bound: bool = True,
+    ) -> None:
         active_receipt = self.read_json(repo / "governance/active_receipt.json")
         active_receipt_id = active_receipt["receipt_id"]
+        closure_receipt_id = f"{active_receipt_id}-CLOSURE"
         active_incident_ids = list(active_receipt["incident_repair_ids"])
 
         if resolve_incident:
@@ -180,15 +188,28 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
                 for line in incidents_path.read_text().splitlines()
                 if line.strip()
             ]
-            rows.append(
-                {
-                    "id": INCIDENT_206,
-                    "recorded_at": "2026-09-05",
-                    "status": "RESOLVED_TEST_FIXTURE",
-                    "severity": "TEST_ONLY",
-                    "summary": "Append-only test event resolves the exact incident repair.",
-                }
-            )
+            resolution = {
+                "id": INCIDENT_206,
+                "recorded_at": "2026-09-05",
+                "status": "RESOLVED_TEST_FIXTURE",
+                "severity": "TEST_ONLY",
+                "summary": "Append-only test event resolves the exact incident repair.",
+            }
+            if evidence_bound:
+                resolution.update(
+                    {
+                        "resolved_at": "2026-09-05",
+                        "resolution_condition": "MET in the bounded test fixture with exact repair and closure receipt binding.",
+                        "evidence": {
+                            "test_fixture": True,
+                            "exact_repair_receipt": active_receipt_id,
+                            "exact_closure_receipt": closure_receipt_id,
+                        },
+                        "repair_receipt_id": active_receipt_id,
+                        "closure_receipt_id": closure_receipt_id,
+                    }
+                )
+            rows.append(resolution)
             incidents_path.write_text(
                 "\n".join(json.dumps(row, separators=(",", ":")) for row in rows)
                 + "\n"
@@ -215,7 +236,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
         receipt.update(
             {
                 "status": "INACTIVE",
-                "receipt_id": f"{active_receipt_id}-CLOSURE",
+                "receipt_id": closure_receipt_id,
                 "node_id": None,
                 "increment_id": None,
                 "baseline_sha": baseline_sha,
@@ -377,11 +398,31 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
                 authority.run(repo)
         self.assertIn("requires durable RESOLVED incident truth", str(cm.exception))
 
+    def test_repair_closure_rejects_unbound_resolution_label(self) -> None:
+        repo = self.clone()
+        base = self.init_git(repo)
+        self.close_repair(
+            repo,
+            baseline_sha=base,
+            resolve_incident=True,
+            evidence_bound=False,
+        )
+        self.commit(repo, "attempt closure with naked resolution label")
+
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_BASE_SHA": base, "N0TE2_EVENT_MODE": "PR", "N0TE2_META_GOVERNANCE_REOPEN": ""},
+            clear=False,
+        ):
+            with self.assertRaises(authority.RepairAuthorityError) as cm:
+                authority.run(repo)
+        self.assertIn("resolution event lacks resolved_at", str(cm.exception))
+
     def test_repair_closure_accepts_append_only_resolution_event(self) -> None:
         repo = self.clone()
         base = self.init_git(repo)
         self.close_repair(repo, baseline_sha=base, resolve_incident=True)
-        self.commit(repo, "close repair with append-only incident resolution")
+        self.commit(repo, "close repair with evidence-bound append-only incident resolution")
 
         gov.run(repo, verify_git=False)
         with mock.patch.object(handoff, "git", return_value="b" * 40):
