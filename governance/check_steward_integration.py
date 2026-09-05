@@ -14,6 +14,7 @@ from typing import Any
 HEX40 = re.compile(r"^[0-9a-f]{40}$")
 VALID_LIFECYCLE_STATES = {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}
 TERMINAL_LIFECYCLE_STATES = {"STABLE", "WAITING", "BLOCKED"}
+VALID_INCIDENT_STATUS_PREFIXES = ("OPEN", "RESOLVED")
 ZERO_SHA = "0" * 40
 
 CONSTRUCTION_SENSITIVE_EXACT = {
@@ -144,6 +145,69 @@ HANDOFF_RUNTIME_TRUTH_CONTRACT = {
         "Lifecycle, delivery state, executor liveness, next action, canonical scope and open "
         "incidents are derived from their canonical owners."
     ),
+}
+
+MERGE_POLICY_TOP_LEVEL_KEYS = {
+    "schema_version",
+    "target_branch",
+    "required_exact_head_status_contexts",
+    "requirements",
+    "steward_gate",
+    "external_enforcement",
+}
+MERGE_REQUIREMENT_KEYS = {
+    "exact_head_only",
+    "handoff_consistent",
+    "governance_green",
+    "full_regression_green",
+    "consumer_smoke_green",
+    "blocking_incidents_resolved_before_merge",
+    "draft_pr_cannot_merge",
+    "substantive_review_terminal_on_exact_head",
+    "review_findings_resolved_or_dispositioned",
+    "late_live_main_race_check",
+    "expected_head_guarded_merge",
+    "post_merge_verification",
+    "single_main_steward_writer",
+    "late_review_creates_post_merge_incident",
+}
+EXTERNAL_ENFORCEMENT_EXPECTED = {
+    "desired": (
+        "After Steward-gate bootstrap, GitHub branch protection or a repository ruleset should "
+        "require the three exact-head platform check contexts plus the trusted "
+        "n0te2-steward-structure context where administratively available."
+    ),
+    "repository_file_cannot_prevent_direct_push_by_itself": True,
+    "current_truth": (
+        "Repository policy and trusted structural CI define evidence requirements, while the "
+        "single active Main Steward remains the live merge-authorization owner unless external "
+        "branch protection or ruleset evidence proves equivalent atomic enforcement. A structural "
+        "status, including green, is not a merge receipt."
+    ),
+}
+
+REGISTRY_TOP_LEVEL_KEYS = {"schema_version", "supervisor", "runtime_state_contract", "actors"}
+STEWARD_ACTOR_TOP_LEVEL_KEYS = {
+    "id",
+    "kind",
+    "role_class",
+    "path",
+    "parent",
+    "reports_to",
+    "purpose",
+    "boundary",
+    "reason_running",
+    "mode",
+    "authority",
+    "allowed_mutations",
+    "wake_condition",
+    "retirement_condition",
+    "failure_policy",
+    "escalation_target",
+    "auto_spawn_successor",
+    "lifecycle",
+    "runtime_state_source",
+    "observability",
 }
 
 BLOCKING_REPAIR_SCOPE = "BLOCKING_EXCEPT_EXPLICIT_INCIDENT_REPAIR"
@@ -381,6 +445,16 @@ def _normalized_status(value: object) -> str:
     return value.strip().upper() if isinstance(value, str) else ""
 
 
+def _validate_incident_status(incident: dict) -> str:
+    status = _normalized_status(incident.get("status"))
+    require(status, f"incident {incident.get('id', '<unknown>')} has no durable status")
+    require(
+        status.startswith(VALID_INCIDENT_STATUS_PREFIXES),
+        f"incident {incident.get('id', '<unknown>')} has unrecognized status {status!r}; incident truth must be OPEN... or RESOLVED...",
+    )
+    return status
+
+
 def candidate_base(repo: Path) -> str | None:
     supplied_raw = str(os.environ.get("N0TE2_BASE_SHA") or "").strip().lower()
     if supplied_raw:
@@ -486,12 +560,16 @@ def check_lifecycle_and_active_receipt(repo: Path, verify_git: bool) -> None:
 
 def check_incident_history(repo: Path, verify_git: bool) -> list[dict]:
     incidents = load_jsonl(repo / "governance/incidents.jsonl")
+    for incident in incidents:
+        _validate_incident_status(incident)
     if not verify_git:
         return incidents
     base = candidate_base(repo)
     if base is None:
         return incidents
     base_rows = git_jsonl(repo, base, "governance/incidents.jsonl")
+    for incident in base_rows:
+        _validate_incident_status(incident)
     require(len(incidents) >= len(base_rows), "candidate removed durable incident history")
     for index, base_row in enumerate(base_rows):
         require(
@@ -530,21 +608,46 @@ def _explicit_incident_repair(repo: Path, incident: dict) -> bool:
     return isinstance(incident_ids, list) and incident_id in incident_ids
 
 
+def _blocking_scope(incident: dict) -> str:
+    raw = incident.get("blocking_scope")
+    require(
+        isinstance(raw, str) and raw.strip(),
+        f"open incident {incident['id']} lacks blocking_scope",
+    )
+    return raw.strip().upper()
+
+
 def check_blocking_incidents(repo: Path, verify_git: bool) -> None:
     incidents = check_incident_history(repo, verify_git)
     event_mode = str(os.environ.get("N0TE2_EVENT_MODE") or "").strip().upper()
-    for incident in _current_incident_rows(incidents):
-        status = _normalized_status(incident.get("status"))
-        require(status, f"incident {incident.get('id', '<unknown>')} has no durable status")
+    current_rows = {row["id"]: row for row in _current_incident_rows(incidents)}
+
+    if verify_git and event_mode == "PR":
+        base = candidate_base(repo)
+        if base is not None:
+            base_rows = _current_incident_rows(git_jsonl(repo, base, "governance/incidents.jsonl"))
+            for base_incident in base_rows:
+                base_status = _validate_incident_status(base_incident)
+                if not base_status.startswith("OPEN"):
+                    continue
+                base_scope = _blocking_scope(base_incident)
+                if base_scope.startswith("NON_BLOCKING"):
+                    continue
+                candidate_incident = current_rows.get(base_incident["id"])
+                require(candidate_incident is not None, f"blocking incident {base_incident['id']} disappeared from current incident truth")
+                candidate_status = _validate_incident_status(candidate_incident)
+                if not candidate_status.startswith("OPEN"):
+                    require(
+                        _explicit_incident_repair(repo, base_incident),
+                        f"blocking incident {base_incident['id']} cannot transition to resolved outside its explicit incident-repair contract",
+                    )
+
+    for incident in current_rows.values():
+        status = _validate_incident_status(incident)
         if not status.startswith("OPEN"):
             continue
 
-        blocking_scope = incident.get("blocking_scope")
-        require(
-            isinstance(blocking_scope, str) and blocking_scope.strip(),
-            f"open incident {incident['id']} lacks blocking_scope",
-        )
-        normalized_scope = blocking_scope.strip().upper()
+        normalized_scope = _blocking_scope(incident)
         if normalized_scope.startswith("NON_BLOCKING"):
             continue
 
@@ -696,29 +799,23 @@ def check_terminal_construction_gate(repo: Path, verify_git: bool) -> None:
 
 def check_merge_policy(repo: Path) -> None:
     policy = load_json(repo / "governance/merge_policy.json")
+    require(
+        set(policy.keys()) == MERGE_POLICY_TOP_LEVEL_KEYS,
+        "merge policy authority surface changed or gained unreviewed shadow fields",
+    )
     require(policy.get("schema_version") == 5, "merge policy schema changed without Main Steward review")
+    require(policy.get("target_branch") == "main", "merge policy target branch changed")
     require(
         exact_json_equal(policy.get("required_exact_head_status_contexts"), REQUIRED_PLATFORM_CONTEXTS),
         "required exact-head platform contexts changed",
     )
 
     requirements = policy.get("requirements", {})
-    for key in (
-        "exact_head_only",
-        "handoff_consistent",
-        "governance_green",
-        "full_regression_green",
-        "consumer_smoke_green",
-        "blocking_incidents_resolved_before_merge",
-        "draft_pr_cannot_merge",
-        "substantive_review_terminal_on_exact_head",
-        "review_findings_resolved_or_dispositioned",
-        "late_live_main_race_check",
-        "expected_head_guarded_merge",
-        "post_merge_verification",
-        "single_main_steward_writer",
-        "late_review_creates_post_merge_incident",
-    ):
+    require(
+        isinstance(requirements, dict) and set(requirements.keys()) == MERGE_REQUIREMENT_KEYS,
+        "merge requirement authority surface changed or gained shadow fields",
+    )
+    for key in MERGE_REQUIREMENT_KEYS:
         require(requirements.get(key) is True, f"merge policy missing required Steward gate: {key}")
 
     steward_gate = policy.get("steward_gate", {})
@@ -748,15 +845,36 @@ def check_merge_policy(repo: Path) -> None:
         "meta_governance_reopen_label": META_GOVERNANCE_REOPEN_LABEL,
         "meta_governance_reopen_env_value": META_GOVERNANCE_REOPEN_VALUE,
     }
+    require(
+        isinstance(steward_gate, dict) and set(steward_gate.keys()) == set(expected.keys()) | {"rule"},
+        "Steward gate authority surface changed or gained shadow fields",
+    )
     for key, value in expected.items():
         require(
             exact_json_equal(steward_gate.get(key), value),
             f"Steward gate policy drifted: {key}",
         )
+    rule = steward_gate.get("rule")
+    require(
+        isinstance(rule, str)
+        and "It never authorizes merge by itself" in rule
+        and "single Main Steward" in rule
+        and META_GOVERNANCE_REOPEN_LABEL in rule,
+        "Steward gate explanatory rule lost non-authorizing or meta-governance truth",
+    )
+    require(
+        exact_json_equal(policy.get("external_enforcement"), EXTERNAL_ENFORCEMENT_EXPECTED),
+        "external enforcement truth changed or gained shadow fields",
+    )
 
 
 def check_steward_actor(repo: Path) -> None:
     registry = load_json(repo / "governance/automation_registry.json")
+    require(
+        set(registry.keys()) == REGISTRY_TOP_LEVEL_KEYS,
+        "automation registry authority surface changed or gained unreviewed shadow fields",
+    )
+    require(registry.get("supervisor") == "N0TE-SUPERVISOR", "automation registry supervision root changed")
     actors = registry.get("actors", [])
     actor = next(
         (
@@ -767,6 +885,10 @@ def check_steward_actor(repo: Path) -> None:
         None,
     )
     require(actor is not None, "Steward integration workflow is missing from the supervision graph")
+    require(
+        set(actor.keys()) == STEWARD_ACTOR_TOP_LEVEL_KEYS,
+        "Steward actor authority surface changed or gained shadow fields",
+    )
 
     expected_fields = {
         "kind": "GITHUB_ACTIONS",
@@ -797,6 +919,10 @@ def check_steward_actor(repo: Path) -> None:
         "trusted_workflow_event": "pull_request_target",
         "merge_authorization_owner": "MAIN_STEWARD",
     }
+    require(
+        isinstance(observability, dict) and set(observability.keys()) == set(expected_observability.keys()),
+        "Steward actor observability authority surface changed or gained shadow fields",
+    )
     for key, expected in expected_observability.items():
         require(
             exact_json_equal(observability.get(key), expected),
@@ -812,6 +938,18 @@ def check_workflow_contracts(repo: Path) -> None:
         "candidate-executing governance workflow must not hold status/check write authority",
     )
     require("persist-credentials: false" in ordinary, "candidate checkout must not persist GitHub credentials")
+    require(
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in ordinary,
+        "ordinary exact-head checkout action must remain pinned",
+    )
+    require(
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in ordinary,
+        "ordinary exact-head Python setup action must remain pinned",
+    )
+    require(
+        "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02" in ordinary,
+        "ordinary exact-head artifact upload action must remain pinned",
+    )
     for context in REQUIRED_PLATFORM_CONTEXTS:
         require(context in ordinary, f"ordinary workflow lost canonical platform job name: {context}")
 
@@ -836,6 +974,14 @@ def check_workflow_contracts(repo: Path) -> None:
     require(
         "$TRUSTED_PATH/governance/check_steward_integration.py" in steward,
         "trusted workflow must execute the PR-base checker from the runtime-unique trusted path",
+    )
+    require(
+        "actions/checkout@11d5960a326750d5838078e36cf38b85af677262" in steward,
+        "trusted Steward checkout action must remain pinned",
+    )
+    require(
+        "actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065" in steward,
+        "trusted Steward Python setup action must remain pinned",
     )
 
 
