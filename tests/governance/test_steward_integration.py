@@ -61,6 +61,27 @@ class StewardIntegrationGateTests(unittest.TestCase):
             ["git", "rev-parse", "HEAD"], cwd=repo, text=True
         ).strip()
 
+    @staticmethod
+    def commit(repo, message):
+        subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+        subprocess.run(
+            ["git", "commit", "-m", message],
+            cwd=repo,
+            check=True,
+            stdout=subprocess.DEVNULL,
+        )
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=repo, text=True
+        ).strip()
+
+    def run_git_gate(self, repo, baseline):
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_BASE_SHA": baseline, "N0TE2_HEAD_SHA": ""},
+            clear=False,
+        ):
+            gate.run(repo, verify_git=True)
+
     def test_current_contract_is_green_without_git(self):
         gate.run(ROOT, verify_git=False)
 
@@ -76,57 +97,91 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, doc)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("cannot shrink below", str(cm.exception))
+        self.assertIn("canonical retained scope changed", str(cm.exception))
 
-    def test_canonical_extension_affinity_must_reference_real_graph_node(self):
+    def test_canonical_source_revision_is_pinned(self):
         repo = self.clone()
         path = repo / "governance/requirements.json"
         doc = json.loads(path.read_text())
-        doc["canonical_extensions"][0]["construction_affinity"] = ["NOT-A-NODE"]
+        doc["canonical_scope"]["source_revision"] = "525"
         self.write_json(path, doc)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("unknown construction-affinity node", str(cm.exception))
+        self.assertIn("source revision changed", str(cm.exception))
+
+    def test_canonical_extension_summary_cannot_be_rewritten(self):
+        repo = self.clone()
+        path = repo / "governance/requirements.json"
+        doc = json.loads(path.read_text())
+        doc["canonical_extensions"][0]["summary"] = "Arbitrary replacement meaning."
+        self.write_json(path, doc)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("extension semantics", str(cm.exception))
+
+    def test_canonical_extension_affinity_cannot_be_remapped(self):
+        repo = self.clone()
+        path = repo / "governance/requirements.json"
+        doc = json.loads(path.read_text())
+        doc["canonical_extensions"][0]["construction_affinity"] = ["BOOT-00"]
+        self.write_json(path, doc)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("extension semantics", str(cm.exception))
 
     def test_stable_candidate_cannot_add_product_code_without_active_receipt(self):
         repo = self.clone()
         baseline = self.init_git(repo)
         product = repo / "n0te2/steward_unauthorized_probe.py"
         product.write_text("VALUE = 'must be rejected'\n")
-        subprocess.run(["git", "add", str(product.relative_to(repo))], cwd=repo, check=True)
+        self.commit(repo, "unauthorized product construction")
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            self.run_git_gate(repo, baseline)
+        self.assertIn("STABLE candidate changed construction-sensitive paths", str(cm.exception))
+
+    def test_terminal_rename_out_of_product_tree_is_still_detected(self):
+        repo = self.clone()
+        baseline = self.init_git(repo)
+        (repo / "docs").mkdir(exist_ok=True)
         subprocess.run(
-            ["git", "commit", "-m", "unauthorized product construction"],
+            ["git", "mv", "n0te2/__init__.py", "docs/renamed_product.py"],
             cwd=repo,
             check=True,
-            stdout=subprocess.DEVNULL,
         )
+        self.commit(repo, "try to hide product deletion behind rename detection")
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            self.run_git_gate(repo, baseline)
+        self.assertIn("n0te2/__init__.py", str(cm.exception))
+
+    def test_all_zero_event_base_fails_closed(self):
+        repo = self.clone()
+        self.init_git(repo)
         with mock.patch.dict(
             os.environ,
-            {"N0TE2_BASE_SHA": baseline, "N0TE2_HEAD_SHA": ""},
+            {"N0TE2_BASE_SHA": "0" * 40, "N0TE2_HEAD_SHA": ""},
             clear=False,
         ):
             with self.assertRaises(gate.StewardIntegrationError) as cm:
                 gate.run(repo, verify_git=True)
-        self.assertIn("STABLE candidate changed construction-sensitive paths", str(cm.exception))
+        self.assertIn("all-zero candidate base is unverifiable", str(cm.exception))
 
     def test_stable_governance_only_repair_is_allowed(self):
         repo = self.clone()
         baseline = self.init_git(repo)
         probe = repo / "governance/steward_probe.txt"
         probe.write_text("integration-only governance repair\n")
-        subprocess.run(["git", "add", str(probe.relative_to(repo))], cwd=repo, check=True)
-        subprocess.run(
-            ["git", "commit", "-m", "governance-only repair"],
-            cwd=repo,
-            check=True,
-            stdout=subprocess.DEVNULL,
-        )
-        with mock.patch.dict(
-            os.environ,
-            {"N0TE2_BASE_SHA": baseline, "N0TE2_HEAD_SHA": ""},
-            clear=False,
-        ):
-            gate.run(repo, verify_git=True)
+        self.commit(repo, "governance-only repair")
+        self.run_git_gate(repo, baseline)
+
+    def test_static_status_cannot_become_merge_authorization(self):
+        repo = self.clone()
+        path = repo / "governance/merge_policy.json"
+        policy = json.loads(path.read_text())
+        policy["steward_gate"]["status_is_merge_authorization"] = True
+        self.write_json(path, policy)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("never be represented as live merge authorization", str(cm.exception))
 
     def test_pending_review_cannot_be_removed_from_merge_policy(self):
         repo = self.clone()
@@ -137,6 +192,28 @@ class StewardIntegrationGateTests(unittest.TestCase):
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
         self.assertIn("pending substantive review", str(cm.exception))
+
+    def test_steward_workflow_actor_is_registered_and_non_authorizing(self):
+        repo = self.clone()
+        path = repo / "governance/automation_registry.json"
+        registry = json.loads(path.read_text())
+        actor = next(
+            row
+            for row in registry["actors"]
+            if row["id"] == "AUTO-STEWARD-INTEGRATION-GATE-001"
+        )
+        actor["authority"] = "MERGE_MAIN"
+        self.write_json(path, registry)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("must not claim live merge authority", str(cm.exception))
+
+    def test_workflow_uses_base_owned_target_event_only(self):
+        workflow = (ROOT / ".github/workflows/steward-integration.yml").read_text()
+        self.assertIn("pull_request_target:", workflow)
+        self.assertNotIn("\n  pull_request:\n", workflow)
+        self.assertIn(".steward-trusted/governance/check_steward_integration.py", workflow)
+        self.assertIn("not merge authorization", workflow)
 
 
 if __name__ == "__main__":
