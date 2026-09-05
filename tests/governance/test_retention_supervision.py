@@ -208,7 +208,7 @@ class RetentionSupervisionRegressionTests(unittest.TestCase):
         with mock.patch.object(handoff_mod, "git", return_value="a" * 40):
             with self.assertRaises(handoff_mod.HandoffError) as cm:
                 handoff_mod.build_runtime_handoff(repo)
-        self.assertIn("ACTIVE lifecycle requires an ACTIVE construction receipt", str(cm.exception))
+        self.assertIn("ACTIVE lifecycle requires an ACTIVE construction or repair receipt", str(cm.exception))
 
     def test_automation_cannot_escape_supervision_graph(self):
         repo = self.clone()
