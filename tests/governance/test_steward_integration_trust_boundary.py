@@ -100,7 +100,7 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         repo = self.clone()
         target = repo / "governance/merge_policy.json"
         target.unlink()
-        target.symlink_to(Path("../requirements.json"))
+        target.symlink_to(Path("requirements.json"))
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
         self.assertIn("must not be a symlink", str(cm.exception))
