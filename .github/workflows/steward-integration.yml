@@ -1,12 +1,13 @@
-name: N0TE2 Steward Integration Gate
+name: N0TE2 Steward Structure
 
 on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   push:
     branches: [main]
-  pull_request:
 
 concurrency:
-  group: n0te2-steward-integration-${{ github.event.pull_request.head.ref || github.ref_name }}
+  group: n0te2-steward-structure-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 permissions:
@@ -14,31 +15,42 @@ permissions:
   statuses: write
 
 jobs:
-  steward-integration:
-    name: steward-integration
+  trusted-pr-structure:
+    if: ${{ github.event_name == 'pull_request_target' }}
+    name: trusted-pr-structure
     runs-on: ubuntu-latest
     env:
-      N0TE2_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
-      N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      N0TE2_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      N0TE2_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      EVIDENCE_CONTEXT: n0te2-steward-structure
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout exact candidate without executing it
+        uses: actions/checkout@v4
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
           fetch-depth: 0
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Fetch exact trusted base for candidate comparison
+        env:
+          BASE_REPOSITORY: ${{ github.repository }}
+        run: git fetch --no-tags --depth=1 "https://github.com/${BASE_REPOSITORY}.git" "$N0TE2_BASE_SHA"
+      - name: Checkout trusted base enforcement copy
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: .steward-trusted
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Verify exact event head checkout
+      - name: Verify exact candidate checkout and trusted checker
         run: |
-          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
-      - name: Validate Steward integration contract
-        run: python governance/check_steward_integration.py --repo .
-      - name: Run Steward integration regression tests
-        run: python -m unittest -v tests.governance.test_steward_integration
-      - name: Publish Steward integration success
+          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'candidate_expected={expected} candidate_actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
+          test -f .steward-trusted/governance/check_steward_integration.py
+      - name: Validate candidate with trusted base Steward checker
+        run: python .steward-trusted/governance/check_steward_integration.py --repo .
+      - name: Publish trusted structural success
         if: ${{ success() }}
-        env:
-          EVIDENCE_CONTEXT: n0te2-steward-integration
         uses: actions/github-script@v7
         with:
           script: |
@@ -48,12 +60,10 @@ jobs:
               sha: process.env.N0TE2_HEAD_SHA,
               state: 'success',
               context: process.env.EVIDENCE_CONTEXT,
-              description: 'Exact-head Steward integration gate passed'
+              description: 'Trusted base structural check passed; not merge authorization'
             })
-      - name: Publish Steward integration failure
+      - name: Publish trusted structural failure
         if: ${{ failure() }}
-        env:
-          EVIDENCE_CONTEXT: n0te2-steward-integration
         uses: actions/github-script@v7
         with:
           script: |
@@ -63,5 +73,53 @@ jobs:
               sha: process.env.N0TE2_HEAD_SHA,
               state: 'failure',
               context: process.env.EVIDENCE_CONTEXT,
-              description: 'Exact-head Steward integration gate failed'
+              description: 'Trusted base structural check failed; merge blocked'
+            })
+
+  main-structure:
+    if: ${{ github.event_name == 'push' }}
+    name: main-structure
+    runs-on: ubuntu-latest
+    env:
+      N0TE2_BASE_SHA: ${{ github.event.before }}
+      N0TE2_HEAD_SHA: ${{ github.sha }}
+      EVIDENCE_CONTEXT: n0te2-steward-structure
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact main checkout
+        run: |
+          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'main_expected={expected} main_actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
+      - name: Validate current main Steward structure
+        run: python governance/check_steward_integration.py --repo .
+      - name: Publish main structural success
+        if: ${{ success() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.N0TE2_HEAD_SHA,
+              state: 'success',
+              context: process.env.EVIDENCE_CONTEXT,
+              description: 'Main structural check passed; post-merge evidence only'
+            })
+      - name: Publish main structural failure
+        if: ${{ failure() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.N0TE2_HEAD_SHA,
+              state: 'failure',
+              context: process.env.EVIDENCE_CONTEXT,
+              description: 'Main structural check failed; Steward incident required'
             })
