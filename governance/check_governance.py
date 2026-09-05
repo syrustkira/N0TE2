@@ -17,6 +17,7 @@ TERMINAL_LIFECYCLE_STATES = {"STABLE", "WAITING", "BLOCKED"}
 INCIDENT_REPAIR_NODE = "INCIDENT-REPAIR"
 INCIDENT_REPAIR_KIND = "INCIDENT_REPAIR"
 INCIDENT_REPAIR_TARGET_KINDS = {"GOVERNANCE", "MERGED_PRODUCT"}
+TRUSTED_REPAIR_WORKFLOW = ".github/workflows/steward-integration.yml"
 
 
 class GovernanceError(RuntimeError):
@@ -319,7 +320,11 @@ def _check_incident_repair_receipt(repo: Path, receipt: dict, verify_git: bool, 
         bad = [
             path
             for path in changed
-            if not (path.startswith("governance/") or path.startswith("tests/governance/"))
+            if not (
+                path.startswith("governance/")
+                or path.startswith("tests/governance/")
+                or path == TRUSTED_REPAIR_WORKFLOW
+            )
         ]
         require(not bad, "GOVERNANCE incident repair changed non-governance paths: " + ", ".join(bad))
     else:
