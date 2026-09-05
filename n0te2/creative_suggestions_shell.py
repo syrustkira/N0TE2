@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 from http.server import BaseHTTPRequestHandler
 from typing import Callable, Mapping
 
@@ -24,6 +25,7 @@ _DISTANCE_LABELS = {
     "ADJACENT": "Adjacent · change one dimension",
     "WILDCARD": "Wildcard · deliberate contrast",
 }
+_RANDOMIZE_ACTION_KIND = "suggestion-randomize"
 _DEFERRAL_CHOICES = {
     LATER_THIS_SONG: (
         "Not now · later this Song",
@@ -71,6 +73,97 @@ def _not_now_action(
     return shell._new_action("suggestion-not-now", _deferral_binding(scope, result))
 
 
+def _clear_suggestion_state(shell: ConsumerShell) -> None:
+    shell._creative_suggestion_result = None
+    shell._creative_suggestion_locked_dimensions = ()
+    shell._creative_suggestion_variation = None
+
+
+def _set_suggestion_state(
+    shell: ConsumerShell,
+    result: CreativeSuggestion,
+    *,
+    locked_dimensions: tuple[str, ...],
+    variation: int,
+) -> None:
+    locks = CreativeSuggestionService.normalize_locks(locked_dimensions)
+    if not isinstance(variation, int) or variation < 0 or variation > 1000:
+        raise ValidationError("suggestion variation must be an integer from 0 through 1000")
+    shell._creative_suggestion_result = result
+    shell._creative_suggestion_locked_dimensions = locks
+    shell._creative_suggestion_variation = variation
+
+
+def _current_suggestion_state(
+    shell: ConsumerShell, result: CreativeSuggestion
+) -> tuple[tuple[str, ...], int] | None:
+    locks = getattr(shell, "_creative_suggestion_locked_dimensions", None)
+    variation = getattr(shell, "_creative_suggestion_variation", None)
+    if not isinstance(locks, tuple) or not isinstance(variation, int):
+        return None
+    try:
+        normalized = CreativeSuggestionService.normalize_locks(locks)
+    except (TypeError, ValidationError):
+        return None
+    if normalized != locks or variation < 0 or variation > 1000:
+        return None
+    return locks, variation
+
+
+def _randomize_binding(
+    result: CreativeSuggestion, locked_dimensions: tuple[str, ...], variation: int
+) -> str:
+    return json.dumps(
+        {
+            "distance": result.distance,
+            "locked_dimensions": list(locked_dimensions),
+            "semantic_key": result.semantic_key,
+            "session_id": result.session_id,
+            "song_id": result.song_id,
+            "variation": variation,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _randomize_action(
+    shell: ConsumerShell,
+    result: CreativeSuggestion,
+    locked_dimensions: tuple[str, ...],
+    variation: int,
+) -> str:
+    return shell._new_action(
+        _RANDOMIZE_ACTION_KIND,
+        _randomize_binding(result, locked_dimensions, variation),
+    )
+
+
+def _randomize_form(shell: ConsumerShell, result: CreativeSuggestion) -> str:
+    state = _current_suggestion_state(shell, result)
+    if state is None:
+        return ""
+    locks, variation = state
+    if locks:
+        lock_summary = "Current locks stay fixed: " + ", ".join(
+            dimension.title() for dimension in locks
+        ) + "."
+    else:
+        lock_summary = "No creative dimensions are locked."
+    action = _randomize_action(shell, result, locks, variation)
+    return (
+        '<form class="stack" method="post" action="/suggestion/randomize" '
+        'aria-label="Try another controlled suggestion">'
+        f'{shell._hidden(action)}'
+        '<button type="submit">Try another direction</button>'
+        '<p class="muted">Keeps the current distance and every lock exactly as shown. '
+        'N0TE only searches the bounded local suggestion catalog and will say so '
+        'if no different eligible prompt exists. '
+        f'{html.escape(lock_summary)}</p>'
+        '</form>'
+    )
+
+
 def _deferral_forms(shell: ConsumerShell, result: CreativeSuggestion) -> str:
     scopes = [NEXT_SONG, NEVER_SUGGEST_AGAIN]
     if result.session_id is not None:
@@ -113,6 +206,7 @@ def _result_markup(shell: ConsumerShell, result: CreativeSuggestion | None) -> s
         f'<p class="muted">{html.escape(result.distance_explanation)}</p>'
         f'{objective}'
         '<p class="muted">Generated locally and deterministically. No AI provider was called, no project was changed, and this is not a claim about what your Song needs.</p>'
+        f'{_randomize_form(shell, result)}'
         f'{_deferral_forms(shell, result)}'
         '</div>'
     )
@@ -145,8 +239,10 @@ def _suggestion_card(shell: ConsumerShell) -> str:
         latest = hq.sessions.latest_for_song(song.id)
         latest_session_id = None if latest is None else latest.id
         if result.song_id != song.id or result.session_id != latest_session_id:
-            shell._creative_suggestion_result = None
+            _clear_suggestion_state(shell)
             result = None
+    elif getattr(shell, "_creative_suggestion_variation", None) is not None:
+        _clear_suggestion_state(shell)
 
     return (
         '<div class="card"><h2>Suggest something</h2>'
@@ -174,25 +270,48 @@ def _locked_dimensions(form: Mapping[str, str]) -> tuple[str, ...]:
         if value != "1":
             raise ValidationError(f"invalid lock value for {dimension}")
         locks.append(dimension)
-    return tuple(locks)
+    return CreativeSuggestionService.normalize_locks(tuple(locks))
 
 
-def _next_visible_suggestion(
-    shell: ConsumerShell, *, distance: str, locked_dimensions: tuple[str, ...]
-) -> CreativeSuggestion:
+def _next_visible_suggestion_state(
+    shell: ConsumerShell,
+    *,
+    distance: str,
+    locked_dimensions: tuple[str, ...],
+    start_variation: int = 0,
+    excluded_semantic_keys: tuple[str, ...] = (),
+    unavailable_message: str = (
+        "Every available local suggestion is currently suppressed by your Not Now choices."
+    ),
+) -> tuple[CreativeSuggestion, int]:
+    if not isinstance(start_variation, int) or start_variation < 0 or start_variation > 1000:
+        raise ValidationError("suggestion variation must be an integer from 0 through 1000")
+    excluded = {str(value).strip() for value in excluded_semantic_keys if str(value).strip()}
     service = _service(shell)
     deferrals = shell.runtime.headquarters.suggestion_deferrals
-    for variation in range(1001):
+    for offset in range(1001):
+        variation = (start_variation + offset) % 1001
         result = service.suggest(
             distance=distance,
             locked_dimensions=locked_dimensions,
             variation=variation,
         )
+        if result.semantic_key in excluded:
+            continue
         if not deferrals.is_deferred_now(result.semantic_key):
-            return result
-    raise CreativeSuggestionError(
-        "Every available local suggestion is currently suppressed by your Not Now choices."
+            return result, variation
+    raise CreativeSuggestionError(unavailable_message)
+
+
+def _next_visible_suggestion(
+    shell: ConsumerShell, *, distance: str, locked_dimensions: tuple[str, ...]
+) -> CreativeSuggestion:
+    result, _ = _next_visible_suggestion_state(
+        shell,
+        distance=distance,
+        locked_dimensions=locked_dimensions,
     )
+    return result
 
 
 def _post_suggestion(
@@ -216,13 +335,106 @@ def _post_suggestion(
             shell._simple_error("The active Song changed. Reload the Song before asking for an idea."),
         )
         return
-    result = _next_visible_suggestion(
+    locks = _locked_dimensions(form)
+    result, variation = _next_visible_suggestion_state(
         shell,
         distance=form.get("distance", ""),
-        locked_dimensions=_locked_dimensions(form),
+        locked_dimensions=locks,
     )
-    shell._creative_suggestion_result = result
+    _set_suggestion_state(
+        shell,
+        result,
+        locked_dimensions=locks,
+        variation=variation,
+    )
     shell._consumer_notice = "Local creative prompt prepared. Nothing in the Song was changed."
+    shell._redirect(handler, "/song")
+
+
+def _post_randomize(
+    shell: ConsumerShell,
+    handler: BaseHTTPRequestHandler,
+    form: Mapping[str, str],
+) -> None:
+    action = shell._consume_action(form.get("action", ""), _RANDOMIZE_ACTION_KIND)
+    if action is None or action.value is None:
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error(
+                "That controlled randomize action was already handled or expired."
+            ),
+        )
+        return
+    result = getattr(shell, "_creative_suggestion_result", None)
+    if not isinstance(result, CreativeSuggestion):
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error(
+                "That suggestion is no longer current. Ask for a suggestion again."
+            ),
+        )
+        return
+    state = _current_suggestion_state(shell, result)
+    if state is None:
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error(
+                "The current suggestion lost its controlled-randomize context. Ask for a suggestion again."
+            ),
+        )
+        return
+    locks, variation = state
+    if action.value != _randomize_binding(result, locks, variation):
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error(
+                "The current suggestion changed before that controlled randomize action was used."
+            ),
+        )
+        return
+
+    hq = shell.runtime.headquarters
+    song = hq.store.active_song()
+    latest = None if song is None else hq.sessions.latest_for_song(song.id)
+    latest_session_id = None if latest is None else latest.id
+    if (
+        song is None
+        or song.id != result.song_id
+        or latest_session_id != result.session_id
+    ):
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error(
+                "The Song work context changed before that suggestion could be randomized."
+            ),
+        )
+        return
+
+    next_result, next_variation = _next_visible_suggestion_state(
+        shell,
+        distance=result.distance,
+        locked_dimensions=locks,
+        start_variation=(variation + 1) % 1001,
+        excluded_semantic_keys=(result.semantic_key,),
+        unavailable_message=(
+            "No different local suggestion is currently available with this distance and these locks. "
+            "Keep this prompt, change the distance or locks, or try again after your suggestion visibility changes."
+        ),
+    )
+    _set_suggestion_state(
+        shell,
+        next_result,
+        locked_dimensions=locks,
+        variation=next_variation,
+    )
+    shell._consumer_notice = (
+        "Another bounded local direction is ready. Your distance and locks were preserved; nothing in the Song was changed."
+    )
     shell._redirect(handler, "/song")
 
 
@@ -282,13 +494,13 @@ def _post_not_now(
         hq.suggestion_deferrals.defer_until_next_song(result.semantic_key)
     else:
         hq.suggestion_deferrals.never_suggest_again(result.semantic_key)
-    shell._creative_suggestion_result = None
+    _clear_suggestion_state(shell)
     shell._consumer_notice = _DEFERRAL_NOTICES[scope]
     shell._redirect(handler, "/song")
 
 
 def install_song_creative_suggestions() -> None:
-    """Attach bounded creative suggestions and durable explicit deferral horizons."""
+    """Attach bounded creative suggestions, controlled randomize and deferrals."""
     if getattr(ConsumerShell, "_song_creative_suggestions_installed", False):
         return
 
@@ -306,7 +518,11 @@ def install_song_creative_suggestions() -> None:
 
     def with_suggestion_post(self: ConsumerShell, handler: BaseHTTPRequestHandler) -> None:
         path = self._path(handler)
-        if path not in {"/suggestion/create", "/suggestion/not-now"}:
+        if path not in {
+            "/suggestion/create",
+            "/suggestion/not-now",
+            "/suggestion/randomize",
+        }:
             original_post(self, handler)
             return
         if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(handler):
@@ -327,6 +543,8 @@ def install_song_creative_suggestions() -> None:
         try:
             if path == "/suggestion/not-now":
                 _post_not_now(self, handler, form)
+            elif path == "/suggestion/randomize":
+                _post_randomize(self, handler, form)
             else:
                 _post_suggestion(self, handler, form)
         except (ValidationError, CreativeSuggestionError, ConsumerShellError) as exc:
