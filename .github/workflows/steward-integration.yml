@@ -1,0 +1,67 @@
+name: N0TE2 Steward Integration Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: n0te2-steward-integration-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  steward-integration:
+    name: steward-integration
+    runs-on: ubuntu-latest
+    env:
+      N0TE2_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+      N0TE2_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify exact event head checkout
+        run: |
+          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'expected={expected} actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
+      - name: Validate Steward integration contract
+        run: python governance/check_steward_integration.py --repo .
+      - name: Run Steward integration regression tests
+        run: python -m unittest -v tests.governance.test_steward_integration
+      - name: Publish Steward integration success
+        if: ${{ success() }}
+        env:
+          EVIDENCE_CONTEXT: n0te2-steward-integration
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.N0TE2_HEAD_SHA,
+              state: 'success',
+              context: process.env.EVIDENCE_CONTEXT,
+              description: 'Exact-head Steward integration gate passed'
+            })
+      - name: Publish Steward integration failure
+        if: ${{ failure() }}
+        env:
+          EVIDENCE_CONTEXT: n0te2-steward-integration
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.repos.createCommitStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: process.env.N0TE2_HEAD_SHA,
+              state: 'failure',
+              context: process.env.EVIDENCE_CONTEXT,
+              description: 'Exact-head Steward integration gate failed'
+            })
