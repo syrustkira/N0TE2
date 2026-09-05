@@ -2,7 +2,7 @@ name: N0TE2 Steward Structure
 
 on:
   pull_request_target:
-    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited]
   push:
     branches: [main]
 
@@ -22,6 +22,9 @@ jobs:
     env:
       N0TE2_BASE_SHA: ${{ github.event.pull_request.base.sha }}
       N0TE2_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      N0TE2_PR_NUMBER: ${{ github.event.pull_request.number }}
+      N0TE2_EVENT_MODE: PR
+      N0TE2_DIFF_MODE: PR_MERGE_BASE
       EVIDENCE_CONTEXT: n0te2-steward-structure
     steps:
       - name: Checkout exact candidate without executing it
@@ -29,15 +32,17 @@ jobs:
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Fetch exact trusted base for candidate comparison
+      - name: Fetch exact trusted base with merge-base ancestry
         env:
           BASE_REPOSITORY: ${{ github.repository }}
-        run: git fetch --no-tags --depth=1 "https://github.com/${BASE_REPOSITORY}.git" "$N0TE2_BASE_SHA"
+        run: git fetch --no-tags "https://github.com/${BASE_REPOSITORY}.git" "$N0TE2_BASE_SHA"
       - name: Checkout trusted base enforcement copy
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+          persist-credentials: false
           ref: ${{ github.event.pull_request.base.sha }}
           path: .steward-trusted
       - uses: actions/setup-python@v5
@@ -83,11 +88,14 @@ jobs:
     env:
       N0TE2_BASE_SHA: ${{ github.event.before }}
       N0TE2_HEAD_SHA: ${{ github.sha }}
+      N0TE2_EVENT_MODE: MAIN_PUSH
+      N0TE2_DIFF_MODE: EXACT_TREE
       EVIDENCE_CONTEXT: n0te2-steward-structure
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ github.sha }}
       - uses: actions/setup-python@v5
         with:
