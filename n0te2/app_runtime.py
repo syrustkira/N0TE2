@@ -223,9 +223,11 @@ class ApplicationRuntime:
         try:
             from .career_state_shell import install_career_state_headquarters
             from .credits_shell import install_credits_headquarters
+            from .release_readiness_shell import install_release_readiness_headquarters
 
             install_credits_headquarters()
             install_career_state_headquarters()
+            install_release_readiness_headquarters()
         except Exception as exc:
             try:
                 headquarters.close()
