@@ -11,25 +11,34 @@ concurrency:
 
 permissions:
   contents: read
-  statuses: write
 
 jobs:
   governance:
-    name: governance-${{ matrix.os }}
+    name: ${{ matrix.context }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            platform: Linux
+            context: n0te2-governance-Linux
+          - os: windows-latest
+            platform: Windows
+            context: n0te2-governance-Windows
+          - os: macos-latest
+            platform: macOS
+            context: n0te2-governance-macOS
     runs-on: ${{ matrix.os }}
     env:
       N0TE2_RUN_ID: ${{ github.run_id }}
       N0TE2_RUN_ATTEMPT: ${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           fetch-depth: 0
+          persist-credentials: false
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: '3.11'
       - name: Install repository dependencies and test runner
@@ -83,7 +92,7 @@ jobs:
         run: python governance/build_handoff.py --repo . --output governance-runtime-handoff.json --observation-output governance-ci-observation.json
       - name: Upload supervision evidence
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: n0te2-supervision-${{ runner.os }}-${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           path: |
@@ -92,35 +101,3 @@ jobs:
             pytest-results.xml
           if-no-files-found: error
           retention-days: 30
-      - name: Publish exact-head success evidence
-        if: ${{ success() }}
-        env:
-          EVIDENCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          EVIDENCE_CONTEXT: n0te2-governance-${{ runner.os }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: process.env.EVIDENCE_SHA,
-              state: 'success',
-              context: process.env.EVIDENCE_CONTEXT,
-              description: 'Exact raw-head governance passed'
-            })
-      - name: Publish exact-head failure evidence
-        if: ${{ failure() }}
-        env:
-          EVIDENCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
-          EVIDENCE_CONTEXT: n0te2-governance-${{ runner.os }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            await github.rest.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              sha: process.env.EVIDENCE_SHA,
-              state: 'failure',
-              context: process.env.EVIDENCE_CONTEXT,
-              description: 'Exact raw-head governance failed'
-            })

@@ -1,0 +1,199 @@
+name: N0TE2 Steward Structure
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited, labeled, unlabeled]
+  push:
+    branches: [main]
+
+concurrency:
+  group: n0te2-steward-structure-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  trusted-pr-structure:
+    if: ${{ github.event_name == 'pull_request_target' }}
+    name: trusted-pr-structure
+    runs-on: ubuntu-latest
+    env:
+      N0TE2_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+      N0TE2_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      N0TE2_PR_NUMBER: ${{ github.event.pull_request.number }}
+      N0TE2_EVENT_MODE: PR
+      N0TE2_DIFF_MODE: PR_MERGE_BASE
+      N0TE2_META_GOVERNANCE_REOPEN: ${{ contains(github.event.pull_request.labels.*.name, 'steward-meta-governance-reopen') && 'MAIN_STEWARD_LABEL' || '' }}
+      TRUSTED_PATH: .steward-trusted-${{ github.run_id }}-${{ github.run_attempt }}
+      EVIDENCE_CONTEXT: n0te2-steward-structure
+    steps:
+      - name: Reset trusted structural status to pending
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_STATE: pending
+          STATUS_DESCRIPTION: Trusted structural evaluation in progress; not merge authorization
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/statuses/$N0TE2_HEAD_SHA" \
+            -d "{\"state\":\"$STATUS_STATE\",\"context\":\"$EVIDENCE_CONTEXT\",\"description\":\"$STATUS_DESCRIPTION\"}"
+
+      - name: Set up trusted Python runtime
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+
+      - name: Checkout exact candidate without executing it
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Fetch exact trusted base with merge-base ancestry
+        env:
+          BASE_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: git fetch --no-tags "https://github.com/${BASE_REPOSITORY}.git" "$N0TE2_BASE_SHA"
+
+      - name: Checkout trusted base enforcement copy to runtime-unique path
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: ${{ env.TRUSTED_PATH }}
+
+      - name: Verify exact candidate checkout and trusted checker
+        shell: bash
+        run: |
+          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'candidate_expected={expected} candidate_actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
+          test -f "$TRUSTED_PATH/governance/check_steward_integration.py"
+
+      - name: Validate candidate with trusted base Steward checker
+        shell: bash
+        run: python "$TRUSTED_PATH/governance/check_steward_integration.py" --repo .
+
+      - name: Publish trusted structural success
+        if: ${{ success() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_STATE: success
+          STATUS_DESCRIPTION: Trusted base structural check passed; not merge authorization
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/statuses/$N0TE2_HEAD_SHA" \
+            -d "{\"state\":\"$STATUS_STATE\",\"context\":\"$EVIDENCE_CONTEXT\",\"description\":\"$STATUS_DESCRIPTION\"}"
+
+      - name: Publish trusted structural failure
+        if: ${{ failure() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_STATE: failure
+          STATUS_DESCRIPTION: Trusted base structural check failed; merge blocked
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/statuses/$N0TE2_HEAD_SHA" \
+            -d "{\"state\":\"$STATUS_STATE\",\"context\":\"$EVIDENCE_CONTEXT\",\"description\":\"$STATUS_DESCRIPTION\"}"
+
+  main-structure:
+    if: ${{ github.event_name == 'push' }}
+    name: main-structure
+    runs-on: ubuntu-latest
+    env:
+      N0TE2_BASE_SHA: ${{ github.event.before }}
+      N0TE2_HEAD_SHA: ${{ github.sha }}
+      N0TE2_EVENT_MODE: MAIN_PUSH
+      N0TE2_DIFF_MODE: EXACT_TREE
+      EVIDENCE_CONTEXT: n0te2-steward-structure
+    steps:
+      - name: Reset main structural status to pending
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_STATE: pending
+          STATUS_DESCRIPTION: Main structural observation in progress
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/statuses/$N0TE2_HEAD_SHA" \
+            -d "{\"state\":\"$STATUS_STATE\",\"context\":\"$EVIDENCE_CONTEXT\",\"description\":\"$STATUS_DESCRIPTION\"}"
+
+      - name: Set up trusted Python runtime
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+
+      - name: Checkout exact main
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ github.sha }}
+
+      - name: Verify exact main checkout
+        shell: bash
+        run: |
+          python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'main_expected={expected} main_actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
+
+      - name: Validate current main Steward structure
+        shell: bash
+        run: python governance/check_steward_integration.py --repo .
+
+      - name: Publish main structural success
+        if: ${{ success() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_STATE: success
+          STATUS_DESCRIPTION: Main structural check passed; post-merge evidence only
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/statuses/$N0TE2_HEAD_SHA" \
+            -d "{\"state\":\"$STATUS_STATE\",\"context\":\"$EVIDENCE_CONTEXT\",\"description\":\"$STATUS_DESCRIPTION\"}"
+
+      - name: Publish main structural failure
+        if: ${{ failure() }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          STATUS_STATE: failure
+          STATUS_DESCRIPTION: Main structural check failed; Steward incident required
+        shell: bash
+        run: |
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/statuses/$N0TE2_HEAD_SHA" \
+            -d "{\"state\":\"$STATUS_STATE\",\"context\":\"$EVIDENCE_CONTEXT\",\"description\":\"$STATUS_DESCRIPTION\"}"

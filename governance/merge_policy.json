@@ -1,7 +1,57 @@
 {
-  "schema_version": 1,
+  "schema_version": 5,
   "target_branch": "main",
-  "required_exact_head_status_contexts": ["n0te2-governance-Linux","n0te2-governance-Windows","n0te2-governance-macOS"],
-  "requirements": {"exact_head_only":true,"handoff_consistent":true,"governance_green":true,"full_regression_green":true,"consumer_smoke_green":true,"blocking_incidents_resolved_before_merge":true,"draft_pr_cannot_merge":true},
-  "external_enforcement": {"desired":"GitHub branch protection or repository ruleset requiring the three exact-head status contexts","repository_file_cannot_prevent_direct_push_by_itself":true}
+  "required_exact_head_status_contexts": [
+    "n0te2-governance-Linux",
+    "n0te2-governance-Windows",
+    "n0te2-governance-macOS"
+  ],
+  "requirements": {
+    "exact_head_only": true,
+    "handoff_consistent": true,
+    "governance_green": true,
+    "full_regression_green": true,
+    "consumer_smoke_green": true,
+    "blocking_incidents_resolved_before_merge": true,
+    "draft_pr_cannot_merge": true,
+    "substantive_review_terminal_on_exact_head": true,
+    "review_findings_resolved_or_dispositioned": true,
+    "late_live_main_race_check": true,
+    "expected_head_guarded_merge": true,
+    "post_merge_verification": true,
+    "single_main_steward_writer": true,
+    "late_review_creates_post_merge_incident": true
+  },
+  "steward_gate": {
+    "required": true,
+    "structural_status_context": "n0te2-steward-structure",
+    "status_is_merge_authorization": false,
+    "live_authorization_owner": "MAIN_STEWARD",
+    "trusted_checker_source": "PR_BASE",
+    "trusted_workflow_event": "pull_request_target",
+    "bootstrap_requires_manual_steward_review": true,
+    "bootstrap_pr": 211,
+    "bootstrap_publishes_trusted_status": false,
+    "pending_review_blocks_merge": true,
+    "review_must_bind_exact_head": true,
+    "post_merge_review_opens_fix_order": true,
+    "open_incident_default": "BLOCK_UNLESS_EXPLICIT_NON_BLOCKING_OR_REPAIR",
+    "receipt_prefix_contract": "NORMALIZED_DIRECTORY_BOUNDARY",
+    "terminal_graph_resequencing": "ACTIVE_TRANSITION_REQUIRED",
+    "trusted_gate_artifact_mutation": "MANUAL_META_GOVERNANCE_REOPEN_REQUIRED",
+    "candidate_ci_token_write_policy": "FORBID_STATUS_AND_CHECK_WRITE",
+    "pr_diff_mode": "MERGE_BASE_TO_HEAD",
+    "main_push_diff_mode": "EXACT_BASE_TO_HEAD_TREE",
+    "incident_history_contract": "APPEND_PRESERVE_BASE",
+    "trusted_status_reset_before_evaluation": true,
+    "trusted_checkout_path_mode": "RUNTIME_UNIQUE",
+    "meta_governance_reopen_label": "steward-meta-governance-reopen",
+    "meta_governance_reopen_env_value": "MAIN_STEWARD_LABEL",
+    "rule": "Structural CI proves only that the exact candidate satisfies the trusted repository-side Steward structure contract. It never authorizes merge by itself. The single Main Steward must independently refresh live main, exact candidate head, required platform evidence, substantive exact-head review completion, unresolved findings and incident state immediately before an expected-head guarded merge, then verify resulting main. Candidate-executing CI must hold no status/check write authority and must not persist repository credentials. The trusted Steward workflow is base-owned and may publish only structural evidence. It resets the structural status to pending before every evaluation so a prior green result cannot survive a new review/base/label event. Trusted base code is checked out to a runtime-unique path so candidate content cannot pre-seed the trusted checkout location. Trusted gate artifacts are immutable in ordinary PRs; changing them requires the repository-side steward-meta-governance-reopen label, which is converted by the base-owned workflow into the fixed MAIN_STEWARD_LABEL signal. Open incidents fail closed unless their durable current event is explicitly NON_BLOCKING or the exact candidate is an explicit repair named by the incident contract. Incident history is append-preserved. Receipt prefixes must be normalized directory boundaries. A terminal candidate cannot alter completion-graph dependencies or semantics; completion-graph mutation at terminal is limited to a state-only closure of exactly one previously ACTIVE bounded node. PR structural diffs use merge-base-to-head semantics; main push structural diffs compare the exact previous and current trees. The first Steward-gate bootstrap cannot trust a base checker or base-owned workflow that does not yet exist, publishes no trusted Steward status, and therefore requires explicit live Steward review plus the ordinary exact-head platform proof."
+  },
+  "external_enforcement": {
+    "desired": "After Steward-gate bootstrap, GitHub branch protection or a repository ruleset should require the three exact-head platform check contexts plus the trusted n0te2-steward-structure context where administratively available.",
+    "repository_file_cannot_prevent_direct_push_by_itself": true,
+    "current_truth": "Repository policy and trusted structural CI define evidence requirements, while the single active Main Steward remains the live merge-authorization owner unless external branch protection or ruleset evidence proves equivalent atomic enforcement. A structural status, including green, is not a merge receipt."
+  }
 }
