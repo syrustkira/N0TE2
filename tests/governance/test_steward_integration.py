@@ -228,6 +228,36 @@ class StewardIntegrationGateTests(unittest.TestCase):
         path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
         gate.run(repo, verify_git=False)
 
+    def test_null_handoff_lifecycle_compatibility_hook_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/handoff.json"
+        handoff = json.loads(path.read_text())
+        handoff["lifecycle"] = None
+        self.write_json(path, handoff)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("compatibility hook must be an object", str(cm.exception))
+
+    def test_handoff_cannot_reclaim_lifecycle_ownership(self):
+        repo = self.clone()
+        path = repo / "governance/handoff.json"
+        handoff = json.loads(path.read_text())
+        handoff["derived_runtime_truth"]["lifecycle_source"] = "governance/handoff.json"
+        self.write_json(path, handoff)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("sole handoff lifecycle source", str(cm.exception))
+
+    def test_legacy_handoff_lifecycle_fields_must_match_current_state(self):
+        repo = self.clone()
+        path = repo / "governance/handoff.json"
+        handoff = json.loads(path.read_text())
+        handoff["lifecycle"] = {"state": "ACTIVE"}
+        self.write_json(path, handoff)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("compatibility state contradicts current_state", str(cm.exception))
+
     def test_static_status_cannot_become_merge_authorization(self):
         repo = self.clone()
         path = repo / "governance/merge_policy.json"
