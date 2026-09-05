@@ -278,9 +278,68 @@ with tempfile.TemporaryDirectory() as temp:
     status, observed = post(shell, "/learning/observe", observe.values)
     assert status == 303, f"learning observe returned {status}: {observed[:600]}"
 
-    status, observed_page = get(shell, "/song")
-    assert status == 200, f"learning-observed GET returned {status}: {observed_page[:1200]}"
-    assert observation_text in observed_page
-    assert "What N0TE remembers" in observed_page
+    status, fresh = get(shell, "/song")
+    assert status == 200, f"fresh-evidence GET returned {status}: {fresh[:1200]}"
+    assert "What N0TE remembers" in fresh
+    assert "1 Learning episode" in fresh
+    explain = mode_form(fresh, "EXPLAIN_WHY")
+    status, explained_post = post(shell, "/interaction/depth", explain.values)
+    assert status == 303, f"EXPLAIN_WHY POST returned {status}: {explained_post[:600]}"
+    status, explained = get(shell, "/song")
+    assert status == 200, f"EXPLAIN_WHY result GET returned {status}: {explained[:1200]}"
+    assert "Working style: EXPLAIN WHY" in explained
+    assert observation_text in explained
+    assert "artist-reported, 70% confidence" in explained
+    assert "question, not established causation" in explained
+    assert "changing fewer variables" in explained
+    assert "Choosing a teaching/collaboration mode never approves a mutation" in explained
+    assert "What N0TE remembers" in explained
+    assert "read-only" in explained
+    assert "one kept result does not become permanent taste doctrine or a causal rule" in explained
 
+    profile_id = shell.runtime.profile_id
+    assert profile_id
     quit_shell(shell)
+
+    # ConsumerShell owns its SQLite connection on the HTTP server thread. Open a
+    # fresh read/composition root on this thread for the context-projection proof
+    # instead of reaching across SQLite thread ownership.
+    with HeadquartersMemory.open(data_root, profile_id) as retained:
+        active_song = retained.store.active_song()
+        assert active_song is not None
+        projection = retained.context_projection.projection_for_song(
+            active_song.id,
+            purpose="Resume the smoke-test work without flattening canonical history",
+            sections=("SESSIONS", "LEARNING", "DURABLE_FACTS"),
+        )
+        assert projection["schema"] == "n0te.context-projection.v1"
+        assert projection["authority_ceiling"] == "READ_ONLY_CONTEXT"
+        assert projection["mutation_policy"]["grants_action_authority"] is False
+        assert projection["budget"]["canonical_history_deleted"] is False
+        assert len(projection["source_digest"]) == 64
+
+    relaunched = ConsumerShell(
+        data_root=data_root,
+        state_root=state_root,
+        process=process,
+        probe=probe,
+    )
+    relaunched.start()
+    status, resumed = get(relaunched, "/song")
+    assert status == 200, f"relaunch song GET returned {status}: {resumed[:1200]}"
+    assert "Retention Smoke Artist" in resumed
+    assert "Retention Smoke Song" in resumed
+    assert observation_text in resumed
+    assert "What N0TE remembers" in resumed
+    assert "Retention active" in resumed
+    assert session_objective in resumed
+    assert "Work Session still open" in resumed
+    assert "1 Learning episode" in resumed
+    assert "Working style: EXPLAIN WHY" not in resumed
+    assert len(parsed_forms(resumed, "/interaction/depth")) == 5
+    assert "learn_" not in resumed and "sess_" not in resumed and "prf_" not in resumed
+    quit_shell(relaunched)
+
+print(
+    "N0TE CONSUMER SMOKE: GREEN: a fresh artist created a Song and real work Session, used the inherited interaction-depth Learning journey, recorded evidence, saw N0TE consult canonical retention and create a bounded read-only source-digest context projection without deleting history or granting mutation authority, explicitly quit/relaunched, and recovered the same Session objective and Learning evidence while the transient interaction-mode choice correctly did not persist"
+)
