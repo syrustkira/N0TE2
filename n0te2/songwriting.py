@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
+import uuid
 from dataclasses import dataclass
 
 from .evidence import EvidenceClaim
@@ -32,6 +34,10 @@ SONGWRITING_ENTRY_KINDS = (
 SONGWRITING_SOURCE_KIND = "USER_DECLARED"
 MAX_SONGWRITING_TEXT_CHARS = 12_000
 MAX_SONGWRITING_SECTION_CHARS = 160
+# The shared consumer shell accepts at most 32,768 URL-encoded bytes. 2,400
+# four-byte UTF-8 characters plus the maximal section and action metadata remain
+# safely below that transport ceiling.
+MAX_SONGWRITING_SURFACE_TEXT_CHARS = 2_400
 
 _ENTRY_MARKER = "\n\n[N0TE-SONGWRITE/1] "
 _KEY_PART = re.compile(r"[^a-z0-9]+")
@@ -43,6 +49,10 @@ class SongwritingCaseHistoryError(RuntimeError):
 
 class SongwritingCaseHistoryIntegrityError(SongwritingCaseHistoryError):
     """N0TE-owned writing scratch no longer matches its canonical encoding."""
+
+
+class StaleSongwritingCaseHistoryError(SongwritingCaseHistoryError):
+    """A rendered songwriting action no longer matches canonical live state."""
 
 
 @dataclass(frozen=True)
@@ -86,6 +96,11 @@ class SongwritingCaseHistoryService:
     and promotion provenance, so this layer adds writing semantics without
     weakening those boundaries.
 
+    Render-bound consumer mutations use the LineageStore BEGIN IMMEDIATE
+    transaction across both freshness validation and the write. That keeps the
+    displayed Song/Version/Session contract exact even with another Headquarters
+    process writing the same profile concurrently.
+
     This is case history, not pitch correction, transcription, comp execution,
     voice cloning, provider generation, or a claim that N0TE heard audio.
     """
@@ -99,6 +114,7 @@ class SongwritingCaseHistoryService:
             )
         self.store = store
         self.sessions = sessions
+        self._conn = store._conn
 
     @staticmethod
     def normalize_aspect(value: str) -> str:
@@ -179,6 +195,61 @@ class SongwritingCaseHistoryService:
             )
         return aspect, section, clean_text
 
+    @classmethod
+    def presentation_text(cls, body: str) -> str | None:
+        """Return artist-authored text for one valid N0TE songwriting envelope."""
+        decoded = cls._decode(body)
+        return None if decoded is None else decoded[2]
+
+    def presentation_replacements_for_song(
+        self, song_id: str
+    ) -> tuple[tuple[str, str | None], ...]:
+        """Map owned storage envelopes to safe consumer text.
+
+        Malformed owned envelopes return a None presentation so the shell can
+        hide the storage payload while its normal integrity path reports
+        recovery instead of leaking internal metadata.
+        """
+        song = self.store.get_song(str(song_id))
+        if song is None:
+            raise NotFoundError(
+                f"Song not found in profile {self.store.profile_id}: {song_id}"
+            )
+        rows = self._conn.execute(
+            "SELECT i.body FROM session_items i "
+            "JOIN sessions s ON s.id=i.session_id "
+            "WHERE s.song_id=? ORDER BY i.seq",
+            (song.id,),
+        ).fetchall()
+        replacements: list[tuple[str, str | None]] = []
+        for row in rows:
+            body = str(row["body"])
+            if _ENTRY_MARKER not in body:
+                continue
+            try:
+                visible = self.presentation_text(body)
+            except SongwritingCaseHistoryIntegrityError:
+                visible = None
+            replacements.append((body, visible))
+        return tuple(replacements)
+
+    def _item(self, item_id: str) -> SessionItem:
+        row = self._conn.execute(
+            "SELECT seq,id,session_id,kind,body FROM session_items WHERE id=?",
+            (str(item_id),),
+        ).fetchone()
+        if row is None:
+            raise NotFoundError(
+                f"Session item not found in profile {self.store.profile_id}: {item_id}"
+            )
+        return SessionItem(
+            sequence=int(row["seq"]),
+            id=str(row["id"]),
+            session_id=str(row["session_id"]),
+            kind=str(row["kind"]),
+            body=str(row["body"]),
+        )
+
     def _entry(self, item: SessionItem, session: SongSession) -> SongwritingEntry | None:
         if item.session_id != session.id:
             raise SongwritingCaseHistoryIntegrityError(
@@ -204,6 +275,20 @@ class SongwritingCaseHistoryService:
             promoted_claim_id=None if promotion is None else promotion.claim_id,
         )
 
+    def _insert_item_locked(
+        self,
+        session: SongSession,
+        *,
+        kind: str,
+        body: str,
+    ) -> SessionItem:
+        item_id = f"sitem_{uuid.uuid4().hex}"
+        self._conn.execute(
+            "INSERT INTO session_items(id,session_id,kind,body) VALUES(?,?,?,?)",
+            (item_id, session.id, kind, body),
+        )
+        return self._item(item_id)
+
     def capture(
         self,
         *,
@@ -214,31 +299,116 @@ class SongwritingCaseHistoryService:
         section: str | None = None,
         kind: str = "MARK",
     ) -> SongwritingEntry:
-        song = self.store.get_song(str(song_id))
-        if song is None:
-            raise NotFoundError(
-                f"Song not found in profile {self.store.profile_id}: {song_id}"
-            )
-        session = self.sessions.get_session(str(session_id))
-        if session is None:
-            raise NotFoundError(
-                f"Session not found in profile {self.store.profile_id}: {session_id}"
-            )
-        if session.song_id != song.id:
-            raise ValidationError("songwriting Session belongs to a different Song")
-        if session.state != "OPEN":
-            raise ValidationError("songwriting case history can be added only to an open Session")
-
         aspect = self.normalize_aspect(aspect)
         kind = self.normalize_kind(kind)
         section = self._clean_section(section)
         text = self._clean_text(text)
-        item = self.sessions.append_scratch(
-            session.id,
-            kind=kind,
-            body=self._encode(aspect=aspect, section=section, text=text),
-        )
-        entry = self._entry(item, session)
+        body = self._encode(aspect=aspect, section=section, text=text)
+
+        try:
+            with self.store._tx():
+                song = self.store.get_song(str(song_id))
+                if song is None:
+                    raise NotFoundError(
+                        f"Song not found in profile {self.store.profile_id}: {song_id}"
+                    )
+                session = self.sessions.get_session(str(session_id))
+                if session is None:
+                    raise NotFoundError(
+                        f"Session not found in profile {self.store.profile_id}: {session_id}"
+                    )
+                if session.song_id != song.id:
+                    raise ValidationError("songwriting Session belongs to a different Song")
+                if session.state != "OPEN":
+                    raise ValidationError(
+                        "songwriting case history can be added only to an open Session"
+                    )
+                item = self._insert_item_locked(session, kind=kind, body=body)
+        except sqlite3.IntegrityError as exc:
+            raise ValidationError(f"cannot append songwriting case history: {exc}") from exc
+
+        current_session = self.sessions.get_session(item.session_id)
+        if current_session is None:
+            raise SongwritingCaseHistoryIntegrityError(
+                "captured songwriting item lost its Session"
+            )
+        entry = self._entry(item, current_session)
+        if entry is None:
+            raise SongwritingCaseHistoryIntegrityError(
+                "captured songwriting item could not be read back"
+            )
+        return entry
+
+    def _validate_capture_binding_locked(
+        self,
+        *,
+        song_id: str,
+        session_id: str,
+        expected_current_version_id: str | None,
+        expected_session_version_id: str | None,
+    ) -> tuple[object, SongSession]:
+        song = self.store.active_song()
+        if song is None or song.id != str(song_id):
+            raise StaleSongwritingCaseHistoryError(
+                "The active Song changed. Reload the Song before capturing this writing note."
+            )
+        if song.current_version_id != expected_current_version_id:
+            raise StaleSongwritingCaseHistoryError(
+                "The current Version changed. Reload the Song before capturing this writing note."
+            )
+        session = self.sessions.get_session(str(session_id))
+        latest = self.sessions.latest_for_song(song.id)
+        if (
+            session is None
+            or session.song_id != song.id
+            or session.state != "OPEN"
+            or session.version_id != expected_session_version_id
+            or latest is None
+            or latest.id != session.id
+            or latest.state != "OPEN"
+        ):
+            raise StaleSongwritingCaseHistoryError(
+                "The work Session changed. Reload the Song before capturing this writing note."
+            )
+        return song, session
+
+    def capture_bound(
+        self,
+        *,
+        song_id: str,
+        session_id: str,
+        expected_current_version_id: str | None,
+        expected_session_version_id: str | None,
+        aspect: str,
+        text: str,
+        section: str | None = None,
+        kind: str = "MARK",
+    ) -> SongwritingEntry:
+        """Validate rendered Song/Version/Session state and append in one write tx."""
+        aspect = self.normalize_aspect(aspect)
+        kind = self.normalize_kind(kind)
+        section = self._clean_section(section)
+        text = self._clean_text(text)
+        body = self._encode(aspect=aspect, section=section, text=text)
+
+        try:
+            with self.store._tx():
+                _, session = self._validate_capture_binding_locked(
+                    song_id=str(song_id),
+                    session_id=str(session_id),
+                    expected_current_version_id=expected_current_version_id,
+                    expected_session_version_id=expected_session_version_id,
+                )
+                item = self._insert_item_locked(session, kind=kind, body=body)
+        except sqlite3.IntegrityError as exc:
+            raise ValidationError(f"cannot append songwriting case history: {exc}") from exc
+
+        current_session = self.sessions.get_session(item.session_id)
+        if current_session is None:
+            raise SongwritingCaseHistoryIntegrityError(
+                "captured songwriting item lost its Session"
+            )
+        entry = self._entry(item, current_session)
         if entry is None:
             raise SongwritingCaseHistoryIntegrityError(
                 "captured songwriting item could not be read back"
@@ -264,7 +434,7 @@ class SongwritingCaseHistoryService:
             raise NotFoundError(
                 f"Song not found in profile {self.store.profile_id}: {song_id}"
             )
-        rows = self.store._conn.execute(
+        rows = self._conn.execute(
             "SELECT id FROM sessions WHERE song_id=? ORDER BY seq",
             (song.id,),
         ).fetchall()
@@ -274,19 +444,16 @@ class SongwritingCaseHistoryService:
         return tuple(sorted(entries, key=lambda entry: entry.sequence))
 
     def entry(self, item_id: str) -> SongwritingEntry:
-        row = self.store._conn.execute(
-            "SELECT session_id FROM session_items WHERE id=?",
-            (str(item_id),),
-        ).fetchone()
-        if row is None:
-            raise NotFoundError(
-                f"Session item not found in profile {self.store.profile_id}: {item_id}"
+        item = self._item(str(item_id))
+        session = self.sessions.get_session(item.session_id)
+        if session is None:
+            raise SongwritingCaseHistoryIntegrityError(
+                "Songwriting item lost its Session"
             )
-        entries = self.entries_for_session(str(row["session_id"]))
-        for entry in entries:
-            if entry.item_id == str(item_id):
-                return entry
-        raise ValidationError("Session item is not N0TE songwriting case history")
+        entry = self._entry(item, session)
+        if entry is None:
+            raise ValidationError("Session item is not N0TE songwriting case history")
+        return entry
 
     @staticmethod
     def semantic_key(entry: SongwritingEntry) -> str:
@@ -296,28 +463,218 @@ class SongwritingCaseHistoryService:
         section = _KEY_PART.sub("_", section).strip("_") or "section"
         return f"songwriting.{entry.aspect.lower()}.{section[:64]}"
 
+    def _promotion_request_locked(
+        self,
+        entry: SongwritingEntry,
+        *,
+        scope_kind: str,
+        key: str,
+    ) -> tuple[str, str]:
+        scope_kind = str(scope_kind).strip().upper()
+        if scope_kind not in {"SONG", "VERSION"}:
+            raise ValidationError(f"unsupported Session promotion scope: {scope_kind}")
+        if scope_kind == "SONG":
+            scope_id = entry.song_id
+        else:
+            if entry.version_id is None:
+                raise ValidationError("Session has no bound Version to promote into")
+            scope_id = entry.version_id
+
+        item = self._item(entry.item_id)
+        value_json = json.dumps(
+            item.body, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        request = self._conn.execute(
+            "SELECT id,source_ref,scope_kind,scope_id,key,value_json,"
+            "source_kind,twin_domain,confidence "
+            "FROM session_promotion_requests WHERE item_id=?",
+            (entry.item_id,),
+        ).fetchone()
+        expected = (
+            scope_kind,
+            scope_id,
+            key,
+            value_json,
+            SONGWRITING_SOURCE_KIND,
+            "CREATIVE",
+            1.0,
+        )
+        if request is None:
+            request_id = f"spr_{uuid.uuid4().hex}"
+            source_ref = f"session-promotion:{request_id}"
+            self._conn.execute(
+                "INSERT INTO session_promotion_requests("
+                "id,item_id,source_ref,scope_kind,scope_id,key,value_json,"
+                "source_kind,twin_domain,confidence) VALUES(?,?,?,?,?,?,?,?,?,?)",
+                (
+                    request_id,
+                    entry.item_id,
+                    source_ref,
+                    scope_kind,
+                    scope_id,
+                    key,
+                    value_json,
+                    SONGWRITING_SOURCE_KIND,
+                    "CREATIVE",
+                    1.0,
+                ),
+            )
+            return scope_id, source_ref
+
+        actual = (
+            str(request["scope_kind"]),
+            str(request["scope_id"]),
+            str(request["key"]),
+            str(request["value_json"]),
+            str(request["source_kind"]),
+            str(request["twin_domain"]),
+            float(request["confidence"]),
+        )
+        if actual != expected:
+            raise ValidationError(
+                "Session item already has a different immutable promotion request"
+            )
+        return scope_id, str(request["source_ref"])
+
+    def _promote_entry_locked(
+        self,
+        entry: SongwritingEntry,
+        *,
+        scope_kind: str,
+    ) -> tuple[str, str]:
+        if entry.kind != "DECISION":
+            raise ValidationError(
+                "only an explicit songwriting DECISION can become durable evidence"
+            )
+        if entry.promoted:
+            raise ValidationError("songwriting decision is already promoted")
+        key = self.semantic_key(entry)
+        scope_id, source_ref = self._promotion_request_locked(
+            entry, scope_kind=scope_kind, key=key
+        )
+        item = self._item(entry.item_id)
+        value_json = json.dumps(
+            item.body, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        claim_id = f"claim_{uuid.uuid4().hex}"
+        self._conn.execute(
+            "INSERT INTO evidence_claims("
+            "id,scope_kind,scope_id,key,value_json,source_kind,source_ref,"
+            "confidence,twin_domain) VALUES(?,?,?,?,?,?,?,?,?)",
+            (
+                claim_id,
+                str(scope_kind).strip().upper(),
+                scope_id,
+                key,
+                value_json,
+                SONGWRITING_SOURCE_KIND,
+                source_ref,
+                1.0,
+                "CREATIVE",
+            ),
+        )
+        linked = self._conn.execute(
+            "SELECT claim_id FROM session_promotions WHERE item_id=?",
+            (entry.item_id,),
+        ).fetchone()
+        if linked is None or str(linked["claim_id"]) != claim_id:
+            raise SongwritingCaseHistoryIntegrityError(
+                "Evidence promotion committed without matching Session link"
+            )
+        return claim_id, key
+
     def promote_decision(
         self,
         item_id: str,
         *,
         scope_kind: str = "SONG",
     ) -> SongwritingPromotion:
-        entry = self.entry(item_id)
-        if entry.kind != "DECISION":
-            raise ValidationError(
-                "only an explicit songwriting DECISION can become durable evidence"
+        try:
+            with self.store._tx():
+                entry = self.entry(item_id)
+                claim_id, key = self._promote_entry_locked(
+                    entry, scope_kind=scope_kind
+                )
+        except sqlite3.IntegrityError as exc:
+            raise ValidationError(f"cannot promote songwriting decision: {exc}") from exc
+
+        claim = self.sessions.evidence.get_claim(claim_id)
+        promoted = self.entry(item_id)
+        if claim is None or promoted.promoted_claim_id != claim.id:
+            raise SongwritingCaseHistoryIntegrityError(
+                "songwriting decision promotion lost its Session provenance"
             )
-        key = self.semantic_key(entry)
-        claim = self.sessions.promote_item(
-            entry.item_id,
-            scope_kind=scope_kind,
-            key=key,
-            source_kind=SONGWRITING_SOURCE_KIND,
-            twin_domain="CREATIVE",
-            confidence=1.0,
-        )
-        promoted = self.entry(entry.item_id)
-        if promoted.promoted_claim_id != claim.id:
+        return SongwritingPromotion(entry=promoted, claim=claim, semantic_key=key)
+
+    def _validate_promotion_binding_locked(
+        self,
+        *,
+        item_id: str,
+        expected_song_id: str,
+        expected_session_id: str,
+        expected_entry_version_id: str | None,
+        expected_current_version_id: str | None,
+    ) -> tuple[object, SongwritingEntry]:
+        song = self.store.active_song()
+        if song is None or song.id != str(expected_song_id):
+            raise StaleSongwritingCaseHistoryError(
+                "The active Song changed. Reload the Song before remembering this decision."
+            )
+        if song.current_version_id != expected_current_version_id:
+            raise StaleSongwritingCaseHistoryError(
+                "The current Version changed. Reload the Song before remembering this decision."
+            )
+        entry = self.entry(str(item_id))
+        if (
+            entry.song_id != song.id
+            or entry.session_id != str(expected_session_id)
+            or entry.version_id != expected_entry_version_id
+            or entry.kind != "DECISION"
+            or entry.promoted
+        ):
+            raise StaleSongwritingCaseHistoryError(
+                "That writing decision changed or is no longer eligible. Reload the Song and try again."
+            )
+        return song, entry
+
+    def promote_decision_bound(
+        self,
+        item_id: str,
+        *,
+        expected_song_id: str,
+        expected_session_id: str,
+        expected_entry_version_id: str | None,
+        expected_current_version_id: str | None,
+        scope_kind: str = "SONG",
+    ) -> SongwritingPromotion:
+        """Validate rendered Song/Version/entry state and promote in one write tx."""
+        try:
+            with self.store._tx():
+                song, entry = self._validate_promotion_binding_locked(
+                    item_id=str(item_id),
+                    expected_song_id=str(expected_song_id),
+                    expected_session_id=str(expected_session_id),
+                    expected_entry_version_id=expected_entry_version_id,
+                    expected_current_version_id=expected_current_version_id,
+                )
+                claim_id, key = self._promote_entry_locked(
+                    entry, scope_kind=scope_kind
+                )
+                if str(scope_kind).strip().upper() == "SONG":
+                    claim_scope = self._conn.execute(
+                        "SELECT scope_id FROM evidence_claims WHERE id=?",
+                        (claim_id,),
+                    ).fetchone()
+                    if claim_scope is None or str(claim_scope["scope_id"]) != song.id:
+                        raise SongwritingCaseHistoryIntegrityError(
+                            "Songwriting decision promotion crossed the active Song binding"
+                        )
+        except sqlite3.IntegrityError as exc:
+            raise ValidationError(f"cannot promote songwriting decision: {exc}") from exc
+
+        claim = self.sessions.evidence.get_claim(claim_id)
+        promoted = self.entry(item_id)
+        if claim is None or promoted.promoted_claim_id != claim.id:
             raise SongwritingCaseHistoryIntegrityError(
                 "songwriting decision promotion lost its Session provenance"
             )

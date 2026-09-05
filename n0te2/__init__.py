@@ -437,3 +437,7 @@ from .profile_create_redirect_shell import install_profile_create_redirect
 
 install_loopback_transport_reliability()
 install_profile_create_redirect()
+
+from .songwriting_shell import install_songwriting_vocal_surface
+
+install_songwriting_vocal_surface()
