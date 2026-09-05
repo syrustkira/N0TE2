@@ -250,6 +250,7 @@ def validate_active_repair(
     require(not unauthorized, "incident repair changed paths outside exact receipt: " + ", ".join(unauthorized))
 
     if target_kind == "GOVERNANCE":
+        require(not allowed_prefixes, "GOVERNANCE repair must enumerate exact allowed paths; broad prefixes are not repair authority")
         require(receipt.get("product_code_allowed") is False, "GOVERNANCE repair cannot authorize product code")
         bad = [
             path
