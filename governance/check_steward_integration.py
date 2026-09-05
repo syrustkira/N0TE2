@@ -155,6 +155,37 @@ def check_blocking_incidents(repo: Path) -> None:
         )
 
 
+def check_handoff_lifecycle_contract(repo: Path) -> None:
+    handoff = load_json(repo / "governance/handoff.json")
+    current = load_json(repo / "governance/current_state.json")
+    if "lifecycle" in handoff:
+        lifecycle = handoff["lifecycle"]
+        require(
+            isinstance(lifecycle, dict),
+            "handoff lifecycle compatibility hook must be an object when present",
+        )
+        key_map = {
+            "state": "lifecycle_state",
+            "active_node": "active_node",
+            "active_increment": "active_increment",
+        }
+        for legacy_key, current_key in key_map.items():
+            if legacy_key in lifecycle:
+                require(
+                    lifecycle.get(legacy_key) == current.get(current_key),
+                    f"handoff compatibility {legacy_key} contradicts current_state",
+                )
+    derived = handoff.get("derived_runtime_truth", {})
+    require(
+        derived.get("lifecycle_source") == "governance/current_state.json",
+        "current_state.json must remain the sole handoff lifecycle source",
+    )
+    require(
+        derived.get("next_admissible_action_source") == "governance/current_state.json",
+        "current_state.json must remain the next-admissible-action source",
+    )
+
+
 def construction_sensitive(path: str) -> bool:
     if path.startswith("n0te2/"):
         return True
@@ -269,6 +300,7 @@ def run(repo: Path, verify_git: bool = True) -> None:
     check_steward_actor(repo)
     check_receipt_path_boundaries(repo)
     check_blocking_incidents(repo)
+    check_handoff_lifecycle_contract(repo)
     check_terminal_construction_gate(repo, verify_git)
     print("N0TE2 STEWARD INTEGRATION STRUCTURE: GREEN")
     print("merge_authorization=LIVE_MAIN_STEWARD_ONLY")
