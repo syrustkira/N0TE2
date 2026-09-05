@@ -4,6 +4,7 @@ import html
 from http.server import BaseHTTPRequestHandler
 from typing import Callable, Mapping
 
+from .belief_sources import present_belief_source
 from .consumer_shell import ConsumerShell, ConsumerShellError
 from .creative_diagnosis import (
     CreativeDiagnosis,
@@ -15,6 +16,11 @@ from .creative_diagnosis import (
 )
 from .creative_suggestions import CREATIVE_DIMENSIONS
 from .lineage import ValidationError
+
+
+_MEASURED_DIAGNOSIS_FACT_LABELS = frozenset(
+    {"Sample peak", "RMS", "Crest factor", "Stereo correlation"}
+)
 
 
 def _service(shell: ConsumerShell) -> CreativeDiagnosisService:
@@ -39,23 +45,33 @@ def _locked_dimensions(form: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(locks)
 
 
+def _fact_source_kind(fact: DiagnosisFact) -> str:
+    if fact.truth_kind == "OBSERVED" and fact.label in _MEASURED_DIAGNOSIS_FACT_LABELS:
+        return "MEASURED"
+    return fact.truth_kind
+
+
 def _fact_markup(fact: DiagnosisFact) -> str:
-    badge = "You said" if fact.truth_kind == "USER_DECLARED" else "Observed"
-    css = "status" if fact.truth_kind == "USER_DECLARED" else "status good"
+    source = present_belief_source(_fact_source_kind(fact))
+    css = "status" if source.source_kind == "USER_DECLARED" else "status good"
     return (
         '<li class="stack">'
-        f'<p class="{css}">{html.escape(badge)}</p>'
+        f'<p class="{css}">{html.escape(source.label)}</p>'
         f'<p><strong>{html.escape(fact.label)}</strong><br>{html.escape(fact.value)}</p>'
+        f'<p class="muted">{html.escape(source.explanation)}</p>'
         f'<p class="muted">Scope: {html.escape(fact.scope)}</p>'
         '</li>'
     )
 
 
 def _hypothesis_markup(hypothesis: DiagnosisHypothesis) -> str:
+    source = present_belief_source("INFERRED")
     return (
         '<li class="stack">'
+        f'<p class="status caution">{html.escape(source.label)}</p>'
         f'<p><strong>{html.escape(hypothesis.label)} · {html.escape(hypothesis.test_dimension.title())}</strong></p>'
         f'<p>{html.escape(hypothesis.statement)}</p>'
+        f'<p class="muted">{html.escape(source.explanation)}</p>'
         '<p class="muted">Hypothesis, not observation.</p>'
         '</li>'
     )
@@ -78,6 +94,31 @@ def _intervention_markup(index: int, path: InterventionPath) -> str:
         f'{preserves}'
         f'<ol class="stack">{steps}</ol>'
         '</li>'
+    )
+
+
+def _belief_sources_markup(result: CreativeDiagnosis) -> str:
+    kinds: list[str] = []
+    for fact in result.facts:
+        kind = _fact_source_kind(fact)
+        if kind not in kinds:
+            kinds.append(kind)
+    if result.hypotheses and "INFERRED" not in kinds:
+        kinds.append("INFERRED")
+    rows = []
+    for kind in kinds:
+        source = present_belief_source(kind)
+        rows.append(
+            '<li class="stack">'
+            f'<p><strong>{html.escape(source.label)}</strong></p>'
+            f'<p class="muted">{html.escape(source.explanation)}</p>'
+            '</li>'
+        )
+    return (
+        '<details><summary>Why does N0TE think that?</summary>'
+        '<p class="muted">These labels describe where each belief came from. They do not upgrade its authority or certainty.</p>'
+        f'<ul class="stack">{"".join(rows)}</ul>'
+        '</details>'
     )
 
 
@@ -104,6 +145,7 @@ def _diagnosis_markup(result: CreativeDiagnosis | None) -> str:
         f'<ul class="stack">{facts}</ul>'
         '<h3>What I’m inferring</h3>'
         f'<ul class="stack">{hypotheses}</ul>'
+        f'{_belief_sources_markup(result)}'
         '<h3>Two ways to test it</h3>'
         f'<ol class="stack">{interventions}</ol>'
         '<p class="status caution"><strong>Nothing changed yet.</strong> These are two bounded tests to compare, not edits that N0TE already made.</p>'
