@@ -173,6 +173,61 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.commit(repo, "governance-only repair")
         self.run_git_gate(repo, baseline)
 
+    def test_empty_receipt_prefix_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/active_receipt.json"
+        receipt = json.loads(path.read_text())
+        receipt["allowed_prefixes"] = [""]
+        self.write_json(path, receipt)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("unsafe allowed_prefixes", str(cm.exception))
+
+    def test_partial_component_receipt_prefix_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/active_receipt.json"
+        receipt = json.loads(path.read_text())
+        receipt["allowed_prefixes"] = ["n0te2"]
+        self.write_json(path, receipt)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("normalized directory", str(cm.exception))
+
+    def test_open_incident_without_explicit_nonblocking_scope_fails_closed(self):
+        repo = self.clone()
+        path = repo / "governance/incidents.jsonl"
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        rows.append(
+            {
+                "id": "INC-TEST-BLOCKING-001",
+                "recorded_at": "2026-09-05",
+                "status": "OPEN",
+                "severity": "BLOCKING",
+                "summary": "test blocker",
+            }
+        )
+        path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("blocks merge", str(cm.exception))
+
+    def test_open_incident_with_explicit_nonblocking_scope_is_allowed(self):
+        repo = self.clone()
+        path = repo / "governance/incidents.jsonl"
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+        rows.append(
+            {
+                "id": "INC-TEST-NONBLOCKING-001",
+                "recorded_at": "2026-09-05",
+                "status": "OPEN_MONITORED",
+                "severity": "MONITORED",
+                "summary": "test monitored incident",
+                "blocking_scope": "NON_BLOCKING_FOR_THIS_INCREMENT",
+            }
+        )
+        path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
+        gate.run(repo, verify_git=False)
+
     def test_static_status_cannot_become_merge_authorization(self):
         repo = self.clone()
         path = repo / "governance/merge_policy.json"
@@ -192,6 +247,26 @@ class StewardIntegrationGateTests(unittest.TestCase):
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
         self.assertIn("pending substantive review", str(cm.exception))
+
+    def test_open_incident_default_policy_is_pinned(self):
+        repo = self.clone()
+        path = repo / "governance/merge_policy.json"
+        policy = json.loads(path.read_text())
+        policy["steward_gate"]["open_incident_default"] = "ALLOW"
+        self.write_json(path, policy)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("open incidents must fail closed", str(cm.exception))
+
+    def test_receipt_prefix_contract_is_pinned(self):
+        repo = self.clone()
+        path = repo / "governance/merge_policy.json"
+        policy = json.loads(path.read_text())
+        policy["steward_gate"]["receipt_prefix_contract"] = "RAW_PREFIX"
+        self.write_json(path, policy)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("normalized directory boundaries", str(cm.exception))
 
     def test_steward_workflow_actor_is_registered_and_non_authorizing(self):
         repo = self.clone()
