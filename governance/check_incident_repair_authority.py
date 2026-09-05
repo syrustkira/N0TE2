@@ -155,6 +155,18 @@ def validate_incidents_open(repo: Path, incident_ids: list[str]) -> list[dict]:
     return incidents
 
 
+def validate_incidents_resolved(repo: Path, incident_ids: list[str]) -> None:
+    rows = load_jsonl(repo / "governance/incidents.jsonl")
+    for incident_id in incident_ids:
+        row = current_incident(rows, incident_id)
+        require(row is not None, f"repair closure names unknown incident: {incident_id}")
+        status = str(row.get("status") or "").strip().upper()
+        require(
+            status.startswith("RESOLVED"),
+            f"repair closure requires durable RESOLVED incident truth: {incident_id} is {status or '<missing>'}",
+        )
+
+
 def validate_active_repair(
     repo: Path,
     base_sha: str,
@@ -196,7 +208,11 @@ def validate_active_repair(
         bad = [
             path
             for path in paths
-            if not (path.startswith("governance/") or path.startswith("tests/governance/") or path == ".github/workflows/steward-integration.yml")
+            if not (
+                path.startswith("governance/")
+                or path.startswith("tests/governance/")
+                or path == ".github/workflows/steward-integration.yml"
+            )
         ]
         require(not bad, "GOVERNANCE repair changed non-governance path: " + ", ".join(bad))
         return
@@ -241,18 +257,23 @@ def validate_closure(
     require(receipt.get("status") == "INACTIVE", "repair closure requires INACTIVE receipt")
     require(receipt.get("product_code_allowed") is False, "repair closure receipt cannot authorize product code")
     require(receipt.get("repair_kind") == CLOSURE_REPAIR_KIND, "terminal incident ids require repair_kind=INCIDENT_REPAIR_CLOSURE")
+    require(receipt.get("baseline_sha") == base_sha, "repair closure receipt must bind exact active-repair base")
     closed_receipt_id = receipt.get("closed_repair_receipt_id")
     require(isinstance(closed_receipt_id, str) and closed_receipt_id.strip(), "repair closure requires closed_repair_receipt_id")
 
     base_current = git_json_at(repo, base_sha, "governance/current_state.json")
     base_receipt = git_json_at(repo, base_sha, "governance/active_receipt.json")
     require(base_current.get("lifecycle_state") == "ACTIVE", "repair closure base was not ACTIVE")
+    require(base_current.get("active_node") == INCIDENT_REPAIR_NODE, "repair closure base was not first-class INCIDENT-REPAIR")
     require(base_receipt.get("status") == "ACTIVE", "repair closure base receipt was not ACTIVE")
+    require(base_receipt.get("repair_kind") == ACTIVE_REPAIR_KIND, "repair closure base receipt was not an incident repair")
     require(base_receipt.get("receipt_id") == closed_receipt_id, "repair closure does not name exact base receipt")
     base_ids = normalize_incident_ids(base_receipt)
     require(base_ids == incident_ids, "repair closure incident ids differ from exact base repair")
     require(base_receipt.get("node_id") == base_current.get("active_node"), "repair closure base receipt node was stale")
     require(base_receipt.get("increment_id") == base_current.get("active_increment"), "repair closure base receipt increment was stale")
+
+    validate_incidents_resolved(repo, incident_ids)
 
     paths = changed_paths(repo, base_sha)
     bad = [
