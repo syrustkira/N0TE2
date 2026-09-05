@@ -33,7 +33,52 @@ class StewardIntegrationGateTests(unittest.TestCase):
         Path(path).write_text(json.dumps(data, indent=2) + "\n")
 
     @staticmethod
-    def init_git(repo):
+    def stabilize_git_fixture(repo):
+        current_path = repo / "governance/current_state.json"
+        current = json.loads(current_path.read_text())
+        current.update(
+            {
+                "lifecycle_state": "STABLE",
+                "active_node": None,
+                "active_increment": None,
+                "terminal_reason": "Synthetic Steward gate fixture baseline.",
+                "wake_condition": None,
+                "product_code_authorized": False,
+                "legacy_admission_authorized": False,
+            }
+        )
+        current_path.write_text(json.dumps(current, indent=2) + "\n")
+
+        graph_path = repo / "governance/completion_graph.json"
+        graph = json.loads(graph_path.read_text())
+        for node in graph["nodes"]:
+            if node.get("state") == "ACTIVE":
+                node["state"] = "PRESERVED"
+        graph_path.write_text(json.dumps(graph, separators=(",", ":")) + "\n")
+
+        receipt_path = repo / "governance/active_receipt.json"
+        receipt = json.loads(receipt_path.read_text())
+        receipt.update(
+            {
+                "status": "INACTIVE",
+                "product_code_allowed": False,
+                "legacy_admission_allowed": False,
+            }
+        )
+        for key in (
+            "repair_kind",
+            "repair_target_kind",
+            "repair_issue",
+            "incident_repair_ids",
+            "repair_target_merge_sha",
+            "closed_repair_receipt_id",
+        ):
+            receipt.pop(key, None)
+        receipt_path.write_text(json.dumps(receipt, indent=2) + "\n")
+
+    @classmethod
+    def init_git(cls, repo):
+        cls.stabilize_git_fixture(repo)
         subprocess.run(
             ["git", "init", "-b", "main"],
             cwd=repo,
@@ -265,7 +310,8 @@ class StewardIntegrationGateTests(unittest.TestCase):
         repo = self.clone()
         path = repo / "governance/handoff.json"
         handoff = json.loads(path.read_text())
-        handoff["lifecycle"] = {"state": "ACTIVE"}
+        conflicting_state = "STABLE" if json.loads((repo / "governance/current_state.json").read_text()).get("lifecycle_state") == "ACTIVE" else "ACTIVE"
+        handoff["lifecycle"] = {"state": conflicting_state}
         self.write_json(path, handoff)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
