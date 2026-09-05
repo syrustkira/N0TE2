@@ -360,7 +360,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
         ):
             with self.assertRaises(authority.RepairAuthorityError) as cm:
                 authority.run(repo)
-        self.assertIn("absent from target merge", str(cm.exception))
+        self.assertIn("absent from the target merge", str(cm.exception))
 
     def test_repair_closure_fails_while_named_incident_is_still_open(self) -> None:
         repo = self.clone()
