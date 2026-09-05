@@ -311,7 +311,7 @@ class StewardIntegrationTrustBoundaryTests(unittest.TestCase):
         self.commit(repo, "change trusted workflow")
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             self.run_gate(repo, baseline, N0TE2_EVENT_MODE="PR", N0TE2_PR_NUMBER="999")
-        self.assertIn("trusted gate artifact changed", str(cm.exception))
+        self.assertIn("privileged workflow surface", str(cm.exception))
 
     def test_trusted_meta_governance_signal_allows_explicit_gate_evolution(self):
         repo = self.clone()
