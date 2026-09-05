@@ -106,6 +106,24 @@ def test_governance_repair_rejects_broad_path_prefixes() -> None:
         td.cleanup()
 
 
+def test_governance_repair_rejects_unused_surplus_exact_paths() -> None:
+    td, repo = clone_active_repair()
+    try:
+        base = init_git(repo)
+        bind_receipt(repo, base, broad_prefixes=False)
+        path = repo / "governance/active_receipt.json"
+        receipt = json.loads(path.read_text())
+        receipt["allowed_exact_paths"].append("governance/authority.json")
+        path.write_text(json.dumps(receipt, indent=2) + "\n")
+        commit(repo, "try surplus governance repair authority")
+
+        with pytest.raises(authority.RepairAuthorityError) as exc:
+            run_authority(repo, base)
+        assert "must exactly equal changed paths" in str(exc.value)
+    finally:
+        td.cleanup()
+
+
 def test_governance_repair_accepts_exact_changed_file_manifest() -> None:
     td, repo = clone_active_repair()
     try:
