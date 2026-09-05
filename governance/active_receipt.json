@@ -1,12 +1,12 @@
 {
   "schema_version": 7,
-  "status": "ACTIVE",
+  "status": "INACTIVE",
   "receipt_id": "N0TE2-AUDIO-02-PLUGIN-DISCOVERY-01",
   "node_id": "AUDIO-02",
   "increment_id": "AUDIO-02-PLUGIN-DISCOVERY-01",
   "baseline_sha": "0543f2fa947cd8b950831c9b8a5f3d17fd94c1a5",
   "purpose": "Add a bounded read-only cross-format plug-in package discovery substrate over standard OS/format locations and caller-explicit additional roots without loading plug-ins or upgrading discovery into entitlement, hostability, control or semantic Tool identity.",
-  "product_code_allowed": true,
+  "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
@@ -25,7 +25,7 @@
     "requirements": ["REQ-SCOPE-150"],
     "increment": "AUDIO-02-PLUGIN-DISCOVERY-01"
   },
-  "why_now": "Global reselection found canonical REQ-SCOPE-150 a required Gate-B blocker, unowned and implementation-missing while existing Tool/Studio contracts already define downstream semantic boundaries. The hardened discovery delta has been repeatedly reconstructed as main advanced through disjoint work rather than carrying stale governance. Exact head dbe305754d913f5488c68eadcf12d1a89a28e000, directly parented by neutral main 6f473b1ceff8f71abc983d189feab3844f9970d9 and preserving the verified Song Reference closure history, passed GitHub Actions run 33924738144 on Ubuntu, macOS and Windows with full regression and staged consumer smoke green. Before merge, main advanced only through verified UX-01 Relevance Broker product/tests to 0543f2fa947cd8b950831c9b8a5f3d17fd94c1a5, changing no governance, plugin, Tool, Studio or entitlement files. This receipt therefore anchors the unchanged discovery product/test blobs to that latest main and requires fresh exact-head proof of the combined composition before merge.",
+  "why_now": "Global reselection found canonical REQ-SCOPE-150 a required Gate-B blocker, unowned and implementation-missing while existing Tool/Studio contracts already defined downstream semantic boundaries. The discovery implementation was reconstructed over current stable main rather than carrying stale ancestry, then received fresh exact-head cross-platform proof before integration.",
   "instead_of_what": "Do not collide with occupied Workspace/consumer composition work, attempt full plug-in hosting in one increment, silently crawl disks, or infer licensing/hostability/control from filenames. Build only the truthful discovery substrate first.",
   "implementation_contract": {
     "root_truth": "Scan only canonical format/OS default roots, environment-defined LV2/LADSPA roots where those specifications define them, and caller-explicit additional roots. Never perform an arbitrary whole-disk crawl.",
@@ -44,15 +44,16 @@
     "recognized package directories are not recursively descended and recursive directory symlinks are not silently followed",
     "malformed semantic inputs fail closed rather than gaining meaning through implicit string/bool coercion",
     "result objects expose no field that grants entitlement, hostability, control, execution or semantic Tool identity",
-    "fresh full regression and staged consumer smoke pass at the exact reconstructed head on Linux, Windows and macOS"
+    "full regression and staged consumer smoke passed at the exact integrated implementation head on Linux, Windows and macOS"
   ],
-  "evidence_classification": "HISTORICAL_VERIFIED_HEAD_REQUIRES_CURRENT_BASE_PROOF",
+  "evidence_classification": "VERIFIED_EXACT_HEAD_CROSS_PLATFORM",
   "evidence_snapshot": {
-    "observed_repository_head": "dbe305754d913f5488c68eadcf12d1a89a28e000",
-    "workflow_run_id": 33924738144,
+    "observed_repository_head": "524948aa43255158bcb3ed0a36ffdf95d83a6079",
+    "workflow_run_id": 33925194048,
     "result": "SUCCESS",
     "platforms": ["Linux", "Windows", "macOS"],
-    "execution_note": "The prior exact discovery head passed dependency installation, exact checkout, construction governance, context lifecycle governance, supervision, full regression, staged consumer smoke, evidence upload and exact-head success publication on Ubuntu, macOS and Windows. Main then advanced only through disjoint Relevance Broker product/tests, so that run is retained as historical integration evidence while the latest-main reconstruction receives independent exact-head proof."
+    "implementation_merge_sha": "4dc0d5dc9e2ea6b0584bd4fe179d32bd0c65f51c",
+    "execution_note": "Exact implementation head passed dependency installation, exact checkout, construction governance, context lifecycle governance, supervision, full regression, staged consumer smoke, evidence upload and exact-head success publication on Ubuntu, macOS and Windows before PR #171 merged as 4dc0d5dc9e2ea6b0584bd4fe179d32bd0c65f51c."
   },
   "non_scope": [
     "custom plug-in path persistence or UI",
@@ -69,5 +70,5 @@
   ],
   "dependencies": ["CORE-03", "CORE-04", "APP-01", "PLATFORM-00"],
   "shared_integration_points": ["Reads the existing semantic format vocabulary from n0te2.tools only; does not modify Tool/Studio semantics, entitlement truth, Song Reference evidence/closure, Relevance Broker, Direct Fan, evidence freshness, role economics, business opportunities, memory.py, package initialization, ConsumerShell, provider/DAW adapters or persistence schemas"],
-  "next_selection_rule": "After fresh exact-head proof and integration, close this bounded receipt, return AUDIO-02 to PRESERVED, refresh live product truth and globally reselect rather than extending into hosting by adjacency."
+  "next_selection_rule": "This bounded plugin-discovery increment is closed. Keep AUDIO-02 PRESERVED and globally reselect from fresh main; do not automatically extend into hosting, entitlement, custom-path persistence or consumer integration by adjacency."
 }
