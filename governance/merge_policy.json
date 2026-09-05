@@ -1,7 +1,38 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "target_branch": "main",
-  "required_exact_head_status_contexts": ["n0te2-governance-Linux","n0te2-governance-Windows","n0te2-governance-macOS"],
-  "requirements": {"exact_head_only":true,"handoff_consistent":true,"governance_green":true,"full_regression_green":true,"consumer_smoke_green":true,"blocking_incidents_resolved_before_merge":true,"draft_pr_cannot_merge":true},
-  "external_enforcement": {"desired":"GitHub branch protection or repository ruleset requiring the three exact-head status contexts","repository_file_cannot_prevent_direct_push_by_itself":true}
+  "required_exact_head_status_contexts": [
+    "n0te2-governance-Linux",
+    "n0te2-governance-Windows",
+    "n0te2-governance-macOS"
+  ],
+  "requirements": {
+    "exact_head_only": true,
+    "handoff_consistent": true,
+    "governance_green": true,
+    "full_regression_green": true,
+    "consumer_smoke_green": true,
+    "blocking_incidents_resolved_before_merge": true,
+    "draft_pr_cannot_merge": true,
+    "substantive_review_terminal_on_exact_head": true,
+    "review_findings_resolved_or_dispositioned": true,
+    "late_live_main_race_check": true,
+    "expected_head_guarded_merge": true,
+    "post_merge_verification": true,
+    "single_main_steward_writer": true,
+    "late_review_creates_post_merge_incident": true
+  },
+  "steward_gate": {
+    "required": true,
+    "status_context": "n0te2-steward-integration",
+    "pending_review_blocks_merge": true,
+    "review_must_bind_exact_head": true,
+    "post_merge_review_opens_fix_order": true,
+    "rule": "The Main Steward must refresh live main, exact candidate head, required statuses, substantive review completion and unresolved findings immediately before guarded merge. A review still pending is not a completed review. Any substantive review arriving after merge creates a durable post-merge incident/FIX_ORDER rather than becoming historical noise."
+  },
+  "external_enforcement": {
+    "desired": "GitHub branch protection or repository ruleset requiring the three exact-head platform contexts plus the Steward integration status where administratively available",
+    "repository_file_cannot_prevent_direct_push_by_itself": true,
+    "current_truth": "Repository policy files define the required contract, while the single active Main Steward remains responsible for atomic review/race/expected-head enforcement unless external branch protection or ruleset evidence proves those controls are enforced by GitHub."
+  }
 }
