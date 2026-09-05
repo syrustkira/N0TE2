@@ -136,7 +136,13 @@ def get(shell: ConsumerShell, path: str) -> tuple[int, str]:
         return exc.code, exc.read().decode("utf-8")
 
 
-def post(shell: ConsumerShell, path: str, values: dict[str, str]) -> tuple[int, str]:
+def post(
+    shell: ConsumerShell,
+    path: str,
+    values: dict[str, str],
+    *,
+    timeout: float = 2.0,
+) -> tuple[int, str]:
     request = Request(
         shell.address.origin + path,
         data=urlencode(values).encode("utf-8"),
@@ -147,7 +153,7 @@ def post(shell: ConsumerShell, path: str, values: dict[str, str]) -> tuple[int, 
         },
     )
     try:
-        with build_opener(NoRedirect()).open(request, timeout=2.0) as response:
+        with build_opener(NoRedirect()).open(request, timeout=timeout) as response:
             return response.status, response.read().decode("utf-8")
     except HTTPError as exc:
         return exc.code, exc.read().decode("utf-8")
@@ -179,10 +185,14 @@ def quit_shell(shell: ConsumerShell) -> None:
     status, settings = get(shell, "/settings")
     assert status == 200, f"settings GET returned {status}: {settings[:600]}"
     quit_form = one_form(settings, "/quit")
-    status, closed = post(shell, "/quit", quit_form.values)
+    # Durable Headquarters shutdown can take longer on Windows CI because SQLite
+    # must release its file handles before the server can return the closed page.
+    # Keep ordinary request deadlines strict while giving this explicit safe-quit
+    # proof a bounded grace period instead of abandoning the socket mid-shutdown.
+    status, closed = post(shell, "/quit", quit_form.values, timeout=15.0)
     assert status == 200, f"quit POST returned {status}: {closed[:600]}"
     assert "N0TE closed safely." in closed
-    assert shell.wait_stopped(timeout=2.0)
+    assert shell.wait_stopped(timeout=5.0)
 
 
 with tempfile.TemporaryDirectory() as temp:
