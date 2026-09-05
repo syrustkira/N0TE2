@@ -173,6 +173,19 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.commit(repo, "governance-only repair")
         self.run_git_gate(repo, baseline)
 
+    def test_stable_candidate_cannot_resequence_completion_graph(self):
+        repo = self.clone()
+        baseline = self.init_git(repo)
+        path = repo / "governance/completion_graph.json"
+        graph = json.loads(path.read_text())
+        song = next(row for row in graph["nodes"] if row["id"] == "SONG-01")
+        song["depends_on"] = ["CORE-01", "CORE-02", "APP-01", "UX-01"]
+        self.write_json(path, graph)
+        self.commit(repo, "try to resequence while stable")
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            self.run_git_gate(repo, baseline)
+        self.assertIn("cannot resequence completion graph from a non-ACTIVE base", str(cm.exception))
+
     def test_empty_receipt_prefix_fails_closed(self):
         repo = self.clone()
         path = repo / "governance/active_receipt.json"
@@ -297,6 +310,16 @@ class StewardIntegrationGateTests(unittest.TestCase):
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
         self.assertIn("normalized directory boundaries", str(cm.exception))
+
+    def test_terminal_graph_resequencing_policy_is_pinned(self):
+        repo = self.clone()
+        path = repo / "governance/merge_policy.json"
+        policy = json.loads(path.read_text())
+        policy["steward_gate"]["terminal_graph_resequencing"] = "ALLOW"
+        self.write_json(path, policy)
+        with self.assertRaises(gate.StewardIntegrationError) as cm:
+            gate.run(repo, verify_git=False)
+        self.assertIn("resequencing must require an ACTIVE bounded transition", str(cm.exception))
 
     def test_steward_workflow_actor_is_registered_and_non_authorizing(self):
         repo = self.clone()
