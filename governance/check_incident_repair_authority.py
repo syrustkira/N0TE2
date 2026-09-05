@@ -114,19 +114,27 @@ def current_incident(rows: list[dict], incident_id: str) -> dict | None:
     return found
 
 
-def normalize_incident_ids(receipt: dict) -> list[str]:
-    ids = receipt.get("incident_repair_ids")
+def normalize_id_list(receipt: dict, field: str) -> list[str]:
+    ids = receipt.get(field)
     if ids is None:
         return []
-    require(isinstance(ids, list), "incident_repair_ids must be a list")
-    require(ids, "incident_repair_ids must not be empty when present")
+    require(isinstance(ids, list), f"{field} must be a list")
+    require(ids, f"{field} must not be empty when present")
     require(
         all(isinstance(item, str) and item.strip() for item in ids),
-        "incident_repair_ids must contain non-empty text ids",
+        f"{field} must contain non-empty text ids",
     )
     normalized = [item.strip() for item in ids]
-    require(len(normalized) == len(set(normalized)), "incident_repair_ids must be unique")
+    require(len(normalized) == len(set(normalized)), f"{field} must be unique")
     return normalized
+
+
+def normalize_incident_ids(receipt: dict) -> list[str]:
+    return normalize_id_list(receipt, "incident_repair_ids")
+
+
+def normalize_closed_incident_ids(receipt: dict) -> list[str]:
+    return normalize_id_list(receipt, "closed_incident_repair_ids")
 
 
 def validate_meta_protection(repo: Path, base_sha: str) -> None:
@@ -181,6 +189,7 @@ def validate_active_repair(
 ) -> None:
     require(current.get("lifecycle_state") == "ACTIVE", "incident repair authority requires ACTIVE lifecycle")
     require(receipt.get("status") == "ACTIVE", "incident repair authority requires ACTIVE receipt")
+    require(not receipt.get("closed_incident_repair_ids"), "active repair receipt cannot carry terminal closure incident history")
     require(receipt.get("node_id") == current.get("active_node"), "incident repair receipt node is stale")
     require(receipt.get("increment_id") == current.get("active_increment"), "incident repair receipt increment is stale")
     require(receipt.get("baseline_sha") == base_sha, "incident repair receipt must bind exact candidate base")
@@ -260,8 +269,10 @@ def validate_closure(
     require(current.get("active_node") is None and current.get("active_increment") is None, "repair closure cannot retain active construction")
     require(current.get("product_code_authorized") is False, "repair closure cannot authorize product code")
     require(receipt.get("status") == "INACTIVE", "repair closure requires INACTIVE receipt")
+    require(not receipt.get("incident_repair_ids"), "repair closure cannot retain active incident repair authority")
     require(receipt.get("product_code_allowed") is False, "repair closure receipt cannot authorize product code")
-    require(receipt.get("repair_kind") == CLOSURE_REPAIR_KIND, "terminal incident ids require repair_kind=INCIDENT_REPAIR_CLOSURE")
+    require(receipt.get("legacy_admission_allowed") is False, "repair closure receipt cannot authorize legacy admission")
+    require(receipt.get("repair_kind") == CLOSURE_REPAIR_KIND, "terminal closure history requires repair_kind=INCIDENT_REPAIR_CLOSURE")
     require(receipt.get("baseline_sha") == base_sha, "repair closure receipt must bind exact active-repair base")
     closed_receipt_id = receipt.get("closed_repair_receipt_id")
     require(isinstance(closed_receipt_id, str) and closed_receipt_id.strip(), "repair closure requires closed_repair_receipt_id")
@@ -298,29 +309,35 @@ def run(repo: Path) -> None:
     require(HEX40.fullmatch(base_sha) is not None, "N0TE2_BASE_SHA must be exact lowercase SHA")
     current = load_json(repo / "governance/current_state.json")
     receipt = load_json(repo / "governance/active_receipt.json")
-    incident_ids = normalize_incident_ids(receipt)
+    active_ids = normalize_incident_ids(receipt)
+    closed_ids = normalize_closed_incident_ids(receipt)
 
     validate_meta_protection(repo, base_sha)
 
-    if not incident_ids:
-        require(current.get("active_node") != INCIDENT_REPAIR_NODE, "INCIDENT-REPAIR requires incident_repair_ids")
-        require(receipt.get("repair_kind") not in {ACTIVE_REPAIR_KIND, CLOSURE_REPAIR_KIND}, "repair_kind cannot exist without incident_repair_ids")
-        print("N0TE2 INCIDENT REPAIR AUTHORITY: GREEN mode=NONE")
-        return
-
     if receipt.get("status") == "ACTIVE":
-        validate_active_repair(repo, base_sha, current, receipt, incident_ids)
+        require(active_ids, "ACTIVE incident repair receipt requires incident_repair_ids")
+        require(receipt.get("repair_kind") == ACTIVE_REPAIR_KIND, "ACTIVE incident repair receipt requires repair_kind=INCIDENT_REPAIR")
+        validate_active_repair(repo, base_sha, current, receipt, active_ids)
         print(
             "N0TE2 INCIDENT REPAIR AUTHORITY: GREEN "
-            f"mode=ACTIVE target={receipt.get('repair_target_kind')} incidents={','.join(incident_ids)}"
+            f"mode=ACTIVE target={receipt.get('repair_target_kind')} incidents={','.join(active_ids)}"
         )
         return
 
-    validate_closure(repo, base_sha, current, receipt, incident_ids)
-    print(
-        "N0TE2 INCIDENT REPAIR AUTHORITY: GREEN "
-        f"mode=CLOSURE incidents={','.join(incident_ids)}"
-    )
+    require(not active_ids, "INACTIVE receipt cannot carry active incident_repair_ids")
+    if receipt.get("repair_kind") == CLOSURE_REPAIR_KIND or closed_ids:
+        require(closed_ids, "INCIDENT_REPAIR_CLOSURE requires closed_incident_repair_ids")
+        validate_closure(repo, base_sha, current, receipt, closed_ids)
+        print(
+            "N0TE2 INCIDENT REPAIR AUTHORITY: GREEN "
+            f"mode=CLOSURE incidents={','.join(closed_ids)}"
+        )
+        return
+
+    require(not closed_ids, "closed incident history cannot exist outside INCIDENT_REPAIR_CLOSURE")
+    require(current.get("active_node") != INCIDENT_REPAIR_NODE, "INCIDENT-REPAIR requires an ACTIVE receipt")
+    require(receipt.get("repair_kind") != ACTIVE_REPAIR_KIND, "repair_kind cannot exist without active incident_repair_ids")
+    print("N0TE2 INCIDENT REPAIR AUTHORITY: GREEN mode=NONE")
 
 
 def main() -> int:
