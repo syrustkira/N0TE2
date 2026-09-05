@@ -37,10 +37,31 @@ def _format_dbfs(value: float | None) -> str:
     return "silent / unavailable" if value is None else f"{value:.2f} dBFS"
 
 
+def _format_lufs(value: float | None) -> str:
+    return "unavailable" if value is None else f"{value:.2f} LUFS"
+
+
+def _loudness_state_label(side: VersionCompareSide) -> str:
+    if side.loudness_measured:
+        return "Measured"
+    state = side.loudness_state
+    if state is None:
+        return "Unavailable for this media"
+    labels = {
+        "TOO_SHORT": "Unavailable: render is too short for the bounded integrated-loudness measurement",
+        "SILENT": "Unavailable: render is silent",
+        "BOUNDED_OUT": "Unavailable: render exceeds the bounded loudness-analysis size",
+        "UNSUPPORTED_CHANNEL_LAYOUT": "Unavailable: channel layout is outside the bounded loudness contract",
+        "BACKEND_UNAVAILABLE": "Unavailable: loudness measurement backend is not available",
+        "BACKEND_ERROR": "Unavailable: loudness measurement could not be completed safely",
+    }
+    return labels.get(state, f"Unavailable: {state}")
+
+
 def _side_markup(shell: ConsumerShell, comparison: VersionComparison, side: VersionCompareSide, role: str) -> str:
     status = {
-        "AUDITIONABLE_MEASURED": '<p class="status good">Verified local audio · exact PCM level evidence</p>',
-        "AUDITIONABLE_UNMEASURED": '<p class="status good">Verified local audio · level evidence unavailable</p>',
+        "AUDITIONABLE_MEASURED": '<p class="status good">Verified local audio · exact PCM engineering evidence</p>',
+        "AUDITIONABLE_UNMEASURED": '<p class="status good">Verified local audio · engineering evidence unavailable</p>',
         "NO_AUDITIONABLE_AUDIO": '<p class="status caution">No supported local audio for this Version</p>',
         "INTEGRITY_BLOCKED": '<p class="status caution">Local material could not be re-verified safely</p>',
     }[side.status]
@@ -64,18 +85,24 @@ def _side_markup(shell: ConsumerShell, comparison: VersionComparison, side: Vers
         )
     evidence = ""
     if side.measured:
+        loudness = _loudness_state_label(side)
+        standard = "" if side.loudness_standard is None else f" · {side.loudness_standard}"
         evidence = (
             '<dl>'
+            '<dt>Integrated programme loudness</dt>'
+            f'<dd>{html.escape(_format_lufs(side.integrated_lufs))}</dd>'
+            '<dt>Loudness measurement state</dt>'
+            f'<dd>{html.escape(loudness + standard)}</dd>'
             '<dt>Whole-render RMS</dt>'
             f'<dd>{html.escape(_format_dbfs(side.rms_dbfs))}</dd>'
             '<dt>Sample peak</dt>'
             f'<dd>{html.escape(_format_dbfs(side.sample_peak_dbfs))}</dd>'
             '</dl>'
-            '<p class="muted">Observed from this exact verified integer PCM WAV. Whole-render RMS is not LUFS.</p>'
+            '<p class="muted">Observed from this exact verified integer PCM WAV. Integrated loudness is standards-based when measured. RMS is not LUFS and remains secondary signal-level evidence.</p>'
         )
     elif side.auditionable:
         evidence = (
-            '<p class="muted">You can audition this exact verified local file, but N0TE has no supported exact PCM level measurement for it.</p>'
+            '<p class="muted">You can audition this exact verified local file, but N0TE has no supported exact PCM engineering measurement for it.</p>'
         )
     return (
         '<div class="card stack">'
@@ -86,22 +113,43 @@ def _side_markup(shell: ConsumerShell, comparison: VersionComparison, side: Vers
     )
 
 
-def _level_markup(comparison: VersionComparison) -> str:
-    if comparison.rms_delta_db is None:
-        return (
-            '<p class="status caution">No trustworthy whole-render RMS difference is available for this pair.</p>'
-            '<p>Match playback or monitor level by ear before judging. N0TE will not invent a loudness match.</p>'
-        )
+def _rms_fallback_statement(comparison: VersionComparison) -> str:
     delta = comparison.rms_delta_db
+    if delta is None:
+        return ""
     if abs(delta) < 0.05:
-        statement = "The two measured whole-render RMS levels are within 0.05 dB."
-    elif delta > 0:
-        statement = f"The Current Version whole-render RMS is {abs(delta):.2f} dB higher than the Reference Version."
-    else:
-        statement = f"The Reference Version whole-render RMS is {abs(delta):.2f} dB higher than the Current Version."
+        return "The two measured whole-render RMS levels are within 0.05 dB."
+    if delta > 0:
+        return f"The Current Version whole-render RMS is {abs(delta):.2f} dB higher than the Reference Version."
+    return f"The Reference Version whole-render RMS is {abs(delta):.2f} dB higher than the Current Version."
+
+
+def _level_markup(comparison: VersionComparison) -> str:
+    loudness_delta = comparison.integrated_loudness_delta_lu
+    if loudness_delta is not None:
+        if abs(loudness_delta) < 0.05:
+            statement = "The two measured integrated loudness values are within 0.05 LU."
+        elif loudness_delta > 0:
+            statement = f"The Current Version integrated loudness is {abs(loudness_delta):.2f} LU higher than the Reference Version."
+        else:
+            statement = f"The Reference Version integrated loudness is {abs(loudness_delta):.2f} LU higher than the Current Version."
+        rms = _rms_fallback_statement(comparison)
+        secondary = "" if not rms else f'<p class="muted">Secondary RMS context: {html.escape(rms)} RMS is not LUFS.</p>'
+        return (
+            f'<p class="status caution">{html.escape(statement)}</p>'
+            '<p>That measured programme-loudness difference can bias an A/B toward the louder render. N0TE has applied no gain or normalization. Level-match deliberately before deciding.</p>'
+            f'{secondary}'
+        )
+
+    rms = _rms_fallback_statement(comparison)
+    if rms:
+        return (
+            '<p class="status caution">Comparable integrated programme loudness is unavailable for this exact pair.</p>'
+            f'<p>{html.escape(rms)} Use that only as a fallback signal-level cue. RMS is not LUFS or perceptual loudness, and N0TE will not invent a loudness match.</p>'
+        )
     return (
-        f'<p class="status caution">{html.escape(statement)}</p>'
-        '<p>That difference can bias an A/B toward the louder render. RMS is not LUFS, and N0TE has applied no gain or normalization. Level-match deliberately before deciding.</p>'
+        '<p class="status caution">No trustworthy pair-level difference is available for this exact pair.</p>'
+        '<p>Match playback or monitor level by ear before judging. N0TE will not invent integrated loudness, RMS, or a loudness match.</p>'
     )
 
 
@@ -228,7 +276,7 @@ def _compare_content(shell: ConsumerShell) -> str:
         f'{_side_markup(shell, comparison, comparison.reference, "Reference")}'
         f'{_side_markup(shell, comparison, comparison.current, "Current")}'
         '<div class="card"><h2>Artist decision remains next</h2>'
-        '<p>Use this surface to hear the exact pair and remove obvious level bias. KEEP, REVERT, REVISE, or INCONCLUSIVE remains a separate explicit decision step.</p></div>'
+        '<p>Use this surface to hear the exact pair and reduce obvious level bias. KEEP, REVERT, REVISE, or INCONCLUSIVE remains a separate explicit decision step.</p></div>'
         f'{_decision_markup(shell, comparison)}'
         '</section>'
     )
@@ -245,7 +293,7 @@ def _compare_song_card(shell: ConsumerShell) -> str:
         return ""
     return (
         '<div class="card"><h2>Compare Versions</h2>'
-        '<p>Hear the current Version beside one exact lineage neighbor. When both are measurable PCM WAVs, N0TE shows whole-render RMS difference only to flag possible level bias.</p>'
+        '<p>Hear the current Version beside one exact lineage neighbor. When both exact PCM WAVs support it, N0TE shows standards-based integrated loudness difference to flag possible level bias; RMS remains secondary fallback context.</p>'
         '<a class="button primary" href="/compare">Open A/B compare</a>'
         '<p class="muted">Listening is read-only. An explicit judgment on the compare page records only your decision; no gain, approval, Learning promotion, provider call, or DAW change is applied.</p>'
         '</div>'

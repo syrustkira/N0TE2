@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .audio_engineering import (
+    LOUDNESS_MEASURED,
     AudioEngineeringError,
     EngineeringEvidenceBinding,
     UnsupportedEngineeringMedia,
@@ -42,6 +43,9 @@ class VersionCompareSide:
     status: str
     sample_peak_dbfs: float | None
     rms_dbfs: float | None
+    integrated_lufs: float | None
+    loudness_state: str | None
+    loudness_standard: str | None
     analyzer_version: str | None
 
     def __post_init__(self) -> None:
@@ -60,6 +64,14 @@ class VersionCompareSide:
             raise ValueError("auditionable compare side requires exact media binding")
         if self.status == "AUDITIONABLE_MEASURED" and self.analyzer_version is None:
             raise ValueError("measured compare side requires analyzer lineage")
+        if self.loudness_state is None:
+            if self.integrated_lufs is not None or self.loudness_standard is not None:
+                raise ValueError("loudness evidence must carry an explicit measurement state")
+        else:
+            if not self.loudness_state.strip() or not self.loudness_standard:
+                raise ValueError("loudness state requires standards lineage")
+            if (self.loudness_state == LOUDNESS_MEASURED) != (self.integrated_lufs is not None):
+                raise ValueError("measured integrated loudness requires an exact LUFS value")
 
     @property
     def auditionable(self) -> bool:
@@ -68,6 +80,10 @@ class VersionCompareSide:
     @property
     def measured(self) -> bool:
         return self.status == "AUDITIONABLE_MEASURED"
+
+    @property
+    def loudness_measured(self) -> bool:
+        return self.loudness_state == LOUDNESS_MEASURED and self.integrated_lufs is not None
 
 
 @dataclass(frozen=True)
@@ -79,6 +95,7 @@ class VersionComparison:
     reference: VersionCompareSide | None
     status: str
     rms_delta_db: float | None
+    integrated_loudness_delta_lu: float | None
     limitations: tuple[str, ...]
 
     def __post_init__(self) -> None:
@@ -90,6 +107,11 @@ class VersionComparison:
             raise ValueError("current compare side does not match current Version binding")
         if self.reference is not None and self.reference.version_id != self.reference_version_id:
             raise ValueError("reference compare side does not match reference Version binding")
+        if self.integrated_loudness_delta_lu is not None:
+            if self.current is None or self.reference is None:
+                raise ValueError("integrated loudness difference requires an exact pair")
+            if not self.current.loudness_measured or not self.reference.loudness_measured:
+                raise ValueError("integrated loudness difference requires measured loudness on both sides")
 
     @property
     def both_auditionable(self) -> bool:
@@ -106,11 +128,11 @@ class VersionCompareService:
 
     The current Version is compared with its canonical parent when possible. If
     that relationship does not yield a peer, the nearest same-Song Version by
-    ordinal is used. Managed audio may be locally auditioned. Integer PCM WAV
-    measurements are reused only as whole-render engineering evidence. RMS is
-    never called LUFS and this service performs no gain processing, Song
-    mutation, approval, Learning write, DAW action, provider call, or artistic
-    decision.
+    ordinal is used. Managed audio may be locally auditioned. The existing exact
+    PCM Engineering Snapshot supplies sample peak, RMS, and standards-based
+    integrated programme loudness when supported. This service performs no gain
+    processing, Song mutation, approval, Learning write, DAW action, provider
+    call, or artistic decision.
     """
 
     def __init__(self, store: LineageStore, materials: SongMaterialMemory) -> None:
@@ -185,6 +207,9 @@ class VersionCompareService:
                 status="AUDITIONABLE_MEASURED",
                 sample_peak_dbfs=snapshot.sample_peak_dbfs,
                 rms_dbfs=snapshot.rms_dbfs,
+                integrated_lufs=snapshot.integrated_lufs,
+                loudness_state=snapshot.loudness_state,
+                loudness_standard=snapshot.loudness_standard,
                 analyzer_version=snapshot.analyzer_version,
             )
 
@@ -201,6 +226,9 @@ class VersionCompareService:
                 status="AUDITIONABLE_UNMEASURED",
                 sample_peak_dbfs=None,
                 rms_dbfs=None,
+                integrated_lufs=None,
+                loudness_state=None,
+                loudness_standard=None,
                 analyzer_version=None,
             )
         return VersionCompareSide(
@@ -214,6 +242,9 @@ class VersionCompareService:
             status="INTEGRITY_BLOCKED" if integrity_blocked else "NO_AUDITIONABLE_AUDIO",
             sample_peak_dbfs=None,
             rms_dbfs=None,
+            integrated_lufs=None,
+            loudness_state=None,
+            loudness_standard=None,
             analyzer_version=None,
         )
 
@@ -230,6 +261,7 @@ class VersionCompareService:
                 reference=None,
                 status="NO_CURRENT_VERSION",
                 rms_delta_db=None,
+                integrated_loudness_delta_lu=None,
                 limitations=(
                     "Add Song material before comparing Versions.",
                     "Preparing comparison performs no Song or external mutation.",
@@ -249,6 +281,7 @@ class VersionCompareService:
                 reference=None,
                 status="NO_REFERENCE_VERSION",
                 rms_delta_db=None,
+                integrated_loudness_delta_lu=None,
                 limitations=(
                     "A/B needs another Version of this Song; only one Version is available.",
                     "Preparing comparison performs no Song or external mutation.",
@@ -258,15 +291,24 @@ class VersionCompareService:
         rms_delta = None
         if current.rms_dbfs is not None and reference.rms_dbfs is not None:
             rms_delta = current.rms_dbfs - reference.rms_dbfs
+        loudness_delta = None
+        if current.loudness_measured and reference.loudness_measured:
+            assert current.integrated_lufs is not None and reference.integrated_lufs is not None
+            loudness_delta = current.integrated_lufs - reference.integrated_lufs
         ready = current.auditionable and reference.auditionable
         limitations = [
-            "Whole-render RMS, when available, is a signal-level cue only. RMS is not LUFS and does not prove perceived loudness or artistic quality.",
+            "Integrated programme loudness, when measured on both exact sides, is standards-based level evidence only; it does not prove artistic quality or which Version is better.",
+            "Whole-render RMS remains secondary signal-level context. RMS is not perceptual loudness and is not substituted for unavailable integrated loudness.",
             "N0TE applies no gain, loudness normalization, crossfade, processing or DAW change on this comparison surface.",
-            "The artist decides what sounds better. Opening A/B does not create an approval, Learning outcome, preference or new Song Version.",
+            "The artist decides what sounds better. A/B evidence does not create an approval, preference, Learning outcome or new Song Version.",
         ]
+        if loudness_delta is None:
+            limitations.append(
+                "Comparable integrated programme loudness is unavailable for this pair, so N0TE does not invent a loudness match."
+            )
         if rms_delta is None:
             limitations.append(
-                "A comparable whole-render RMS difference is unavailable, so N0TE does not invent a level match."
+                "A comparable whole-render RMS difference is also unavailable; no fallback level difference is fabricated."
             )
         return VersionComparison(
             song_id=song.id,
@@ -276,5 +318,6 @@ class VersionCompareService:
             reference=reference,
             status="READY" if ready else "PARTIAL",
             rms_delta_db=rms_delta,
+            integrated_loudness_delta_lu=loudness_delta,
             limitations=tuple(limitations),
         )
