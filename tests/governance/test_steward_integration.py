@@ -222,7 +222,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("blocks merge", str(cm.exception))
+        self.assertIn("lacks blocking_scope", str(cm.exception))
 
     def test_open_incident_with_explicit_nonblocking_scope_is_allowed(self):
         repo = self.clone()
@@ -259,7 +259,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, handoff)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("sole handoff lifecycle source", str(cm.exception))
+        self.assertIn("lifecycle ownership declaration changed", str(cm.exception))
 
     def test_legacy_handoff_lifecycle_fields_must_match_current_state(self):
         repo = self.clone()
@@ -279,7 +279,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, policy)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("never be represented as live merge authorization", str(cm.exception))
+        self.assertIn("policy drifted: status_is_merge_authorization", str(cm.exception))
 
     def test_pending_review_cannot_be_removed_from_merge_policy(self):
         repo = self.clone()
@@ -289,7 +289,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, policy)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("pending substantive review", str(cm.exception))
+        self.assertIn("policy drifted: pending_review_blocks_merge", str(cm.exception))
 
     def test_open_incident_default_policy_is_pinned(self):
         repo = self.clone()
@@ -299,7 +299,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, policy)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("open incidents must fail closed", str(cm.exception))
+        self.assertIn("policy drifted: open_incident_default", str(cm.exception))
 
     def test_receipt_prefix_contract_is_pinned(self):
         repo = self.clone()
@@ -309,7 +309,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, policy)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("normalized directory boundaries", str(cm.exception))
+        self.assertIn("policy drifted: receipt_prefix_contract", str(cm.exception))
 
     def test_terminal_graph_resequencing_policy_is_pinned(self):
         repo = self.clone()
@@ -319,7 +319,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, policy)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("resequencing must require an ACTIVE bounded transition", str(cm.exception))
+        self.assertIn("policy drifted: terminal_graph_resequencing", str(cm.exception))
 
     def test_steward_workflow_actor_is_registered_and_non_authorizing(self):
         repo = self.clone()
@@ -334,7 +334,7 @@ class StewardIntegrationGateTests(unittest.TestCase):
         self.write_json(path, registry)
         with self.assertRaises(gate.StewardIntegrationError) as cm:
             gate.run(repo, verify_git=False)
-        self.assertIn("must not claim live merge authority", str(cm.exception))
+        self.assertIn("authority contract drifted: authority", str(cm.exception))
 
     def test_workflow_uses_base_owned_target_event_only(self):
         workflow = (ROOT / ".github/workflows/steward-integration.yml").read_text()
