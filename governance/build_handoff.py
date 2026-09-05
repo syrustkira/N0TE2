@@ -38,6 +38,18 @@ def load_jsonl(path: Path):
     return rows
 
 
+def current_incident_rows(rows: list[dict]) -> list[dict]:
+    latest: dict[str, dict] = {}
+    order: list[str] = []
+    for row in rows:
+        incident_id = row.get("id")
+        require(isinstance(incident_id, str) and incident_id.strip(), "incident row lacks a durable id")
+        if incident_id not in latest:
+            order.append(incident_id)
+        latest[incident_id] = row
+    return [latest[incident_id] for incident_id in order]
+
+
 def git(repo: Path, *args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=repo, text=True, stderr=subprocess.STDOUT).strip()
 
@@ -179,9 +191,10 @@ def build_runtime_handoff(repo: Path) -> dict:
         "build_graph_is_product_scope_owner": False,
         "canonical_extensions_unselected": [row.get("id") for row in extensions if row.get("selected") is False],
     }
+    current_incidents = current_incident_rows(incidents)
     open_incidents = [
         row.get("id")
-        for row in incidents
+        for row in current_incidents
         if str(row.get("status", "")).upper().startswith("OPEN") and row.get("id")
     ]
     next_admissible_action = current.get("next_admissible_action")
