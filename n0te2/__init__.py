@@ -441,3 +441,7 @@ install_profile_create_redirect()
 from .songwriting_shell import install_songwriting_vocal_surface
 
 install_songwriting_vocal_surface()
+
+from .template_catalog_shell import install_song_template_catalog
+
+install_song_template_catalog()
