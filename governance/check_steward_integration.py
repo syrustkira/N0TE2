@@ -59,6 +59,25 @@ def load_json(path: Path) -> dict:
     return value
 
 
+def load_jsonl(path: Path) -> list[dict]:
+    rows: list[dict] = []
+    try:
+        for line_number, raw in enumerate(path.read_text().splitlines(), 1):
+            if not raw.strip():
+                continue
+            value = json.loads(raw)
+            require(
+                isinstance(value, dict),
+                f"{path} line {line_number} must contain a JSON object",
+            )
+            rows.append(value)
+    except StewardIntegrationError:
+        raise
+    except Exception as exc:
+        raise StewardIntegrationError(f"cannot load {path}: {exc}") from exc
+    return rows
+
+
 def git(repo: Path, *args: str) -> str:
     return subprocess.check_output(
         ["git", *args], cwd=repo, text=True, stderr=subprocess.STDOUT
@@ -88,6 +107,51 @@ def check_canonical_extensions(repo: Path) -> None:
         require(
             all(node_id in graph_ids for node_id in row["construction_affinity"]),
             f"{row['id']} references an unknown construction-affinity node",
+        )
+
+
+def _valid_directory_prefix(prefix: object) -> bool:
+    if not isinstance(prefix, str) or not prefix:
+        return False
+    if prefix != prefix.strip() or "\\" in prefix or prefix.startswith("/"):
+        return False
+    if not prefix.endswith("/"):
+        return False
+    components = prefix[:-1].split("/")
+    return bool(components) and all(
+        component not in {"", ".", ".."} for component in components
+    )
+
+
+def check_receipt_path_boundaries(repo: Path) -> None:
+    receipt = load_json(repo / "governance/active_receipt.json")
+    prefixes = receipt.get("allowed_prefixes", [])
+    require(isinstance(prefixes, list), "active receipt allowed_prefixes must be a list")
+    invalid = [prefix for prefix in prefixes if not _valid_directory_prefix(prefix)]
+    require(
+        not invalid,
+        "active receipt contains unsafe allowed_prefixes; use normalized directory "
+        f"boundaries ending in '/': {invalid}",
+    )
+
+
+def check_blocking_incidents(repo: Path) -> None:
+    incidents = load_jsonl(repo / "governance/incidents.jsonl")
+    for incident in incidents:
+        status = incident.get("status")
+        require(
+            isinstance(status, str) and status.strip(),
+            f"incident {incident.get('id', '<unknown>')} has no durable status",
+        )
+        if not status.startswith("OPEN"):
+            continue
+        blocking_scope = incident.get("blocking_scope")
+        require(
+            isinstance(blocking_scope, str)
+            and blocking_scope.startswith("NON_BLOCKING"),
+            "open incident "
+            f"{incident.get('id', '<unknown>')} blocks merge unless its durable "
+            "record explicitly declares a NON_BLOCKING scope",
         )
 
 
@@ -173,6 +237,14 @@ def check_merge_policy(repo: Path) -> None:
     require(steward_gate.get("pending_review_blocks_merge") is True, "pending substantive review must block Steward merge authorization")
     require(steward_gate.get("review_must_bind_exact_head") is True, "substantive review must bind exact candidate head")
     require(steward_gate.get("post_merge_review_opens_fix_order") is True, "late review must create a durable post-merge repair obligation")
+    require(
+        steward_gate.get("open_incident_default") == "BLOCK_UNLESS_EXPLICIT_NON_BLOCKING",
+        "open incidents must fail closed unless durable scope explicitly says NON_BLOCKING",
+    )
+    require(
+        steward_gate.get("receipt_prefix_contract") == "NORMALIZED_DIRECTORY_BOUNDARY",
+        "receipt prefixes must remain normalized directory boundaries",
+    )
 
 
 def check_steward_actor(repo: Path) -> None:
@@ -195,6 +267,8 @@ def run(repo: Path, verify_git: bool = True) -> None:
     check_canonical_extensions(repo)
     check_merge_policy(repo)
     check_steward_actor(repo)
+    check_receipt_path_boundaries(repo)
+    check_blocking_incidents(repo)
     check_terminal_construction_gate(repo, verify_git)
     print("N0TE2 STEWARD INTEGRATION STRUCTURE: GREEN")
     print("merge_authorization=LIVE_MAIN_STEWARD_ONLY")
