@@ -14,7 +14,7 @@
   "repair_target_kind": "GOVERNANCE",
   "repair_issue": 247,
   "incident_repair_ids": ["INC-2026-09-05-STEWARD-INTEGRATION-206"],
-  "allowed_exact_paths": [],
+  "allowed_exact_paths": [".github/workflows/steward-integration.yml"],
   "allowed_prefixes": ["governance/","tests/governance/"],
   "forbidden_prefixes": ["n0te2/","app/","src/","legacy/","vendor/","tests/core/","tests/song/","tests/ux/","tests/platform/"],
   "lineage": {
@@ -28,19 +28,19 @@
   "why_now": "PR #211 repaired the trusted Steward bootstrap and was post-merge verified, but first use exposed two governance mismatches: already-merged/governance repairs cannot always bind a dependency-ready product node (#247), and ordinary governance incorrectly requires the immutable automation registry to mirror current construction lifecycle (#248). These must be repaired before serializing #210 or other product fixes.",
   "implementation_contract": {
     "exclusive_mode": "ACTIVE authority is either normal completion-graph construction or INCIDENT-REPAIR, never both.",
-    "governance_repair": "GOVERNANCE incident repairs authorize only governance/** and tests/governance/** with product_code_allowed=false.",
+    "governance_repair": "GOVERNANCE incident repairs authorize only governance/**, tests/governance/**, and the exact trusted Steward workflow path with product_code_allowed=false.",
     "merged_product_repair": "MERGED_PRODUCT repair requires an exact target merge that predates the incident discovery main, and construction-sensitive repaired paths must already exist at that target merge.",
-    "incident_truth": "Every incident repair names a currently open repairable durable incident. An INACTIVE receipt cannot carry repair authority.",
+    "incident_truth": "Every incident repair names a currently open repairable durable incident. An INACTIVE receipt cannot carry repair authority except an exact base-bound INCIDENT_REPAIR_CLOSURE transition.",
     "runtime_truth": "governance/current_state.json owns construction lifecycle. automation_registry.json remains declarative actor/authority bounds and is not a live runtime-state source.",
-    "trust": "The ordinary governance checker becomes a protected trusted gate artifact so a candidate cannot self-weaken dependency, receipt, or repair-mode checks."
+    "trust": "The ordinary governance checker and repair-authority helper become protected trusted surfaces so a candidate cannot self-weaken dependency, receipt, or repair-mode checks."
   },
   "completion_proof": [
     "normal ACTIVE construction remains graph-node/dependency bound",
     "GOVERNANCE repair passes with zero ACTIVE graph nodes and unchanged declarative automation lifecycle projection",
     "MERGED_PRODUCT repair requires a pre-incident target merge and pre-existing repaired product paths",
-    "INACTIVE receipt incident ids cannot authorize a #206 repair",
+    "INACTIVE receipt incident ids cannot authorize a #206 repair except exact base-bound final repair closure",
     "new product files cannot be introduced through MERGED_PRODUCT repair mode",
-    "candidate cannot mutate check_governance.py without explicit meta-governance reopen",
+    "candidate cannot mutate check_governance.py or the repair-authority helper without explicit meta-governance reopen",
     "automation registry cannot reclaim runtime lifecycle ownership",
     "exact-head governance, full regression and staged consumer smoke pass on Linux, Windows and macOS",
     "substantive exact-head review is terminal before merge"
@@ -57,6 +57,6 @@
     "branch protection configuration"
   ],
   "dependencies": [],
-  "shared_integration_points": ["governance/current_state.json","governance/active_receipt.json","governance/check_governance.py","governance/build_handoff.py","governance/check_steward_integration.py"],
-  "next_selection_rule": "After this governance repair is merged and post-merge verified, return to a truthful terminal state and rebuild the next product repair from fresh main."
+  "shared_integration_points": ["governance/current_state.json","governance/active_receipt.json","governance/check_governance.py","governance/build_handoff.py","governance/check_incident_repair_authority.py",".github/workflows/steward-integration.yml"],
+  "next_selection_rule": "After this governance repair is merged and post-merge verified, keep #206 repair work truthful under exactly one active receipt at a time; do not select unrelated ordinary work."
 }
