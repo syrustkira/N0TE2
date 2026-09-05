@@ -173,7 +173,13 @@ def validate_incidents_open(repo: Path, incident_ids: list[str]) -> list[dict]:
     return incidents
 
 
-def validate_incidents_resolved(repo: Path, incident_ids: list[str]) -> None:
+def validate_incidents_resolved(
+    repo: Path,
+    incident_ids: list[str],
+    *,
+    closed_repair_receipt_id: str,
+    closure_receipt_id: str,
+) -> None:
     rows = load_jsonl(repo / "governance/incidents.jsonl")
     for incident_id in incident_ids:
         row = current_incident(rows, incident_id)
@@ -182,6 +188,27 @@ def validate_incidents_resolved(repo: Path, incident_ids: list[str]) -> None:
         require(
             status.startswith("RESOLVED"),
             f"repair closure requires durable RESOLVED incident truth: {incident_id} is {status or '<missing>'}",
+        )
+        require(
+            isinstance(row.get("resolved_at"), str) and row["resolved_at"].strip(),
+            f"repair closure resolution event lacks resolved_at: {incident_id}",
+        )
+        require(
+            isinstance(row.get("resolution_condition"), str) and row["resolution_condition"].strip(),
+            f"repair closure resolution event lacks resolution_condition: {incident_id}",
+        )
+        evidence = row.get("evidence")
+        require(
+            isinstance(evidence, dict) and evidence,
+            f"repair closure resolution event lacks evidence: {incident_id}",
+        )
+        require(
+            row.get("repair_receipt_id") == closed_repair_receipt_id,
+            f"repair closure resolution event is not bound to exact ACTIVE repair receipt: {incident_id}",
+        )
+        require(
+            row.get("closure_receipt_id") == closure_receipt_id,
+            f"repair closure resolution event is not bound to exact terminal closure receipt: {incident_id}",
         )
 
 
@@ -287,6 +314,9 @@ def validate_closure(
     require(receipt.get("baseline_sha") == base_sha, "repair closure receipt must bind exact active-repair base")
     closed_receipt_id = receipt.get("closed_repair_receipt_id")
     require(isinstance(closed_receipt_id, str) and closed_receipt_id.strip(), "repair closure requires closed_repair_receipt_id")
+    closure_receipt_id = receipt.get("receipt_id")
+    require(isinstance(closure_receipt_id, str) and closure_receipt_id.strip(), "repair closure requires a stable terminal receipt_id")
+    require(closure_receipt_id != closed_receipt_id, "repair closure receipt_id must differ from the ACTIVE repair receipt being closed")
     require(set(receipt.get("allowed_exact_paths", [])) == CLOSURE_PATHS, "repair closure must bind exactly the three durable closure paths")
     require(receipt.get("allowed_prefixes", []) == [], "repair closure cannot authorize path prefixes")
 
@@ -302,7 +332,12 @@ def validate_closure(
     require(base_receipt.get("node_id") == base_current.get("active_node"), "repair closure base receipt node was stale")
     require(base_receipt.get("increment_id") == base_current.get("active_increment"), "repair closure base receipt increment was stale")
 
-    validate_incidents_resolved(repo, incident_ids)
+    validate_incidents_resolved(
+        repo,
+        incident_ids,
+        closed_repair_receipt_id=closed_receipt_id,
+        closure_receipt_id=closure_receipt_id,
+    )
 
     paths = set(changed_paths(repo, base_sha))
     require(CLOSURE_PATHS.issubset(paths), "repair closure must change current_state, active_receipt and incidents")
