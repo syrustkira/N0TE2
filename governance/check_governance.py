@@ -202,7 +202,7 @@ def check_authority(repo: Path):
     require(laws["known_scope_does_not_select_work"] is True, "known scope cannot silently select work")
     require(laws["automation_must_report_to_supervision_graph"] is True, "automation escaped supervision graph")
     require(laws["reactivation_must_be_observable"] is True, "reactivation must be observable")
-    require(laws["durable_handoff_precedes_historical_archaeology"] is True, "durable handoff must precede archaeology")
+    require(laws["durable_handoff_precedes_historical_archaeology"] is True, "handoff must precede historical archaeology")
     require(laws["exact_head_observations_required"] is True, "exact-head observation law missing")
     require(laws["decisions_and_incidents_retain_provenance"] is True, "decision/incident provenance law missing")
 
@@ -374,6 +374,11 @@ def check_retention_surfaces(repo: Path, current: dict):
 
     automation = load_json(repo / "governance/automation_registry.json")
     require(automation.get("supervisor") == "N0TE-SUPERVISOR", "automation registry must root at N0TE-SUPERVISOR")
+    runtime_contract = automation.get("runtime_state_contract")
+    require(isinstance(runtime_contract, dict), "automation registry lacks runtime-state ownership contract")
+    require(runtime_contract.get("registry_is_runtime_source") is False, "automation registry cannot own live runtime state")
+    require(runtime_contract.get("construction_lifecycle_source") == "governance/current_state.json", "construction lifecycle must be owned by current_state")
+    require(runtime_contract.get("external_liveness_requires_runtime_observation") is True, "external automation liveness must require runtime observation")
     actors = automation.get("actors", [])
     actor_ids = [row.get("id") for row in actors]
     require(actor_ids and len(actor_ids) == len(set(actor_ids)), "automation actors need unique stable IDs")
@@ -387,8 +392,8 @@ def check_retention_surfaces(repo: Path, current: dict):
         require(actor.get("lifecycle", {}).get("state") in {"ACTIVE","DORMANT","RETIRED","QUARANTINED"}, f"automation {actor.get('id')} lacks lifecycle state")
     construction_actor = next((actor for actor in actors if actor.get("id") == "AUTO-CONSTRUCTION-CONTROLLER-001"), None)
     require(construction_actor is not None, "construction controller is not registered")
-    expected_controller_state = "ACTIVE" if current.get("lifecycle_state") == "ACTIVE" else "DORMANT"
-    require(construction_actor["lifecycle"]["state"] == expected_controller_state, "construction controller lifecycle disagrees with current state")
+    require(construction_actor.get("runtime_state_source") == "REPOSITORY_GOVERNANCE_STATE", "construction controller lost repository governance state binding")
+    require(construction_actor.get("lifecycle", {}).get("health") == "DERIVED_FROM_CURRENT_STATE", "construction controller lifecycle must remain derived from current_state")
 
     handoff = load_json(repo / "governance/handoff.json")
     require(handoff.get("repository") == current.get("repository") == "syrustkira/N0TE2", "handoff repository mismatch")
