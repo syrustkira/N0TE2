@@ -8,6 +8,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+INCIDENT_REPAIR_NODE = "INCIDENT-REPAIR"
+INCIDENT_REPAIR_KIND = "INCIDENT_REPAIR"
+
 
 class HandoffError(RuntimeError):
     pass
@@ -54,6 +57,12 @@ def build_supervision_summary(repo: Path, current: dict) -> dict:
     registry = load_json(repo / "governance/automation_registry.json")
     context_policy = load_json(repo / "governance/context_lifecycle.json")
     require(registry.get("supervisor") == "N0TE-SUPERVISOR", "automation registry supervision root is stale")
+    runtime_contract = registry.get("runtime_state_contract")
+    require(isinstance(runtime_contract, dict), "automation registry lacks runtime-state ownership contract")
+    require(runtime_contract.get("registry_is_runtime_source") is False, "automation registry cannot own live runtime state")
+    require(runtime_contract.get("construction_lifecycle_source") == "governance/current_state.json", "construction lifecycle must come from current_state")
+    require(runtime_contract.get("external_liveness_requires_runtime_observation") is True, "external liveness must require runtime observation")
+
     actors = registry.get("actors", [])
     require(isinstance(actors, list) and actors, "automation registry requires actors")
     summarized = []
@@ -69,7 +78,7 @@ def build_supervision_summary(repo: Path, current: dict) -> dict:
             {
                 "id": actor.get("id"),
                 "role_class": actor.get("role_class"),
-                "state": actor.get("lifecycle", {}).get("state"),
+                "declared_state": actor.get("lifecycle", {}).get("state"),
                 "purpose": actor.get("purpose"),
                 "reason_running": actor.get("reason_running"),
                 "allowed_mutations": actor.get("allowed_mutations"),
@@ -78,10 +87,12 @@ def build_supervision_summary(repo: Path, current: dict) -> dict:
                 "escalation_target": actor.get("escalation_target"),
             }
         )
+
     controller = next((actor for actor in actors if actor.get("id") == "AUTO-CONSTRUCTION-CONTROLLER-001"), None)
     require(controller is not None, "construction controller is not registered")
-    expected_controller_state = "ACTIVE" if current.get("lifecycle_state") == "ACTIVE" else "DORMANT"
-    require(controller.get("lifecycle", {}).get("state") == expected_controller_state, "construction controller lifecycle is stale")
+    require(controller.get("runtime_state_source") == "REPOSITORY_GOVERNANCE_STATE", "construction controller lost repository governance state binding")
+    require(controller.get("lifecycle", {}).get("health") == "DERIVED_FROM_CURRENT_STATE", "construction controller lifecycle must remain derived from current_state")
+
     if current.get("lifecycle_state") != "ACTIVE":
         build_roles = {"N0TE_BUILD_HARNESS_COORDINATOR", "N0TE_BUILD_HARNESS_EXECUTOR"}
         for actor in actors:
@@ -101,6 +112,13 @@ def build_supervision_summary(repo: Path, current: dict) -> dict:
 
     return {
         "root": registry["supervisor"],
+        "runtime_state_contract": runtime_contract,
+        "construction_lifecycle": {
+            "source": "governance/current_state.json",
+            "state": current.get("lifecycle_state"),
+            "active_node": current.get("active_node"),
+            "active_increment": current.get("active_increment"),
+        },
         "actors": summarized,
         "context_policy": {
             "id": context_policy.get("policy_id"),
@@ -140,6 +158,11 @@ def build_runtime_handoff(repo: Path) -> dict:
     }
     lifecycle_state = lifecycle["state"]
     require(lifecycle_state in {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}, "current lifecycle state is invalid")
+    if lifecycle_state == "ACTIVE":
+        lifecycle["mode"] = "INCIDENT_REPAIR" if lifecycle.get("active_node") == INCIDENT_REPAIR_NODE else "CONSTRUCTION"
+    else:
+        lifecycle["mode"] = "TERMINAL"
+
     legacy_lifecycle = handoff.get("lifecycle", {})
     require(isinstance(legacy_lifecycle, dict), "handoff lifecycle compatibility hook must be an object")
     for key, label in (("state", "lifecycle"), ("active_node", "active node"), ("active_increment", "active increment")):
@@ -165,15 +188,30 @@ def build_runtime_handoff(repo: Path) -> dict:
     require(next_admissible_action, "current state lacks next_admissible_action")
 
     receipt_status = receipt.get("status")
+    repair_summary = None
     if lifecycle_state == "ACTIVE":
-        require(receipt_status == "ACTIVE", "ACTIVE lifecycle requires an ACTIVE construction receipt")
+        require(receipt_status == "ACTIVE", "ACTIVE lifecycle requires an ACTIVE construction or repair receipt")
         require(receipt.get("node_id") == lifecycle.get("active_node"), "active receipt node is stale")
         require(receipt.get("increment_id") == lifecycle.get("active_increment"), "active receipt increment is stale")
-        require(receipt.get("product_code_allowed") is True or receipt.get("node_id") in {"BOOT-02", "LEGACY-01"}, "active product receipt lost construction authority")
+        if lifecycle.get("active_node") == INCIDENT_REPAIR_NODE:
+            require(receipt.get("repair_kind") == INCIDENT_REPAIR_KIND, "INCIDENT-REPAIR lifecycle requires repair_kind=INCIDENT_REPAIR")
+            incident_ids = receipt.get("incident_repair_ids")
+            require(isinstance(incident_ids, list) and incident_ids, "INCIDENT-REPAIR lifecycle requires incident_repair_ids")
+            require(receipt.get("product_code_allowed") == current.get("product_code_authorized"), "incident repair product authority is stale")
+            repair_summary = {
+                "kind": receipt.get("repair_kind"),
+                "target_kind": receipt.get("repair_target_kind"),
+                "repair_issue": receipt.get("repair_issue"),
+                "incident_repair_ids": incident_ids,
+                "repair_target_merge_sha": receipt.get("repair_target_merge_sha"),
+            }
+        else:
+            require(receipt.get("product_code_allowed") is True or receipt.get("node_id") in {"BOOT-02", "LEGACY-01"}, "active product receipt lost construction authority")
     else:
         require(receipt_status == "INACTIVE", f"{lifecycle_state} cannot carry an ACTIVE construction receipt")
         require(receipt.get("product_code_allowed") is False, f"{lifecycle_state} receipt cannot authorize product construction")
         require(receipt.get("legacy_admission_allowed") is False, f"{lifecycle_state} receipt cannot authorize legacy admission")
+        require(not receipt.get("incident_repair_ids"), f"{lifecycle_state} INACTIVE receipt cannot carry incident repair authority")
 
     reconstruction = handoff["reconstruction"]
     require(reconstruction.get("handoff_first") is True, "runtime reconstruction must start from durable handoff")
@@ -184,7 +222,7 @@ def build_runtime_handoff(repo: Path) -> dict:
     supervision = build_supervision_summary(repo, current)
 
     runtime = {
-        "schema_version": 4,
+        "schema_version": 5,
         "repository": handoff["repository"],
         "observed_head_sha": head,
         "head_binding": "RUNTIME_EXACT",
@@ -192,6 +230,7 @@ def build_runtime_handoff(repo: Path) -> dict:
         "lifecycle": lifecycle,
         "controller": handoff["controller"],
         "construction_receipt_status": receipt_status,
+        "incident_repair": repair_summary,
         "open_incidents": open_incidents,
         "canonical_scope": canonical_scope,
         "next_admissible_action": next_admissible_action,
@@ -228,7 +267,7 @@ def build_observation(runtime: dict) -> dict:
     regression = _step_outcome("N0TE2_REGRESSION_OUTCOME")
     smoke = _step_outcome("N0TE2_SMOKE_OUTCOME")
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "automation_id": "AUTO-GH-GOVERNANCE-001",
         "supervision_parent": "N0TE-SUPERVISOR",
         "observed_head_sha": runtime["observed_head_sha"],
@@ -258,6 +297,8 @@ def build_observation(runtime: dict) -> dict:
                 "consumer_smoke": smoke,
             },
             "construction_receipt_status": runtime["construction_receipt_status"],
+            "lifecycle_mode": runtime["lifecycle"]["mode"],
+            "incident_repair": runtime.get("incident_repair"),
         },
     }
 
@@ -284,8 +325,8 @@ def main() -> int:
             print(
                 "N0TE2 HANDOFF: GREEN "
                 f"head={runtime['observed_head_sha']} lifecycle={runtime['lifecycle']['state']} "
-                f"active={runtime['lifecycle'].get('active_node') or '-'} receipt={runtime['construction_receipt_status']} "
-                f"actors={len(runtime['supervision']['actors'])}"
+                f"mode={runtime['lifecycle']['mode']} active={runtime['lifecycle'].get('active_node') or '-'} "
+                f"receipt={runtime['construction_receipt_status']} actors={len(runtime['supervision']['actors'])}"
             )
         elif not args.output and not args.observation_output:
             print(json.dumps(runtime, indent=2, sort_keys=True))
