@@ -16,8 +16,13 @@ CLOSURE_REPAIR_KIND = "INCIDENT_REPAIR_CLOSURE"
 TARGET_KINDS = {"GOVERNANCE", "MERGED_PRODUCT"}
 META_TOKEN = "MAIN_STEWARD_LABEL"
 PROTECTED_CANDIDATE_GOVERNANCE = {
+    "governance/build_handoff.py",
+    "governance/check_context_lifecycle.py",
     "governance/check_governance.py",
     "governance/check_incident_repair_authority.py",
+    "governance/check_steward_integration.py",
+    "governance/smoke/consumer_smoke.py",
+    "governance/supervision.py",
 }
 
 
