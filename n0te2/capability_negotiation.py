@@ -79,7 +79,7 @@ class OperationDepth:
 
 @dataclass(frozen=True)
 class CapabilityNegotiationRequest:
-    """The exact artist-job and environment whose route is being negotiated."""
+    """The exact artist-job and current environment being negotiated."""
 
     job: N0TEableJob
     profile_id: str
@@ -244,14 +244,6 @@ class CapabilityNegotiator:
             raise CapabilityNegotiationError(
                 "route capability does not match the requested job capability"
             )
-        if observation.workspace_observation_id != request.workspace_observation_id:
-            raise CapabilityNegotiationError(
-                "route evidence does not match the requested workspace observation"
-            )
-        if observation.host_runtime_fingerprint != request.environment_fingerprint:
-            raise CapabilityNegotiationError(
-                "route evidence does not match the requested environment"
-            )
         if freshness.observed_at_epoch_seconds != observation.observed_at_epoch_seconds:
             raise CapabilityNegotiationError(
                 "freshness assessment does not describe the route observation time"
@@ -268,23 +260,21 @@ class CapabilityNegotiator:
             raise CapabilityNegotiationError(
                 "freshness assessment must bind workspace observation and host runtime"
             )
-        if (
-            workspace_dependency.observed_fingerprint
-            != observation.workspace_observation_id
-            or workspace_dependency.current_fingerprint
-            != request.workspace_observation_id
-        ):
+        if workspace_dependency.observed_fingerprint != observation.workspace_observation_id:
             raise CapabilityNegotiationError(
-                "freshness workspace binding does not match the negotiation case"
+                "freshness workspace evidence does not describe the route observation"
             )
-        if (
-            runtime_dependency.observed_fingerprint
-            != observation.host_runtime_fingerprint
-            or runtime_dependency.current_fingerprint
-            != request.environment_fingerprint
-        ):
+        if workspace_dependency.current_fingerprint != request.workspace_observation_id:
             raise CapabilityNegotiationError(
-                "freshness runtime binding does not match the negotiation case"
+                "freshness workspace current state does not match the negotiation case"
+            )
+        if runtime_dependency.observed_fingerprint != observation.host_runtime_fingerprint:
+            raise CapabilityNegotiationError(
+                "freshness runtime evidence does not describe the route observation"
+            )
+        if runtime_dependency.current_fingerprint != request.environment_fingerprint:
+            raise CapabilityNegotiationError(
+                "freshness runtime current state does not match the negotiation case"
             )
 
         access_required = (
@@ -348,7 +338,7 @@ class CapabilityNegotiator:
                 common_path = path
                 break
 
-        reasons: list[str] = ["EXACT_ROUTE_ENVIRONMENT_BOUND"]
+        reasons: list[str] = ["ROUTE_CHARACTERIZATION_BOUND"]
         hard_unavailable = False
         conflict = False
         revalidation_required = False
