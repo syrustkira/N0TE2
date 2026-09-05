@@ -1,5 +1,5 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "target_branch": "main",
   "required_exact_head_status_contexts": [
     "n0te2-governance-Linux",
@@ -35,13 +35,18 @@
     "pending_review_blocks_merge": true,
     "review_must_bind_exact_head": true,
     "post_merge_review_opens_fix_order": true,
-    "open_incident_default": "BLOCK_UNLESS_EXPLICIT_NON_BLOCKING",
+    "open_incident_default": "BLOCK_UNLESS_EXPLICIT_NON_BLOCKING_OR_REPAIR",
     "receipt_prefix_contract": "NORMALIZED_DIRECTORY_BOUNDARY",
     "terminal_graph_resequencing": "ACTIVE_TRANSITION_REQUIRED",
-    "rule": "Structural CI proves only that the exact candidate satisfies the trusted repository-side Steward structure contract. It never authorizes merge by itself. The single Main Steward must independently refresh live main, exact candidate head, required platform statuses, substantive exact-head review completion, unresolved findings and incident state immediately before an expected-head guarded merge, then verify resulting main. Open incidents fail closed unless their durable incident record explicitly declares a NON_BLOCKING scope. Receipt prefixes must be normalized directory boundaries. A terminal candidate cannot alter completion-graph dependencies or semantics; completion-graph mutation at terminal is limited to a state-only closure of exactly one previously ACTIVE bounded node. The first Steward-gate bootstrap cannot trust a base checker or base-owned workflow that does not yet exist, publishes no trusted Steward status, and therefore requires explicit live Steward review plus the ordinary exact-head platform proof."
+    "trusted_gate_artifact_mutation": "MANUAL_META_GOVERNANCE_REOPEN_REQUIRED",
+    "candidate_ci_token_write_policy": "FORBID_STATUS_AND_CHECK_WRITE",
+    "pr_diff_mode": "MERGE_BASE_TO_HEAD",
+    "main_push_diff_mode": "EXACT_BASE_TO_HEAD_TREE",
+    "incident_history_contract": "APPEND_PRESERVE_BASE",
+    "rule": "Structural CI proves only that the exact candidate satisfies the trusted repository-side Steward structure contract. It never authorizes merge by itself. The single Main Steward must independently refresh live main, exact candidate head, required platform evidence, substantive exact-head review completion, unresolved findings and incident state immediately before an expected-head guarded merge, then verify resulting main. Candidate-executing CI must hold no status/check write authority and must not persist repository credentials. The trusted Steward workflow is base-owned and may publish only structural evidence. Trusted gate artifacts are immutable in ordinary PRs and require an explicit manual meta-governance reopen to evolve. Open incidents fail closed unless their durable current event is explicitly NON_BLOCKING or the exact candidate is an explicit repair named by the incident contract. Incident history is append-preserved. Receipt prefixes must be normalized directory boundaries. A terminal candidate cannot alter completion-graph dependencies or semantics; completion-graph mutation at terminal is limited to a state-only closure of exactly one previously ACTIVE bounded node. PR structural diffs use merge-base-to-head semantics; main push structural diffs compare the exact previous and current trees. The first Steward-gate bootstrap cannot trust a base checker or base-owned workflow that does not yet exist, publishes no trusted Steward status, and therefore requires explicit live Steward review plus the ordinary exact-head platform proof."
   },
   "external_enforcement": {
-    "desired": "After Steward-gate bootstrap, GitHub branch protection or a repository ruleset should require the three exact-head platform contexts plus the trusted n0te2-steward-structure context where administratively available.",
+    "desired": "After Steward-gate bootstrap, GitHub branch protection or a repository ruleset should require the three exact-head platform check contexts plus the trusted n0te2-steward-structure context where administratively available.",
     "repository_file_cannot_prevent_direct_push_by_itself": true,
     "current_truth": "Repository policy and trusted structural CI define evidence requirements, while the single active Main Steward remains the live merge-authorization owner unless external branch protection or ruleset evidence proves equivalent atomic enforcement. A structural status, including green, is not a merge receipt."
   }
