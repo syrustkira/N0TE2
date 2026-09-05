@@ -100,7 +100,11 @@ class StewardIntegrationGateTests(unittest.TestCase):
             check=True,
             stdout=subprocess.DEVNULL,
         )
-        with mock.patch.dict(os.environ, {"N0TE2_BASE_SHA": baseline}, clear=False):
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_BASE_SHA": baseline, "N0TE2_HEAD_SHA": ""},
+            clear=False,
+        ):
             with self.assertRaises(gate.StewardIntegrationError) as cm:
                 gate.run(repo, verify_git=True)
         self.assertIn("STABLE candidate changed construction-sensitive paths", str(cm.exception))
@@ -117,7 +121,11 @@ class StewardIntegrationGateTests(unittest.TestCase):
             check=True,
             stdout=subprocess.DEVNULL,
         )
-        with mock.patch.dict(os.environ, {"N0TE2_BASE_SHA": baseline}, clear=False):
+        with mock.patch.dict(
+            os.environ,
+            {"N0TE2_BASE_SHA": baseline, "N0TE2_HEAD_SHA": ""},
+            clear=False,
+        ):
             gate.run(repo, verify_git=True)
 
     def test_pending_review_cannot_be_removed_from_merge_policy(self):
