@@ -205,7 +205,7 @@ def check_authority(repo: Path):
     require(laws["construction_can_terminate_at_stability"] is True, "construction must be able to terminate at stability")
     require(laws["known_scope_does_not_select_work"] is True, "known scope cannot silently select work")
     require(laws["automation_must_report_to_supervision_graph"] is True, "automation escaped supervision graph")
-    require(laws["reactivation_must_be_observable"] is True, "automation escaped supervision graph")
+    require(laws["reactivation_must_be_observable"] is True, "reactivation must be observable")
     require(laws["durable_handoff_precedes_historical_archaeology"] is True, "durable handoff must precede archaeology")
     require(laws["exact_head_observations_required"] is True, "exact-head observation law missing")
     require(laws["decisions_and_incidents_retain_provenance"] is True, "decision/incident provenance law missing")
