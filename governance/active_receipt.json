@@ -30,7 +30,7 @@
     "exclusive_mode": "ACTIVE authority is either normal completion-graph construction or INCIDENT-REPAIR, never both.",
     "governance_repair": "GOVERNANCE incident repairs authorize only governance/**, tests/governance/**, and the exact trusted Steward workflow path with product_code_allowed=false.",
     "merged_product_repair": "MERGED_PRODUCT repair requires an exact target merge that predates the incident discovery main, and construction-sensitive repaired paths must already exist at that target merge.",
-    "incident_truth": "An ACTIVE incident repair names currently open repairable durable incidents through incident_repair_ids. incidents.jsonl is append-only event history and current incident truth is the latest row for each durable incident ID. An INACTIVE receipt carries no incident_repair_ids; exact terminal lineage is inert closure evidence through closed_incident_repair_ids plus closed_repair_receipt_id and requires latest durable RESOLVED truth.",
+    "incident_truth": "An ACTIVE incident repair names currently open repairable durable incidents through incident_repair_ids. incidents.jsonl is append-only event history and current incident truth is the latest row for each durable incident ID. An INACTIVE receipt carries no incident_repair_ids; exact terminal lineage is inert closure evidence through closed_incident_repair_ids plus closed_repair_receipt_id. Closure requires a latest durable RESOLVED event with resolved_at, a non-empty resolution_condition, non-empty evidence, exact binding to the ACTIVE repair receipt being closed, and exact binding to the new terminal closure receipt.",
     "runtime_truth": "governance/current_state.json owns construction lifecycle. automation_registry.json remains declarative actor/authority bounds and is not a live runtime-state source. Runtime handoff derives current open incidents from the latest event per incident ID.",
     "trust": "Lifecycle enforcement surfaces are protected behind explicit meta-governance reopen, including ordinary governance, incident-repair authority, context lifecycle, supervision, runtime handoff, Steward integration checking and staged consumer smoke. The pull_request_target workflow uses the trusted base copy; this bootstrap PR therefore also requires substantive manual review of the newly introduced helper before it can become base-owned for later PRs."
   },
@@ -41,6 +41,7 @@
     "INACTIVE receipts cannot carry active incident_repair_ids; terminal closure preserves only inert closed_incident_repair_ids and closed_repair_receipt_id bound to the exact prior ACTIVE repair",
     "append-only incident history permits repeated incident IDs while other durable JSONL registries retain unique IDs",
     "current open-incident projections use the latest event per incident ID so a later RESOLVED event supersedes historical OPEN state without deleting history",
+    "a naked RESOLVED label cannot close a repair: the resolution event must carry evidence, resolution condition, resolved_at, exact ACTIVE repair receipt binding, and exact terminal closure receipt binding",
     "new product files cannot be introduced through MERGED_PRODUCT repair mode",
     "protected lifecycle enforcement surfaces cannot be changed by an ordinary PR without explicit meta-governance reopen",
     "automation registry cannot reclaim runtime lifecycle ownership",
@@ -49,7 +50,7 @@
     "substantive exact-head review is terminal before merge"
   ],
   "historical_proof": [],
-  "evidence_classification": "PENDING_EXACT_HEAD_PROOF",
+  "evidence_classification": "EXTERNAL_EXACT_HEAD_PROOF_REQUIRED",
   "evidence_snapshot": null,
   "non_scope": [
     "any N0TE product feature",
@@ -61,5 +62,5 @@
   ],
   "dependencies": [],
   "shared_integration_points": ["governance/current_state.json","governance/active_receipt.json","governance/check_governance.py","governance/check_incident_repair_authority.py","governance/check_context_lifecycle.py","governance/supervision.py","governance/build_handoff.py","governance/check_steward_integration.py","governance/smoke/consumer_smoke.py",".github/workflows/steward-integration.yml"],
-  "next_selection_rule": "After this governance repair is merged and post-merge verified, close this exact ACTIVE repair receipt through inert closure lineage before selecting another #206 repair or unrelated product work. Keep #206 active until its full repair/verification contract is actually satisfied."
+  "next_selection_rule": "After this governance repair is merged and post-merge verified, close this exact ACTIVE repair receipt through inert evidence-bound closure lineage before selecting another #206 repair or unrelated product work. Keep #206 active until its full repair/verification contract is actually satisfied."
 }
