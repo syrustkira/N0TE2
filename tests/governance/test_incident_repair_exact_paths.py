@@ -92,6 +92,21 @@ def run_authority(repo: Path, base: str) -> None:
         authority.run(repo)
 
 
+def test_current_pr_manifest_satisfies_specialized_repair_authority() -> None:
+    receipt = json.loads((ROOT / "governance/active_receipt.json").read_text())
+    base = receipt["baseline_sha"]
+    with mock.patch.dict(
+        os.environ,
+        {
+            "N0TE2_BASE_SHA": base,
+            "N0TE2_EVENT_MODE": "PR",
+            "N0TE2_META_GOVERNANCE_REOPEN": "MAIN_STEWARD_LABEL",
+        },
+        clear=False,
+    ):
+        authority.run(ROOT)
+
+
 def test_governance_repair_rejects_broad_path_prefixes() -> None:
     td, repo = clone_active_repair()
     try:
