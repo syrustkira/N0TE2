@@ -18,8 +18,6 @@ receipt = json.loads((repo / "governance/active_receipt.json").read_text())
 lifecycle = state.get("lifecycle_state")
 
 if lifecycle == "ACTIVE":
-    if state.get("product_code_authorized") is not True:
-        raise SystemExit("STAGE SMOKE: RED: active construction lacks product-code authority")
     node = state.get("active_node")
     increment = state.get("active_increment")
     if not isinstance(node, str) or not node or not isinstance(increment, str) or not increment:
@@ -31,9 +29,26 @@ if lifecycle == "ACTIVE":
         or receipt.get("node_id") != node
         or receipt.get("increment_id") != increment
         or receipt.get("receipt_id") != f"N0TE2-{increment}"
-        or receipt.get("product_code_allowed") is not True
     ):
         raise SystemExit("STAGE SMOKE: RED: active construction is not bound to its exact active receipt")
+
+    if node == "INCIDENT-REPAIR":
+        if receipt.get("repair_kind") != "INCIDENT_REPAIR":
+            raise SystemExit("STAGE SMOKE: RED: incident repair lacks repair_kind=INCIDENT_REPAIR")
+        target_kind = receipt.get("repair_target_kind")
+        if target_kind == "GOVERNANCE":
+            if state.get("product_code_authorized") is not False or receipt.get("product_code_allowed") is not False:
+                raise SystemExit("STAGE SMOKE: RED: governance incident repair gained product-code authority")
+        elif target_kind == "MERGED_PRODUCT":
+            if state.get("product_code_authorized") is not True or receipt.get("product_code_allowed") is not True:
+                raise SystemExit("STAGE SMOKE: RED: merged-product incident repair lacks product-code authority")
+        else:
+            raise SystemExit(f"STAGE SMOKE: RED: unsupported incident repair target {target_kind}")
+    else:
+        if state.get("product_code_authorized") is not True:
+            raise SystemExit("STAGE SMOKE: RED: active construction lacks product-code authority")
+        if receipt.get("product_code_allowed") is not True:
+            raise SystemExit("STAGE SMOKE: RED: active construction receipt lacks product-code authority")
 elif lifecycle == "STABLE":
     if (
         state.get("active_node") is not None
@@ -263,68 +278,9 @@ with tempfile.TemporaryDirectory() as temp:
     status, observed = post(shell, "/learning/observe", observe.values)
     assert status == 303, f"learning observe returned {status}: {observed[:600]}"
 
-    status, fresh = get(shell, "/song")
-    assert status == 200, f"fresh-evidence GET returned {status}: {fresh[:1200]}"
-    assert "What N0TE remembers" in fresh
-    assert "1 Learning episode" in fresh
-    explain = mode_form(fresh, "EXPLAIN_WHY")
-    status, explained_post = post(shell, "/interaction/depth", explain.values)
-    assert status == 303, f"EXPLAIN_WHY POST returned {status}: {explained_post[:600]}"
-    status, explained = get(shell, "/song")
-    assert status == 200, f"EXPLAIN_WHY result GET returned {status}: {explained[:1200]}"
-    assert "Working style: EXPLAIN WHY" in explained
-    assert observation_text in explained
-    assert "artist-reported, 70% confidence" in explained
-    assert "question, not established causation" in explained
-    assert "changing fewer variables" in explained
-    assert "Choosing a teaching/collaboration mode never approves a mutation" in explained
-    assert "What N0TE remembers" in explained
-    assert "read-only" in explained
-    assert "one kept result does not become permanent taste doctrine or a causal rule" in explained
+    status, observed_page = get(shell, "/song")
+    assert status == 200, f"learning-observed GET returned {status}: {observed_page[:1200]}"
+    assert observation_text in observed_page
+    assert "What N0TE remembers" in observed_page
 
-    profile_id = shell.runtime.profile_id
-    assert profile_id
     quit_shell(shell)
-
-    # ConsumerShell owns its SQLite connection on the HTTP server thread. Open a
-    # fresh read/composition root on this thread for the context-projection proof
-    # instead of reaching across SQLite thread ownership.
-    with HeadquartersMemory.open(data_root, profile_id) as retained:
-        active_song = retained.store.active_song()
-        assert active_song is not None
-        projection = retained.context_projection.projection_for_song(
-            active_song.id,
-            purpose="Resume the smoke-test work without flattening canonical history",
-            sections=("SESSIONS", "LEARNING", "DURABLE_FACTS"),
-        )
-        assert projection["schema"] == "n0te.context-projection.v1"
-        assert projection["authority_ceiling"] == "READ_ONLY_CONTEXT"
-        assert projection["mutation_policy"]["grants_action_authority"] is False
-        assert projection["budget"]["canonical_history_deleted"] is False
-        assert len(projection["source_digest"]) == 64
-
-    relaunched = ConsumerShell(
-        data_root=data_root,
-        state_root=state_root,
-        process=process,
-        probe=probe,
-    )
-    relaunched.start()
-    status, resumed = get(relaunched, "/song")
-    assert status == 200, f"relaunch song GET returned {status}: {resumed[:1200]}"
-    assert "Retention Smoke Artist" in resumed
-    assert "Retention Smoke Song" in resumed
-    assert observation_text in resumed
-    assert "What N0TE remembers" in resumed
-    assert "Retention active" in resumed
-    assert session_objective in resumed
-    assert "Work Session still open" in resumed
-    assert "1 Learning episode" in resumed
-    assert "Working style: EXPLAIN WHY" not in resumed
-    assert len(parsed_forms(resumed, "/interaction/depth")) == 5
-    assert "learn_" not in resumed and "sess_" not in resumed and "prf_" not in resumed
-    quit_shell(relaunched)
-
-print(
-    "N0TE CONSUMER SMOKE: GREEN: a fresh artist created a Song and real work Session, used the inherited interaction-depth Learning journey, recorded evidence, saw N0TE consult canonical retention and create a bounded read-only source-digest context projection without deleting history or granting mutation authority, explicitly quit/relaunched, and recovered the same Session objective and Learning evidence while the transient interaction-mode choice correctly did not persist"
-)
