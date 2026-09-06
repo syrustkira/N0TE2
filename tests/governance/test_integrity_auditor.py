@@ -295,3 +295,27 @@ def test_global_source_contract_requires_public_provider_rights_and_acceptance_t
     for source_id in ("TELLMEN0TE_PUBLIC_RUNTIME", "PROVIDER_EVIDENCE", "RIGHTS_PROVENANCE_EVIDENCE", "HUMAN_ACCEPTANCE_EVIDENCE"):
         assert by_id[source_id]["required_for_global_pass"] is True
         assert by_id[source_id]["absence_state"] == "INCOMPLETE_AUDIT"
+
+
+def test_repository_adapter_preserves_mapped_unselected_extensions_and_completion_graph_role(tmp_path):
+    gov = tmp_path / "governance"
+    gov.mkdir()
+    (gov / "requirements.json").write_text(json.dumps({
+        "canonical_scope": {"start": 154, "end": 154, "source_revision": "x"},
+        "canonical_extensions": [{"id": "REQ-SCOPE-154", "state": "MAPPED", "selected": False}],
+        "held_or_boundary": [], "superseded": []
+    }), encoding="utf-8")
+    (gov / "completion_graph.json").write_text(json.dumps({
+        "nodes": [{"id": "UX-01", "state": "DONE", "requirements": "154", "depends_on": []}]
+    }), encoding="utf-8")
+    (gov / "current_state.json").write_text("{}", encoding="utf-8")
+    (gov / "active_receipt.json").write_text("{}", encoding="utf-8")
+    (gov / "automation_registry.json").write_text('{"actors":[]}', encoding="utf-8")
+    (gov / "authority.json").write_text("{}", encoding="utf-8")
+    (gov / "invariants.json").write_text("{}", encoding="utf-8")
+    g = ia.RepositoryAdapter(tmp_path).build()
+    assert g.nodes["REQ-SCOPE-154"].attrs["disposition"] == "MAPPED_UNSELECTED"
+    assert g.nodes["CONSTRUCTION:UX-01"].kind == "CONSTRUCTION_STATE"
+    _, findings = audit(g)
+    assert "ORPHAN_REQUIREMENT_NO_STATE" not in ids(findings)
+    assert "MERGED_WITHOUT_MERGE_RECEIPT" not in ids(findings)
