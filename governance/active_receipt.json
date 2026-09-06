@@ -1,63 +1,68 @@
 {
   "schema_version": 7,
-  "status": "ACTIVE",
-  "receipt_id": "N0TE2-INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01",
-  "node_id": "INCIDENT-REPAIR",
-  "increment_id": "INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01",
-  "baseline_sha": "d0aecd36caaa2455addba75a86bb1e78bf5b24ca",
-  "purpose": "Continue the selected trusted/base-owned Steward cross-ledger integrity repair after adversarial and historical-review completeness passes found fail-open equivalence, authority-boundary, build-sequence retention and exact-base no-silent-drop gaps. Harden only validation semantics without changing the trusted workflow, integrity contract, product code, semantic authority or parent #206 scope.",
+  "status": "INACTIVE",
+  "receipt_id": "N0TE2-INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01-CLOSURE",
+  "node_id": null,
+  "increment_id": null,
+  "baseline_sha": "37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
+  "purpose": "Close the bounded trusted-integrity child repair after PR #276 integrated the complete same-repair hardening and resulting main passed trusted Structure plus Linux, Windows and macOS Governance. Parent incident #206 remains OPEN for its retained repair ledger.",
   "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "repair_kind": "INCIDENT_REPAIR",
-  "repair_target_kind": "GOVERNANCE",
+  "repair_kind": "INCIDENT_REPAIR_CLOSURE",
   "repair_issue": 206,
-  "incident_repair_ids": ["INC-2026-09-05-STEWARD-INTEGRATION-206"],
+  "closed_incident_repair_ids": [
+    "INC-2026-09-05-STEWARD-INTEGRATION-206"
+  ],
+  "closed_repair_receipt_id": "N0TE2-INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01",
   "allowed_exact_paths": [
     "governance/active_receipt.json",
-    "governance/check_steward_integrity.py",
     "governance/current_state.json",
-    "tests/governance/test_steward_integrity.py"
+    "governance/incidents.jsonl"
   ],
   "allowed_prefixes": [],
-  "forbidden_prefixes": ["n0te2/", "app/", "src/", "legacy/", "vendor/", "tests/core/", "tests/song/", "tests/ux/", "tests/platform/"],
+  "forbidden_prefixes": [
+    "n0te2/",
+    "app/",
+    "src/",
+    "legacy/",
+    "vendor/",
+    "tests/core/",
+    "tests/song/",
+    "tests/ux/",
+    "tests/platform/"
+  ],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "Accepted or unfinished work cannot silently disappear across repository governance ledgers; equivalence and authority claims fail closed; non-superseded build-sequence requirements remain represented; and exact-base decision, continuity, action-receipt and work-continuity obligations cannot be silently removed or rewritten.",
-    "journeys": ["J-TRUST"],
-    "capability": "Trusted cross-ledger integrity, adversarial equivalence enforcement, build-sequence retention and exact-base governance preservation",
+    "outcome": "Trusted cross-ledger integrity now fails closed on silent build-sequence loss, under-evidenced equivalence, authority-contract drift, exact-base decision-history mutation, continuity-acceptance loss, action-receipt weakening and work-continuity weakening.",
+    "journeys": [
+      "J-TRUST"
+    ],
+    "capability": "Trusted cross-ledger integrity and exact-base governance preservation",
     "requirements": [],
     "increment": "INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01"
   },
-  "why_now": "PR #267 merged the initial trusted cross-ledger integrity gate as d0aecd36caaa2455addba75a86bb1e78bf5b24ca and resulting main passed post-merge trusted Structure plus Linux/Windows/macOS Governance. Review of stale-base PR #269 then found real equivalence and contract-validation gaps. Later #267 review established the missing build-sequence coverage guard. PR #273 attempted to combine that same-repair fix with a separate trusted-workflow bootstrap idea; trusted incident-repair authority correctly rejected the out-of-receipt workflow path and #273 was closed unmerged as SPLIT_REQUIRED / REBUILD_REQUIRED. Clean successor #276 reconstructed only the four-path repair and exact head deb4dbd7725b47f5d6de41f879ecabcb978ebbd4 passed trusted Structure plus Linux/Windows/macOS Governance run 34035548446, but a subsequent historical-review completeness pass found four additional live no-silent-drop gaps still present in that head: exact-base decision history could be deleted or rewritten, continuity acceptance items could disappear or have lineage rewritten, action-receipt required safety fields could be removed, and work-continuity checkpoint fields or hard rules could be removed. The prior qualification was explicitly corrected to FIX_REQUIRED, and this same four-path child now carries those missing safeguards plus a candidate-side regression that executes the checker against this ACTIVE receipt's exact baseline before any terminal qualification is renewed.",
+  "why_now": "PR #276 final exact head b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5 passed trusted structure, three-platform Governance run 34039640004, terminal Main Steward review and final Codex review with no major issue. It merged through one expected-head guarded COMMIT_SLOT as 37ec6faa24d5f94e042b23b15131e4c9d13a59dc. Resulting main then passed Steward Structure run 34042016612 and Governance run 34042016805 on Linux, Windows and macOS through regression, consumer smoke and evidence. The bounded child may therefore terminate without resolving parent #206.",
   "implementation_contract": {
-    "continuation": "Preserve the same ACTIVE child repair identity and exact baseline d0aecd36caaa2455addba75a86bb1e78bf5b24ca. Enumerate exactly the four continuation paths and require explicit reconstruction/revalidation if main moves.",
-    "equivalence": "Require non-empty acceptance evidence, exact original-requirement semantic coverage, empty uncovered residue for SUPERSEDED_BY_EQUIVALENT, duplicate-free evidence and evidence for every superseded lineage requirement.",
-    "contract_validation": "Validate the complete authoritative-source map, all declared no-authority fields, exact equivalence receipt field contract, public-handoff boundary and all legacy-compatibility protections.",
-    "graph_retention": "Derive the exact build-sequence requirement set from requirements.sequence, subtract only explicit superseded requirements, and fail if any remaining sequence requirement is absent from completion_graph. Canonical extensions outside the build sequence remain mapped/unselected metadata and are not forced into construction.",
-    "decision_history": "When an exact base is supplied, every exact-base decisions.jsonl row must remain unchanged and in the same order. Candidate decisions may only extend that durable prefix; deletion, rewrite or reorder fails closed.",
-    "continuity_acceptance": "Every exact-base continuity acceptance item ID must survive. Its id, name and requirement lineage remain immutable; state may progress without rewriting the obligation.",
-    "action_receipt_preservation": "Every exact-base required request field, required result field and authority rule must survive. Additive strengthening is permitted; silent weakening or removal fails closed.",
-    "work_continuity_preservation": "Every exact-base required checkpoint field and hard rule must survive. Additive strengthening is permitted; silent deletion fails closed.",
-    "exact_base_candidate_proof": "While this receipt is ACTIVE, candidate regression must set N0TE2_BASE_SHA from this receipt's exact baseline_sha and execute the candidate checker with git verification enabled. An INACTIVE receipt may skip that candidate-only proof so terminal closure does not create a stale-base trap.",
-    "split_boundary": "Do not modify .github/workflows/steward-integration.yml or governance/steward_integrity_contract.json in this repair. The truthful bootstrap-classification idea remains separate WAITING meta-governance residue and requires independent future selection and receipt authority if still justified.",
-    "authority": "The checker remains validation-only. This continuation grants no product, semantic, public, human/artist acceptance, provider, legacy, merge or external-action authority."
+    "closure_scope": "This closure changes exactly governance/active_receipt.json, governance/current_state.json and governance/incidents.jsonl relative to exact verified base 37ec6faa24d5f94e042b23b15131e4c9d13a59dc.",
+    "parent_incident": "closed_incident_repair_ids records the still-open #206 incident authority consumed by this bounded repair; it does not assert #206 resolution.",
+    "incident_truth": "The appended #206 event remains OPEN_REPAIR_COMPLETED, preserves the parent repair contract and every still-open obligation, and binds exactly to the closed ACTIVE repair receipt plus this closure receipt.",
+    "trusted_gate_disposition": "Historical trusted-gate PR #256 is not resurrected. Its intended trusted enforcement role was integrated through #267 and completed by #276 hardening; #256 remains closed historical lineage.",
+    "bootstrap_classification_residue": "The trusted-workflow bootstrap-classification idea discovered during #267/#273 review remains separate WAITING meta-governance residue. It was not implemented by #276, is not closed or superseded by this child closure, and requires independent future selection plus a receipt explicitly authorizing any trusted-workflow mutation if still justified.",
+    "candidate_train_public_acceptance_residue": "The separate MAIN_WRITE_TOKEN/candidate-train/public-acceptance state-machine implementation remains WAITING control-plane residue. Current serialized COMMIT_SLOT/MAIN_WRITE_TOKEN merge discipline is process enforcement, not implementation of that durable mechanism. PR #276 did not implement it and this child closure does not close or supersede it; any future implementation requires independent selection and bounded receipt authority.",
+    "external_enforcement_constraint": "Paid native GitHub branch protection/rulesets are financially unavailable for the desired private-source setup. Internal Steward enforcement remains active; this limitation is retained as non-blocking infrastructure debt and does not require making source public.",
+    "authority": "Terminal closure grants no product, semantic, legacy, merge, publication, provider, public/human acceptance or external-action authority."
   },
   "completion_proof": [
-    "PR #267 exact head c06468420d9dbac3b5fe361674a0dd95321cffcf passed Linux/Windows/macOS Governance run 34025295028; resulting main d0aecd36caaa2455addba75a86bb1e78bf5b24ca passed post-merge Steward Structure run 34025972749 plus Governance run 34025972755",
-    "PR #269 hardened equivalence and contract-boundary defects on exact head c88c850ddee0012d083713eef90bd3f39a7accd4 and passed Linux/Windows/macOS Governance run 34025930610; its stale lifecycle projection remains historical only",
-    "build-sequence hardening rejects disappearance of a non-superseded in-sequence requirement while preserving explicit supersession and unselected canonical-extension semantics",
-    "typed equivalence hardening rejects empty acceptance evidence, missing original-requirement mapping, uncovered residue and under-evidenced superseded lineage",
-    "integrity-contract validation enforces the complete authoritative-source map, every declared false authority capability, the exact equivalence field contract, public boundary and legacy protections",
-    "exact-base decision-history validation rejects deletion, rewrite and reorder while allowing append-only successors",
-    "exact-base continuity-acceptance validation rejects missing base items and rewritten id/name/requirement lineage while allowing state progression",
-    "exact-base action-receipt validation rejects removal of any currently required request/result safety field or drift of any base authority rule",
-    "exact-base work-continuity validation rejects removal of any current checkpoint field or hard rule",
-    "ACTIVE candidate regression executes the candidate integrity checker against this receipt's exact baseline_sha; Linux proof on exact head 2962245a172f571baa2af36fd4c7713659535f0c produced 1494 passed with zero skips, proving the exact-base candidate test executed rather than taking its INACTIVE skip path",
-    "PR #273 was closed unmerged after trusted incident-repair authority rejected an out-of-receipt trusted-workflow mutation; the workflow bootstrap idea remains split out",
-    "PR #276 old exact head deb4dbd7725b47f5d6de41f879ecabcb978ebbd4 passed trusted Structure and Linux/Windows/macOS Governance run 34035548446, but that qualification was superseded by FIX_REQUIRED after the historical completeness pass exposed the four remaining exact-base preservation gaps",
-    "the final corrected exact head requires fresh trusted Structure, Linux/Windows/macOS Governance, substantive review, late-main race check, Main Steward MAIN_WRITE_TOKEN serialization and post-merge verification before closure"
+    "PR #267 integrated the initial trusted cross-ledger integrity gate as d0aecd36caaa2455addba75a86bb1e78bf5b24ca and resulting main passed trusted Structure plus Linux/Windows/macOS Governance",
+    "PR #276 final reviewed exact head b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5 passed N0TE2 Governance run 34039640004 on Linux, Windows and macOS",
+    "PR #276 final Codex late review reported no major issues on b7c11fc040",
+    "PR #276 merged through an expected-head guarded COMMIT_SLOT as 37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
+    "resulting main 37ec6faa24d5f94e042b23b15131e4c9d13a59dc passed N0TE2 Steward Structure run 34042016612",
+    "resulting main 37ec6faa24d5f94e042b23b15131e4c9d13a59dc passed N0TE2 Governance run 34042016805 on Linux, Windows and macOS through full regression, consumer smoke and evidence",
+    "parent incident #206 remains OPEN and all remaining repair/product/control-plane obligations, including the separate trusted-workflow bootstrap-classification residue and MAIN_WRITE_TOKEN/candidate-train/public-acceptance implementation residue, remain explicitly retained",
+    "this closure candidate must itself receive fresh exact-head structural/governance proof, terminal substantive review, late-main race check, guarded merge and resulting-main post-merge verification"
   ],
   "historical_proof": [
     {
@@ -65,67 +70,76 @@
       "head": "c06468420d9dbac3b5fe361674a0dd95321cffcf",
       "governance_run_id": 34025295028,
       "result": "SUCCESS",
-      "platforms": ["Linux", "Windows", "macOS"],
-      "classification": "PR267_EXACT_HEAD_VERIFIED_INITIAL_INTEGRITY"
-    },
-    {
-      "head": "d0aecd36caaa2455addba75a86bb1e78bf5b24ca",
-      "steward_structure_run_id": 34025972749,
-      "governance_run_id": 34025972755,
-      "result": "SUCCESS",
-      "platforms": ["Linux", "Windows", "macOS"],
-      "classification": "PR267_POST_MERGE_VERIFIED_BASE"
-    },
-    {
-      "pr": 269,
-      "head": "c88c850ddee0012d083713eef90bd3f39a7accd4",
-      "governance_run_id": 34025930610,
-      "result": "SUCCESS",
-      "platforms": ["Linux", "Windows", "macOS"],
-      "classification": "STALE_BASE_HARDENING_IMPLEMENTATION_EVIDENCE_ONLY"
-    },
-    {
-      "pr": 273,
-      "head": "2b04ef07b18f4438de5942248253dce0aab84189",
-      "steward_structure_run_id": 34027373465,
-      "result": "PARTIAL_HISTORICAL_ONLY",
-      "platforms": ["Linux", "macOS"],
-      "classification": "CLOSED_UNMERGED_PRE_SPLIT_HEAD; WINDOWS_CANCELLED; DOES_NOT_CERTIFY_REBUILD"
+      "platforms": [
+        "Linux",
+        "Windows",
+        "macOS"
+      ],
+      "classification": "INITIAL_TRUSTED_INTEGRITY_EXACT_HEAD"
     },
     {
       "pr": 276,
-      "head": "deb4dbd7725b47f5d6de41f879ecabcb978ebbd4",
-      "governance_run_id": 34035548446,
-      "result": "SUCCESS_BUT_SUPERSEDED_BY_FIX_REQUIRED",
-      "platforms": ["Linux", "Windows", "macOS"],
-      "classification": "HISTORICAL_EXACT_HEAD_PROOF_ONLY; DOES_NOT_CERTIFY_CORRECTED_HEAD"
+      "head": "b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5",
+      "governance_run_id": 34039640004,
+      "result": "SUCCESS",
+      "platforms": [
+        "Linux",
+        "Windows",
+        "macOS"
+      ],
+      "classification": "FINAL_HARDENING_EXACT_HEAD_VERIFIED"
+    },
+    {
+      "head": "37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
+      "steward_structure_run_id": 34042016612,
+      "governance_run_id": 34042016805,
+      "result": "SUCCESS",
+      "platforms": [
+        "Linux",
+        "Windows",
+        "macOS"
+      ],
+      "classification": "PR276_POST_MERGE_VERIFIED"
     }
   ],
-  "evidence_classification": "TRUSTED_INTEGRITY_EXACT_BASE_PRESERVATION_CORRECTION_PENDING_FRESH_EXACT_HEAD_PROOF",
-  "evidence_snapshot": null,
+  "evidence_classification": "TRUSTED_INTEGRITY_CHILD_POST_MERGE_VERIFIED_CLOSURE_EXACT_HEAD_PENDING",
+  "evidence_snapshot": {
+    "implementation_pr": 276,
+    "implementation_final_head": "b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5",
+    "implementation_exact_head_governance_run": 34039640004,
+    "implementation_merge_sha": "37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
+    "post_merge_steward_structure_run": 34042016612,
+    "post_merge_governance_run": 34042016805,
+    "post_merge_platforms": [
+      "Linux",
+      "Windows",
+      "macOS"
+    ],
+    "post_merge_result": "SUCCESS"
+  },
+  "public_handoff_required": false,
+  "public_acceptance_state": "NOT_EVALUATED",
   "non_scope": [
     "closing parent incident #206",
-    "terminal closure of this child before corrected hardening is post-merge verified",
-    "trusted-workflow bootstrap/meta-governance changes",
-    "any N0TE product feature or merged-product repair",
-    "PR #254 read-mostly Cross-Ledger Integrity Auditor integration",
+    "trusted-workflow bootstrap-classification/meta-governance changes; the idea remains separate WAITING residue requiring independent selection and receipt authority",
+    "MAIN_WRITE_TOKEN/candidate-train/public-acceptance state-machine implementation; current guarded merge discipline does not satisfy or supersede this separate WAITING residue",
     "Template Catalog repair #207",
     "Capability Negotiation repair #208",
     "Opportunity Matching repair #209",
     "Creative Partner repair #210",
-    "clean-room/context-pruning closure",
-    "branch-protection/ruleset administration",
-    "MAIN_WRITE_TOKEN or candidate-train implementation",
+    "PR #254 read-mostly Cross-Ledger Integrity Auditor reconstruction",
+    "Builder handoff contract/intake reconstruction from #255/#257",
+    "clean-current-context governance #246",
+    "clean-room/context-pruning and remaining #206 control-plane work",
+    "stale Builder product reconstruction",
+    "paid GitHub branch-protection/ruleset administration",
     "public deployment or human/artist acceptance authority"
   ],
-  "dependencies": [
-    "Exact verified main d0aecd36caaa2455addba75a86bb1e78bf5b24ca must remain the continuation base through qualification; any main movement requires explicit reconstruction/revalidation rather than silent retargeting."
-  ],
+  "dependencies": [],
   "shared_integration_points": [
     "governance/active_receipt.json",
-    "governance/check_steward_integrity.py",
     "governance/current_state.json",
-    "tests/governance/test_steward_integrity.py"
+    "governance/incidents.jsonl"
   ],
-  "next_selection_rule": "Qualify only this corrected four-path hardening continuation of INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01. Do not terminally close or select the separate trusted-workflow bootstrap idea, #254, #207/#208/#209/#210, clean-room/context-pruning, product work or remaining #206 control-plane obligations until corrected resulting main is post-merge verified and this child receives a separate exact three-path closure."
+  "next_selection_rule": "After this exact closure is merged and resulting main is post-merge verified, refresh the complete #206 ledger and select exactly one bounded next repair from fresh main. Give the known merged-product defects #207/#208/#209/#210 first-class global comparison before optional governance expansion. The separate trusted-workflow bootstrap-classification idea and MAIN_WRITE_TOKEN/candidate-train/public-acceptance state-machine implementation remain WAITING and may be selected only through their own future bounded receipts; preserve every unselected obligation as WAITING rather than dropping it."
 }
