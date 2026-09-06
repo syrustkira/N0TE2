@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "UX-01-CREATIVE-PARTNER-PRESENCE-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-98",
+      "candidate_id": "UX-01-CREATIVE-PARTNER-PRESENCE-01",
+      "requirement_ids": ["REQ-SCOPE-155"],
+      "pub_ids": [],
+      "product_outcome": "An ephemeral Creative Partner Presence policy kernel with distinct QUIET, NUDGE, COLLABORATE and LEAD initiative levels, truthful NO_ACTION and hard-false action authority.",
+      "artist_job": "Control how proactively N0TE participates in the creative process without changing collaboration depth, action authority or the Artist's current explicit request.",
+      "semantic_owner": "REQ-SCOPE-155"
+    },
+    "bounded_increment": {
+      "increment_id": "UX-01-CREATIVE-PARTNER-PRESENCE-01",
+      "description": "Preserve the three-file Presence policy kernel without reconstruction churn until Windows reliability and Steward integration dependencies clear, then reconcile against current Creative Partner and InteractionPolicy contracts.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-155",
+      "required_behavior": "Select a qualitative conversational initiative level from exact current context while preserving explicit requests, required alerts, Not Now deferral, stale-context failure and structural separation from collaboration depth and action authority.",
+      "non_negotiable_semantics": [
+        "Presence levels are exactly QUIET, NUDGE, COLLABORATE and LEAD",
+        "old or policy-less contexts default deterministically to ephemeral QUIET",
+        "relevance is explained qualitatively rather than by fabricated numeric confidence or relevance scores",
+        "NO_ACTION or leave-it-alone is a first-class truthful result",
+        "current explicit Artist requests and required safety, contradiction, stale-context and rights/privacy alerts survive QUIET and prior Not Now deferral",
+        "Not Now remains authoritative for unsolicited interventions",
+        "decisions bind to exact Artist, Song, Session, Focus and job context and fail closed when context moves",
+        "unknown future policy versions and malformed semantic input fail safely",
+        "Presence policy remains ephemeral and is not persisted by this kernel",
+        "action authority granted, mutation authorized and external action authorized remain structurally hard-false",
+        "Presence remains distinct from collaboration depth and ASK/ADVISE/TRY/DO action authority"
+      ],
+      "allowed_implementation_freedom": ["internal qualitative reason organization", "pure policy helper decomposition", "non-authorizing result presentation"],
+      "interpretations_required": ["reconcile Presence with repaired Creative Partner lenses/relevance and REQ-SCOPE-157 InteractionPolicy without collapsing these separate policy dimensions"],
+      "remaining_semantics": ["consumer reachability through NOW, Song, Produce and Learn", "full REQ-SCOPE-155 completion"]
+    },
+    "behavior": {
+      "requested_behavior": "Provide a bounded policy for how present/proactive the Creative Partner should be.",
+      "implemented_behavior": "Historical three-file candidate produced exact-context qualitative Presence decisions, truthful no-action results, explicit-request/required-alert exceptions and non-forgeable hard-false authority fields.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "The PR proves the Presence policy kernel only; normal consumer composition remains a later increment.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["Creative Partner Presence policy kernel"],
+      "contracts": ["Presence is conversational initiative only", "no action/mutation/external authority"],
+      "persistence": [],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["Historical Windows matrix encountered an independently owned reliability failure class still tracked by issue #136."]
+    },
+    "dependencies": {
+      "upstream": ["Windows reliability issue #136 disposition", "repaired stable main after integration incident #206", "repaired/current Creative Partner lens semantics from #210", "current REQ-SCOPE-157 InteractionPolicy lane #205"],
+      "downstream_consumers": ["NOW", "Song", "Produce", "Learn"],
+      "shared_domains": ["Creative Partner initiative", "relevance", "Not Now", "required alerts", "InteractionPolicy", "collaboration depth", "action authority"],
+      "shared_files": [],
+      "ordering_assumptions": ["Do not repeatedly reconstruct this branch while #136 and #206 remain unresolved; wake on a stable integration baseline."],
+      "provider_assumptions": [],
+      "platform_assumptions": ["The historical WinError 10053 foreign-Origin transport failure belongs to the shared Windows reliability class and is not Presence completion proof."],
+      "semantic_assumptions": ["Presence, collaboration depth and action authority remain separate orthogonal concepts."],
+      "collision_surfaces": ["Creative Partner lenses/relevance", "REQ-SCOPE-157 InteractionPolicy"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/ux/test_creative_partner_presence.py tests/ux/test_creative_partner_presence_input_boundaries.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. Historical Linux/macOS success and Windows failure evidence on 2bca0f59854a216bd2e74621449db22ae51743fb remain preservation evidence only. Reliability issue #136 and incident #206 must clear before reconstruction and fresh first-attempt exact-head proof.",
+          "observed_at": "2026-09-06T03:00:00Z",
+          "artifact_refs": ["issue:136", "issue:206", "pr:210", "pr:205"]
+        }
+      ],
+      "regression_proof": "Fresh first-attempt exact-head repository regression is required after dependencies clear and the policy is reconstructed on current main.",
+      "consumer_smoke": "No consumer integration is claimed by this kernel; repository staged smoke remains a future integration regression guard.",
+      "full_regression": "Historical platform results cannot authorize the H0 head or future reconstruction.",
+      "migration_proof": "",
+      "recovery_proof": "Presence policy is ephemeral; reconstruction must continue rejecting attempted durable persistence in this kernel.",
+      "security_privacy_rights_proof": "Required rights/privacy alerts remain visible and authority fields are non-initializable hard-false values.",
+      "cross_platform_proof": "Fresh first-attempt Linux/Windows/macOS exact-head proof is required after #136/#206 clear."
+    },
+    "review": {
+      "status": "WAITING_DEPENDENCY",
+      "unresolved_findings": [
+        "Issue #136 still owns the Windows reliability recurrence that invalidated the historical first-attempt matrix.",
+        "Future reconstruction must reconcile Presence with current Creative Partner lenses/relevance and InteractionPolicy without semantic collapse."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": ["The Presence kernel remains accepted; issue #96 stays open until this bounded kernel integrates or is verified superseded."]
+    },
+    "risk": {
+      "tier": "TIER_2",
+      "high_consequence_surfaces": ["conversation initiative policy", "required-alert suppression", "Not Now semantics", "action-authority separation"],
+      "failure_modes": ["Presence suppresses an explicit request or required alert", "Not Now is ignored for unsolicited intervention", "Presence is mistaken for permission to act", "future reconstruction duplicates or collapses InteractionPolicy/lens semantics"],
+      "rollback_recovery_considerations": ["the policy is additive and ephemeral; preserve no-action behavior and hard-false authority during any reconstruction"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["no normal consumer reachability", "does not complete full REQ-SCOPE-155", "historical Windows first attempt is not green", "current policy collisions require reconciliation"],
+      "deferred_portions": [],
+      "external_dependencies": ["issue #136", "incident #206", "current Creative Partner lens/relevance contract", "REQ-SCOPE-157 InteractionPolicy"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "WAITING_DEPENDENCY",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve the exact Presence semantic fixtures", "map orthogonality against current lenses and InteractionPolicy without changing main", "do not churn reconstruction while #136/#206 remain unresolved", "retain issue #96"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Presence must be reconciled with current lens/relevance and InteractionPolicy contracts."},
+      {"name": "AUTHORITY_SEPARATION", "state": "APPLICABLE_PASS"},
+      {"name": "PLATFORM_RELIABILITY", "state": "EXTERNAL_ACCEPTANCE_REQUIRED", "reason": "Issue #136 owns the historical Windows recurrence."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This policy kernel neither deploys nor publishes state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": "REBUILD_ORDER",
+      "legacy_source_pr": 98,
+      "historical_head_before_h0": "2bca0f59854a216bd2e74621449db22ae51743fb",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
