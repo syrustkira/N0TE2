@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "UX-01-CREATIVE-TENSION-CHALLENGER-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-112",
+      "candidate_id": "UX-01-CREATIVE-TENSION-CHALLENGER-01",
+      "requirement_ids": ["REQ-SCOPE-158"],
+      "pub_ids": [],
+      "product_outcome": "A read-only Creative Tension and Challenger reasoning kernel that surfaces provisional artistic tradeoffs from exact canonical evidence without turning hypotheses, audience inference or success associations into correctness, market certainty or action authority.",
+      "artist_job": "Challenge a creative direction with bounded, evidence-scoped tension and alternative perspective while preserving uncertainty and the Artist's authority.",
+      "semantic_owner": "REQ-SCOPE-158"
+    },
+    "bounded_increment": {
+      "increment_id": "UX-01-CREATIVE-TENSION-CHALLENGER-01",
+      "description": "Preserve the Creative Tension/Challenger kernel and its exact semantic boundaries for reconstruction after the newer Creative Partner lens ontology is repaired and stable.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": true,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": true
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-158",
+      "required_behavior": "Produce provisional artistic-tension hypotheses from exact current canonical evidence, preserving Technical-vs-Creative distinction, deterministic canonical Challenger/WILDCARD inputs, audience provenance separation and disagreement without blended market scoring.",
+      "non_negotiable_semantics": [
+        "artistic tradeoffs remain HYPOTHESIS rather than correctness or defect truth",
+        "only exact canonical active evidence for the current profile, Song and Version is admissible",
+        "Technical Twin and Creative Twin remain distinct",
+        "Challenger suggestions must be freshly re-derived from the canonical deterministic WILDCARD path rather than accepting fabricated or stale suggestion identity",
+        "Success patterns remain association-only and do not certify outcomes",
+        "simulated first-listen inference remains distinct from provenance-bearing observed audience evidence",
+        "observed audience evidence requires a timezone-aware observation time",
+        "confidence rejects booleans, NaN, infinities and values outside 0..1",
+        "disagreement stays visible without a blended market score, market certainty or hit prediction",
+        "outputs remain frozen, ephemeral, read-only, non-authorizing and non-mutating"
+      ],
+      "allowed_implementation_freedom": ["internal hypothesis representation", "pure reasoning helper decomposition", "presentation of disagreement when semantic distinctions remain explicit"],
+      "interpretations_required": ["reconcile Challenger ownership with the current REQ-SCOPE-154 professional-lens ontology so creative_tension.py does not create a second incompatible Challenger lens, identity or authority concept"],
+      "remaining_semantics": ["consumer reachability", "full REQ-SCOPE-158 completion beyond the independent reasoning kernel"]
+    },
+    "behavior": {
+      "requested_behavior": "Provide a bounded creative Challenger that can surface evidence-scoped tension without claiming artistic or market truth.",
+      "implemented_behavior": "Historical candidate produced frozen read-only tension hypotheses from canonical evidence, canonical deterministic WILDCARD suggestions and provenance-separated audience context with strict stale/fabricated input rejection.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "The PR explicitly closes only an independent reasoning kernel; consumer reachability remains separately selectable.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["Creative Tension / Challenger reasoning kernel"],
+      "contracts": ["hypothesis only", "association is not causation or certification", "no mutation or external action"],
+      "persistence": [],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["historical candidate also carried bounded governance activation files whose current ownership must be re-evaluated rather than replayed"]
+    },
+    "dependencies": {
+      "upstream": ["repaired/stable Creative Partner lens semantics rooted in merged #210", "repaired stable main after integration incident #206"],
+      "downstream_consumers": ["future REQ-SCOPE-158 consumer reachability"],
+      "shared_domains": ["Creative Partner lenses", "Challenger identity", "canonical EvidenceMemory", "CreativeSuggestionService", "Success patterns"],
+      "shared_files": ["governance/active_receipt.json", "governance/automation_registry.json", "governance/completion_graph.json", "governance/current_state.json"],
+      "ordering_assumptions": ["Do not reconstruct or merge until the current Challenger/lens ownership contract is stable enough to reconcile explicitly."],
+      "provider_assumptions": [],
+      "platform_assumptions": [],
+      "semantic_assumptions": ["The newer professional-lens ontology is authoritative where it supersedes older Challenger identity assumptions."],
+      "collision_surfaces": ["REQ-SCOPE-154 Challenger/professional-lens ontology", "trusted governance activation surfaces"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/ux/test_creative_tension.py tests/ux/test_creative_tension_boundaries.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. Historical workflow 33925165126 on 90cd15e65dd12f453d13663f425822060c289fba is preservation evidence only; Main Steward has ordered reconstruction with semantic dependency reconciliation and fresh exact-head review/proof.",
+          "observed_at": "2026-09-06T03:00:00Z",
+          "artifact_refs": ["workflow:33925165126", "pr:210", "issue:206"]
+        }
+      ],
+      "regression_proof": "Fresh exact-head repository regression is required after semantic reconciliation and current-main reconstruction.",
+      "consumer_smoke": "No direct consumer path is claimed; staged smoke remains a future integration regression guard.",
+      "full_regression": "Historical green CI cannot authorize the H0 head or a future reconstructed head.",
+      "migration_proof": "Historical governance activation cannot be copied as current truth; current trusted ownership must be re-established by Main Steward.",
+      "recovery_proof": "",
+      "security_privacy_rights_proof": "Stale/fabricated evidence and suggestions fail closed; outputs remain non-authorizing and non-mutating.",
+      "cross_platform_proof": "Fresh first-attempt Linux/Windows/macOS exact-head proof is required after reconstruction."
+    },
+    "review": {
+      "status": "STEWARD_REBUILD_REQUIRED_SEMANTIC_DEPENDENCY",
+      "unresolved_findings": [
+        "Current main contains a newer professional-lens ontology with a Challenger lens; future reconstruction must prevent a second incompatible Challenger identity/authority concept.",
+        "Historical automated review did not terminate on the eventual stale head under the current semantic environment, so fresh exact-head substantive review is required."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": ["The bounded Creative Tension semantics remain accepted and must not disappear; issue #106 stays live until integration or verified equivalent supersession."]
+    },
+    "risk": {
+      "tier": "TIER_3",
+      "high_consequence_surfaces": ["creative-authority semantics", "Challenger identity collision", "canonical evidence scope", "trusted governance activation surfaces"],
+      "failure_modes": ["hypothesis becomes artistic correctness", "simulated audience inference becomes observed truth", "stale/fabricated suggestion is accepted", "duplicate Challenger ontology fragments authority", "historical governance activation is replayed as current authority"],
+      "rollback_recovery_considerations": ["reconstruct the product semantics on current main under Steward-owned governance rather than carrying historical activation state forward"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["no consumer reachability", "does not complete full REQ-SCOPE-158", "historical governance activation is stale", "Challenger ownership requires semantic reconciliation"],
+      "deferred_portions": [],
+      "external_dependencies": ["#210-derived lens semantic repairs/stability", "incident #206 repaired stable main"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "REBUILD_ORDER",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve focused Creative Tension semantic fixtures", "map historical Challenger semantics against the current professional-lens ontology without changing main", "retain issue #106"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Challenger ownership must be reconciled with current lens semantics."},
+      {"name": "AUTHORITY_SEPARATION", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Historical kernel is hard-false, but duplicate lens/identity authority must be ruled out on reconstruction."},
+      {"name": "GOVERNANCE_OWNERSHIP", "state": "STEWARD_REVIEW_REQUIRED", "reason": "The stale candidate includes trusted governance activation surfaces that Builder code cannot self-authorize."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This reasoning kernel neither deploys nor publishes public state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": "REBUILD_ORDER",
+      "legacy_source_pr": 112,
+      "historical_head_before_h0": "90cd15e65dd12f453d13663f425822060c289fba",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
