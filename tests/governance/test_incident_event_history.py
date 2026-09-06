@@ -41,7 +41,8 @@ class IncidentEventHistoryTests(unittest.TestCase):
         repo = self.clone()
         path = repo / "governance/incidents.jsonl"
         rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-        source = next(row for row in rows if row.get("id") == INCIDENT_206)
+        source = next(row for row in reversed(rows) if row.get("id") == INCIDENT_206)
+        before = sum(row.get("id") == source["id"] for row in rows)
         rows.append(
             {
                 "id": source["id"],
@@ -53,13 +54,16 @@ class IncidentEventHistoryTests(unittest.TestCase):
         )
         path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
         parsed = gov.check_jsonl_ids(repo, "governance/incidents.jsonl", allow_repeated_ids=True)
-        self.assertEqual(sum(row.get("id") == source["id"] for row in parsed), 2)
+        self.assertEqual(
+            sum(row.get("id") == source["id"] for row in parsed),
+            before + 1,
+        )
 
     def test_bounded_repair_completion_can_leave_parent_incident_open(self) -> None:
         repo = self.clone()
         path = repo / "governance/incidents.jsonl"
         rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-        source = next(row for row in rows if row.get("id") == INCIDENT_206)
+        source = next(row for row in reversed(rows) if row.get("id") == INCIDENT_206)
         rows.append(
             {
                 "id": INCIDENT_206,
@@ -105,7 +109,7 @@ class IncidentEventHistoryTests(unittest.TestCase):
         repo = self.clone()
         path = repo / "governance/incidents.jsonl"
         rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-        source = next(row for row in rows if row.get("id") == INCIDENT_206)
+        source = next(row for row in reversed(rows) if row.get("id") == INCIDENT_206)
         rows.append(
             {
                 "id": INCIDENT_206,
