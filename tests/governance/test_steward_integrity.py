@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 from pathlib import Path
 
@@ -37,10 +38,11 @@ def _graph() -> dict:
 
 
 def test_held_requirement_cannot_silently_disappear() -> None:
+    requirements = _requirements()
     graph = _graph()
     graph["nodes"][1]["requirements"] = ""
     with pytest.raises(integrity.StewardIntegrityError, match="held_or_boundary and LATER-01 diverged"):
-        integrity.validate_requirement_graph(_requirements(), graph)
+        integrity.validate_requirement_graph(requirements, graph)
 
 
 def test_graph_requirement_cannot_escape_canonical_scope() -> None:
@@ -51,8 +53,9 @@ def test_graph_requirement_cannot_escape_canonical_scope() -> None:
 
 
 def test_superseded_decision_requires_successor() -> None:
+    rows = [{"id": "DEC-1", "status": "SUPERSEDED", "supersedes": []}]
     with pytest.raises(integrity.StewardIntegrityError, match="lacks durable successor"):
-        integrity.validate_decisions([{"id": "DEC-1", "status": "SUPERSEDED", "supersedes": []}])
+        integrity.validate_decisions(rows)
 
 
 def test_decision_supersession_cycle_is_rejected() -> None:
@@ -76,36 +79,52 @@ def _receipt() -> dict:
 
 
 def _current() -> dict:
-    return {"lifecycle_state": "ACTIVE", "active_node": "INCIDENT-REPAIR", "active_increment": "INCIDENT-REPAIR-TEST"}
+    return {
+        "lifecycle_state": "ACTIVE",
+        "active_node": "INCIDENT-REPAIR",
+        "active_increment": "INCIDENT-REPAIR-TEST",
+    }
 
 
 def _incidents() -> dict:
-    return {"INC-1": {"id": "INC-1", "status": "OPEN_REPAIRING", "repair_contract": {"future_receipt_field": "incident_repair_ids"}}}
+    return {
+        "INC-1": {
+            "id": "INC-1",
+            "status": "OPEN_REPAIRING",
+            "repair_contract": {"future_receipt_field": "incident_repair_ids"},
+        }
+    }
 
 
 def test_public_handoff_obligation_cannot_be_orphaned() -> None:
     receipt = _receipt()
     receipt["public_handoff_required"] = True
     with pytest.raises(integrity.StewardIntegrityError, match="no durable public_handoff_ref"):
-        integrity.validate_receipt_and_current_state(_current(), receipt, {"REQ-SCOPE-002"}, set(), {}, _incidents())
+        integrity.validate_receipt_and_current_state(
+            _current(), receipt, {"REQ-SCOPE-002"}, set(), {}, _incidents()
+        )
 
 
 def test_merge_receipt_cannot_claim_public_verified() -> None:
     receipt = _receipt()
     receipt["public_acceptance_state"] = "PUBLIC_VERIFIED"
     with pytest.raises(integrity.StewardIntegrityError, match="cannot create PUBLIC_VERIFIED"):
-        integrity.validate_receipt_and_current_state(_current(), receipt, {"REQ-SCOPE-002"}, set(), {}, _incidents())
+        integrity.validate_receipt_and_current_state(
+            _current(), receipt, {"REQ-SCOPE-002"}, set(), {}, _incidents()
+        )
 
 
 def test_equivalence_requires_semantic_proof() -> None:
     receipt = _receipt()
     receipt["current_disposition"] = "SUPERSEDED_BY_EQUIVALENT"
     with pytest.raises(integrity.StewardIntegrityError, match="requires equivalence_receipt"):
-        integrity.validate_receipt_and_current_state(_current(), receipt, {"REQ-SCOPE-002"}, set(), {}, _incidents())
+        integrity.validate_receipt_and_current_state(
+            _current(), receipt, {"REQ-SCOPE-002"}, set(), {}, _incidents()
+        )
 
 
 def test_equivalence_receipt_with_complete_lineage_passes() -> None:
-    integrity.validate_equivalence_receipt({
+    evidence = {
         "original_requirement": "REQ-SCOPE-002",
         "replacement_implementation": "impl://replacement",
         "semantic_coverage_mapping": {"REQ-SCOPE-002": ["impl://replacement"]},
@@ -115,19 +134,39 @@ def test_equivalence_receipt_with_complete_lineage_passes() -> None:
         "acceptance_evidence": ["evidence://1"],
         "semantic_authority": "USER_ROOT",
         "lineage": ["receipt://old", "receipt://new"],
-        "successor_status": "INTEGRATED"
-    }, {"REQ-SCOPE-002"})
+        "successor_status": "INTEGRATED",
+    }
+    integrity.validate_equivalence_receipt(evidence, {"REQ-SCOPE-002"})
 
 
 def test_resolved_incident_cannot_authorize_active_repair() -> None:
     incidents = _incidents()
     incidents["INC-1"]["status"] = "RESOLVED"
     with pytest.raises(integrity.StewardIntegrityError, match="non-open incident"):
-        integrity.validate_receipt_and_current_state(_current(), _receipt(), {"REQ-SCOPE-002"}, set(), {}, incidents)
+        integrity.validate_receipt_and_current_state(
+            _current(), _receipt(), {"REQ-SCOPE-002"}, set(), {}, incidents
+        )
 
 
 def test_active_receipt_must_bind_exact_current_increment() -> None:
     current = _current()
     current["active_increment"] = "OTHER"
     with pytest.raises(integrity.StewardIntegrityError, match="increment diverges"):
-        integrity.validate_receipt_and_current_state(current, _receipt(), {"REQ-SCOPE-002"}, set(), {}, _incidents())
+        integrity.validate_receipt_and_current_state(
+            current, _receipt(), {"REQ-SCOPE-002"}, set(), {}, _incidents()
+        )
+
+
+def test_explicit_base_lookup_failure_fails_closed(monkeypatch, tmp_path) -> None:
+    def fail_git(*args, **kwargs):
+        raise RuntimeError("base unavailable")
+
+    monkeypatch.setattr(integrity, "git", fail_git)
+    with pytest.raises(integrity.StewardIntegrityError, match="cannot inspect exact base requirements"):
+        integrity.validate_new_supersessions(
+            tmp_path,
+            "a" * 40,
+            _requirements(),
+            {},
+            {"REQ-SCOPE-002", "REQ-SCOPE-003", "REQ-SCOPE-004"},
+        )
