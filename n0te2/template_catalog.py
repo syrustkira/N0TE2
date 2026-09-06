@@ -5,10 +5,12 @@ import sqlite3
 import uuid
 from dataclasses import dataclass
 
+from .capabilities import CapabilityResolutionError, canonical_template_capability_key
 from .lineage import LineageCorruptionError, LineageStore, NotFoundError, ValidationError
 from .templates import TemplateDefinition, TemplateRole, TemplateValidationError
 
-TEMPLATE_CATALOG_SCHEMA_VERSION = 1
+TEMPLATE_CATALOG_SCHEMA_VERSION = 2
+_TEMPLATE_CATALOG_V1 = "1"
 TEMPLATE_SELECTION_SOURCE = "ARTIST_DECLARED"
 _MAX_TEMPLATE_ID = 200
 _MAX_NAME = 120
@@ -31,7 +33,7 @@ class TemplateSelection:
     id: str
     artist_id: str
     song_id: str
-    template_id: str
+    template_id: str | None
     source_kind: str
 
 
@@ -54,7 +56,8 @@ class TemplateCatalog:
     The catalog is profile-local and deliberately does not instantiate a host,
     resolve a capability route, start a Session, mutate a Version, or grant action
     authority. Reads against a profile with no catalog remain pure. The bounded
-    schema is created only by the first explicit save operation.
+    schema is created only by the first explicit save operation. Existing v1
+    catalogs migrate in place to the append-only nullable-selection event schema.
     """
 
     _TABLES = ("template_definitions", "template_selections")
@@ -73,8 +76,8 @@ class TemplateCatalog:
         self.store = store
         self._conn = store._conn
         # Existing-catalog validation may resolve selection references through
-        # get(). Seed the read gate only for that validation pass; the returned
-        # value immediately restores False for profiles where no catalog exists.
+        # get(). Seed the read gate only for that validation/migration pass; the
+        # returned value immediately restores False where no catalog exists.
         self._present = True
         self._present = self._validate_or_absent()
 
@@ -120,9 +123,12 @@ class TemplateCatalog:
                   SELECT 1 FROM songs s
                   WHERE s.id=NEW.song_id AND s.artist_id=NEW.artist_id
               )
-              OR NOT EXISTS (
-                  SELECT 1 FROM template_definitions t
-                  WHERE t.id=NEW.template_id AND t.artist_id=NEW.artist_id
+              OR (
+                  NEW.template_id IS NOT NULL
+                  AND NOT EXISTS (
+                      SELECT 1 FROM template_definitions t
+                      WHERE t.id=NEW.template_id AND t.artist_id=NEW.artist_id
+                  )
               )
             BEGIN SELECT RAISE(ABORT, 'Template selection binding is invalid'); END""",
             """CREATE TRIGGER template_selections_immutable_update
@@ -133,6 +139,77 @@ class TemplateCatalog:
             BEGIN SELECT RAISE(ABORT, 'Template selection history is immutable'); END""",
         )
 
+    def _validate_contents(self) -> None:
+        for row in self._conn.execute(
+            "SELECT seq,id,artist_id,family,name,intent,roles_json "
+            "FROM template_definitions ORDER BY seq"
+        ):
+            if str(row["artist_id"]) != self.store.primary_artist_id:
+                raise LineageCorruptionError(
+                    "Template definition artist does not match active profile"
+                )
+            self._definition(row)
+        for row in self._conn.execute(
+            "SELECT seq,id,artist_id,song_id,template_id,source_kind "
+            "FROM template_selections ORDER BY seq"
+        ):
+            selection = self._selection(row)
+            song = self.store.get_song(selection.song_id)
+            if song is None or song.artist_id != selection.artist_id:
+                raise LineageCorruptionError(
+                    "Template selection references an invalid Song"
+                )
+            if selection.template_id is not None:
+                template = self.get(selection.template_id)
+                if template is None:
+                    raise LineageCorruptionError(
+                        "Template selection references a missing Template"
+                    )
+
+    def _migrate_v1_to_v2(self) -> None:
+        try:
+            with self.store._tx():
+                # Trigger names are global within SQLite. Cycle the already-
+                # validated v1 hooks inside this same transaction so table rename
+                # cannot leave old trigger names colliding with the v2 hooks.
+                for name in sorted(self._TRIGGERS):
+                    self._conn.execute(f'DROP TRIGGER "{name}"')
+                self._conn.execute(
+                    "ALTER TABLE template_selections RENAME TO template_selections_v1"
+                )
+                self._conn.execute(
+                    """CREATE TABLE template_selections (
+                        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                        id TEXT NOT NULL UNIQUE,
+                        artist_id TEXT NOT NULL REFERENCES artists(id),
+                        song_id TEXT NOT NULL REFERENCES songs(id),
+                        template_id TEXT NULL REFERENCES template_definitions(id),
+                        source_kind TEXT NOT NULL CHECK(source_kind='ARTIST_DECLARED')
+                    )"""
+                )
+                self._conn.execute(
+                    "INSERT INTO template_selections("
+                    "seq,id,artist_id,song_id,template_id,source_kind) "
+                    "SELECT seq,id,artist_id,song_id,template_id,source_kind "
+                    "FROM template_selections_v1 ORDER BY seq"
+                )
+                self._conn.execute("DROP TABLE template_selections_v1")
+                self._conn.execute(
+                    "CREATE INDEX template_selections_by_song "
+                    "ON template_selections(song_id,seq)"
+                )
+                for statement in self._trigger_statements():
+                    self._conn.execute(statement)
+                self._conn.execute(
+                    "UPDATE metadata SET value=? "
+                    "WHERE key='template_catalog_schema_version'",
+                    (str(TEMPLATE_CATALOG_SCHEMA_VERSION),),
+                )
+        except sqlite3.DatabaseError as exc:
+            raise LineageCorruptionError(
+                "cannot migrate Template catalog selection history safely"
+            ) from exc
+
     def _validate_or_absent(self) -> bool:
         present = [self._table_exists(name) for name in self._TABLES]
         version = self._metadata_value("template_catalog_schema_version")
@@ -140,7 +217,7 @@ class TemplateCatalog:
             return False
         if not all(present) or version is None:
             raise LineageCorruptionError("Template catalog schema metadata/table mismatch")
-        if version != str(TEMPLATE_CATALOG_SCHEMA_VERSION):
+        if version not in {_TEMPLATE_CATALOG_V1, str(TEMPLATE_CATALOG_SCHEMA_VERSION)}:
             raise LineageCorruptionError(
                 f"unsupported Template catalog schema version: {version}"
             )
@@ -150,30 +227,21 @@ class TemplateCatalog:
                 f"Template catalog integrity hooks are incomplete: {sorted(missing)}"
             )
         try:
-            for row in self._conn.execute(
-                "SELECT seq,id,artist_id,family,name,intent,roles_json "
-                "FROM template_definitions ORDER BY seq"
-            ):
-                if str(row["artist_id"]) != self.store.primary_artist_id:
+            self._validate_contents()
+            if version == _TEMPLATE_CATALOG_V1:
+                self._migrate_v1_to_v2()
+                version = self._metadata_value("template_catalog_schema_version")
+                if version != str(TEMPLATE_CATALOG_SCHEMA_VERSION):
                     raise LineageCorruptionError(
-                        "Template definition artist does not match active profile"
+                        "Template catalog migration did not publish schema version 2"
                     )
-                self._definition(row)
-            for row in self._conn.execute(
-                "SELECT seq,id,artist_id,song_id,template_id,source_kind "
-                "FROM template_selections ORDER BY seq"
-            ):
-                selection = self._selection(row)
-                song = self.store.get_song(selection.song_id)
-                if song is None or song.artist_id != selection.artist_id:
+                missing = self._TRIGGERS - self._trigger_names()
+                if missing:
                     raise LineageCorruptionError(
-                        "Template selection references an invalid Song"
+                        "Template catalog migration left integrity hooks incomplete: "
+                        f"{sorted(missing)}"
                     )
-                template = self.get(selection.template_id)
-                if template is None:
-                    raise LineageCorruptionError(
-                        "Template selection references a missing Template"
-                    )
+                self._validate_contents()
         except LineageCorruptionError:
             raise
         except sqlite3.DatabaseError as exc:
@@ -206,7 +274,7 @@ class TemplateCatalog:
                         id TEXT NOT NULL UNIQUE,
                         artist_id TEXT NOT NULL REFERENCES artists(id),
                         song_id TEXT NOT NULL REFERENCES songs(id),
-                        template_id TEXT NOT NULL REFERENCES template_definitions(id),
+                        template_id TEXT NULL REFERENCES template_definitions(id),
                         source_kind TEXT NOT NULL CHECK(source_kind='ARTIST_DECLARED')
                     )"""
                 )
@@ -285,12 +353,14 @@ class TemplateCatalog:
         source = str(row["source_kind"])
         if source != TEMPLATE_SELECTION_SOURCE:
             raise LineageCorruptionError("Template selection source is invalid")
+        raw_template_id = row["template_id"]
+        template_id = None if raw_template_id is None else str(raw_template_id)
         return TemplateSelection(
             sequence=int(row["seq"]),
             id=str(row["id"]),
             artist_id=str(row["artist_id"]),
             song_id=str(row["song_id"]),
-            template_id=str(row["template_id"]),
+            template_id=template_id,
             source_kind=source,
         )
 
@@ -305,17 +375,37 @@ class TemplateCatalog:
             raise TemplateCatalogError(
                 f"Template may contain at most {_MAX_ROLES} semantic roles"
             )
+        canonical_roles: list[TemplateRole] = []
         for role in definition.roles:
             _bounded(role.role_id, "role_id", _MAX_ROLE_ID)
             _bounded(role.capability, "role capability", _MAX_CAPABILITY)
             _bounded(role.description, "role description", _MAX_DESCRIPTION)
+            try:
+                capability = canonical_template_capability_key(role.capability)
+            except CapabilityResolutionError as exc:
+                raise TemplateCatalogError(str(exc)) from exc
             if len(role.tags) > _MAX_TAGS:
                 raise TemplateCatalogError(
                     f"Template role may contain at most {_MAX_TAGS} tags"
                 )
             for tag in role.tags:
                 _bounded(tag, "role tag", _MAX_TAG)
-        return definition
+            canonical_roles.append(
+                TemplateRole(
+                    role_id=role.role_id,
+                    capability=capability,
+                    description=role.description,
+                    required=role.required,
+                    tags=role.tags,
+                )
+            )
+        return TemplateDefinition(
+            template_id=definition.template_id,
+            family=definition.family,
+            name=definition.name,
+            intent=definition.intent,
+            roles=tuple(canonical_roles),
+        )
 
     def templates(self) -> tuple[TemplateDefinition, ...]:
         if not self._present:
@@ -384,6 +474,40 @@ class TemplateCatalog:
         )
         return self.save(definition)
 
+    def _append_selection_event(
+        self,
+        *,
+        song_id: str,
+        template_id: str | None,
+    ) -> TemplateSelection:
+        event = TemplateSelection(
+            sequence=0,
+            id=_new_id("tsel"),
+            artist_id=self.store.primary_artist_id,
+            song_id=song_id,
+            template_id=template_id,
+            source_kind=TEMPLATE_SELECTION_SOURCE,
+        )
+        cursor = self._conn.execute(
+            "INSERT INTO template_selections("
+            "id,artist_id,song_id,template_id,source_kind) VALUES(?,?,?,?,?)",
+            (
+                event.id,
+                event.artist_id,
+                event.song_id,
+                event.template_id,
+                event.source_kind,
+            ),
+        )
+        return TemplateSelection(
+            sequence=int(cursor.lastrowid),
+            id=event.id,
+            artist_id=event.artist_id,
+            song_id=event.song_id,
+            template_id=event.template_id,
+            source_kind=event.source_kind,
+        )
+
     def select_for_song(self, *, song_id: str, template_id: str) -> TemplateSelection:
         song = self.store.get_song(str(song_id))
         if song is None or song.artist_id != self.store.primary_artist_id:
@@ -391,38 +515,62 @@ class TemplateCatalog:
         template = self.get(str(template_id))
         if template is None:
             raise NotFoundError("Template not found in active profile")
-        selection = TemplateSelection(
-            sequence=0,
-            id=_new_id("tsel"),
-            artist_id=self.store.primary_artist_id,
-            song_id=song.id,
-            template_id=template.template_id,
-            source_kind=TEMPLATE_SELECTION_SOURCE,
-        )
         try:
             with self.store._tx():
-                cursor = self._conn.execute(
-                    "INSERT INTO template_selections("
-                    "id,artist_id,song_id,template_id,source_kind) VALUES(?,?,?,?,?)",
-                    (
-                        selection.id,
-                        selection.artist_id,
-                        selection.song_id,
-                        selection.template_id,
-                        selection.source_kind,
-                    ),
+                selection = self._append_selection_event(
+                    song_id=song.id,
+                    template_id=template.template_id,
                 )
-                sequence = int(cursor.lastrowid)
         except sqlite3.DatabaseError as exc:
             raise LineageCorruptionError("cannot record Template selection safely") from exc
-        return TemplateSelection(
-            sequence=sequence,
-            id=selection.id,
-            artist_id=selection.artist_id,
-            song_id=selection.song_id,
-            template_id=selection.template_id,
-            source_kind=selection.source_kind,
+        return selection
+
+    def clear_selection_for_song(
+        self,
+        *,
+        song_id: str,
+        expected_selection_id: str,
+    ) -> TemplateSelection:
+        song = self.store.get_song(str(song_id))
+        if song is None or song.artist_id != self.store.primary_artist_id:
+            raise NotFoundError("Song not found in active profile")
+        expected = _bounded(
+            expected_selection_id,
+            "expected Template selection id",
+            200,
         )
+        if not self._present:
+            raise TemplateCatalogError("No Template is currently selected for this Song")
+        try:
+            with self.store._tx():
+                row = self._conn.execute(
+                    "SELECT seq,id,artist_id,song_id,template_id,source_kind "
+                    "FROM template_selections "
+                    "WHERE song_id=? AND artist_id=? ORDER BY seq DESC LIMIT 1",
+                    (song.id, self.store.primary_artist_id),
+                ).fetchone()
+                if row is None:
+                    raise TemplateCatalogError(
+                        "No Template is currently selected for this Song"
+                    )
+                current = self._selection(row)
+                if current.template_id is None:
+                    raise TemplateCatalogError(
+                        "No Template is currently selected for this Song"
+                    )
+                if current.id != expected:
+                    raise TemplateCatalogError(
+                        "Template selection changed. Reload the Song before clearing it."
+                    )
+                cleared = self._append_selection_event(
+                    song_id=song.id,
+                    template_id=None,
+                )
+        except TemplateCatalogError:
+            raise
+        except sqlite3.DatabaseError as exc:
+            raise LineageCorruptionError("cannot clear Template selection safely") from exc
+        return cleared
 
     def selection_history(self, song_id: str) -> tuple[TemplateSelection, ...]:
         song = self.store.get_song(str(song_id))
@@ -441,8 +589,13 @@ class TemplateCatalog:
 
     def current_selection(self, song_id: str) -> TemplateSelection | None:
         history = self.selection_history(song_id)
-        return None if not history else history[-1]
+        if not history:
+            return None
+        latest = history[-1]
+        return None if latest.template_id is None else latest
 
     def selected_template(self, song_id: str) -> TemplateDefinition | None:
         selection = self.current_selection(song_id)
-        return None if selection is None else self.get(selection.template_id)
+        if selection is None or selection.template_id is None:
+            return None
+        return self.get(selection.template_id)

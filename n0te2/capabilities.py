@@ -12,6 +12,34 @@ ROUTE_KINDS = {
 }
 RESOLUTION_STATUSES = {"RESOLVED", "UNAVAILABLE"}
 
+# Central Template-eligible vocabulary over capability identities already used by
+# N0TE's resolver, Studio, Template, Recipe, tool and host-observation surfaces.
+# This does not make every observed/provider capability a Template capability.
+# Adding a new reusable Template role identity should extend this owner first.
+SUPPORTED_TEMPLATE_CAPABILITY_KEYS = frozenset(
+    {
+        "arrangement.structure",
+        "audio.compare",
+        "audio.compress",
+        "audio.master",
+        "audio.process",
+        "audio.repair",
+        "audio.transient-edit",
+        "content.generate",
+        "content.publish.prepare",
+        "daw.feature.comping",
+        "dynamics.compress",
+        "instrument.play",
+        "pitch.correct",
+        "session.musician",
+        "track.read",
+        "transport.read",
+        "vocal.harmony.build",
+        "vocal.tighten",
+        "vocal.timing.inspect",
+    }
+)
+
 _SCORE_WEIGHTS = {
     "task_fit": 0.30,
     "editability": 0.10,
@@ -27,6 +55,25 @@ _SCORE_WEIGHTS = {
 
 class CapabilityResolutionError(ValueError):
     """Invalid resolver input, never a provider/host execution failure."""
+
+
+def canonical_template_capability_key(value: str) -> str:
+    """Return one supported canonical Template capability identity.
+
+    Capability matching elsewhere remains exact and provider-neutral. This helper
+    exists specifically so immutable reusable Template meaning cannot persist a
+    typo, natural-language label, casing variant or otherwise unsupported key.
+    """
+    if not isinstance(value, str):
+        raise CapabilityResolutionError("Template capability key must be text")
+    key = value.strip().casefold()
+    if not key:
+        raise CapabilityResolutionError("Template capability key must not be empty")
+    if key not in SUPPORTED_TEMPLATE_CAPABILITY_KEYS:
+        raise CapabilityResolutionError(
+            f"unsupported Template capability key: {key}"
+        )
+    return key
 
 
 def _required_text(value: str, field: str) -> str:

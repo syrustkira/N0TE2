@@ -42,7 +42,7 @@ def _role_editor(index: int) -> str:
     required = " checked" if index == 1 else ""
     return (
         '<fieldset class="stack">'
-        f'<legend>Semantic role {index}</legend>'
+        f"<legend>Semantic role {index}</legend>"
         f'<div><label for="template-role-{index}-capability">Capability</label>'
         f'<input id="template-role-{index}-capability" name="role_{index}_capability" '
         f'type="text" maxlength="{_MAX_CAPABILITY}" placeholder="example: vocal.tighten"></div>'
@@ -53,7 +53,7 @@ def _role_editor(index: int) -> str:
         f'<input id="template-role-{index}-tags" name="role_{index}_tags" '
         f'type="text" maxlength="{_MAX_TAG_TEXT}" placeholder="lead, editing"></div>'
         f'<label><input name="role_{index}_required" type="checkbox" value="1"{required}> Required for this reusable start</label>'
-        '</fieldset>'
+        "</fieldset>"
     )
 
 
@@ -76,62 +76,77 @@ def _template_catalog_card(shell: ConsumerShell, song) -> str:
                 if selected
                 else '<p class="muted">Available reusable start</p>'
             )
-            token = shell._new_action(
-                "template-select",
-                json.dumps(
-                    {"song_id": song.id, "template_id": definition.template_id},
-                    sort_keys=True,
-                    separators=(",", ":"),
-                ),
-            )
-            roles = "".join(_role_summary(role) for role in definition.roles)
-            action = (
-                ""
-                if selected
-                else (
+            if selected:
+                if selection is None:
+                    raise ConsumerShellError(
+                        "Template selection state changed while rendering the Song"
+                    )
+                token = shell._new_action(
+                    "template-clear",
+                    json.dumps(
+                        {"song_id": song.id, "selection_id": selection.id},
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                )
+                action = (
+                    '<form method="post" action="/template/clear">'
+                    + shell._hidden(token)
+                    + '<button type="submit">Clear Template selection</button></form>'
+                )
+            else:
+                token = shell._new_action(
+                    "template-select",
+                    json.dumps(
+                        {"song_id": song.id, "template_id": definition.template_id},
+                        sort_keys=True,
+                        separators=(",", ":"),
+                    ),
+                )
+                action = (
                     '<form method="post" action="/template/select">'
                     + shell._hidden(token)
                     + '<button type="submit">Select for this Song</button></form>'
                 )
-            )
+            roles = "".join(_role_summary(role) for role in definition.roles)
             cards.append(
                 '<div class="card stack">'
-                f'<h3>{html.escape(definition.name)}</h3>{status}'
+                f"<h3>{html.escape(definition.name)}</h3>{status}"
                 f'<p><strong>{html.escape(definition.family.replace("_", " ").title())}</strong> · {html.escape(definition.intent)}</p>'
-                f'<ul>{roles}</ul>{action}'
-                '</div>'
+                f"<ul>{roles}</ul>{action}"
+                "</div>"
             )
         catalog_html = "".join(cards)
 
     save_token = shell._new_action("template-save", song.id)
     editors = "".join(_role_editor(index) for index in range(1, _MAX_CONSUMER_ROLES + 1))
     save_form = (
-        '<details><summary>Save a reusable Template</summary>'
+        "<details><summary>Save a reusable Template</summary>"
         '<form class="stack" method="post" action="/template/save">'
         + shell._hidden(save_token)
         + '<div><label for="template-family">Family</label><select id="template-family" name="family">'
         + _family_options()
-        + '</select></div>'
+        + "</select></div>"
         + f'<div><label for="template-name">Name</label><input id="template-name" name="name" type="text" maxlength="{_MAX_NAME}" required></div>'
         + f'<div><label for="template-intent">Reusable intent</label><textarea id="template-intent" name="intent" maxlength="{_MAX_INTENT}" required></textarea></div>'
         + editors
         + '<button type="submit">Save Template meaning</button>'
-        + '</form></details>'
+        + "</form></details>"
     )
     selected_copy = (
         '<p class="status caution">No Template selected for this Song.</p>'
         if selected_id is None
-        else '<p class="muted">Selection is durable Song context only. Nothing has been instantiated, authorized, or changed in a DAW.</p>'
+        else '<p class="muted">Selection is durable Song context only. Clear it to return to a blank start. Nothing has been instantiated, authorized, or changed in a DAW.</p>'
     )
     return (
         '<div class="card stack" aria-label="Reusable Templates">'
-        '<h2>Reusable starts</h2>'
-        '<p>Keep the musical or operational meaning above any DAW, provider, plug-in, or track layout. Select a Template here before a later capability-aware application step.</p>'
+        "<h2>Reusable starts</h2>"
+        "<p>Keep the musical or operational meaning above any DAW, provider, plug-in, or track layout. Select a Template here before a later capability-aware application step.</p>"
         + selected_copy
         + catalog_html
         + save_form
-        + '<p class="muted">Saving or selecting a Template does not execute a Recipe, call a provider, mutate a Version, start a Session, or grant external action authority.</p>'
-        + '</div>'
+        + '<p class="muted">Saving, selecting, or clearing a Template does not execute a Recipe, call a provider, mutate a Version, start a Session, or grant external action authority.</p>'
+        + "</div>"
     )
 
 
@@ -236,8 +251,32 @@ def _select_template(shell: ConsumerShell, form: Mapping[str, str]) -> None:
     )
 
 
+def _clear_template(shell: ConsumerShell, form: Mapping[str, str]) -> None:
+    action = shell._consume_action(form.get("action", ""), "template-clear")
+    if action is None or action.value is None:
+        raise ConsumerShellError("That Template clear action was already handled or expired")
+    try:
+        binding = json.loads(action.value)
+    except json.JSONDecodeError as exc:
+        raise ConsumerShellError("Template clear binding is unreadable") from exc
+    if not isinstance(binding, dict) or set(binding) != {"song_id", "selection_id"}:
+        raise ConsumerShellError("Template clear binding is invalid")
+    song = _require_bound_song(shell, str(binding["song_id"]))
+    try:
+        _catalog(shell).clear_selection_for_song(
+            song_id=song.id,
+            expected_selection_id=str(binding["selection_id"]),
+        )
+    except TemplateCatalogError as exc:
+        raise ConsumerShellError(str(exc)) from exc
+    shell._consumer_notice = (
+        f"Cleared the Template selection for {song.title}. "
+        "History remains append-only and no DAW or provider action occurred."
+    )
+
+
 def install_song_template_catalog() -> None:
-    """Attach durable provider-neutral Template save/select to the Song surface."""
+    """Attach durable provider-neutral Template save/select/clear to the Song surface."""
     if getattr(ConsumerShell, "_song_template_catalog_installed", False):
         return
 
@@ -260,7 +299,7 @@ def install_song_template_catalog() -> None:
 
     def with_template_post(self: ConsumerShell, handler: BaseHTTPRequestHandler) -> None:
         path = self._path(handler)
-        if path not in {"/template/save", "/template/select"}:
+        if path not in {"/template/save", "/template/select", "/template/clear"}:
             original_post(self, handler)
             return
         if not self._request_host_is_exact(handler) or not self._post_origin_is_allowed(handler):
@@ -288,8 +327,10 @@ def install_song_template_catalog() -> None:
         try:
             if path == "/template/save":
                 _save_template(self, form)
-            else:
+            elif path == "/template/select":
                 _select_template(self, form)
+            else:
+                _clear_template(self, form)
         except ConsumerShellError as exc:
             self._send_html(handler, 409, self._simple_error(str(exc)))
             return

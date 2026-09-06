@@ -1,145 +1,125 @@
 {
   "schema_version": 7,
-  "status": "INACTIVE",
-  "receipt_id": "N0TE2-INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01-CLOSURE",
-  "node_id": null,
-  "increment_id": null,
-  "baseline_sha": "37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
-  "purpose": "Close the bounded trusted-integrity child repair after PR #276 integrated the complete same-repair hardening and resulting main passed trusted Structure plus Linux, Windows and macOS Governance. Parent incident #206 remains OPEN for its retained repair ledger.",
-  "product_code_allowed": false,
+  "status": "ACTIVE",
+  "receipt_id": "N0TE2-INCIDENT-REPAIR-206-TEMPLATE-CATALOG-01",
+  "node_id": "INCIDENT-REPAIR",
+  "increment_id": "INCIDENT-REPAIR-206-TEMPLATE-CATALOG-01",
+  "baseline_sha": "a79882c4aee543259e648f6e367f7f6fa57ffed5",
+  "purpose": "Repair the accepted Template Catalog from merged PR #196 without reopening unrelated scope: canonicalize supported capability keys before immutable Template persistence and add append-only reversible Song Template deselection while preserving provider-neutral save/select/relaunch behavior and consumer action protections.",
+  "product_code_allowed": true,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "repair_kind": "INCIDENT_REPAIR_CLOSURE",
-  "repair_issue": 206,
-  "closed_incident_repair_ids": [
+  "repair_kind": "INCIDENT_REPAIR",
+  "repair_target_kind": "MERGED_PRODUCT",
+  "repair_issue": 207,
+  "repair_target_merge_sha": "49e5bf7375f29885976b628d4cebf49d9007500f",
+  "incident_repair_ids": [
     "INC-2026-09-05-STEWARD-INTEGRATION-206"
   ],
-  "closed_repair_receipt_id": "N0TE2-INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01",
   "allowed_exact_paths": [
     "governance/active_receipt.json",
     "governance/current_state.json",
-    "governance/incidents.jsonl"
+    "n0te2/capabilities.py",
+    "n0te2/template_catalog.py",
+    "n0te2/template_catalog_shell.py",
+    "tests/core/test_capability_resolver.py",
+    "tests/core/test_template_catalog.py",
+    "tests/song/test_template_catalog_consumer.py"
   ],
   "allowed_prefixes": [],
   "forbidden_prefixes": [
-    "n0te2/",
-    "app/",
-    "src/",
+    ".github/workflows/",
     "legacy/",
-    "vendor/",
-    "tests/core/",
-    "tests/song/",
-    "tests/ux/",
-    "tests/platform/"
+    "vendor/"
   ],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "Trusted cross-ledger integrity now fails closed on silent build-sequence loss, under-evidenced equivalence, authority-contract drift, exact-base decision-history mutation, continuity-acceptance loss, action-receipt weakening and work-continuity weakening.",
+    "outcome": "The accepted Template Catalog persists only canonical supported capability keys and lets an Artist explicitly return a Song to No Template selected through durable append-only history.",
     "journeys": [
-      "J-TRUST"
+      "J-SONG"
     ],
-    "capability": "Trusted cross-ledger integrity and exact-base governance preservation",
-    "requirements": [],
-    "increment": "INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01"
+    "capability": "Provider-neutral reusable Song Template catalog and reversible explicit selection",
+    "requirements": [
+      "REQ-SCOPE-147"
+    ],
+    "increment": "INCIDENT-REPAIR-206-TEMPLATE-CATALOG-01"
   },
-  "why_now": "PR #276 final exact head b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5 passed trusted structure, three-platform Governance run 34039640004, terminal Main Steward review and final Codex review with no major issue. It merged through one expected-head guarded COMMIT_SLOT as 37ec6faa24d5f94e042b23b15131e4c9d13a59dc. Resulting main then passed Steward Structure run 34042016612 and Governance run 34042016805 on Linux, Windows and macOS through regression, consumer smoke and evidence. The bounded child may therefore terminate without resolving parent #206.",
+  "why_now": "Parent incident #206 requires the known merged-product findings from PR #196/#181/#200/#204 to be repaired forward or safely reverted before closure. The trusted-integrity child is now post-merge verified as main a79882c4aee543259e648f6e367f7f6fa57ffed5 with zero dangling Actions. #207 is selected first because it is a bounded consumer-visible repair with the smallest direct dependency cone among #207-#210.",
   "implementation_contract": {
-    "closure_scope": "This closure changes exactly governance/active_receipt.json, governance/current_state.json and governance/incidents.jsonl relative to exact verified base 37ec6faa24d5f94e042b23b15131e4c9d13a59dc.",
-    "parent_incident": "closed_incident_repair_ids records the still-open #206 incident authority consumed by this bounded repair; it does not assert #206 resolution.",
-    "incident_truth": "The appended #206 event remains OPEN_REPAIR_COMPLETED, preserves the parent repair contract and every still-open obligation, and binds exactly to the closed ACTIVE repair receipt plus this closure receipt.",
-    "trusted_gate_disposition": "Historical trusted-gate PR #256 is not resurrected. Its intended trusted enforcement role was integrated through #267 and completed by #276 hardening; #256 remains closed historical lineage.",
-    "bootstrap_classification_residue": "The trusted-workflow bootstrap-classification idea discovered during #267/#273 review remains separate WAITING meta-governance residue. It was not implemented by #276, is not closed or superseded by this child closure, and requires independent future selection plus a receipt explicitly authorizing any trusted-workflow mutation if still justified.",
-    "candidate_train_public_acceptance_residue": "The separate MAIN_WRITE_TOKEN/candidate-train/public-acceptance state-machine implementation remains WAITING control-plane residue. Current serialized COMMIT_SLOT/MAIN_WRITE_TOKEN merge discipline is process enforcement, not implementation of that durable mechanism. PR #276 did not implement it and this child closure does not close or supersede it; any future implementation requires independent selection and bounded receipt authority.",
-    "external_enforcement_constraint": "Paid native GitHub branch protection/rulesets are financially unavailable for the desired private-source setup. Internal Steward enforcement remains active; this limitation is retained as non-blocking infrastructure debt and does not require making source public.",
-    "authority": "Terminal closure grants no product, semantic, legacy, merge, publication, provider, public/human acceptance or external-action authority."
+    "canonical_capabilities": "Keep the generic capability resolver provider-neutral, but add an explicit canonical product capability-key vocabulary in the existing n0te2/capabilities.py semantic owner. Template input may normalize deterministic case/whitespace to a known canonical key; unknown, typo or natural-language capability text must fail before immutable persistence.",
+    "selection_reversibility": "Represent deselection as an append-only selection-history event rather than deletion or mutation. Existing selection rows remain durable; the latest clear event yields No Template selected and a later explicit selection may select again.",
+    "schema_migration": "Upgrade existing Template catalog schema safely so historical v1 definition/selection rows are preserved exactly while the selection event can encode a clear state. New profiles create the repaired schema directly.",
+    "consumer_binding": "Expose explicit clear selection only when a Template is selected, with the same active-Song, one-shot trusted action, Host/Origin/CSRF and stale-context protections as selection. Clear grants no provider/DAW execution authority.",
+    "preserve": "Preserve accepted Template save, browse, select and relaunch continuity, immutable Template definitions, Artist/Song binding, provider-neutral semantics and existing security boundaries.",
+    "authority": "This repair grants no provider write, DAW instantiation, Version/Session mutation, public/human/artist acceptance, spend, publication, merge or external-action authority."
   },
   "completion_proof": [
-    "PR #267 integrated the initial trusted cross-ledger integrity gate as d0aecd36caaa2455addba75a86bb1e78bf5b24ca and resulting main passed trusted Structure plus Linux/Windows/macOS Governance",
-    "PR #276 final reviewed exact head b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5 passed N0TE2 Governance run 34039640004 on Linux, Windows and macOS",
-    "PR #276 final Codex late review reported no major issues on b7c11fc040",
-    "PR #276 merged through an expected-head guarded COMMIT_SLOT as 37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
-    "resulting main 37ec6faa24d5f94e042b23b15131e4c9d13a59dc passed N0TE2 Steward Structure run 34042016612",
-    "resulting main 37ec6faa24d5f94e042b23b15131e4c9d13a59dc passed N0TE2 Governance run 34042016805 on Linux, Windows and macOS through full regression, consumer smoke and evidence",
-    "parent incident #206 remains OPEN and all remaining repair/product/control-plane obligations, including the separate trusted-workflow bootstrap-classification residue and MAIN_WRITE_TOKEN/candidate-train/public-acceptance implementation residue, remain explicitly retained",
-    "this closure candidate must itself receive fresh exact-head structural/governance proof, terminal substantive review, late-main race check, guarded merge and resulting-main post-merge verification"
+    "canonical supported capability input is persisted using the exact canonical key; deterministic casing/whitespace may resolve to that key while unknown/typo/free-prose capability input fails before persistence",
+    "existing v1 Template catalog data migrates without definition/selection loss and the repaired schema remains integrity-checked",
+    "select then clear appends history, preserves the prior selection event and makes current_selection/selected_template return no active Template",
+    "clear survives relaunch and a later explicit reselect remains possible",
+    "consumer clear action is shown only for an active selection and rejects replay, stale Song context and hostile Origin with no provider/Version/Session side effect",
+    "focused Template/capability/consumer regressions pass",
+    "fresh exact-head Linux, macOS and Windows Governance/full regression/consumer smoke/evidence pass",
+    "terminal substantive and Codex review complete on the exact final head, followed by guarded merge and exact-main post-merge verification"
   ],
   "historical_proof": [
     {
-      "pr": 267,
-      "head": "c06468420d9dbac3b5fe361674a0dd95321cffcf",
-      "governance_run_id": 34025295028,
-      "result": "SUCCESS",
-      "platforms": [
-        "Linux",
-        "Windows",
-        "macOS"
-      ],
-      "classification": "INITIAL_TRUSTED_INTEGRITY_EXACT_HEAD"
+      "pr": 196,
+      "head": "9eb266989523fb549b6c7ae1fe6dde025a8f8cb0",
+      "merge_sha": "49e5bf7375f29885976b628d4cebf49d9007500f",
+      "classification": "ACCEPTED_TEMPLATE_CATALOG_WITH_POST_MERGE_FINDINGS"
     },
     {
-      "pr": 276,
-      "head": "b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5",
-      "governance_run_id": 34039640004,
+      "pr": 277,
+      "head": "b00041991fb2bd47d624c4261cef86bd737313e0",
+      "merge_sha": "a79882c4aee543259e648f6e367f7f6fa57ffed5",
+      "steward_structure_run_id": 34053097869,
+      "governance_run_id": 34053097858,
       "result": "SUCCESS",
       "platforms": [
         "Linux",
         "Windows",
         "macOS"
       ],
-      "classification": "FINAL_HARDENING_EXACT_HEAD_VERIFIED"
-    },
-    {
-      "head": "37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
-      "steward_structure_run_id": 34042016612,
-      "governance_run_id": 34042016805,
-      "result": "SUCCESS",
-      "platforms": [
-        "Linux",
-        "Windows",
-        "macOS"
-      ],
-      "classification": "PR276_POST_MERGE_VERIFIED"
+      "classification": "VERIFIED_REPAIR_BASE"
     }
   ],
-  "evidence_classification": "TRUSTED_INTEGRITY_CHILD_POST_MERGE_VERIFIED_CLOSURE_EXACT_HEAD_PENDING",
+  "evidence_classification": "MERGED_PRODUCT_TEMPLATE_REPAIR_SELECTED_EXACT_HEAD_PROOF_PENDING",
   "evidence_snapshot": {
-    "implementation_pr": 276,
-    "implementation_final_head": "b7c11fc0400b1f70b5ba7ddebb1dbff27d8e1ec5",
-    "implementation_exact_head_governance_run": 34039640004,
-    "implementation_merge_sha": "37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
-    "post_merge_steward_structure_run": 34042016612,
-    "post_merge_governance_run": 34042016805,
-    "post_merge_platforms": [
-      "Linux",
-      "Windows",
-      "macOS"
-    ],
-    "post_merge_result": "SUCCESS"
+    "parent_incident": 206,
+    "repair_issue": 207,
+    "repair_target_pr": 196,
+    "repair_target_merge_sha": "49e5bf7375f29885976b628d4cebf49d9007500f",
+    "selected_base": "a79882c4aee543259e648f6e367f7f6fa57ffed5",
+    "selected_base_steward_structure_run": 34053097869,
+    "selected_base_governance_run": 34053097858,
+    "selected_base_result": "SUCCESS"
   },
   "public_handoff_required": false,
   "public_acceptance_state": "NOT_EVALUATED",
   "non_scope": [
     "closing parent incident #206",
-    "trusted-workflow bootstrap-classification/meta-governance changes; the idea remains separate WAITING residue requiring independent selection and receipt authority",
-    "MAIN_WRITE_TOKEN/candidate-train/public-acceptance state-machine implementation; current guarded merge discipline does not satisfy or supersede this separate WAITING residue",
-    "Template Catalog repair #207",
+    "declaring full REQ-SCOPE-147 complete",
+    "provider or DAW Template instantiation",
+    "claiming capability availability or provider equivalence from Template declaration",
     "Capability Negotiation repair #208",
     "Opportunity Matching repair #209",
     "Creative Partner repair #210",
-    "PR #254 read-mostly Cross-Ledger Integrity Auditor reconstruction",
-    "Builder handoff contract/intake reconstruction from #255/#257",
-    "clean-current-context governance #246",
-    "clean-room/context-pruning and remaining #206 control-plane work",
-    "stale Builder product reconstruction",
+    "trusted-workflow bootstrap-classification/meta-governance work",
+    "MAIN_WRITE_TOKEN/candidate-train/public-acceptance state-machine implementation",
+    "Cross-Ledger Auditor #254",
+    "Builder handoff reconstruction #255/#257",
+    "clean-current-context #246",
     "paid GitHub branch-protection/ruleset administration",
     "public deployment or human/artist acceptance authority"
   ],
   "dependencies": [],
   "shared_integration_points": [
-    "governance/active_receipt.json",
-    "governance/current_state.json",
-    "governance/incidents.jsonl"
+    "n0te2/capabilities.py",
+    "n0te2/template_catalog.py",
+    "n0te2/template_catalog_shell.py"
   ],
-  "next_selection_rule": "After this exact closure is merged and resulting main is post-merge verified, refresh the complete #206 ledger and select exactly one bounded next repair from fresh main. Give the known merged-product defects #207/#208/#209/#210 first-class global comparison before optional governance expansion. The separate trusted-workflow bootstrap-classification idea and MAIN_WRITE_TOKEN/candidate-train/public-acceptance state-machine implementation remain WAITING and may be selected only through their own future bounded receipts; preserve every unselected obligation as WAITING rather than dropping it."
+  "next_selection_rule": "Complete, prove, review, guarded-merge and post-merge verify #207 before selecting another #206 child. Any new finding blocks only this repair dependency cone. #208/#209/#210 and every other retained obligation remain WAITING rather than being silently bundled into this increment."
 }

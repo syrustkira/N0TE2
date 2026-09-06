@@ -149,7 +149,7 @@ def save_payload(page: str, *, name: str = "Vocal Start") -> dict[str, str]:
             "family": "VOCAL",
             "name": name,
             "intent": "Start vocal production from semantic roles, independent of the DAW",
-            "role_1_capability": "vocal.tighten",
+            "role_1_capability": "  VOCAL.TIGHTEN  ",
             "role_1_description": "Tighten the lead while preserving performance intent",
             "role_1_tags": "lead, editing",
             "role_1_required": "1",
@@ -162,14 +162,16 @@ def save_payload(page: str, *, name: str = "Vocal Start") -> dict[str, str]:
     return payload
 
 
-def test_artist_can_save_select_and_relaunch_provider_neutral_template(tmp_path: Path) -> None:
+def test_artist_can_save_select_clear_and_relaunch_provider_neutral_template(
+    tmp_path: Path,
+) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
     profile_id, song_id = create_profile(data_root, "Template Artist", "Template Song")
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
-        process=process(8701, "template-save-select"),
+        process=process(8701, "template-save-select-clear"),
         probe=Probe(),
     )
     shell.start()
@@ -206,6 +208,10 @@ def test_artist_can_save_select_and_relaunch_provider_neutral_template(tmp_path:
         definition = definitions[0]
         assert definition.family == "VOCAL"
         assert tuple(role.required for role in definition.roles) == (True, False)
+        assert tuple(role.capability for role in definition.roles) == (
+            "vocal.tighten",
+            "vocal.harmony.build",
+        )
         assert catalog.current_selection(song_id) is None
         song = headquarters.store.get_song(song_id)
         assert song is not None
@@ -230,7 +236,10 @@ def test_artist_can_save_select_and_relaunch_provider_neutral_template(tmp_path:
     assert status == 200
     assert "Selected for this Song" in selected_page
     assert "Selection is durable Song context only" in selected_page
+    assert "Clear Template selection" in selected_page
     assert definition.template_id not in selected_page
+    clear = forms(selected_page, "/template/clear")
+    assert len(clear) == 1
 
     headquarters = HeadquartersMemory.open(data_root, profile_id)
     try:
@@ -248,26 +257,62 @@ def test_artist_can_save_select_and_relaunch_provider_neutral_template(tmp_path:
     finally:
         headquarters.close()
 
+    status, _ = request(
+        shell,
+        "/template/clear",
+        method="POST",
+        fields=clear[0].values,
+        origin=shell.address.origin,
+    )
+    assert status == 303
+    status, cleared_page = request(shell, "/song")
+    assert status == 200
+    assert "No Template selected for this Song" in cleared_page
+    assert "Available reusable start" in cleared_page
+    assert "Selected for this Song" not in cleared_page
+    assert forms(cleared_page, "/template/clear") == []
+
+    headquarters = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        catalog = TemplateCatalog(headquarters.store)
+        assert catalog.current_selection(song_id) is None
+        assert catalog.selected_template(song_id) is None
+        assert tuple(item.template_id for item in catalog.selection_history(song_id)) == (
+            definition.template_id,
+            None,
+        )
+        song = headquarters.store.get_song(song_id)
+        assert song is not None
+        assert song.current_version_id is None
+        assert song.approved_version_id is None
+        assert headquarters.sessions.latest_for_song(song_id) is None
+    finally:
+        headquarters.close()
+
     quit_shell(shell)
     reopened = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
-        process=process(8702, "template-relaunch"),
+        process=process(8702, "template-relaunch-cleared"),
         probe=Probe(),
     )
     reopened.start()
     status, resumed = request(reopened, "/song")
     assert status == 200
     assert "Vocal Start" in resumed
-    assert "Selected for this Song" in resumed
-    assert definition.template_id not in resumed
+    assert "No Template selected for this Song" in resumed
+    assert "Selected for this Song" not in resumed
+    assert forms(resumed, "/template/clear") == []
+    assert len(forms(resumed, "/template/select")) == 1
     quit_shell(reopened)
 
 
-def test_template_actions_are_origin_checked_one_shot_and_stale_song_safe(tmp_path: Path) -> None:
+def test_template_actions_are_origin_checked_one_shot_and_stale_selection_safe(
+    tmp_path: Path,
+) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
-    profile_id, _ = create_profile(data_root, "Authority Artist", "First Song")
+    profile_id, song_id = create_profile(data_root, "Authority Artist", "First Song")
     shell = ConsumerShell(
         data_root=data_root,
         state_root=state_root,
@@ -315,6 +360,74 @@ def test_template_actions_are_origin_checked_one_shot_and_stale_song_safe(tmp_pa
     )
     assert replay == 409
 
+    status, selected_page = request(shell, "/song")
+    assert status == 200
+    stale_clear = forms(selected_page, "/template/clear")[0]
+    rejected_clear, _ = request(
+        shell,
+        "/template/clear",
+        method="POST",
+        fields=stale_clear.values,
+        origin="https://attacker.example",
+    )
+    assert rejected_clear == 403
+
+    changer = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        catalog = TemplateCatalog(changer.store)
+        current = catalog.current_selection(song_id)
+        assert current is not None
+        template_id = current.template_id
+        assert template_id is not None
+        newer = catalog.select_for_song(song_id=song_id, template_id=template_id)
+        assert newer.id != current.id
+    finally:
+        changer.close()
+
+    stale, _ = request(
+        shell,
+        "/template/clear",
+        method="POST",
+        fields=stale_clear.values,
+        origin=shell.address.origin,
+    )
+    assert stale == 409
+
+    status, refreshed = request(shell, "/song")
+    assert status == 200
+    fresh_clear = forms(refreshed, "/template/clear")[0]
+    cleared, _ = request(
+        shell,
+        "/template/clear",
+        method="POST",
+        fields=fresh_clear.values,
+        origin=shell.address.origin,
+    )
+    assert cleared == 303
+    replay_clear, _ = request(
+        shell,
+        "/template/clear",
+        method="POST",
+        fields=fresh_clear.values,
+        origin=shell.address.origin,
+    )
+    assert replay_clear == 409
+
+    headquarters = HeadquartersMemory.open(data_root, profile_id)
+    try:
+        catalog = TemplateCatalog(headquarters.store)
+        assert catalog.current_selection(song_id) is None
+        history = catalog.selection_history(song_id)
+        assert len(history) == 3
+        assert history[-1].template_id is None
+        song = headquarters.store.get_song(song_id)
+        assert song is not None
+        assert song.current_version_id is None
+        assert song.approved_version_id is None
+        assert headquarters.sessions.latest_for_song(song_id) is None
+    finally:
+        headquarters.close()
+
     status, current_page = request(shell, "/song")
     stale_save = forms(current_page, "/template/save")[0]
     changer = HeadquartersMemory.open(data_root, profile_id)
@@ -325,19 +438,19 @@ def test_template_actions_are_origin_checked_one_shot_and_stale_song_safe(tmp_pa
     payload = dict(stale_save.values)
     payload.update(save_payload(current_page))
     payload["action"] = stale_save.values["action"]
-    stale, _ = request(
+    stale_song, _ = request(
         shell,
         "/template/save",
         method="POST",
         fields=payload,
         origin=shell.address.origin,
     )
-    assert stale == 409
+    assert stale_song == 409
     assert template_count(data_root, profile_id) == 1
     quit_shell(shell)
 
 
-def test_invalid_template_form_does_not_create_durable_schema(tmp_path: Path) -> None:
+def test_invalid_template_capability_does_not_create_durable_schema(tmp_path: Path) -> None:
     data_root = (tmp_path / "data").resolve()
     state_root = (tmp_path / "state").resolve()
     profile_id, _ = create_profile(data_root, "Validation Artist", "Validation Song")
@@ -354,11 +467,11 @@ def test_invalid_template_form_does_not_create_durable_schema(tmp_path: Path) ->
     payload = dict(forms(page, "/template/save")[0].values)
     payload.update(
         {
-            "family": "SONG",
-            "name": "Incomplete Start",
+            "family": "VOCAL",
+            "name": "Typo Start",
             "intent": "This must fail before durable catalog initialization",
-            "role_1_capability": "song.arrange",
-            "role_1_description": "",
+            "role_1_capability": "vocal.tigten",
+            "role_1_description": "Typo must fail before durable catalog initialization",
         }
     )
     status, _ = request(
