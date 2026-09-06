@@ -357,7 +357,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
 
         incidents_path = repo / "governance/incidents.jsonl"
         rows = [json.loads(line) for line in incidents_path.read_text().splitlines() if line.strip()]
-        incident = next(row for row in rows if row.get("id") == INCIDENT_206)
+        incident = next(row for row in reversed(rows) if row.get("id") == INCIDENT_206)
         incident.setdefault("evidence", {})["main_at_discovery"] = target_merge
         incidents_path.write_text("\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n")
         base = self.commit(repo, "bind incident discovery fixture")
@@ -385,6 +385,8 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
 
     def test_repair_closure_fails_while_named_incident_is_still_open(self) -> None:
         repo = self.clone()
+        self.stabilize(repo)
+        self.activate_repair(repo, baseline_sha="a" * 40)
         base = self.init_git(repo)
         self.close_repair(repo, baseline_sha=base, resolve_incident=False)
         self.commit(repo, "attempt closure while incident remains open")
@@ -400,6 +402,8 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
 
     def test_repair_closure_rejects_unbound_resolution_label(self) -> None:
         repo = self.clone()
+        self.stabilize(repo)
+        self.activate_repair(repo, baseline_sha="a" * 40)
         base = self.init_git(repo)
         self.close_repair(
             repo,
@@ -420,6 +424,8 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
 
     def test_repair_closure_accepts_append_only_resolution_event(self) -> None:
         repo = self.clone()
+        self.stabilize(repo)
+        self.activate_repair(repo, baseline_sha="a" * 40)
         base = self.init_git(repo)
         self.close_repair(repo, baseline_sha=base, resolve_incident=True)
         self.commit(repo, "close repair with evidence-bound append-only incident resolution")
