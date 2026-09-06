@@ -169,6 +169,11 @@ class TemplateCatalog:
     def _migrate_v1_to_v2(self) -> None:
         try:
             with self.store._tx():
+                # Trigger names are global within SQLite. Cycle the already-
+                # validated v1 hooks inside this same transaction so table rename
+                # cannot leave old trigger names colliding with the v2 hooks.
+                for name in sorted(self._TRIGGERS):
+                    self._conn.execute(f'DROP TRIGGER "{name}"')
                 self._conn.execute(
                     "ALTER TABLE template_selections RENAME TO template_selections_v1"
                 )
