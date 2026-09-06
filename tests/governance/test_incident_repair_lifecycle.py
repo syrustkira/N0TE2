@@ -58,6 +58,45 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
     def read_json(path: Path) -> dict:
         return json.loads(path.read_text())
 
+    def set_open_parent_incident_fixture(self, repo: Path) -> None:
+        """Make the synthetic closure tests own current #206 truth.
+
+        Repository HEAD may itself be ACTIVE, a closure candidate, or post-closure.
+        The closure tests must not inherit whichever production event happens to
+        be latest. Append a test-owned OPEN event with the preserved repair
+        contract and no completion evidence, then let each test append only the
+        event needed for the behavior it is exercising.
+        """
+        path = repo / "governance/incidents.jsonl"
+        rows = [
+            json.loads(line)
+            for line in path.read_text().splitlines()
+            if line.strip()
+        ]
+        source = next(
+            row for row in reversed(rows) if row.get("id") == INCIDENT_206
+        )
+        contract = source.get("repair_contract")
+        self.assertIsInstance(contract, dict)
+        rows.append(
+            {
+                "id": INCIDENT_206,
+                "recorded_at": "2026-09-05T00:00:00Z",
+                "status": "OPEN_REPAIRING_TEST_FIXTURE",
+                "severity": source.get("severity", "TEST_ONLY"),
+                "summary": "Synthetic current open parent incident for closure lifecycle tests.",
+                "blocking_scope": source.get(
+                    "blocking_scope", "BLOCKING_EXCEPT_EXPLICIT_INCIDENT_REPAIR"
+                ),
+                "repair_contract": dict(contract),
+                "evidence": {"test_fixture": True},
+            }
+        )
+        path.write_text(
+            "\n".join(json.dumps(row, separators=(",", ":")) for row in rows)
+            + "\n"
+        )
+
     def stabilize(self, repo: Path) -> None:
         state_path = repo / "governance/current_state.json"
         state = self.read_json(state_path)
@@ -387,6 +426,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
         repo = self.clone()
         self.stabilize(repo)
         self.activate_repair(repo, baseline_sha="a" * 40)
+        self.set_open_parent_incident_fixture(repo)
         base = self.init_git(repo)
         self.close_repair(repo, baseline_sha=base, resolve_incident=False)
         self.commit(repo, "attempt closure while incident remains open")
@@ -404,6 +444,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
         repo = self.clone()
         self.stabilize(repo)
         self.activate_repair(repo, baseline_sha="a" * 40)
+        self.set_open_parent_incident_fixture(repo)
         base = self.init_git(repo)
         self.close_repair(
             repo,
@@ -426,6 +467,7 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
         repo = self.clone()
         self.stabilize(repo)
         self.activate_repair(repo, baseline_sha="a" * 40)
+        self.set_open_parent_incident_fixture(repo)
         base = self.init_git(repo)
         self.close_repair(repo, baseline_sha=base, resolve_incident=True)
         self.commit(repo, "close repair with evidence-bound append-only incident resolution")
