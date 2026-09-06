@@ -49,6 +49,7 @@
     "parent_incident": "closed_incident_repair_ids records the still-open #206 incident authority consumed by this bounded repair; it does not assert #206 resolution.",
     "incident_truth": "The appended #206 event remains OPEN_REPAIR_COMPLETED, preserves the parent repair contract and every still-open obligation, and binds exactly to the closed ACTIVE repair receipt plus this closure receipt.",
     "trusted_gate_disposition": "Historical trusted-gate PR #256 is not resurrected. Its intended trusted enforcement role was integrated through #267 and completed by #276 hardening; #256 remains closed historical lineage.",
+    "bootstrap_classification_residue": "The trusted-workflow bootstrap-classification idea discovered during #267/#273 review remains separate WAITING meta-governance residue. It was not implemented by #276, is not closed or superseded by this child closure, and requires independent future selection plus a receipt explicitly authorizing any trusted-workflow mutation if still justified.",
     "external_enforcement_constraint": "Paid native GitHub branch protection/rulesets are financially unavailable for the desired private-source setup. Internal Steward enforcement remains active; this limitation is retained as non-blocking infrastructure debt and does not require making source public.",
     "authority": "Terminal closure grants no product, semantic, legacy, merge, publication, provider, public/human acceptance or external-action authority."
   },
@@ -59,7 +60,7 @@
     "PR #276 merged through an expected-head guarded COMMIT_SLOT as 37ec6faa24d5f94e042b23b15131e4c9d13a59dc",
     "resulting main 37ec6faa24d5f94e042b23b15131e4c9d13a59dc passed N0TE2 Steward Structure run 34042016612",
     "resulting main 37ec6faa24d5f94e042b23b15131e4c9d13a59dc passed N0TE2 Governance run 34042016805 on Linux, Windows and macOS through full regression, consumer smoke and evidence",
-    "parent incident #206 remains OPEN and all remaining repair/product/control-plane obligations remain explicitly retained",
+    "parent incident #206 remains OPEN and all remaining repair/product/control-plane obligations, including the separate trusted-workflow bootstrap-classification residue, remain explicitly retained",
     "this closure candidate must itself receive fresh exact-head structural/governance proof, terminal substantive review, late-main race check, guarded merge and resulting-main post-merge verification"
   ],
   "historical_proof": [
@@ -119,6 +120,7 @@
   "public_acceptance_state": "NOT_EVALUATED",
   "non_scope": [
     "closing parent incident #206",
+    "trusted-workflow bootstrap-classification/meta-governance changes; the idea remains separate WAITING residue requiring independent selection and receipt authority",
     "Template Catalog repair #207",
     "Capability Negotiation repair #208",
     "Opportunity Matching repair #209",
@@ -137,5 +139,5 @@
     "governance/current_state.json",
     "governance/incidents.jsonl"
   ],
-  "next_selection_rule": "After this exact closure is merged and resulting main is post-merge verified, refresh the complete #206 ledger and select exactly one bounded next repair from fresh main. Give the known merged-product defects #207/#208/#209/#210 first-class global comparison before optional governance expansion; preserve every unselected obligation as WAITING rather than dropping it."
+  "next_selection_rule": "After this exact closure is merged and resulting main is post-merge verified, refresh the complete #206 ledger and select exactly one bounded next repair from fresh main. Give the known merged-product defects #207/#208/#209/#210 first-class global comparison before optional governance expansion. The separate trusted-workflow bootstrap-classification idea remains WAITING and may be selected only through its own future meta-governance receipt; preserve every unselected obligation as WAITING rather than dropping it."
 }
