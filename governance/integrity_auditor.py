@@ -276,17 +276,18 @@ class RepositoryAdapter:
         extensions = {row.get("id"): row for row in requirements.get("canonical_extensions", []) if isinstance(row, dict) and row.get("id")}
         for number in range(int(canonical.get("start", 0)), int(canonical.get("end", -1)) + 1):
             req_id = f"REQ-SCOPE-{number:03d}"
-            disposition = "SUPERSEDED_DECLARED" if req_id in superseded else "HELD" if req_id in held else "RETAINED"
+            extension = extensions.get(req_id)
+            disposition = "SUPERSEDED_DECLARED" if req_id in superseded else "HELD" if req_id in held else "MAPPED_UNSELECTED" if extension and str(extension.get("state") or "").upper() == "MAPPED" and extension.get("selected") is False else "RETAINED"
             attrs = {"accepted": True, "disposition": disposition, "source_revision": canonical.get("source_revision")}
-            if req_id in extensions:
-                attrs["extension"] = extensions[req_id]
+            if extension:
+                attrs["extension"] = extension
             graph.add_node(Node(req_id, "REQUIREMENT", "governance/requirements.json", attrs))
 
         for row in completion.get("nodes", []) or []:
             if not isinstance(row, dict) or not row.get("id"):
                 continue
             candidate_id = f"CONSTRUCTION:{row['id']}"
-            graph.add_node(Node(candidate_id, "CANDIDATE", "governance/completion_graph.json", {"status": row.get("state"), "construction_id": row.get("id"), "required": row.get("required")}))
+            graph.add_node(Node(candidate_id, "CONSTRUCTION_STATE", "governance/completion_graph.json", {"status": row.get("state"), "construction_id": row.get("id"), "required": row.get("required")}))
             for req_id in parse_requirement_spec(str(row.get("requirements") or "")):
                 if req_id in graph.nodes:
                     graph.add_edge(Edge(candidate_id, "SERVES", req_id, "governance/completion_graph.json", {}))
@@ -350,7 +351,7 @@ def event_paths_to_seeds(graph: IntegrityGraph, paths: Sequence[str]) -> list[st
         if path == "governance/requirements.json":
             seeds.update(node.id for node in graph.kind("REQUIREMENT", "PUB_REQUIREMENT"))
         elif path == "governance/completion_graph.json":
-            seeds.update(node.id for node in graph.kind("CANDIDATE"))
+            seeds.update(node.id for node in graph.kind("CONSTRUCTION_STATE", "CANDIDATE"))
         elif path in {"governance/current_state.json", "governance/active_receipt.json"}:
             seeds.add("MAIN:CURRENT")
             seeds.update(node.id for node in graph.kind("IMPLEMENTATION_RECEIPT"))
@@ -417,7 +418,7 @@ class Auditor:
 
     def orphan_requirements(self) -> None:
         valid_rels = {"SERVES", "IMPLEMENTS", "BLOCKED_BY", "SUPERSEDES", "REPLACES", "REMOVED_BY", "VERIFIED_BY"}
-        terminal_dispositions = {"HELD", "WAITING", "BLOCKED", "DEFERRED", "REMOVED_AUTHORIZED", "COMPLETED", "SUPERSEDED_WITH_PROOF"}
+        terminal_dispositions = {"HELD", "WAITING", "BLOCKED", "DEFERRED", "MAPPED_UNSELECTED", "REMOVED_AUTHORIZED", "COMPLETED", "SUPERSEDED_WITH_PROOF"}
         for req in self.graph.kind("REQUIREMENT", "PUB_REQUIREMENT"):
             if not req.attrs.get("accepted", False) or str(req.attrs.get("disposition") or "").upper() in terminal_dispositions:
                 continue
