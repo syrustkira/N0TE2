@@ -173,42 +173,77 @@ def validate_incidents_open(repo: Path, incident_ids: list[str]) -> list[dict]:
     return incidents
 
 
-def validate_incidents_resolved(
+def validate_repair_completion_events(
     repo: Path,
     incident_ids: list[str],
     *,
     closed_repair_receipt_id: str,
     closure_receipt_id: str,
 ) -> None:
+    """Require exact evidence that this bounded repair completed.
+
+    A bounded repair may finish while its governing parent incident remains OPEN.
+    OPEN_REPAIR_COMPLETED-style events preserve the parent incident and its repair
+    contract for subsequent bounded repairs. RESOLVED events remain valid only
+    when this repair truly satisfies the full incident closure contract.
+    """
+
     rows = load_jsonl(repo / "governance/incidents.jsonl")
     for incident_id in incident_ids:
         row = current_incident(rows, incident_id)
         require(row is not None, f"repair closure names unknown incident: {incident_id}")
         status = str(row.get("status") or "").strip().upper()
         require(
-            status.startswith("RESOLVED"),
-            f"repair closure requires durable RESOLVED incident truth: {incident_id} is {status or '<missing>'}",
-        )
-        require(
-            isinstance(row.get("resolved_at"), str) and row["resolved_at"].strip(),
-            f"repair closure resolution event lacks resolved_at: {incident_id}",
-        )
-        require(
-            isinstance(row.get("resolution_condition"), str) and row["resolution_condition"].strip(),
-            f"repair closure resolution event lacks resolution_condition: {incident_id}",
+            status.startswith("OPEN") or status.startswith("RESOLVED"),
+            f"repair closure requires durable OPEN repair-completion or RESOLVED incident truth: {incident_id} is {status or '<missing>'}",
         )
         evidence = row.get("evidence")
         require(
             isinstance(evidence, dict) and evidence,
-            f"repair closure resolution event lacks evidence: {incident_id}",
+            f"repair completion event lacks evidence: {incident_id}",
         )
         require(
             row.get("repair_receipt_id") == closed_repair_receipt_id,
-            f"repair closure resolution event is not bound to exact ACTIVE repair receipt: {incident_id}",
+            f"repair completion event is not bound to exact ACTIVE repair receipt: {incident_id}",
         )
         require(
             row.get("closure_receipt_id") == closure_receipt_id,
-            f"repair closure resolution event is not bound to exact terminal closure receipt: {incident_id}",
+            f"repair completion event is not bound to exact terminal closure receipt: {incident_id}",
+        )
+
+        if status.startswith("RESOLVED"):
+            require(
+                isinstance(row.get("resolved_at"), str) and row["resolved_at"].strip(),
+                f"repair closure resolution event lacks resolved_at: {incident_id}",
+            )
+            require(
+                isinstance(row.get("resolution_condition"), str)
+                and row["resolution_condition"].strip(),
+                f"repair closure resolution event lacks resolution_condition: {incident_id}",
+            )
+            continue
+
+        require(
+            isinstance(row.get("repair_completed_at"), str)
+            and row["repair_completed_at"].strip(),
+            f"open repair-completion event lacks repair_completed_at: {incident_id}",
+        )
+        require(
+            isinstance(row.get("repair_completion_condition"), str)
+            and row["repair_completion_condition"].strip(),
+            f"open repair-completion event lacks repair_completion_condition: {incident_id}",
+        )
+        remaining = row.get("remaining_open_obligations")
+        require(
+            (isinstance(remaining, list) and bool(remaining))
+            or (isinstance(remaining, str) and bool(remaining.strip())),
+            f"open repair-completion event must preserve remaining_open_obligations: {incident_id}",
+        )
+        contract = row.get("repair_contract")
+        require(
+            isinstance(contract, dict)
+            and contract.get("future_receipt_field") == "incident_repair_ids",
+            f"open repair-completion event must preserve repair_contract for later bounded repairs: {incident_id}",
         )
 
 
@@ -336,7 +371,7 @@ def validate_closure(
     require(base_receipt.get("node_id") == base_current.get("active_node"), "repair closure base receipt node was stale")
     require(base_receipt.get("increment_id") == base_current.get("active_increment"), "repair closure base receipt increment was stale")
 
-    validate_incidents_resolved(
+    validate_repair_completion_events(
         repo,
         incident_ids,
         closed_repair_receipt_id=closed_receipt_id,
