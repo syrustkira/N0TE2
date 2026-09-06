@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "SONG-01-CONTROLLED-RANDOMIZE-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-190",
+      "candidate_id": "SONG-01-CONTROLLED-RANDOMIZE-01",
+      "requirement_ids": ["REQ-SCOPE-140", "REQ-SCOPE-004"],
+      "pub_ids": [],
+      "product_outcome": "Controlled randomization of the current Song suggestion while preserving server-held distance, locks, suppression and one-shot authority.",
+      "artist_job": "Ask N0TE for a different eligible suggestion without silently loosening creative constraints, resurrecting Not Now material or granting broader action authority.",
+      "semantic_owner": "REQ-SCOPE-140"
+    },
+    "bounded_increment": {
+      "increment_id": "SONG-01-CONTROLLED-RANDOMIZE-01",
+      "description": "Add controlled randomize to the Song suggestion surface with retained REQ-SCOPE-004 interaction reachability support.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-140",
+      "required_behavior": "Randomize only within the current server-held suggestion contract, preserve Familiar/Adjacent/Wildcard distance and locks, fail stale or forged authority closed, respect Not Now suppression and keep More/Less compatibility.",
+      "non_negotiable_semantics": [
+        "randomize stays bound to the current Song, Session, suggestion and variation",
+        "client fields cannot loosen server-held constraints",
+        "a changed or expired one-shot token fails closed",
+        "the result is a different eligible semantic key or truthful unavailability",
+        "Not Now suppression remains effective",
+        "randomized results remain compatible with More/Less feedback",
+        "no persistent preference, generator/provider, DAW, publication, spend or external-action authority is added"
+      ],
+      "allowed_implementation_freedom": ["safe stale-token rejection wording", "internal eligible-key selection structure", "consumer test parser structure when anchored to the correct suggestion surface"],
+      "interpretations_required": ["Either safe 409 rejection path is acceptable when an earlier token is no longer authoritative."],
+      "remaining_semantics": ["full REQ-SCOPE-140 completion beyond this bounded interaction", "full REQ-SCOPE-004 completion beyond supporting reachability"]
+    },
+    "behavior": {
+      "requested_behavior": "Let the artist request a controlled alternative to the current Song suggestion.",
+      "implemented_behavior": "Preserves current distance and exact locks, binds a one-shot randomize action to current suggestion state, rejects stale/forged authority, respects suppression and returns another eligible semantic key or truthful unavailability.",
+      "consumer_path": {
+        "applicable": true,
+        "path": "Song consumer surface -> One prompt to try -> controlled randomize action",
+        "proof": "The candidate implements and tests this consumer route; fresh exact-head H0 proof remains required before qualification."
+      },
+      "apis": ["one-shot controlled-randomize action"],
+      "contracts": ["current Song suggestion binding", "server-held variation distance and locks"],
+      "persistence": ["process-ephemeral action state only"],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["consumer parser must measure the Song suggestion card, not unrelated page status"]
+    },
+    "dependencies": {
+      "upstream": ["current Song suggestion and variation state", "Not Now suppression semantics"],
+      "downstream_consumers": ["Song suggestion feedback flow"],
+      "shared_domains": ["Song suggestions", "interaction authority", "Not Now", "More/Less feedback"],
+      "shared_files": [],
+      "ordering_assumptions": ["integration must be reconstructed from a fresh Steward-approved main after incident #206 sequencing"],
+      "provider_assumptions": [],
+      "platform_assumptions": ["consumer behavior must remain consistent across Linux, Windows and macOS proof"],
+      "semantic_assumptions": ["randomize does not create a persistent preference or broader Song/Version authority"],
+      "collision_surfaces": ["current Song suggestion consumer surface and one-shot action store"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The prior exact head 75f7a45a6559f114c078c96cf2465270aa7cce4 is historical Builder evidence. The H0 declaration changes the head and a future reconstruction requires fresh exact-head proof.",
+          "observed_at": "2026-09-06T02:40:00Z",
+          "artifact_refs": []
+        }
+      ],
+      "regression_proof": "Fresh exact-head full regression is required after reconstruction.",
+      "consumer_smoke": "Fresh staged Song consumer smoke is required after reconstruction; historical parser/action evidence is not rebound to this H0 head.",
+      "full_regression": "",
+      "migration_proof": "",
+      "recovery_proof": "",
+      "security_privacy_rights_proof": "One-shot action authority remains server-bound and forged client fields fail closed.",
+      "cross_platform_proof": "Fresh Linux/Windows/macOS exact-head proof is required."
+    },
+    "review": {
+      "status": "STEWARD_REBUILD_REQUIRED",
+      "unresolved_findings": [],
+      "inline_threads": [],
+      "reviewer_assumptions": ["Historical deterministic harness fixes remain evidence, not current-head acceptance."]
+    },
+    "risk": {
+      "tier": "TIER_2",
+      "high_consequence_surfaces": ["consumer action authority", "creative constraint retention", "suppression semantics"],
+      "failure_modes": ["stale action mutates current suggestion", "client fields loosen locks", "randomize resurrects suppressed material", "consumer harness observes the wrong status surface"],
+      "rollback_recovery_considerations": ["remove controlled-randomize action and return to existing suggestion behavior; state is process-ephemeral"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["state is process-ephemeral", "does not complete full REQ-SCOPE-140", "does not complete full REQ-SCOPE-004"],
+      "deferred_portions": [],
+      "external_dependencies": ["fresh Steward reconstruction after #206 sequencing"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "REBUILD_ORDER",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve adversarial stale-token and forged-field fixtures", "review collision with current Song suggestion surface before reconstruction"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Fresh-main reconstruction and exact-head consumer proof remain required."},
+      {"name": "CONSUMER_REACHABILITY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "The route exists historically but must be re-proven on the reconstructed exact head."},
+      {"name": "AUTHORITY_SEPARATION", "state": "APPLICABLE_PASS"},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "No public deployment or publication behavior is added."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 190,
+      "historical_head_before_h0": "75f7a45a6559f114c078c96cf2465270aa7cce4a",
+      "migration_classification": "STALE_BUILDER_PRESERVATION"
+    }
+  }
+}
