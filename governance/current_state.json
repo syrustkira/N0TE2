@@ -2,12 +2,12 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "ACTIVE",
-  "active_node": "INCIDENT-REPAIR",
-  "active_increment": "INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01",
-  "terminal_reason": null,
-  "wake_condition": "Exact verified main 6a0a453da9620247d3931aa5e81de82cd4786a46 remains live and parent incident #206 remains OPEN. This selected trusted-integrity repair may qualify only on that exact baseline; any main movement requires explicit rebuild/revalidation.",
-  "next_admissible_action": "Qualify only INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01: preserve the reviewed integrity checker/contract/test semantics, apply the four bounded workflow additions to the current trusted Steward workflow, obtain exact-head trusted structure plus Linux/Windows/macOS Governance and substantive review, then use the sole Main Steward guarded merge path. Do not select product construction or #254 concurrently.",
+  "lifecycle_state": "STABLE",
+  "active_node": null,
+  "active_increment": null,
+  "terminal_reason": "PR #267 integrated the selected validation-only trusted Steward cross-ledger integrity gate and resulting main d0aecd36caaa2455addba75a86bb1e78bf5b24ca passed post-merge trusted Structure plus Linux, macOS and Windows Governance. This exact closure returns the bounded trusted-integrity child repair to terminal state without resolving parent incident #206.",
+  "wake_condition": "Select exactly one bounded repair from the still-open #206 repair ledger against fresh verified main after this closure itself is merged and post-merge verified; unrelated Builder work remains blocked while #206 is active.",
+  "next_admissible_action": "After this closure is exact-head verified, substantively reviewed, merged and post-merge verified, refresh the remaining #206 repair ledger and globally compare PR #254 read-mostly Cross-Ledger Integrity Auditor, #207 Template Catalog, #208 Capability Negotiation, #209 Opportunity Matching, #210 Creative Partner, clean-room/context-pruning and remaining control-plane/bookkeeping obligations. Activate exactly one bounded repair and preserve every unselected obligation as WAITING rather than dropping it.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -43,7 +43,8 @@
     "Closure attempts #260/#261/#262 proved the legal closure path but exposed state-coupled governance test fixtures rather than a production closure defect.",
     "PR #264 merged lifecycle-independent incident-repair regression fixtures as c9a78c87765aa912126dc7d75dbe0e5053700fb8 from reviewed exact head 1000e19bb19ea3a7c9cd2b8c61377d772344dd66; resulting main passed post-merge Steward Structure run 34007932842 and Linux/Windows/macOS Governance run 34007933112.",
     "PR #266 merged the exact three-file #247/#248 child-repair closure as 6a0a453da9620247d3931aa5e81de82cd4786a46. Resulting main passed post-merge Steward Structure run 34009216653 and Linux/Windows/macOS Governance run 34009216638 through full regression, consumer smoke and evidence.",
-    "Parent incident #206 remains OPEN. Main Steward globally selected INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01 as the next bounded repair from verified terminal main. Stale PR #256 is closed unmerged as historical-only evidence; #254, repairs #207/#208/#209/#210, clean-room/context-pruning and remaining bookkeeping stay explicitly WAITING.",
-    "This selected repair adds validation-only trusted cross-ledger integrity and no-silent-drop enforcement. It grants no product construction, semantic scope, public-deployment, merge, human-acceptance or artist-value authority."
+    "PR #267 merged trusted cross-ledger integrity and no-silent-drop enforcement as d0aecd36caaa2455addba75a86bb1e78bf5b24ca from reviewed exact head c06468420d9dbac3b5fe361674a0dd95321cffcf. Exact-head Governance run 34025295028 and resulting-main Steward Structure run 34025972749 plus Linux/Windows/macOS Governance run 34025972755 all passed; the integrated Structure run executed current-main cross-ledger validation successfully.",
+    "Duplicate-equivalent PR #268 was closed unmerged after the late live-main race check rather than being retargeted onto moved main; its proof remains historical only and does not create a second authority.",
+    "The bounded trusted-integrity child repair is complete, but parent incident #206 remains OPEN. PR #254, repairs #207/#208/#209/#210, clean-room/context-pruning and remaining control-plane/bookkeeping obligations remain explicit WAITING residue. This closure authorizes none of them and never marks N0TE complete."
   ]
 }
