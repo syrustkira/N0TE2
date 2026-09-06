@@ -15,6 +15,7 @@ from .host_observation import HostObservationCoordinator
 from .learning import LearningMemory
 from .lineage import LineageStore
 from .material import SongMaterialMemory
+from .obligations import ObligationMemory
 from .operations import OperationJournal
 from .people import PeopleMemory
 from .provenance import ProvenanceLedger
@@ -42,6 +43,7 @@ class HeadquartersMemory:
         self.activity = ActivityLog(store)
         self.attention = AttentionMemory(store)
         self.people = PeopleMemory(store)
+        self.obligations = ObligationMemory(store, self.people, self.evidence)
         self.workspaces = WorkspaceMemory(store)
         self.capability_evidence = CapabilityEvidenceMemory(store, self.workspaces)
         self.shadow = HostShadow(store, self.workspaces)

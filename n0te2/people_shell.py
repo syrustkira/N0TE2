@@ -1,23 +1,48 @@
 from __future__ import annotations
 
 import html
+import uuid
+from datetime import date
 from http.server import BaseHTTPRequestHandler
 from typing import Callable, Mapping
 
 from . import consumer_shell as consumer_shell_module
 from .consumer_shell import ConsumerShell, ConsumerShellError, _PageState
 from .lineage import NotFoundError, ValidationError
+from .obligations import OBLIGATION_KINDS, OBLIGATION_STATUSES, ObligationSnapshot
 from .people import FOLLOWUP_RESPONSIBILITIES, FollowUp, Person
 
 _MAX_PERSON_NAME = 160
 _MAX_RELATIONSHIP_CONTEXT = 800
 _MAX_FOLLOWUP_SUMMARY = 600
 _MAX_RESOLUTION_NOTE = 1000
+_MAX_OBLIGATION_SUMMARY = 1200
+_MAX_OBLIGATION_SOURCE_NOTE = 1200
+_MAX_OBLIGATION_TRIGGER = 800
+_MAX_OBLIGATION_CONSEQUENCE = 1200
+_MAX_OBLIGATION_JUDGMENT_NOTE = 1200
 
 _RESPONSIBILITY_LABELS = {
     "ARTIST_OWES": "I owe this",
     "WAITING_ON_OTHER": "Waiting on them",
     "MUTUAL": "We both have a next step",
+}
+
+_OBLIGATION_KIND_LABELS = {
+    "DELIVERABLE": "Deliverable",
+    "DEADLINE": "Deadline",
+    "LICENSE": "License",
+    "PAYMENT": "Payment",
+    "OTHER": "Other obligation",
+}
+
+_OBLIGATION_STATUS_LABELS = {
+    "OPEN": "Open",
+    "BLOCKED": "Blocked",
+    "DISPUTED": "Disputed",
+    "SATISFIED": "Satisfied",
+    "WAIVED": "Waived",
+    "CANCELED": "Canceled",
 }
 
 
@@ -55,6 +80,63 @@ def _close_action(shell: ConsumerShell, followup: FollowUp, kind: str) -> str:
     return shell._new_action(kind, followup.id)
 
 
+def _obligation_create_action(shell: ConsumerShell, person: Person) -> str:
+    song = shell.runtime.headquarters.store.active_song()
+    song_marker = "~" if song is None else song.id
+    return shell._new_action("people-obligation-create", f"{person.id}|{song_marker}")
+
+
+def _latest_event_sequence(obligation: ObligationSnapshot) -> int:
+    if not obligation.events:
+        raise ConsumerShellError("Obligation lifecycle evidence is missing")
+    return obligation.events[-1].sequence
+
+
+def _latest_trigger_sequence(obligation: ObligationSnapshot) -> str:
+    if not obligation.trigger_events:
+        return "~"
+    return str(obligation.trigger_events[-1].sequence)
+
+
+def _declared_trigger_key(obligation: ObligationSnapshot) -> str:
+    return f"obligation.trigger.declared.{obligation.id}"
+
+
+def _declared_trigger_claims(shell: ConsumerShell, obligation: ObligationSnapshot):
+    hq = shell.runtime.headquarters
+    scope_kind = "SONG" if obligation.song_id is not None else "ARTIST"
+    scope_id = obligation.song_id if obligation.song_id is not None else hq.store.primary_artist_id
+    claims = hq.evidence.active_claims(scope_kind, scope_id, _declared_trigger_key(obligation))
+    if any(claim.source_kind != "USER_DECLARED" for claim in claims):
+        raise ConsumerShellError("Declared trigger evidence crossed its truth boundary")
+    return claims
+
+
+def _latest_declared_trigger_sequence(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    claims = _declared_trigger_claims(shell, obligation)
+    if not claims:
+        return "~"
+    return str(claims[-1].sequence)
+
+
+def _obligation_transition_action(
+    shell: ConsumerShell,
+    obligation: ObligationSnapshot,
+    target_status: str,
+) -> str:
+    value = f"{obligation.id}|{_latest_event_sequence(obligation)}|{obligation.status}"
+    return shell._new_action(f"people-obligation-{target_status.lower()}", value)
+
+
+def _obligation_trigger_action(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    value = (
+        f"{obligation.id}|{_latest_event_sequence(obligation)}|"
+        f"{obligation.status}|{_latest_trigger_sequence(obligation)}|"
+        f"{_latest_declared_trigger_sequence(shell, obligation)}"
+    )
+    return shell._new_action("people-obligation-trigger", value)
+
+
 def _person_form(shell: ConsumerShell) -> str:
     return (
         '<div class="card"><h2>Add someone you work with</h2>'
@@ -73,6 +155,13 @@ def _responsibility_options() -> str:
     return "".join(
         f'<option value="{html.escape(value, quote=True)}">{html.escape(_RESPONSIBILITY_LABELS[value])}</option>'
         for value in ("ARTIST_OWES", "WAITING_ON_OTHER", "MUTUAL")
+    )
+
+
+def _obligation_kind_options() -> str:
+    return "".join(
+        f'<option value="{html.escape(value, quote=True)}">{html.escape(_OBLIGATION_KIND_LABELS[value])}</option>'
+        for value in OBLIGATION_KINDS
     )
 
 
@@ -99,6 +188,34 @@ def _followup_form(shell: ConsumerShell, person: Person) -> str:
     )
 
 
+def _obligation_form(shell: ConsumerShell, person: Person) -> str:
+    song = shell.runtime.headquarters.store.active_song()
+    song_binding = ""
+    if song is not None:
+        song_binding = (
+            '<label><input type="checkbox" name="bind_song" value="1"> '
+            f'Bind this obligation to current Song: <strong>{html.escape(song.title)}</strong></label>'
+        )
+    return (
+        '<form class="stack" method="post" action="/people/obligation/create" '
+        f'aria-label="Add obligation for {html.escape(person.display_name, quote=True)}">'
+        f'{shell._hidden(_obligation_create_action(shell, person))}'
+        f'<div><label>Obligation<textarea name="summary" maxlength="{_MAX_OBLIGATION_SUMMARY}" rows="3" required></textarea></label></div>'
+        '<div><label>Kind<select name="kind" required>'
+        f'{_obligation_kind_options()}</select></label></div>'
+        '<div><label>Who is responsible?<select name="responsibility" required>'
+        f'{_responsibility_options()}</select></label></div>'
+        '<div><label>Due date <span class="muted">optional</span><input name="due_on" type="date"></label></div>'
+        f'<div><label>Trigger <span class="muted">optional</span><input name="trigger_ref" type="text" maxlength="{_MAX_OBLIGATION_TRIGGER}" placeholder="When the final vocal is approved"></label></div>'
+        f'<div><label>Consequence or dependency <span class="muted">optional</span><textarea name="consequence_note" maxlength="{_MAX_OBLIGATION_CONSEQUENCE}" rows="2"></textarea></label></div>'
+        f'<div><label>What makes this true?<textarea name="source_note" maxlength="{_MAX_OBLIGATION_SOURCE_NOTE}" rows="2" placeholder="I promised this in our conversation..." required></textarea></label></div>'
+        f'{song_binding}'
+        '<button type="submit">Remember obligation</button>'
+        '<p class="muted">This records your statement as USER_DECLARED evidence. It does not send, schedule, pay, license, verify a provider, or perform any external action.</p>'
+        '</form>'
+    )
+
+
 def _followup_status(followup: FollowUp) -> str:
     responsibility = _RESPONSIBILITY_LABELS[followup.responsibility]
     due = "No due date" if followup.due_on is None else f"Due {followup.due_on}"
@@ -111,6 +228,15 @@ def _followup_song(shell: ConsumerShell, followup: FollowUp) -> str:
     song = shell.runtime.headquarters.store.get_song(followup.song_id)
     if song is None:
         raise ConsumerShellError("A follow-up references Song state that is no longer readable")
+    return f"Song: {song.title}"
+
+
+def _obligation_song(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    if obligation.song_id is None:
+        return "Artist-wide"
+    song = shell.runtime.headquarters.store.get_song(obligation.song_id)
+    if song is None:
+        raise ConsumerShellError("An obligation references Song state that is no longer readable")
     return f"Song: {song.title}"
 
 
@@ -137,8 +263,151 @@ def _followup_markup(shell: ConsumerShell, followup: FollowUp) -> str:
     )
 
 
+def _evidence_source_text(source_kind: str, source_ref: str | None) -> str:
+    if source_ref is None:
+        return f"{source_kind} · local declaration; no external source reference"
+    return f"{source_kind} · source reference: {source_ref}"
+
+
+def _source_note(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    claim = shell.runtime.headquarters.evidence.get_claim(obligation.source_claim_id)
+    if claim is None:
+        raise ConsumerShellError("An obligation references source evidence that is no longer readable")
+    if isinstance(claim.value, dict):
+        note = claim.value.get("source_note")
+        if isinstance(note, str) and note.strip():
+            return note.strip()
+    return "No human-readable source note was preserved in this declaration."
+
+
+def _evidence_history_markup(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    rows: list[str] = []
+    for event in obligation.events:
+        note = "Initial obligation declaration" if event.note is None else event.note
+        source = _evidence_source_text(event.source_kind, event.source_ref)
+        rows.append(
+            '<li>'
+            f'<strong>Lifecycle: {html.escape(event.status)}</strong> · '
+            f'{html.escape(source)}<br><span class="muted">{html.escape(note)}</span>'
+            '</li>'
+        )
+    for trigger in obligation.trigger_events:
+        source = _evidence_source_text(trigger.source_kind, trigger.source_ref)
+        rows.append(
+            '<li>'
+            f'<strong>Canonical trigger event</strong> · {html.escape(source)}<br>'
+            f'<span class="muted">{html.escape(trigger.note)}</span>'
+            '</li>'
+        )
+    for claim in _declared_trigger_claims(shell, obligation):
+        if not isinstance(claim.value, dict):
+            raise ConsumerShellError("Declared trigger evidence lost its human-readable note")
+        note = claim.value.get("note")
+        if not isinstance(note, str) or not note.strip():
+            raise ConsumerShellError("Declared trigger evidence lost its human-readable note")
+        source = _evidence_source_text(claim.source_kind, claim.source_ref)
+        rows.append(
+            '<li>'
+            f'<strong>Declared trigger evidence</strong> · {html.escape(source)}<br>'
+            f'<span class="muted">{html.escape(note.strip())}</span>'
+            '</li>'
+        )
+    return '<ol class="stack">' + "".join(rows) + "</ol>"
+
+
+def _allowed_transition_statuses(obligation: ObligationSnapshot) -> tuple[str, ...]:
+    if obligation.terminal:
+        return ()
+    if obligation.status == "OPEN":
+        return ("BLOCKED", "DISPUTED", "SATISFIED", "WAIVED", "CANCELED")
+    if obligation.status == "BLOCKED":
+        return ("OPEN", "DISPUTED", "SATISFIED", "WAIVED", "CANCELED")
+    if obligation.status == "DISPUTED":
+        return ("OPEN", "BLOCKED", "SATISFIED", "WAIVED", "CANCELED")
+    return tuple(status for status in OBLIGATION_STATUSES if status != obligation.status)
+
+
+def _transition_forms(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    forms: list[str] = []
+    for target in _allowed_transition_statuses(obligation):
+        action = _obligation_transition_action(shell, obligation, target)
+        forms.append(
+            '<form class="stack" method="post" action="/people/obligation/transition">'
+            f'{shell._hidden(action)}'
+            f'<input type="hidden" name="status" value="{html.escape(target, quote=True)}">'
+            f'<div><label>Why {_OBLIGATION_STATUS_LABELS[target].lower()}?<input name="judgment_note" type="text" maxlength="{_MAX_OBLIGATION_JUDGMENT_NOTE}" required></label></div>'
+            f'<button type="submit">Mark {_OBLIGATION_STATUS_LABELS[target].lower()}</button>'
+            '</form>'
+        )
+    if not forms:
+        return '<p class="muted">Terminal lifecycle state. Historical evidence remains readable.</p>'
+    return "".join(forms)
+
+
+def _trigger_form(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    if obligation.trigger_ref is None or obligation.terminal or obligation.trigger_events:
+        return ""
+    return (
+        '<details><summary>Record trigger evidence</summary>'
+        '<form class="stack" method="post" action="/people/obligation/trigger">'
+        f'{shell._hidden(_obligation_trigger_action(shell, obligation))}'
+        f'<div><label>What are you declaring about this trigger?<textarea name="trigger_note" maxlength="{_MAX_OBLIGATION_JUDGMENT_NOTE}" rows="2" required></textarea></label></div>'
+        '<button type="submit">Record declared trigger evidence</button>'
+        '<p class="muted">This records USER_DECLARED evidence only. It does not satisfy the trigger or silently become observed, measured, or provider-verified truth.</p>'
+        '</form></details>'
+    )
+
+
+def _obligation_markup(shell: ConsumerShell, obligation: ObligationSnapshot) -> str:
+    as_of = date.today().isoformat()
+    timing = obligation.due_state(as_of=as_of)
+    attention = obligation.attention_state(as_of=as_of)
+    due = "No due date" if obligation.due_on is None else f"Due {obligation.due_on}"
+    declared_triggers = _declared_trigger_claims(shell, obligation)
+    if obligation.trigger_ref is None:
+        trigger = "No trigger"
+    elif obligation.trigger_events:
+        trigger = f"Canonical trigger evidence recorded: {obligation.trigger_ref}"
+    elif declared_triggers:
+        trigger = (
+            f"Declared trigger evidence recorded: {obligation.trigger_ref} · "
+            "trigger remains pending until legitimate observed, measured, or provider-verified evidence is recorded"
+        )
+    else:
+        trigger = f"Waiting for trigger: {obligation.trigger_ref}"
+    consequence = (
+        "No consequence or dependency recorded"
+        if obligation.consequence_note is None
+        else f"Consequence/dependency: {obligation.consequence_note}"
+    )
+    source = _evidence_source_text(obligation.source_kind, obligation.source_ref)
+    source_note = _source_note(shell, obligation)
+    return (
+        '<li class="stack">'
+        f'<p><strong>{html.escape(obligation.summary)}</strong></p>'
+        f'<p class="status caution">Status: {html.escape(obligation.status)} · Attention: {html.escape(attention)}</p>'
+        f'<p>{html.escape(_OBLIGATION_KIND_LABELS[obligation.kind])} · {html.escape(_RESPONSIBILITY_LABELS[obligation.responsibility])}</p>'
+        f'<p class="muted">Person: {html.escape(obligation.person_display_name)} · {html.escape(_obligation_song(shell, obligation))}</p>'
+        f'<p>Timing: <strong>{html.escape(timing)}</strong> · {html.escape(due)}</p>'
+        f'<p>{html.escape(trigger)}</p>'
+        f'<p>{html.escape(consequence)}</p>'
+        f'<p><strong>Source note:</strong> {html.escape(source_note)}</p>'
+        f'<p class="muted">Provenance: {html.escape(source)} · source current: {str(obligation.source_current).lower()}</p>'
+        '<details><summary>Evidence history</summary>'
+        f'{_evidence_history_markup(shell, obligation)}'
+        '</details>'
+        f'{_trigger_form(shell, obligation)}'
+        '<details><summary>Record lifecycle judgment</summary>'
+        f'{_transition_forms(shell, obligation)}'
+        '<p class="muted">Lifecycle judgments are local USER_DECLARED evidence. They do not send, pay, license, schedule, publish, or perform anything externally.</p>'
+        '</details>'
+        '</li>'
+    )
+
+
 def _person_markup(shell: ConsumerShell, person: Person) -> str:
     followups = shell.runtime.headquarters.people.open_followups(person_id=person.id)
+    obligations = shell.runtime.headquarters.obligations.for_person(person.id)
     context = (
         ""
         if person.relationship_context is None
@@ -151,12 +420,24 @@ def _person_markup(shell: ConsumerShell, person: Person) -> str:
         )
     else:
         open_html = '<p class="status good">No open follow-ups</p>'
+    if obligations:
+        obligation_rows = "".join(
+            _obligation_markup(shell, item) for item in reversed(obligations)
+        )
+        obligation_html = (
+            f'<h3>Obligations</h3><ol class="stack" aria-label="Obligations for {html.escape(person.display_name, quote=True)}">{obligation_rows}</ol>'
+        )
+    else:
+        obligation_html = '<p class="muted">No obligations recorded for this person.</p>'
     return (
         '<div class="card stack">'
         f'<h2>{html.escape(person.display_name)}</h2>'
-        f'{context}{open_html}'
+        f'{context}{open_html}{obligation_html}'
         '<details><summary>Add a follow-up</summary>'
         f'{_followup_form(shell, person)}'
+        '</details>'
+        '<details><summary>Add an obligation</summary>'
+        f'{_obligation_form(shell, person)}'
         '</details></div>'
     )
 
@@ -289,8 +570,261 @@ def _post_close_followup(
     shell._redirect(handler, "/people")
 
 
+def _record_declared_evidence(
+    shell: ConsumerShell,
+    *,
+    song_id: str | None,
+    key: str,
+    value: object,
+):
+    hq = shell.runtime.headquarters
+    return hq.evidence.record_claim(
+        scope_kind="SONG" if song_id is not None else "ARTIST",
+        scope_id=song_id if song_id is not None else hq.store.primary_artist_id,
+        key=key,
+        value=value,
+        source_kind="USER_DECLARED",
+        source_ref=None,
+        confidence=1.0,
+        twin_domain="UNSPECIFIED",
+    )
+
+
+def _post_create_obligation(
+    shell: ConsumerShell,
+    handler: BaseHTTPRequestHandler,
+    form: Mapping[str, str],
+) -> None:
+    action = shell._consume_action(form.get("action", ""), "people-obligation-create")
+    if action is None or action.value is None:
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error("That obligation action was already handled or expired."),
+        )
+        return
+    person_id, rendered_song_id = _parse_followup_binding(action.value)
+    person = shell.runtime.headquarters.people.get_person(person_id)
+    if person is None:
+        raise ConsumerShellError("That person is no longer available")
+    bind_song = form.get("bind_song")
+    if bind_song not in {None, "1"}:
+        raise ConsumerShellError("That Song binding choice is invalid")
+    song_id: str | None = None
+    if bind_song == "1":
+        active = shell.runtime.headquarters.store.active_song()
+        if active is None or rendered_song_id is None or active.id != rendered_song_id:
+            raise ConsumerShellError(
+                "The active Song changed. Reload People before binding this obligation to a Song."
+            )
+        song_id = active.id
+    kind = str(form.get("kind", "")).strip().upper()
+    if kind not in OBLIGATION_KINDS:
+        raise ConsumerShellError("Choose a supported obligation kind")
+    responsibility = str(form.get("responsibility", "")).strip().upper()
+    if responsibility not in FOLLOWUP_RESPONSIBILITIES:
+        raise ConsumerShellError("Choose who is responsible for this obligation")
+    summary = _clean_human_text(
+        form.get("summary", ""), "Obligation", maximum=_MAX_OBLIGATION_SUMMARY
+    )
+    due_on = _optional_human_text(form.get("due_on"), "Due date", maximum=10)
+    trigger_ref = _optional_human_text(
+        form.get("trigger_ref"), "Trigger", maximum=_MAX_OBLIGATION_TRIGGER
+    )
+    consequence_note = _optional_human_text(
+        form.get("consequence_note"),
+        "Consequence or dependency",
+        maximum=_MAX_OBLIGATION_CONSEQUENCE,
+    )
+    source_note = _clean_human_text(
+        form.get("source_note", ""),
+        "Source note",
+        maximum=_MAX_OBLIGATION_SOURCE_NOTE,
+    )
+    claim = _record_declared_evidence(
+        shell,
+        song_id=song_id,
+        key=f"obligation.declaration.{uuid.uuid4().hex}",
+        value={
+            "statement": summary,
+            "source_note": source_note,
+            "person_id": person.id,
+            "kind": kind,
+            "responsibility": responsibility,
+            "due_on": due_on,
+            "trigger_ref": trigger_ref,
+            "consequence_note": consequence_note,
+        },
+    )
+    shell.runtime.headquarters.obligations.create_obligation(
+        person.id,
+        kind=kind,
+        responsibility=responsibility,
+        summary=summary,
+        source_claim_id=claim.id,
+        song_id=song_id,
+        due_on=due_on,
+        trigger_ref=trigger_ref,
+        consequence_note=consequence_note,
+    )
+    shell._consumer_notice = (
+        "Obligation remembered from explicit USER_DECLARED evidence. "
+        "N0TE did not verify a provider or perform an external action."
+    )
+    shell._redirect(handler, "/people")
+
+
+def _parse_lifecycle_binding(value: str) -> tuple[str, int, str]:
+    parts = value.split("|")
+    if len(parts) != 3 or not all(parts):
+        raise ConsumerShellError("That obligation lifecycle action is no longer valid")
+    try:
+        sequence = int(parts[1])
+    except ValueError as exc:
+        raise ConsumerShellError("That obligation lifecycle action is no longer valid") from exc
+    return parts[0], sequence, parts[2]
+
+
+def _post_transition_obligation(
+    shell: ConsumerShell,
+    handler: BaseHTTPRequestHandler,
+    form: Mapping[str, str],
+) -> None:
+    status = str(form.get("status", "")).strip().upper()
+    if status not in OBLIGATION_STATUSES:
+        raise ConsumerShellError("Choose a supported obligation lifecycle judgment")
+    action = shell._consume_action(
+        form.get("action", ""), f"people-obligation-{status.lower()}"
+    )
+    if action is None or action.value is None:
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error("That obligation lifecycle action was already handled or expired."),
+        )
+        return
+    obligation_id, rendered_event_sequence, rendered_status = _parse_lifecycle_binding(
+        action.value
+    )
+    current = shell.runtime.headquarters.obligations.get(obligation_id)
+    if (
+        _latest_event_sequence(current) != rendered_event_sequence
+        or current.status != rendered_status
+    ):
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error(
+                "That obligation changed since this page was rendered. Reload People before recording another judgment."
+            ),
+        )
+        return
+    if status not in _allowed_transition_statuses(current):
+        raise ConsumerShellError("That lifecycle transition is no longer available")
+    note = _clean_human_text(
+        form.get("judgment_note", ""),
+        "Lifecycle judgment note",
+        maximum=_MAX_OBLIGATION_JUDGMENT_NOTE,
+    )
+    claim = _record_declared_evidence(
+        shell,
+        song_id=current.song_id,
+        key=f"obligation.lifecycle.{current.id}.{uuid.uuid4().hex}",
+        value={
+            "obligation": current.summary,
+            "from_status": current.status,
+            "status": status,
+            "note": note,
+        },
+    )
+    shell.runtime.headquarters.obligations.transition(
+        current.id,
+        status=status,
+        evidence_claim_id=claim.id,
+        note=note,
+    )
+    shell._consumer_notice = (
+        f"Obligation marked {_OBLIGATION_STATUS_LABELS[status].lower()} from USER_DECLARED evidence. "
+        "No external action was performed."
+    )
+    shell._redirect(handler, "/people")
+
+
+def _parse_trigger_binding(value: str) -> tuple[str, int, str, str, str]:
+    parts = value.split("|")
+    if len(parts) != 5 or not all(parts):
+        raise ConsumerShellError("That trigger-evidence action is no longer valid")
+    try:
+        event_sequence = int(parts[1])
+    except ValueError as exc:
+        raise ConsumerShellError("That trigger-evidence action is no longer valid") from exc
+    return parts[0], event_sequence, parts[2], parts[3], parts[4]
+
+
+def _post_record_trigger(
+    shell: ConsumerShell,
+    handler: BaseHTTPRequestHandler,
+    form: Mapping[str, str],
+) -> None:
+    action = shell._consume_action(form.get("action", ""), "people-obligation-trigger")
+    if action is None or action.value is None:
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error("That trigger-evidence action was already handled or expired."),
+        )
+        return
+    (
+        obligation_id,
+        rendered_event_sequence,
+        rendered_status,
+        rendered_trigger_sequence,
+        rendered_declared_trigger_sequence,
+    ) = _parse_trigger_binding(action.value)
+    current = shell.runtime.headquarters.obligations.get(obligation_id)
+    if (
+        _latest_event_sequence(current) != rendered_event_sequence
+        or current.status != rendered_status
+        or _latest_trigger_sequence(current) != rendered_trigger_sequence
+        or _latest_declared_trigger_sequence(shell, current)
+        != rendered_declared_trigger_sequence
+    ):
+        shell._send_html(
+            handler,
+            409,
+            shell._simple_error(
+                "That obligation changed since this page was rendered. Reload People before recording trigger evidence."
+            ),
+        )
+        return
+    if current.trigger_ref is None or current.terminal or current.trigger_events:
+        raise ConsumerShellError("That trigger-evidence action is no longer available")
+    note = _clean_human_text(
+        form.get("trigger_note", ""),
+        "Trigger evidence note",
+        maximum=_MAX_OBLIGATION_JUDGMENT_NOTE,
+    )
+    _record_declared_evidence(
+        shell,
+        song_id=current.song_id,
+        key=_declared_trigger_key(current),
+        value={
+            "obligation_id": current.id,
+            "obligation": current.summary,
+            "trigger_ref": current.trigger_ref,
+            "truth_class": "DECLARED",
+            "note": note,
+        },
+    )
+    shell._consumer_notice = (
+        "Declared trigger evidence recorded. The trigger remains pending until legitimate "
+        "observed, measured, or provider-verified evidence is recorded."
+    )
+    shell._redirect(handler, "/people")
+
+
 def install_people_headquarters() -> None:
-    """Attach the local People/Follow-up Headquarters surface exactly once."""
+    """Attach the local People/Follow-up/Obligation Headquarters surface exactly once."""
     if getattr(ConsumerShell, "_people_headquarters_installed", False):
         return
 
@@ -325,6 +859,9 @@ def install_people_headquarters() -> None:
             "/people/followup/create",
             "/people/followup/resolve",
             "/people/followup/cancel",
+            "/people/obligation/create",
+            "/people/obligation/transition",
+            "/people/obligation/trigger",
         }:
             original_post(self, handler)
             return
@@ -363,7 +900,7 @@ def install_people_headquarters() -> None:
                     action_kind="people-followup-resolve",
                     close_state="RESOLVED",
                 )
-            else:
+            elif path == "/people/followup/cancel":
                 _post_close_followup(
                     self,
                     handler,
@@ -371,6 +908,12 @@ def install_people_headquarters() -> None:
                     action_kind="people-followup-cancel",
                     close_state="CANCELED",
                 )
+            elif path == "/people/obligation/create":
+                _post_create_obligation(self, handler, form)
+            elif path == "/people/obligation/transition":
+                _post_transition_obligation(self, handler, form)
+            else:
+                _post_record_trigger(self, handler, form)
         except (NotFoundError, ValidationError, ConsumerShellError) as exc:
             self._consumer_notice = str(exc)
             self._redirect(handler, "/people")
