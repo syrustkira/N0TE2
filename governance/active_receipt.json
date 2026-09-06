@@ -1,70 +1,83 @@
 {
   "schema_version": 7,
-  "status": "ACTIVE",
-  "receipt_id": "N0TE2-INCIDENT-REPAIR-247-248-GOVERNANCE-01",
-  "node_id": "INCIDENT-REPAIR",
-  "increment_id": "INCIDENT-REPAIR-247-248-GOVERNANCE-01",
-  "baseline_sha": "2283d08f05e4445762333f607e2af4416e375696",
-  "purpose": "Complete the already-merged #247/#248 governance repair lifecycle by making the general blocking-incident gate recognize the exact evidence-bound INCIDENT_REPAIR_CLOSURE mode already enforced by the specialized repair authority checker.",
+  "status": "INACTIVE",
+  "receipt_id": "N0TE2-INCIDENT-REPAIR-247-248-GOVERNANCE-01-CLOSURE",
+  "node_id": null,
+  "increment_id": null,
+  "baseline_sha": "dd783e9e7d4dd2a1fa8f4b69f89523049984fdce",
+  "purpose": "Close the exact bounded #247/#248 governance incident repair after PR #249 integration, PR #259 closure-gate compatibility integration, and post-merge verification of both while preserving parent incident #206 as OPEN for its remaining repair ledger.",
   "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
   "legacy_test_text_copy_allowed": false,
-  "repair_kind": "INCIDENT_REPAIR",
-  "repair_target_kind": "GOVERNANCE",
+  "repair_kind": "INCIDENT_REPAIR_CLOSURE",
   "repair_issue": 247,
-  "incident_repair_ids": ["INC-2026-09-05-STEWARD-INTEGRATION-206"],
+  "closed_incident_repair_ids": ["INC-2026-09-05-STEWARD-INTEGRATION-206"],
+  "closed_repair_receipt_id": "N0TE2-INCIDENT-REPAIR-247-248-GOVERNANCE-01",
   "allowed_exact_paths": [
     "governance/active_receipt.json",
-    "governance/check_steward_integration.py",
-    "tests/governance/test_incident_repair_closure_gate.py"
+    "governance/current_state.json",
+    "governance/incidents.jsonl"
   ],
   "allowed_prefixes": [],
   "forbidden_prefixes": ["n0te2/","app/","src/","legacy/","vendor/","tests/core/","tests/song/","tests/ux/","tests/platform/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The first-class incident-repair lifecycle can reach its own evidence-bound terminal closure without resolving the still-open parent incident or weakening its unrelated-merge block.",
+    "outcome": "The first-class bounded incident-repair lifecycle, lifecycle-owner correction and terminal-closure gate compatibility are integrated and verified, so the governance repair can terminate without resolving the still-open parent incident.",
     "journeys": ["J-TRUST"],
-    "capability": "Bounded incident-repair lifecycle closure gate compatibility",
+    "capability": "Bounded incident-repair lifecycle and lifecycle-owner reconciliation",
     "requirements": [],
     "increment": "INCIDENT-REPAIR-247-248-GOVERNANCE-01"
   },
-  "why_now": "PR #249 merged as 2283d08f05e4445762333f607e2af4416e375696 and passed post-merge trusted structure plus full three-platform governance. Final lifecycle review then exposed one remaining self-blocking seam: check_incident_repair_authority.py accepts an exact three-path INCIDENT_REPAIR_CLOSURE that preserves parent #206 OPEN, while check_steward_integration.py recognizes only ACTIVE incident_repair_ids as explicit repair authority. Without this bounded compatibility fix, the legal terminal closure is unreachable.",
+  "why_now": "PR #249 merged as 2283d08f05e4445762333f607e2af4416e375696 after reviewed exact head 9b8ca57137217ef3e2e33a99dcf977ffead1d83a passed Steward Structure and three-platform pull-request proof, then post-merge Steward Structure run 34002882027 and Governance run 34002882020 passed. PR #259 then repaired the remaining terminal-closure gate incompatibility and merged as dd783e9e7d4dd2a1fa8f4b69f89523049984fdce; resulting main passed post-merge Steward Structure run 34004035524 and three-platform Governance run 34004035531. The bounded repair can now truthfully terminate while #206 remains OPEN.",
   "implementation_contract": {
-    "exclusive_mode": "This is continuation work on the exact existing ACTIVE repair identity; it does not select a new incident repair or product increment.",
-    "closure_authority": "The general blocking-incident gate may recognize closed_incident_repair_ids only when repair_kind is exactly INCIDENT_REPAIR_CLOSURE. It must not treat inert historical closed IDs under any other receipt kind as authority.",
-    "specialized_validation": "Recognition by the general gate is not sufficient to authorize closure. The trusted workflow must still run check_incident_repair_authority.py, which requires terminal lifecycle, exact prior ACTIVE receipt binding, exact three-path closure manifest, evidence-bound incident completion, and no active incident_repair_ids.",
-    "parent_incident": "Parent incident #206 remains OPEN with blocking_scope BLOCKING_EXCEPT_EXPLICIT_INCIDENT_REPAIR and unrelated_merges_blocked=true. This repair must not reclassify it as non-blocking or resolved.",
-    "noninterference": "Normal ACTIVE incident repair authority remains unchanged; unrelated closure IDs and closed IDs outside INCIDENT_REPAIR_CLOSURE grant no authority."
+    "closure_scope": "This closure changes exactly current_state.json, active_receipt.json and incidents.jsonl relative to exact base dd783e9e7d4dd2a1fa8f4b69f89523049984fdce.",
+    "parent_incident": "closed_incident_repair_ids records the governing incident authority consumed by this bounded repair. It does not assert that #206 is resolved.",
+    "incident_truth": "The appended #206 event must remain OPEN_REPAIR_COMPLETED, preserve the repair_contract and remaining obligations, and bind exactly to the ACTIVE repair receipt plus this closure receipt.",
+    "authority": "Terminal closure grants no product, legacy, merge, publication, provider, external-action or adjacent construction authority."
   },
   "completion_proof": [
-    "ACTIVE incident_repair_ids remain recognized as explicit repair authority",
-    "INCIDENT_REPAIR_CLOSURE with the exact incident in closed_incident_repair_ids is recognized by the general blocking-incident gate",
-    "an unrelated closed incident id grants no authority",
-    "closed_incident_repair_ids outside INCIDENT_REPAIR_CLOSURE grant no authority",
-    "specialized incident-repair closure validation remains unchanged and still owns exact terminal proof",
-    "parent #206 remains OPEN and blocking for unrelated merges",
-    "candidate diff is exactly the active receipt, trusted Steward checker and focused governance regression",
-    "full exact-head Linux, Windows and macOS governance plus substantive review pass before integration"
+    "PR #249 merged from terminally reviewed exact head 9b8ca57137217ef3e2e33a99dcf977ffead1d83a",
+    "PR #249 pull-request Steward Structure run 34002298969 passed",
+    "PR #249 pull-request Governance run 34002299554 passed Linux, Windows and macOS with regression and consumer smoke",
+    "PR #249 post-merge Steward Structure run 34002882027 passed on main 2283d08f05e4445762333f607e2af4416e375696",
+    "PR #249 post-merge Governance run 34002882020 passed Linux, Windows and macOS with regression, consumer smoke and evidence",
+    "PR #259 exact head 94cb3985789e59f5a6ab9d4c1320da40d510bb75 received terminal substantive review with no blocker",
+    "PR #259 merged as dd783e9e7d4dd2a1fa8f4b69f89523049984fdce",
+    "PR #259 post-merge Steward Structure run 34004035524 passed",
+    "PR #259 post-merge Governance run 34004035531 passed Linux, Windows and macOS through regression, consumer smoke and evidence",
+    "this closure keeps #206 OPEN and preserves every remaining obligation",
+    "this closure candidate must itself receive exact-head structural/governance proof, terminal substantive review, late-main race check, guarded merge and post-merge verification"
   ],
-  "historical_proof": [],
-  "evidence_classification": "EXTERNAL_EXACT_HEAD_PROOF_REQUIRED",
-  "evidence_snapshot": null,
+  "historical_proof": [
+    {"head":"9b8ca57137217ef3e2e33a99dcf977ffead1d83a","steward_structure_run_id":34002298969,"governance_run_id":34002299554,"result":"SUCCESS","platforms":["Linux","Windows","macOS"],"classification":"PR249_EXACT_HEAD_VERIFIED"},
+    {"head":"2283d08f05e4445762333f607e2af4416e375696","steward_structure_run_id":34002882027,"governance_run_id":34002882020,"result":"SUCCESS","platforms":["Linux","Windows","macOS"],"classification":"PR249_POST_MERGE_VERIFIED"},
+    {"head":"dd783e9e7d4dd2a1fa8f4b69f89523049984fdce","steward_structure_run_id":34004035524,"governance_run_id":34004035531,"result":"SUCCESS","platforms":["Linux","Windows","macOS"],"classification":"PR259_POST_MERGE_VERIFIED"}
+  ],
+  "evidence_classification": "PR249_AND_PR259_POST_MERGE_VERIFIED_CLOSURE_EXACT_HEAD_PENDING",
+  "evidence_snapshot": {
+    "implementation_pr": 249,
+    "implementation_merge_sha": "2283d08f05e4445762333f607e2af4416e375696",
+    "implementation_reviewed_head": "9b8ca57137217ef3e2e33a99dcf977ffead1d83a",
+    "continuation_fix_pr": 259,
+    "continuation_fix_reviewed_head": "94cb3985789e59f5a6ab9d4c1320da40d510bb75",
+    "continuation_fix_merge_sha": "dd783e9e7d4dd2a1fa8f4b69f89523049984fdce",
+    "post_merge_steward_structure_run_id": 34004035524,
+    "post_merge_governance_run_id": 34004035531,
+    "post_merge_result": "SUCCESS",
+    "post_merge_platforms": ["Linux","Windows","macOS"]
+  },
   "non_scope": [
-    "closing the #247/#248 active repair receipt in this same candidate",
-    "resolving parent incident #206",
-    "selecting the cross-ledger successor repair",
-    "product construction",
-    "public deployment",
-    "branch protection administration"
+    "closing parent incident #206",
+    "any N0TE product feature or merged-product repair",
+    "Cross-Ledger Integrity successor repair",
+    "Creative Partner repair #210",
+    "Capability Negotiation repair #208",
+    "Opportunity Matching repair #209",
+    "Template Catalog repair #207",
+    "branch protection configuration"
   ],
   "dependencies": [],
-  "shared_integration_points": [
-    "governance/check_steward_integration.py",
-    "governance/check_incident_repair_authority.py",
-    "governance/active_receipt.json",
-    "governance/incidents.jsonl",
-    "governance/current_state.json"
-  ],
-  "next_selection_rule": "After this exact continuation repair is merged and post-merge verified, create the three-path INCIDENT_REPAIR_CLOSURE for N0TE2-INCIDENT-REPAIR-247-248-GOVERNANCE-01, preserve parent #206 OPEN with remaining obligations and evidence-bound repair completion, verify that closure, then select the next bounded #206 repair."
+  "shared_integration_points": ["governance/current_state.json","governance/active_receipt.json","governance/incidents.jsonl"],
+  "next_selection_rule": "After this exact closure is merged and post-merge verified, refresh the remaining #206 ledger and globally select exactly one bounded repair. Preserve the cross-ledger integrity successor and #207/#208/#209/#210 plus control-plane/context-pruning obligations as explicit candidates or WAITING residue until selected or dispositioned."
 }
