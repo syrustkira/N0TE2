@@ -2,12 +2,12 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "PR #249 integrated the first-class #247/#248 incident-repair lifecycle, PR #259 integrated legal terminal-closure gate compatibility, and PR #264 made incident-repair regression fixtures independent of live repository lifecycle. All resulting main heads required for this child repair are post-merge verified. This exact closure returns the bounded repair to terminal state without resolving parent incident #206.",
-  "wake_condition": "Select exactly one bounded repair from the still-open #206 repair ledger against fresh verified main; unrelated Builder work remains blocked while #206 is active.",
-  "next_admissible_action": "After this closure is exact-head verified, reviewed, merged and post-merge verified, refresh the remaining #206 repair ledger and globally compare the live Cross-Ledger Integrity Auditor, Trusted Steward integrity gate, Template Catalog, Capability Negotiation, Opportunity Matching, Creative Partner, clean-room/context-pruning and control-plane obligations. Activate exactly one bounded repair; preserve every unselected obligation as WAITING rather than dropping it.",
+  "lifecycle_state": "ACTIVE",
+  "active_node": "INCIDENT-REPAIR",
+  "active_increment": "INCIDENT-REPAIR-206-CROSS-LEDGER-INTEGRITY-02",
+  "terminal_reason": null,
+  "wake_condition": "Main Steward explicitly selected this bounded trusted-integrity repair after #266 MERGED_VERIFIED. It remains ACTIVE only against exact verified baseline 6a0a453da9620247d3931aa5e81de82cd4786a46; any main movement requires explicit proof-inheritance classification or reconstruction.",
+  "next_admissible_action": "Qualify only INCIDENT-REPAIR-206-CROSS-LEDGER-INTEGRITY-02: preserve current Steward/closure machinery, reuse the reviewed #256 integrity checker/contract/test semantics, require steward-meta-governance-reopen, obtain trusted structure, Linux/Windows/macOS Governance, terminal substantive review and a late exact-main race check, then hand the exact candidate to the sole Main Steward. Do not select product construction or merge by adjacency.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -32,6 +32,9 @@
     "PR #259 merged bounded terminal-closure gate compatibility as dd783e9e7d4dd2a1fa8f4b69f89523049984fdce and resulting main passed post-merge Steward Structure run 34004035524 and three-platform Governance run 34004035531.",
     "Closure attempts #260/#261/#262 proved the legal closure path but exposed state-coupled governance test fixtures rather than a production closure defect.",
     "PR #264 merged lifecycle-independent incident-repair regression fixtures as c9a78c87765aa912126dc7d75dbe0e5053700fb8 from reviewed exact head 1000e19bb19ea3a7c9cd2b8c61377d772344dd66; resulting main passed post-merge Steward Structure run 34007932842 and Linux/Windows/macOS Governance run 34007933112.",
-    "The bounded #247/#248 governance repair is complete, but parent incident #206 remains OPEN with merged-product, bookkeeping, ledger, cross-ledger integrity, trusted-integrity and context-pruning obligations. Closing this child repair never authorizes unrelated integration or marks N0TE complete."
+    "PR #266 closed the bounded #247/#248 child repair as 6a0a453da9620247d3931aa5e81de82cd4786a46 after exact-head and post-merge proof. Parent incident #206 remains OPEN with unrelated integration blocked and all remaining obligations preserved.",
+    "Main Steward global reselection after #266 selected the trusted/base-owned Steward cross-ledger integrity gate, successor to stale closed-unmerged PR #256, as the next bounded #206 repair. Historical #256 proof remains support only and does not authorize this reconstructed head.",
+    "This ACTIVE repair adds validation-only no-silent-drop, supersession/equivalence, receipt/current-state, incident-reference, acceptance-class and continuity integrity enforcement. It grants no product construction, semantic scope, public-deployment, merge, human-acceptance or artist-value authority.",
+    "PR #254 remains explicit WAITING residue as the distinct read-mostly Cross-Ledger Integrity Auditor / defect router; it is not silently collapsed into this trusted integration gate."
   ]
 }
