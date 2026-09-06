@@ -1,0 +1,152 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "DAW-00-INSTALLATIONS-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-92",
+      "candidate_id": "DAW-00-INSTALLATIONS-01",
+      "requirement_ids": ["REQ-SCOPE-012"],
+      "pub_ids": [],
+      "product_outcome": "Truthful read-only peer-DAW installation evidence from bounded standard local roots, with non-detection remaining UNKNOWN, filesystem paths kept private and installation evidence strictly separated from runtime identity, support, capability, health or execution authority.",
+      "artist_job": "See truthful local evidence that peer DAWs are installed without N0TE exposing paths, launching software or pretending installation proves integration support or runtime capability.",
+      "semantic_owner": "REQ-SCOPE-012"
+    },
+    "bounded_increment": {
+      "increment_id": "DAW-00-INSTALLATIONS-01",
+      "description": "Preserve the installation-evidence foundation while explicitly retaining the missing normal Settings customer-reachability closure as a separate successor obligation.",
+      "cohesive": false,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": true,
+      "independent_disposition_possible": true,
+      "external_dependency_partial": true,
+      "review_opaque": true
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-012",
+      "required_behavior": "Discover only positive peer-DAW installation evidence from bounded absolute standard local locations, hide paths, fail closed on unsafe roots and expose the result read-only without converting absence or installation into unsupported runtime claims.",
+      "non_negotiable_semantics": [
+        "scan only bounded absolute standard local installation locations",
+        "positive peer-DAW installation evidence may be reported without exposing filesystem paths",
+        "non-detection remains UNKNOWN rather than MISSING, UNSUPPORTED or proof of absence",
+        "symlink/root-escape and relative-root evidence fail closed",
+        "installation evidence never becomes runtime identity, adapter support, capability, health, preference, process liveness or execution authority",
+        "the installation inventory never launches a DAW or writes product state",
+        "the Settings adapter remains idempotent and read-only with ephemeral rescans",
+        "focused test attachment is not equivalent to normal customer reachability"
+      ],
+      "allowed_implementation_freedom": ["platform-specific bounded standard-root tables", "internal scan helper decomposition", "read-only Settings presentation details"],
+      "interpretations_required": ["re-evaluate the current shared composition/installer root rather than replaying historical ownership assumptions from #93"],
+      "remaining_semantics": ["DAW-00-INSTALLATIONS-FOUNDATION reconstruction", "DAW-00-INSTALLATIONS-CONSUMER-CLOSURE for normal Settings reachability"]
+    },
+    "behavior": {
+      "requested_behavior": "Expose truthful local peer-DAW installation evidence through Settings without execution or support overclaims.",
+      "implemented_behavior": "Historical candidate scanned bounded standard roots, hid paths, rejected unsafe root evidence and provided a read-only Settings adapter; focused tests attached that adapter explicitly rather than proving normal composition-root reachability.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "Normal Settings reachability is not complete in the historical branch. Focused tests explicitly attach the adapter and therefore do not prove the ordinary customer composition path.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["peer-DAW installation inventory", "read-only Settings adapter"],
+      "contracts": ["positive evidence only", "path privacy", "installation is not runtime support/capability"],
+      "persistence": [],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["local installation roots are platform-specific and require fresh cross-platform proof"]
+    },
+    "dependencies": {
+      "upstream": ["repaired stable main after integration incident #206", "current shared composition/installer ownership"],
+      "downstream_consumers": ["normal Settings customer reachability", "future DAW capability/runtime identity systems that must not infer support from installation alone"],
+      "shared_domains": ["DAW installation evidence", "Settings", "consumer composition", "filesystem privacy", "DAW capability/runtime identity"],
+      "shared_files": ["governance/active_receipt.json", "governance/automation_registry.json", "governance/completion_graph.json", "governance/current_state.json"],
+      "ordering_assumptions": ["The old multi-commit branch must not be merged as customer-complete; foundation and consumer closure require current-main collision review."],
+      "provider_assumptions": [],
+      "platform_assumptions": ["standard installation roots differ by operating system and non-detection must stay UNKNOWN on every platform"],
+      "semantic_assumptions": ["installation evidence is weaker than runtime identity/support/capability evidence"],
+      "collision_surfaces": ["current memory/composition root", "current Settings installer wiring", "trusted governance activation surfaces"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/daw/test_host_installations.py tests/ux/test_host_installations_consumer.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. Historical proof on 14c20b9df1ec6e2f9f1be643c16848d7a27a3801 cannot authorize integration, and Steward has explicitly ordered a split plus current-main rebuild rather than treating the old branch as consumer-complete.",
+          "observed_at": "2026-09-06T03:00:00Z",
+          "artifact_refs": ["issue:206", "pr:92"]
+        }
+      ],
+      "regression_proof": "Fresh exact-head regression is required independently for each reconstructed successor as applicable.",
+      "consumer_smoke": "The consumer-closure successor must prove ordinary Settings reachability without explicit test-only adapter attachment.",
+      "full_regression": "Historical branch proof is stale and does not close the missing normal composition seam.",
+      "migration_proof": "Historical governance activation state must not be replayed; successor receipts must be built from current trusted main.",
+      "recovery_proof": "The inventory is read-only and ephemeral, but reconstruction must preserve fail-closed root validation and no product-state writes.",
+      "security_privacy_rights_proof": "Filesystem paths stay private; relative/symlink/root-escape evidence fails closed; no DAW execution authority is granted.",
+      "cross_platform_proof": "Fresh first-attempt Linux/Windows/macOS exact-head proof is required for the reconstructed foundation and consumer closure as applicable."
+    },
+    "review": {
+      "status": "SPLIT_REQUIRED_REBUILD_REQUIRED",
+      "unresolved_findings": [
+        "The historical branch is not consumer-complete because normal shared composition/installer wiring is absent.",
+        "The missing consumer closure must remain durable rather than being dropped when the foundation is reconstructed.",
+        "Historical governance activation and composition-root ownership are stale and require current-main Steward review."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": ["The installation-evidence foundation remains required, but normal customer reachability is a separate retained obligation."]
+    },
+    "risk": {
+      "tier": "TIER_2",
+      "high_consequence_surfaces": ["local filesystem discovery", "path privacy", "DAW support/capability truth", "shared consumer composition", "governance activation"],
+      "failure_modes": ["non-detection becomes false absence/support truth", "filesystem paths leak", "symlink/root escape is accepted", "installation is promoted into runtime capability or execution authority", "foundation is merged while consumer-closure residue disappears"],
+      "rollback_recovery_considerations": ["keep inventory read-only and ephemeral; reconstruct foundation separately from normal consumer composition so either portion can be dispositioned without deleting the other"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["normal Settings composition is incomplete", "does not prove runtime identity/support/capability", "does not complete full REQ-SCOPE-012", "historical governance activation is stale"],
+      "deferred_portions": [
+        {
+          "description": "Normal Settings customer reachability through the current shared composition/installer seam.",
+          "reason": "The historical branch deliberately avoided shared composition ownership and focused tests attached the adapter explicitly; Steward requires this remainder to survive as a separate closure obligation.",
+          "dependency": "Repaired stable main after #206 plus current composition-root ownership",
+          "owner": "Main Steward-selected successor Builder/Steward lane",
+          "impact": "Without this closure, the inventory remains a foundation/read-only adapter and must not be represented as a finished customer capability.",
+          "merge_may_proceed": false,
+          "future_acceptance_condition": "Normal Settings reachability is implemented on current main, exact-head cross-platform proof passes, and Steward verifies no support/capability/execution overclaim.",
+          "successor_work_item": "DAW-00-INSTALLATIONS-CONSUMER-CLOSURE",
+          "durable_state": "RETAINED_UNTIL_VERIFIED_SUPERSESSION"
+        }
+      ],
+      "external_dependencies": ["incident #206 repaired stable main", "current shared composition ownership"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "SPLIT_ORDER",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve bounded installation/root/privacy fixtures", "retain DAW-00-INSTALLATIONS-FOUNDATION", "retain DAW-00-INSTALLATIONS-CONSUMER-CLOSURE", "audit current Settings composition ownership without changing main"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Foundation semantics remain valid but normal customer reachability is explicitly incomplete."},
+      {"name": "AUTHORITY_SEPARATION", "state": "APPLICABLE_PASS"},
+      {"name": "PRIVACY_FILESYSTEM", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Path privacy and root/symlink escape behavior require fresh platform proof after reconstruction."},
+      {"name": "GOVERNANCE_OWNERSHIP", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Historical branch carries stale activation surfaces that cannot be self-authorized by Builder code."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This candidate neither deploys nor publishes public state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": "SPLIT_ORDER",
+      "legacy_source_pr": 92,
+      "historical_head_before_h0": "14c20b9df1ec6e2f9f1be643c16848d7a27a3801",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
