@@ -6,13 +6,28 @@
   "active_node": "INCIDENT-REPAIR",
   "active_increment": "INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01",
   "terminal_reason": null,
-  "wake_condition": "Exact verified main 6a0a453da9620247d3931aa5e81de82cd4786a46 remains live and parent incident #206 remains OPEN. This selected trusted-integrity repair may qualify only on that exact baseline; any main movement requires explicit rebuild/revalidation.",
-  "next_admissible_action": "Qualify only INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01: preserve the reviewed integrity checker/contract/test semantics, apply the four bounded workflow additions to the current trusted Steward workflow, obtain exact-head trusted structure plus Linux/Windows/macOS Governance and substantive review, then use the sole Main Steward guarded merge path. Do not select product construction or #254 concurrently.",
+  "wake_condition": "Exact current main d0aecd36caaa2455addba75a86bb1e78bf5b24ca remains live and parent incident #206 remains OPEN. Closure review of #271/#272 exposed five validated fail-open gaps in the merged trusted-integrity checker, so this child repair remains ACTIVE until a fresh four-file hardening continuation is integrated and post-merge verified.",
+  "next_admissible_action": "Rebuild only the validated #269 checker/test semantic hardening on exact current main d0aecd36caaa2455addba75a86bb1e78bf5b24ca using exactly four receipt-bounded paths: fresh receipt/current_state plus hardened checker/tests. Preserve the already-current integrity contract and trusted workflow unchanged. Obtain exact-head Steward Structure, Linux/Windows/macOS Governance, substantive exact-head review, late race check, guarded merge and post-merge verification; only then create the separate exact three-file terminal closure. Do not select product construction, #254, or another #206 repair concurrently.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
-  "completed_nodes": ["BOOT-00", "BOOT-01", "BOOT-02", "AUDIT-01", "AUDIT-HISTORY", "AUDIT-DESIGN", "AUDIT-GRAPH", "LEGACY-01", "CORE-01", "CORE-02", "CORE-03", "CORE-04", "PLATFORM-00", "APP-01"],
+  "completed_nodes": [
+    "BOOT-00",
+    "BOOT-01",
+    "BOOT-02",
+    "AUDIT-01",
+    "AUDIT-HISTORY",
+    "AUDIT-DESIGN",
+    "AUDIT-GRAPH",
+    "LEGACY-01",
+    "CORE-01",
+    "CORE-02",
+    "CORE-03",
+    "CORE-04",
+    "PLATFORM-00",
+    "APP-01"
+  ],
   "supervision": {
     "root": "N0TE-SUPERVISOR",
     "handoff": "governance/handoff.json",
@@ -44,6 +59,7 @@
     "PR #264 merged lifecycle-independent incident-repair regression fixtures as c9a78c87765aa912126dc7d75dbe0e5053700fb8 from reviewed exact head 1000e19bb19ea3a7c9cd2b8c61377d772344dd66; resulting main passed post-merge Steward Structure run 34007932842 and Linux/Windows/macOS Governance run 34007933112.",
     "PR #266 merged the exact three-file #247/#248 child-repair closure as 6a0a453da9620247d3931aa5e81de82cd4786a46. Resulting main passed post-merge Steward Structure run 34009216653 and Linux/Windows/macOS Governance run 34009216638 through full regression, consumer smoke and evidence.",
     "Parent incident #206 remains OPEN. Main Steward globally selected INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01 as the next bounded repair from verified terminal main. Stale PR #256 is closed unmerged as historical-only evidence; #254, repairs #207/#208/#209/#210, clean-room/context-pruning and remaining bookkeeping stay explicitly WAITING.",
-    "This selected repair adds validation-only trusted cross-ledger integrity and no-silent-drop enforcement. It grants no product construction, semantic scope, public-deployment, merge, human-acceptance or artist-value authority."
+    "This selected repair adds validation-only trusted cross-ledger integrity and no-silent-drop enforcement. It grants no product construction, semantic scope, public-deployment, merge, human-acceptance or artist-value authority.",
+    "PR #267 integrated the selected trusted cross-ledger integrity gate as d0aecd36caaa2455addba75a86bb1e78bf5b24ca and passed post-merge trusted Structure plus Linux/Windows/macOS Governance. Terminal closure candidates #271/#272 were then rejected and closed unmerged because review found five real fail-open equivalence/contract-validation gaps. Stale PR #269 head c88c850ddee0012d083713eef90bd3f39a7accd4 proves the hardened checker/tests across all three platforms but cannot authorize integration. Direct blob comparison shows its hardened steward_integrity_contract.json is already identical to current main, so this ACTIVE child repair continues with a fresh exact four-file reconstruction: receipt, current_state, checker and adversarial tests."
   ]
 }

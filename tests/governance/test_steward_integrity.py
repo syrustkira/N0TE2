@@ -37,6 +37,21 @@ def _graph() -> dict:
     }
 
 
+def _equivalence(original: str = "REQ-SCOPE-002") -> dict:
+    return {
+        "original_requirement": original,
+        "replacement_implementation": "impl://replacement",
+        "semantic_coverage_mapping": {original: ["impl://replacement"]},
+        "retained_behavior": ["A"],
+        "changed_behavior": [],
+        "uncovered_residue": [],
+        "acceptance_evidence": ["evidence://1"],
+        "semantic_authority": "USER_ROOT",
+        "lineage": ["receipt://old", "receipt://new"],
+        "successor_status": "INTEGRATED",
+    }
+
+
 def test_held_requirement_cannot_silently_disappear() -> None:
     graph = _graph()
     graph["nodes"][1]["requirements"] = ""
@@ -116,21 +131,53 @@ def test_equivalence_requires_semantic_proof() -> None:
 
 
 def test_equivalence_receipt_with_complete_lineage_passes() -> None:
-    integrity.validate_equivalence_receipt(
-        {
-            "original_requirement": "REQ-SCOPE-002",
-            "replacement_implementation": "impl://replacement",
-            "semantic_coverage_mapping": {"REQ-SCOPE-002": ["impl://replacement"]},
-            "retained_behavior": ["A"],
-            "changed_behavior": [],
-            "uncovered_residue": [],
-            "acceptance_evidence": ["evidence://1"],
-            "semantic_authority": "USER_ROOT",
-            "lineage": ["receipt://old", "receipt://new"],
-            "successor_status": "INTEGRATED",
-        },
-        {"REQ-SCOPE-002"},
-    )
+    integrity.validate_equivalence_receipt(_equivalence(), {"REQ-SCOPE-002"})
+
+
+def test_equivalence_requires_acceptance_evidence() -> None:
+    receipt = _equivalence()
+    receipt["acceptance_evidence"] = []
+    with pytest.raises(integrity.StewardIntegrityError, match="acceptance_evidence must not be empty"):
+        integrity.validate_equivalence_receipt(receipt, {"REQ-SCOPE-002"})
+
+
+def test_equivalence_mapping_must_cover_original_requirement() -> None:
+    receipt = _equivalence()
+    receipt["semantic_coverage_mapping"] = {"REQ-SCOPE-003": ["impl://replacement"]}
+    with pytest.raises(integrity.StewardIntegrityError, match="must cover original_requirement"):
+        integrity.validate_equivalence_receipt(receipt, {"REQ-SCOPE-002", "REQ-SCOPE-003"})
+
+
+def test_equivalence_cannot_hide_uncovered_residue() -> None:
+    receipt = _equivalence()
+    receipt["uncovered_residue"] = ["missing behavior"]
+    with pytest.raises(integrity.StewardIntegrityError, match="cannot retain uncovered_residue"):
+        integrity.validate_equivalence_receipt(receipt, {"REQ-SCOPE-002"})
+
+
+def test_every_superseded_lineage_requirement_needs_equivalence_evidence() -> None:
+    receipt = _receipt()
+    receipt["lineage"] = {"requirements": ["REQ-SCOPE-002", "REQ-SCOPE-003"]}
+    receipt["equivalence_receipts"] = [_equivalence("REQ-SCOPE-002")]
+    with pytest.raises(
+        integrity.StewardIntegrityError,
+        match="superseded receipt lineage lacks equivalence evidence: REQ-SCOPE-003",
+    ):
+        integrity.validate_receipt_and_current_state(
+            _current(),
+            receipt,
+            {"REQ-SCOPE-002", "REQ-SCOPE-003"},
+            {"REQ-SCOPE-002", "REQ-SCOPE-003"},
+            {},
+            _incidents(),
+        )
+
+
+def test_contract_cannot_grant_scope_authority() -> None:
+    contract = json.loads((ROOT / "governance" / "steward_integrity_contract.json").read_text(encoding="utf-8"))
+    contract["authority_boundary"]["can_select_product_scope"] = True
+    with pytest.raises(integrity.StewardIntegrityError, match="cannot grant authority: can_select_product_scope"):
+        integrity.validate_contract(contract)
 
 
 def test_resolved_incident_cannot_authorize_active_repair() -> None:
