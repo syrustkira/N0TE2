@@ -15,47 +15,45 @@ REQ_ID = re.compile(r"^REQ-SCOPE-(\d{3})$")
 REQ_TOKEN = re.compile(r"^(?:REQ-SCOPE-)?(\d{3})(?:-(?:REQ-SCOPE-)?(\d{3}))?$")
 
 ACCEPTANCE_STATES = [
-    "MAPPED",
-    "IMPLEMENTED",
-    "INTEGRATED",
-    "REACHABLE",
-    "VERIFIED",
-    "RECOVERABLE",
-    "AUTHORITY_SAFE",
-    "CONSUMER_ACCEPTED",
-    "VALUE_EVIDENCED",
+    "MAPPED", "IMPLEMENTED", "INTEGRATED", "REACHABLE", "VERIFIED",
+    "RECOVERABLE", "AUTHORITY_SAFE", "CONSUMER_ACCEPTED", "VALUE_EVIDENCED",
 ]
 ACCEPTANCE_LINKS = [
-    "requirement_id",
-    "canonical_scope_ref",
-    "implementation_refs",
-    "integration_refs",
-    "user_reachability_refs",
-    "verification_refs",
-    "failure_recovery_refs",
-    "authority_security_refs",
-    "consumer_acceptance_refs",
-    "value_evidence_refs",
+    "requirement_id", "canonical_scope_ref", "implementation_refs", "integration_refs",
+    "user_reachability_refs", "verification_refs", "failure_recovery_refs",
+    "authority_security_refs", "consumer_acceptance_refs", "value_evidence_refs",
 ]
 DISCOVERY_DISPOSITIONS = {
-    "EXECUTED",
-    "DURABLY_CAPTURED",
-    "DUPLICATE",
-    "BLOCKED",
-    "REJECTED",
-    "NON_ACTIONABLE",
+    "EXECUTED", "DURABLY_CAPTURED", "DUPLICATE", "BLOCKED", "REJECTED", "NON_ACTIONABLE",
 }
 EQUIV_FIELDS = {
-    "original_requirement",
-    "replacement_implementation",
-    "semantic_coverage_mapping",
-    "retained_behavior",
-    "changed_behavior",
-    "uncovered_residue",
-    "acceptance_evidence",
-    "semantic_authority",
-    "lineage",
-    "successor_status",
+    "original_requirement", "replacement_implementation", "semantic_coverage_mapping",
+    "retained_behavior", "changed_behavior", "uncovered_residue", "acceptance_evidence",
+    "semantic_authority", "lineage", "successor_status",
+}
+EXPECTED_AUTHORITATIVE_SOURCES = {
+    "canonical_scope_projection": "governance/requirements.json",
+    "construction_graph": "governance/completion_graph.json",
+    "live_construction_state": "governance/current_state.json",
+    "bounded_work_receipt": "governance/active_receipt.json",
+    "incident_history": "governance/incidents.jsonl",
+    "semantic_decisions": "governance/decisions.jsonl",
+    "acceptance_spine": "governance/acceptance_evidence_spine.json",
+    "action_receipt_envelope": "governance/action_receipt_contract.json",
+    "unfinished_work_policy": "governance/work_continuity.json",
+    "discovery_closure_policy": "governance/discovery_closure.json",
+    "continuity_acceptance": "governance/continuity_acceptance.json",
+    "external_semantic_authority": "N0TE_PRODUCT_DB/SCOPE_LEDGER",
+}
+AUTHORITY_FALSE_FIELDS = {
+    "creates_second_steward", "can_mutate_main", "can_select_product_scope",
+    "can_retire_accepted_scope", "can_accept_artist_value", "can_declare_public_completion",
+}
+LEGACY_TRUE_FIELDS = {
+    "new_supersession_requires_evidence",
+    "historical_supersession_without_local_proof_is_not_equivalence",
+    "historical_records_are_not_deleted_to_make_validation_green",
+    "blocked_legacy_reconciliation_remains_visible",
 }
 
 
@@ -86,6 +84,8 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
             value = json.loads(raw)
             require(isinstance(value, dict), f"{path}:{lineno} is not an object")
             rows.append(value)
+    except StewardIntegrityError:
+        raise
     except Exception as exc:
         raise StewardIntegrityError(f"cannot load {path}: {exc}") from exc
     return rows
@@ -93,11 +93,27 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def git(repo: Path, *args: str) -> str:
     return subprocess.check_output(
-        ["git", *args],
-        cwd=repo,
-        text=True,
-        stderr=subprocess.STDOUT,
+        ["git", *args], cwd=repo, text=True, stderr=subprocess.STDOUT,
     ).strip()
+
+
+def _git_json(repo: Path, base_sha: str, path: str) -> dict[str, Any]:
+    try:
+        value = json.loads(git(repo, "show", f"{base_sha}:{path}"))
+    except Exception as exc:
+        raise StewardIntegrityError(f"cannot inspect exact base {path} at {base_sha}: {exc}") from exc
+    require(isinstance(value, dict), f"exact base {path} must contain an object")
+    return value
+
+
+def _git_jsonl(repo: Path, base_sha: str, path: str) -> list[dict[str, Any]]:
+    try:
+        raw = git(repo, "show", f"{base_sha}:{path}")
+        rows = [json.loads(line) for line in raw.splitlines() if line.strip()]
+    except Exception as exc:
+        raise StewardIntegrityError(f"cannot inspect exact base {path} at {base_sha}: {exc}") from exc
+    require(all(isinstance(row, dict) for row in rows), f"exact base {path} must contain object rows")
+    return rows
 
 
 def canonical_requirement_id(number: int) -> str:
@@ -113,7 +129,6 @@ def expand_requirement_spec(value: Any) -> set[str]:
             expanded |= expand_requirement_spec(item)
         return expanded
     require(isinstance(value, str), "requirement expression must be text or list")
-
     expanded: set[str] = set()
     for raw in value.split(","):
         token = raw.strip()
@@ -141,6 +156,24 @@ def normalize_requirement_ids(values: Any, field: str = "requirements") -> list[
     return normalized
 
 
+def _nonempty_text(value: Any, field: str) -> str:
+    require(isinstance(value, str) and value.strip(), f"{field} must be non-empty text")
+    return value.strip()
+
+
+def _text_list(value: Any, field: str, *, nonempty: bool = False) -> list[str]:
+    require(isinstance(value, list), f"{field} must be a list")
+    if nonempty:
+        require(bool(value), f"{field} must not be empty")
+    require(
+        all(isinstance(item, str) and item.strip() for item in value),
+        f"{field} must contain non-empty text values",
+    )
+    normalized = [item.strip() for item in value]
+    require(len(normalized) == len(set(normalized)), f"{field} contains duplicates")
+    return normalized
+
+
 def graph_index(graph: dict[str, Any]) -> dict[str, dict[str, Any]]:
     rows = graph.get("nodes")
     require(isinstance(rows, list), "completion_graph.nodes must be a list")
@@ -156,38 +189,33 @@ def graph_index(graph: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 def validate_contract(contract: dict[str, Any]) -> None:
     require(contract.get("schema_version") == 1, "integrity contract schema must be 1")
-    require(
-        contract.get("contract_id") == "STEWARD-CROSS-LEDGER-INTEGRITY-001",
-        "unexpected integrity contract id",
-    )
-    require(
-        contract.get("role") == "VALIDATION_ONLY_NO_SEMANTIC_AUTHORITY",
-        "integrity checker became semantic authority",
-    )
-    boundary = contract.get("authority_boundary", {})
-    require(boundary.get("creates_second_steward") is False, "integrity checker cannot create a second Steward")
-    require(boundary.get("can_mutate_main") is False, "integrity checker cannot mutate main")
-    require(boundary.get("can_accept_artist_value") is False, "integrity checker cannot fabricate artist acceptance")
-    legacy = contract.get("legacy_compatibility", {})
-    require(legacy.get("new_supersession_requires_evidence") is True, "new supersession must require evidence")
-    require(
-        legacy.get("historical_supersession_without_local_proof_is_not_equivalence") is True,
-        "historical supersession cannot become implicit equivalence",
-    )
+    require(contract.get("contract_id") == "STEWARD-CROSS-LEDGER-INTEGRITY-001", "unexpected integrity contract id")
+    require(contract.get("role") == "VALIDATION_ONLY_NO_SEMANTIC_AUTHORITY", "integrity checker became semantic authority")
+    require(contract.get("authoritative_sources") == EXPECTED_AUTHORITATIVE_SOURCES, "integrity contract authoritative-source map drifted")
+    boundary = contract.get("authority_boundary")
+    require(isinstance(boundary, dict), "integrity contract authority_boundary must be an object")
+    for field in sorted(AUTHORITY_FALSE_FIELDS):
+        require(boundary.get(field) is False, f"integrity checker cannot grant authority: {field}")
+    required_fields = contract.get("equivalence_receipt_required_fields")
+    require(isinstance(required_fields, list) and set(required_fields) == EQUIV_FIELDS, "integrity contract equivalence receipt fields drifted")
+    public = contract.get("public_handoff_contract")
+    require(isinstance(public, dict), "integrity contract public_handoff_contract must be an object")
+    require(public.get("trigger_field") == "public_handoff_required", "public handoff trigger field drifted")
+    require(public.get("required_reference_field") == "public_handoff_ref", "public handoff reference field drifted")
+    require(public.get("merge_is_public_acceptance") is False, "merge cannot become public acceptance")
+    require(public.get("public_verified_is_repository_integration_state") is False, "PUBLIC_VERIFIED cannot become repository integration state")
+    legacy = contract.get("legacy_compatibility")
+    require(isinstance(legacy, dict), "integrity contract legacy_compatibility must be an object")
+    for field in sorted(LEGACY_TRUE_FIELDS):
+        require(legacy.get(field) is True, f"integrity contract legacy protection weakened: {field}")
 
 
-def validate_requirement_graph(
-    requirements: dict[str, Any],
-    graph: dict[str, Any],
-) -> tuple[set[str], set[str], dict[str, dict[str, Any]]]:
+def validate_requirement_graph(requirements: dict[str, Any], graph: dict[str, Any]) -> tuple[set[str], set[str], dict[str, dict[str, Any]]]:
     canonical = requirements.get("canonical_scope", {})
-    start = canonical.get("start")
-    end = canonical.get("end")
-    count = canonical.get("retained_requirement_count")
+    start, end, count = canonical.get("start"), canonical.get("end"), canonical.get("retained_requirement_count")
     require(type(start) is int and type(end) is int and start <= end, "canonical range invalid")
     require(count == end - start + 1, "canonical retained count does not match range")
     canonical_ids = {canonical_requirement_id(number) for number in range(start, end + 1)}
-
     nodes = graph_index(graph)
     graph_requirements: set[str] = set()
     for node_id, row in nodes.items():
@@ -196,23 +224,14 @@ def validate_requirement_graph(
             refs = row.get(field, []) or []
             require(isinstance(refs, list), f"{node_id}.{field} must be a list")
             for ref in refs:
-                require(
-                    isinstance(ref, str) and ref in nodes,
-                    f"{node_id}.{field} references unknown node: {ref}",
-                )
+                require(isinstance(ref, str) and ref in nodes, f"{node_id}.{field} references unknown node: {ref}")
     unknown = sorted(graph_requirements - canonical_ids)
-    require(
-        not unknown,
-        "completion graph references requirements outside canonical scope: " + ", ".join(unknown),
-    )
+    require(not unknown, "completion graph references requirements outside canonical scope: " + ", ".join(unknown))
 
     held = set(normalize_requirement_ids(requirements.get("held_or_boundary"), "held_or_boundary"))
     require(held <= canonical_ids, "held scope escaped canonical range")
     require("LATER-01" in nodes, "completion graph lost LATER-01")
-    require(
-        expand_requirement_spec(nodes["LATER-01"].get("requirements")) == held,
-        "held_or_boundary and LATER-01 diverged; retained work may have been silently dropped or invented",
-    )
+    require(expand_requirement_spec(nodes["LATER-01"].get("requirements")) == held, "held_or_boundary and LATER-01 diverged; retained work may have been silently dropped or invented")
 
     superseded = set(normalize_requirement_ids(requirements.get("superseded"), "superseded"))
     require(superseded <= canonical_ids, "superseded scope escaped canonical range")
@@ -225,38 +244,21 @@ def validate_requirement_graph(
     for row in extensions:
         require(isinstance(row, dict), "canonical extension must be an object")
         requirement_id = row.get("id")
-        require(
-            isinstance(requirement_id, str) and REQ_ID.fullmatch(requirement_id),
-            "malformed canonical extension id",
-        )
-        require(
-            requirement_id in canonical_ids and requirement_id not in seen,
-            f"invalid/duplicate canonical extension: {requirement_id}",
-        )
+        require(isinstance(requirement_id, str) and REQ_ID.fullmatch(requirement_id), "malformed canonical extension id")
+        require(requirement_id in canonical_ids and requirement_id not in seen, f"invalid/duplicate canonical extension: {requirement_id}")
         seen.add(requirement_id)
-        require(
-            row.get("state") == "MAPPED" and row.get("selected") is False,
-            f"canonical extension {requirement_id} self-selected or changed state",
-        )
+        require(row.get("state") == "MAPPED" and row.get("selected") is False, f"canonical extension {requirement_id} self-selected or changed state")
         affinities = row.get("construction_affinity")
-        require(
-            isinstance(affinities, list) and affinities,
-            f"canonical extension {requirement_id} lacks affinity",
-        )
-        require(
-            all(affinity in nodes for affinity in affinities),
-            f"canonical extension {requirement_id} references unknown affinity",
-        )
+        require(isinstance(affinities, list) and affinities, f"canonical extension {requirement_id} lacks affinity")
+        require(all(affinity in nodes for affinity in affinities), f"canonical extension {requirement_id} references unknown affinity")
 
     sequence = requirements.get("sequence", {})
-    require(
-        type(sequence.get("start")) is int and type(sequence.get("end")) is int,
-        "build sequence invalid",
-    )
-    require(
-        start <= sequence["start"] <= sequence["end"] <= end,
-        "build sequence escaped canonical range",
-    )
+    sequence_start, sequence_end = sequence.get("start"), sequence.get("end")
+    require(type(sequence_start) is int and type(sequence_end) is int, "build sequence invalid")
+    require(start <= sequence_start <= sequence_end <= end, "build sequence escaped canonical range")
+    sequence_ids = {canonical_requirement_id(number) for number in range(sequence_start, sequence_end + 1)}
+    missing = sorted((sequence_ids - superseded) - graph_requirements)
+    require(not missing, "completion graph lost build-sequence requirements: " + ", ".join(missing))
     return canonical_ids, superseded, nodes
 
 
@@ -274,10 +276,8 @@ def validate_decisions(rows: list[dict[str, Any]]) -> None:
         for ref in refs:
             require(ref in by_id and ref != decision_id, f"{decision_id} supersedes invalid decision: {ref}")
             successors.setdefault(ref, []).append(decision_id)
-
     visiting: set[str] = set()
     visited: set[str] = set()
-
     def visit(decision_id: str) -> None:
         if decision_id in visited:
             return
@@ -287,12 +287,17 @@ def validate_decisions(rows: list[dict[str, Any]]) -> None:
             visit(ref)
         visiting.remove(decision_id)
         visited.add(decision_id)
-
     for decision_id in by_id:
         visit(decision_id)
     for decision_id, row in by_id.items():
         if str(row.get("status") or "").upper() == "SUPERSEDED":
             require(successors.get(decision_id), f"superseded decision lacks durable successor: {decision_id}")
+
+
+def validate_decision_history_against_base(candidate: list[dict[str, Any]], base: list[dict[str, Any]]) -> None:
+    require(len(candidate) >= len(base), "decision ledger deleted exact-base history")
+    for index, base_row in enumerate(base):
+        require(candidate[index] == base_row, f"decision ledger mutated/reordered exact-base row at index {index}")
 
 
 def current_incidents(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
@@ -308,25 +313,41 @@ def validate_equivalence_receipt(value: Any, canonical_ids: set[str]) -> None:
     require(isinstance(value, dict), "SUPERSEDED_BY_EQUIVALENT requires equivalence_receipt evidence")
     missing = sorted(EQUIV_FIELDS - set(value))
     require(not missing, "equivalence_receipt missing required fields: " + ", ".join(missing))
-    require(value.get("original_requirement") in canonical_ids, "equivalence original requirement must be canonical")
-    for key in (
-        "replacement_implementation",
-        "semantic_coverage_mapping",
-        "semantic_authority",
-        "lineage",
-        "successor_status",
-    ):
-        require(bool(value.get(key)), f"equivalence_receipt {key} must be non-empty")
+    original = value.get("original_requirement")
+    require(original in canonical_ids, "equivalence original requirement must be canonical")
+    _nonempty_text(value.get("replacement_implementation"), "equivalence_receipt replacement_implementation")
+    coverage = value.get("semantic_coverage_mapping")
+    require(isinstance(coverage, dict), "equivalence_receipt semantic_coverage_mapping must be an object")
+    require(original in coverage, "equivalence_receipt semantic_coverage_mapping must cover original_requirement")
+    _text_list(coverage[original], "equivalence_receipt semantic coverage refs", nonempty=True)
+    _text_list(value.get("retained_behavior"), "equivalence_receipt retained_behavior")
+    _text_list(value.get("changed_behavior"), "equivalence_receipt changed_behavior")
+    residue = _text_list(value.get("uncovered_residue"), "equivalence_receipt uncovered_residue")
+    require(not residue, "SUPERSEDED_BY_EQUIVALENT cannot retain uncovered_residue")
+    _text_list(value.get("acceptance_evidence"), "equivalence_receipt acceptance_evidence", nonempty=True)
+    _nonempty_text(value.get("semantic_authority"), "equivalence_receipt semantic_authority")
+    _text_list(value.get("lineage"), "equivalence_receipt lineage", nonempty=True)
+    _nonempty_text(value.get("successor_status"), "equivalence_receipt successor_status")
 
 
-def validate_receipt_and_current_state(
-    current: dict[str, Any],
-    receipt: dict[str, Any],
-    canonical_ids: set[str],
-    superseded: set[str],
-    nodes: dict[str, dict[str, Any]],
-    incidents: dict[str, dict[str, Any]],
-) -> None:
+def _equivalence_rows(receipt: dict[str, Any], canonical_ids: set[str]) -> dict[str, dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    if receipt.get("equivalence_receipt") is not None:
+        rows.append(receipt["equivalence_receipt"])
+    multiple = receipt.get("equivalence_receipts")
+    if multiple is not None:
+        require(isinstance(multiple, list), "active_receipt.equivalence_receipts must be a list")
+        rows.extend(multiple)
+    indexed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        validate_equivalence_receipt(row, canonical_ids)
+        original = row["original_requirement"]
+        require(original not in indexed, f"duplicate equivalence evidence for {original}")
+        indexed[original] = row
+    return indexed
+
+
+def validate_receipt_and_current_state(current: dict[str, Any], receipt: dict[str, Any], canonical_ids: set[str], superseded: set[str], nodes: dict[str, dict[str, Any]], incidents: dict[str, dict[str, Any]]) -> None:
     lifecycle = current.get("lifecycle_state")
     require(lifecycle in {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}, f"unknown lifecycle_state: {lifecycle}")
     if lifecycle == "ACTIVE":
@@ -340,14 +361,15 @@ def validate_receipt_and_current_state(
     else:
         require(receipt.get("status") == "INACTIVE", f"{lifecycle} requires INACTIVE receipt")
         require(current.get("active_node") is None and current.get("active_increment") is None, f"{lifecycle} retained active identity")
-
     lineage = receipt.get("lineage", {})
     require(isinstance(lineage, dict), "receipt lineage must be an object")
     lineage_requirements = set(normalize_requirement_ids(lineage.get("requirements", []), "receipt lineage requirements"))
     require(lineage_requirements <= canonical_ids, "receipt lineage references non-canonical requirement")
-    if lineage_requirements & superseded:
-        validate_equivalence_receipt(receipt.get("equivalence_receipt"), canonical_ids)
-
+    superseded_lineage = lineage_requirements & superseded
+    if superseded_lineage:
+        evidence = _equivalence_rows(receipt, canonical_ids)
+        missing = sorted(superseded_lineage - set(evidence))
+        require(not missing, "superseded receipt lineage lacks equivalence evidence: " + ", ".join(missing))
     incident_ids = receipt.get("incident_repair_ids", []) or []
     require(isinstance(incident_ids, list), "incident_repair_ids must be a list")
     for incident_id in incident_ids:
@@ -356,7 +378,6 @@ def validate_receipt_and_current_state(
         require(str(incident.get("status") or "").upper().startswith("OPEN"), f"repair receipt references non-open incident: {incident_id}")
         contract = incident.get("repair_contract")
         require(isinstance(contract, dict) and contract.get("future_receipt_field") == "incident_repair_ids", f"incident lacks receipt-bound repair contract: {incident_id}")
-
     if receipt.get("public_handoff_required") is True:
         public_ref = receipt.get("public_handoff_ref")
         require(isinstance(public_ref, str) and public_ref.strip(), "public-consequence receipt declared public_handoff_required but has no durable public_handoff_ref")
@@ -366,7 +387,57 @@ def validate_receipt_and_current_state(
         validate_equivalence_receipt(receipt.get("equivalence_receipt"), canonical_ids)
 
 
-def validate_static_spines(repo: Path) -> None:
+def _continuity_index(doc: dict[str, Any], field: str) -> dict[str, dict[str, Any]]:
+    rows = doc.get("acceptance_items")
+    require(isinstance(rows, list) and rows, f"{field}.acceptance_items must be a non-empty list")
+    indexed: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        require(isinstance(row, dict), f"{field} acceptance item must be an object")
+        item_id = _nonempty_text(row.get("id"), f"{field} acceptance item id")
+        require(item_id not in indexed, f"duplicate continuity acceptance id: {item_id}")
+        _nonempty_text(row.get("name"), f"continuity acceptance {item_id} name")
+        _nonempty_text(row.get("state"), f"continuity acceptance {item_id} state")
+        _nonempty_text(row.get("requirement"), f"continuity acceptance {item_id} requirement")
+        indexed[item_id] = row
+    return indexed
+
+
+def validate_continuity_acceptance_against_base(candidate: dict[str, Any], base: dict[str, Any]) -> None:
+    candidate_rows = _continuity_index(candidate, "candidate continuity")
+    base_rows = _continuity_index(base, "base continuity")
+    missing = sorted(set(base_rows) - set(candidate_rows))
+    require(not missing, "continuity acceptance lost exact-base items: " + ", ".join(missing))
+    for item_id, base_row in base_rows.items():
+        candidate_row = candidate_rows[item_id]
+        for immutable in ("id", "name", "requirement"):
+            require(candidate_row.get(immutable) == base_row.get(immutable), f"continuity acceptance {item_id} mutated exact-base {immutable}")
+
+
+def validate_action_contract_against_base(candidate: dict[str, Any], base: dict[str, Any]) -> None:
+    for field in ("required_request_fields", "required_result_fields"):
+        candidate_fields = set(_text_list(candidate.get(field), f"action receipt {field}", nonempty=True))
+        base_fields = set(_text_list(base.get(field), f"base action receipt {field}", nonempty=True))
+        missing = sorted(base_fields - candidate_fields)
+        require(not missing, f"action receipt lost exact-base {field}: " + ", ".join(missing))
+    candidate_rules = candidate.get("authority_rules")
+    base_rules = base.get("authority_rules")
+    require(isinstance(candidate_rules, dict) and isinstance(base_rules, dict), "action receipt authority_rules must be objects")
+    for key, value in base_rules.items():
+        require(candidate_rules.get(key) == value, f"action receipt authority rule drifted from exact base: {key}")
+
+
+def validate_work_continuity_against_base(candidate: dict[str, Any], base: dict[str, Any]) -> None:
+    candidate_fields = set(_text_list(candidate.get("required_checkpoint_fields"), "work continuity checkpoint fields", nonempty=True))
+    base_fields = set(_text_list(base.get("required_checkpoint_fields"), "base work continuity checkpoint fields", nonempty=True))
+    missing_fields = sorted(base_fields - candidate_fields)
+    require(not missing_fields, "work continuity lost exact-base checkpoint fields: " + ", ".join(missing_fields))
+    candidate_rules = set(_text_list(candidate.get("hard_rules"), "work continuity hard rules", nonempty=True))
+    base_rules = set(_text_list(base.get("hard_rules"), "base work continuity hard rules", nonempty=True))
+    missing_rules = sorted(base_rules - candidate_rules)
+    require(not missing_rules, "work continuity lost exact-base hard rules")
+
+
+def validate_static_spines(repo: Path) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     spine = load_json(repo / "governance/acceptance_evidence_spine.json")
     require(spine.get("states") == ACCEPTANCE_STATES, "acceptance evidence states changed or collapsed")
     require(spine.get("required_links") == ACCEPTANCE_LINKS, "acceptance evidence links changed or collapsed")
@@ -375,36 +446,34 @@ def validate_static_spines(repo: Path) -> None:
 
     work = load_json(repo / "governance/work_continuity.json")
     require(set(work.get("legal_unfinished_states", [])) == {"ACTIVE", "WAITING", "BLOCKED"}, "work continuity lost unfinished states")
-    checkpoint = set(work.get("required_checkpoint_fields", []))
-    require({"canonical_work_id", "remaining_work", "wake_condition"} <= checkpoint, "work continuity lost checkpoint fields")
+    _text_list(work.get("required_checkpoint_fields"), "work continuity checkpoint fields", nonempty=True)
+    _text_list(work.get("hard_rules"), "work continuity hard rules", nonempty=True)
 
     discovery = load_json(repo / "governance/discovery_closure.json")
     require(set((discovery.get("allowed_dispositions") or {}).keys()) == DISCOVERY_DISPOSITIONS, "discovery closure dispositions changed")
     require(discovery.get("unfinished_work_policy") == "governance/work_continuity.json", "discovery closure lost work-continuity binding")
 
     continuity = load_json(repo / "governance/continuity_acceptance.json")
-    seen: set[str] = set()
-    for row in continuity.get("acceptance_items", []):
-        require(isinstance(row, dict) and isinstance(row.get("id"), str) and row["id"], "continuity acceptance item lacks id")
-        require(row["id"] not in seen, f"duplicate continuity acceptance id: {row['id']}")
-        seen.add(row["id"])
-        require(isinstance(row.get("state"), str) and row["state"] and isinstance(row.get("requirement"), str) and row["requirement"], f"continuity acceptance {row['id']} lost state/requirement")
+    _continuity_index(continuity, "continuity acceptance")
 
     action = load_json(repo / "governance/action_receipt_contract.json")
     require(action.get("contract_id") == "ACTION-RECEIPT-001", "action receipt contract changed")
-    require({"operation_id", "trace_id", "authority_basis", "state_basis", "idempotency_key"} <= set(action.get("required_request_fields", [])), "action receipt request lost trace/authority/idempotency")
-    require({"operation_id", "trace_id", "result_state", "evidence_refs", "reconciliation_required"} <= set(action.get("required_result_fields", [])), "action receipt result lost evidence/reconciliation")
+    _text_list(action.get("required_request_fields"), "action receipt required_request_fields", nonempty=True)
+    _text_list(action.get("required_result_fields"), "action receipt required_result_fields", nonempty=True)
     authority = action.get("authority_rules", {})
     require(authority.get("stale_receipt_authorizes_new_work") is False and authority.get("target_must_be_revalidated_before_external_consequence") is True, "action receipt authority boundary weakened")
+    return work, action, continuity
 
 
-def validate_new_supersessions(
-    repo: Path,
-    base_sha: str | None,
-    requirements: dict[str, Any],
-    receipt: dict[str, Any],
-    canonical_ids: set[str],
-) -> None:
+def validate_exact_base_preservation(repo: Path, base_sha: str, decisions: list[dict[str, Any]], work: dict[str, Any], action: dict[str, Any], continuity: dict[str, Any]) -> None:
+    require(HEX40.fullmatch(base_sha) is not None, "N0TE2_BASE_SHA must be exact lowercase SHA")
+    validate_decision_history_against_base(decisions, _git_jsonl(repo, base_sha, "governance/decisions.jsonl"))
+    validate_work_continuity_against_base(work, _git_json(repo, base_sha, "governance/work_continuity.json"))
+    validate_action_contract_against_base(action, _git_json(repo, base_sha, "governance/action_receipt_contract.json"))
+    validate_continuity_acceptance_against_base(continuity, _git_json(repo, base_sha, "governance/continuity_acceptance.json"))
+
+
+def validate_new_supersessions(repo: Path, base_sha: str | None, requirements: dict[str, Any], receipt: dict[str, Any], canonical_ids: set[str]) -> None:
     if not base_sha:
         return
     require(HEX40.fullmatch(base_sha) is not None, "N0TE2_BASE_SHA must be exact lowercase SHA")
@@ -422,7 +491,9 @@ def validate_new_supersessions(
     by_requirement: dict[str, dict[str, Any]] = {}
     for row in rows:
         validate_equivalence_receipt(row, canonical_ids)
-        by_requirement[row["original_requirement"]] = row
+        original = row["original_requirement"]
+        require(original not in by_requirement, f"duplicate equivalence evidence for {original}")
+        by_requirement[original] = row
     missing = sorted(new - set(by_requirement))
     require(not missing, "newly superseded requirements lack equivalence evidence: " + ", ".join(missing))
 
@@ -438,16 +509,16 @@ def run(repo: Path, *, verify_git: bool = True) -> None:
     receipt = load_json(repo / "governance/active_receipt.json")
     current = load_json(repo / "governance/current_state.json")
     validate_receipt_and_current_state(current, receipt, canonical_ids, superseded, nodes, incidents)
-    validate_static_spines(repo)
+    work, action, continuity = validate_static_spines(repo)
     base_sha = str(os.environ.get("N0TE2_BASE_SHA") or "").strip().lower() if verify_git else None
+    if base_sha:
+        validate_exact_base_preservation(repo, base_sha, decisions, work, action, continuity)
     validate_new_supersessions(repo, base_sha or None, requirements, receipt, canonical_ids)
     print(
         "N0TE2 STEWARD INTEGRITY: GREEN "
-        f"canonical={len(canonical_ids)} "
-        f"graph_nodes={len(nodes)} "
+        f"canonical={len(canonical_ids)} graph_nodes={len(nodes)} "
         f"held={len(requirements.get('held_or_boundary', []))} "
-        f"decisions={len(decisions)} "
-        f"incidents={len(incidents)}"
+        f"decisions={len(decisions)} incidents={len(incidents)}"
     )
 
 
