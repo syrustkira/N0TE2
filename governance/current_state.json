@@ -41,7 +41,7 @@
   },
   "truth": [
     "This current-state truth list is a selective projection of durable repository history, not a replacement for canonical governance, git chronology, decisions, incidents, provenance, prior exact-head evidence or retained H0 Builder handoffs.",
-    "The canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains REQ-SCOPE-002 through REQ-SCOPE-170. Retained scope does not select work by itself, and STABLE never means N0TE is complete.",
+    "The canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 169 requirements, REQ-SCOPE-002 through REQ-SCOPE-170. Retained scope does not select work by itself, and STABLE never means N0TE is complete.",
     "N0TE already has a real local consumer product surface and durable Artist/Song/Version/Session foundations. Governance repair exists to make further product construction reliable; it is not itself the product destination.",
     "PR #211 integrated the trusted Main Steward gate. PR #249 integrated first-class incident-repair lifecycle authority. PR #259 made legal terminal closure reachable. PR #264 made incident-repair regression fixtures lifecycle-independent. Their resulting main heads were post-merge verified.",
     "PR #266 merged and post-merge verified the exact three-path #247/#248 child repair closure while preserving parent #206 OPEN.",
