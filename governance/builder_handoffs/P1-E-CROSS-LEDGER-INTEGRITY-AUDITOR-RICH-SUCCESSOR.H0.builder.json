@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "P1-E-CROSS-LEDGER-INTEGRITY-AUDITOR-RICH-SUCCESSOR",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-254",
+      "candidate_id": "P1-E-CROSS-LEDGER-INTEGRITY-AUDITOR-RICH-SUCCESSOR",
+      "requirement_ids": ["P1-E"],
+      "pub_ids": [],
+      "product_outcome": "A read-mostly cross-ledger integrity observer and defect router that normalizes source-owned repository and external truth into an audit graph, emits attributable durable findings, and localizes integrity failures without mutating the semantic sources it audits.",
+      "artist_job": "Detect missing, contradictory, stale, orphaned or falsely promoted product/governance/public evidence across N0TE ledgers without letting the auditor become a second authority or silently repair truth.",
+      "semantic_owner": "P1-E Cross-Ledger Integrity Auditor"
+    },
+    "bounded_increment": {
+      "increment_id": "P1-E-CROSS-LEDGER-INTEGRITY-AUDITOR-RICH-SUCCESSOR",
+      "description": "Preserve the richer runnable P1-E auditor, workflow, contracts and adversarial proof as explicit WAITING residue while the selected #256 trusted integration gate proceeds first.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": false,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "P1-E",
+      "required_behavior": "Read source-owned repository and supplied external projections without mutating them; normalize a traceable graph; evaluate cataloged integrity invariants; preserve incomplete evidence honestly; emit deterministic durable findings and remediation routing; and localize blocking cones instead of fabricating global truth.",
+      "non_negotiable_semantics": [
+        "the auditor is an observer and defect router, not Main Steward, Builder, scope owner, current-state owner, public executor, rights authority or semantic authority",
+        "missing required external evidence yields INCOMPLETE_AUDIT rather than PASS",
+        "finding identities and lifecycle remain durable and attributable across runs",
+        "open findings do not disappear merely because a later run cannot inspect the required source",
+        "only cataloged blocking or critical invariant failures create localized blocking cones",
+        "unrelated cones remain outside a localized block",
+        "supersession, equivalence, residue and cycle checks preserve explicit successor and coverage truth",
+        "merge evidence must never imply public acceptance, human acceptance, provider acceptance or rights clearance",
+        "the auditor cannot create, redefine or delete product requirements or incident truth",
+        "every supplied semantic or materialized input projection must remain byte-for-byte unchanged before versus after audit, proven by deterministic hashing or equivalent adversarial proof",
+        "the stronger minimal P1-E residue from PR #252 remains mandatory, including omitted retained requirements, dangling bridges, missing public handoffs, merge-not-public-acceptance, historical trace warnings without fabricated identifiers, incomplete equivalence failure, WAITING without resurrection or wake conditions, and a fully linked valid sample"
+      ],
+      "allowed_implementation_freedom": [
+        "internal graph representation when stable source identity and semantics are preserved",
+        "finding serialization and report presentation",
+        "event-cone optimization when unknown paths safely fall back to full reconciliation",
+        "artifact-retention implementation compatible with current trusted workflow ownership"
+      ],
+      "interpretations_required": [
+        "The richer observer/auditor is distinct from the selected #256 trusted integration gate: #256 is fail-closed base-owned integration enforcement, while this lane is read-mostly observation, durable findings and remediation routing.",
+        "Workflow and automation-registry surfaces make final integration Steward/meta-governance work even though the auditor itself is read-mostly."
+      ],
+      "remaining_semantics": [
+        "fresh-main reconstruction after the selected #256 repair reaches its required terminal state",
+        "explicit source-immutability adversarial proof must be carried into that reconstruction even if historical candidate code appears read-only"
+      ]
+    },
+    "behavior": {
+      "requested_behavior": "Provide a durable cross-ledger auditor that detects integrity defects without becoming a competing source of truth.",
+      "implemented_behavior": "Historical current candidate includes a runnable auditor, invariant/source/external-snapshot contracts, exact-head workflow, durable run/finding/report state, event-cone and full reconciliation behavior, tests, and read-mostly actor registration.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "This is governance/integrity infrastructure and defect routing, not a product consumer journey.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["governance/integrity_auditor.py CLI", "external integrity snapshot schema", "integrity invariant/source catalogs"],
+      "contracts": ["read-mostly audit", "fail-honest incomplete evidence", "localized blocking", "durable finding lifecycle"],
+      "persistence": ["integrity run receipts", "finding lifecycle", "audit graph", "summary", "remediation queue artifacts"],
+      "schemas": ["governance/integrity_external_snapshot.schema.json"],
+      "migrations": [],
+      "background_jobs": ["scheduled/manual/event-driven integrity workflow"],
+      "provider_behavior": ["provider truth is consumed only through normalized external snapshots; the auditor does not execute provider actions"],
+      "platform_implications": ["GitHub workflow/automation-registry integration is trusted Steward/meta-governance surface"]
+    },
+    "dependencies": {
+      "upstream": [
+        "selected #256 trusted Steward integrity gate successor must be reconstructed and dispositioned first under current #206 reselection",
+        "parent incident #206 remains OPEN"
+      ],
+      "downstream_consumers": ["Main Steward defect routing", "future integrity reconciliation and remediation queues"],
+      "shared_domains": ["requirements", "completion graph", "current state", "receipts", "incidents", "public/provider/rights/human evidence", "supersession", "automation registry"],
+      "shared_files": [".github/workflows/integrity-auditor.yml", "governance/automation_registry.json"],
+      "ordering_assumptions": [
+        "Main Steward reselection after #266 explicitly selected the #256 trusted integrity gate next and retained #254 as WAITING residue.",
+        "This historical branch must not be retargeted or merged by adjacency; reconstruct it from a then-current verified main after its dependency cone is admissible."
+      ],
+      "provider_assumptions": ["required external provider/public/rights/human evidence may be unavailable and must remain INCOMPLETE rather than fabricated"],
+      "platform_assumptions": [],
+      "semantic_assumptions": ["source ledgers retain their own authority; normalization is audit-only"],
+      "collision_surfaces": ["trusted workflow ownership", "automation registry", "selected #256 integrity enforcement semantics"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/governance/test_integrity_auditor.py tests/governance/test_integrity_workflow_exact_head.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. Historical Linux/Windows/macOS Governance and dedicated integrity-workflow proof on e48d83213770b18d93c6ab4440c787fee2aa94f8 remains preservation evidence only and cannot certify this H0 head or a future fresh-main reconstruction.",
+          "observed_at": "2026-09-06T09:45:00Z",
+          "artifact_refs": ["pr:254", "pr:252", "issue:206", "pr:256"]
+        }
+      ],
+      "regression_proof": "Fresh exact-head repository regression is required on the eventual reconstructed candidate; historical proof remains support only.",
+      "consumer_smoke": "No direct product consumer path is claimed; staged consumer smoke remains a repository-wide regression guard.",
+      "full_regression": "Fresh full regression and trusted-structure proof are required because workflow and automation-registry surfaces participate in trusted governance.",
+      "migration_proof": "The H0 preserves the runnable richer auditor semantics and explicitly carries forward the stronger nine-case/source-immutability residue from #252 without claiming that #252 historical proof certifies this branch.",
+      "recovery_proof": "The auditor must remain read-mostly with durable prior finding state; reconstruction or rollback must not mutate audited semantic source files, erase open findings, or collapse historical finding lifecycle.",
+      "security_privacy_rights_proof": "Workflow permissions remain read-only for repository contents/actions; external privacy/rights/provider evidence is observed, not promoted into clearance or execution authority.",
+      "cross_platform_proof": "Fresh Linux/Windows/macOS exact-head Governance plus trusted workflow/structure proof is required after reconstruction."
+    },
+    "review": {
+      "status": "WAITING_DEPENDENCY_REBUILD_REQUIRED",
+      "unresolved_findings": [
+        "Main Steward has selected #256, not #254, as the next bounded #206 repair.",
+        "The eventual fresh-main rebuild must add or retain deterministic before/after source-immutability proof for every supplied semantic/materialized input projection.",
+        "Historical workflow and automation-registry edits cannot self-authorize final trusted integration."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": [
+        "The current richer candidate is runnable and historically cross-platform proven; the much earlier non-runnable intermediate branch state is lineage only, not a current defect.",
+        "#254 remains distinct from #256 and must not be silently collapsed into the selected trusted integration gate."
+      ]
+    },
+    "risk": {
+      "tier": "TIER_3",
+      "high_consequence_surfaces": ["trusted governance workflow", "cross-ledger acceptance semantics", "rights/public/provider evidence interpretation", "durable integrity findings", "automation registry"],
+      "failure_modes": [
+        "auditor mutates or redefines source truth",
+        "missing external evidence becomes PASS",
+        "merge is promoted into public/human/rights acceptance",
+        "open findings disappear without sufficient revalidation",
+        "blocking cone becomes repository-global without a cataloged critical invariant",
+        "observer semantics conflict with the selected #256 trusted enforcement layer",
+        "input source mutation goes undetected"
+      ],
+      "rollback_recovery_considerations": [
+        "Keep audited source ledgers unchanged, preserve finding history/artifacts where required, and reconstruct trusted workflow/registry integration from current main rather than carrying stale authority forward."
+      ]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": [
+        "historical base and exact-head integration proof are stale relative to current main",
+        "not selected as the current #206 repair",
+        "workflow and automation-registry integration require Steward/meta-governance authority",
+        "external evidence can be unavailable and must yield INCOMPLETE_AUDIT",
+        "source-immutability proof from #252 remains mandatory residue for rebuild"
+      ],
+      "deferred_portions": [],
+      "external_dependencies": ["selected #256 repair disposition", "parent incident #206 sequencing"],
+      "provider_dependencies": ["external provider/public/rights/human projections when applicable"],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "WAITING_DEPENDENCY",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": [
+        "preserve the runnable auditor/invariant/source/external-snapshot/test semantics",
+        "preserve #252 nine-case and byte-for-byte source-immutability residue",
+        "keep #254 distinct from #256 trusted enforcement",
+        "do not retarget or merge the stale historical branch",
+        "reconstruct only when Main Steward sequencing makes this repair cone admissible"
+      ]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Fresh-main reconstruction must preserve observer-only semantics and #252 residue."},
+      {"name": "AUTHORITY_SEPARATION", "state": "STEWARD_REVIEW_REQUIRED", "reason": "The observer is read-mostly, but trusted workflow/registry integration and its distinction from #256 require Steward validation."},
+      {"name": "SOURCE_IMMUTABILITY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Future reconstruction must prove every supplied semantic/materialized input projection is byte-for-byte unchanged before and after audit."},
+      {"name": "PUBLIC_RIGHTS_ACCEPTANCE", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Public/provider/rights/human evidence may be audited but cannot be converted into acceptance or clearance authority."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "The auditor does not deploy or publish product/public state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 254,
+      "historical_head_before_h0": "e48d83213770b18d93c6ab4440c787fee2aa94f8",
+      "related_minimal_predecessor_pr": 252,
+      "migration_classification": "WAITING_REBUILD_RICH_SUCCESSOR"
+    }
+  }
+}
