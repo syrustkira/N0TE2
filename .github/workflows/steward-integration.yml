@@ -72,14 +72,37 @@ jobs:
           ref: ${{ github.event.pull_request.base.sha }}
           path: ${{ env.TRUSTED_PATH }}
 
-      - name: Verify exact candidate checkout and trusted checker
+      - name: Verify exact candidate checkout and classify trusted integrity base
         shell: bash
         run: |
           python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'candidate_expected={expected} candidate_actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
           test -f "$TRUSTED_PATH/governance/check_steward_integration.py"
           test -f "$TRUSTED_PATH/governance/check_incident_repair_authority.py"
-          test -f "$TRUSTED_PATH/governance/check_steward_integrity.py"
-          test -f "$TRUSTED_PATH/governance/steward_integrity_contract.json"
+
+          INTEGRITY_CHECKER="$TRUSTED_PATH/governance/check_steward_integrity.py"
+          INTEGRITY_CONTRACT="$TRUSTED_PATH/governance/steward_integrity_contract.json"
+          CHECKER_PRESENT=0
+          CONTRACT_PRESENT=0
+          [ -f "$INTEGRITY_CHECKER" ] && CHECKER_PRESENT=1
+          [ -f "$INTEGRITY_CONTRACT" ] && CONTRACT_PRESENT=1
+
+          if [ "$CHECKER_PRESENT" -ne "$CONTRACT_PRESENT" ]; then
+            echo "Trusted base integrity surface is partial; checker and contract must both exist or both be absent" >&2
+            exit 1
+          fi
+
+          if [ "$CHECKER_PRESENT" -eq 1 ]; then
+            echo "N0TE2_BASE_INTEGRITY_MODE=TRUSTED" >> "$GITHUB_ENV"
+          else
+            if [ "$N0TE2_META_GOVERNANCE_REOPEN" != "MAIN_STEWARD_LABEL" ]; then
+              echo "Integrity bootstrap requires explicit Main Steward meta-governance reopen" >&2
+              exit 1
+            fi
+            git cat-file -e "$N0TE2_HEAD_SHA:governance/check_steward_integrity.py"
+            git cat-file -e "$N0TE2_HEAD_SHA:governance/steward_integrity_contract.json"
+            echo "N0TE2_BASE_INTEGRITY_MODE=BOOTSTRAP" >> "$GITHUB_ENV"
+            echo "Trusted bootstrap structure passed: candidate integrity files exist but are not executed as trusted."
+          fi
 
       - name: Protect Steward integrity enforcement surfaces
         shell: bash
@@ -102,16 +125,25 @@ jobs:
 
       - name: Validate candidate cross-ledger integrity from trusted base
         shell: bash
-        run: python "$TRUSTED_PATH/governance/check_steward_integrity.py" --repo .
+        run: |
+          if [ "$N0TE2_BASE_INTEGRITY_MODE" = "TRUSTED" ]; then
+            python "$TRUSTED_PATH/governance/check_steward_integrity.py" --repo .
+          else
+            echo "BOOTSTRAP: exact base has no integrity checker/contract; candidate integrity code remains untrusted until integration and post-merge base-owned verification."
+          fi
 
       - name: Publish trusted structural success
         if: ${{ success() }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           STATUS_STATE: success
-          STATUS_DESCRIPTION: Trusted base structural check passed; not merge authorization
         shell: bash
         run: |
+          if [ "$N0TE2_BASE_INTEGRITY_MODE" = "BOOTSTRAP" ]; then
+            STATUS_DESCRIPTION="Trusted bootstrap structure passed; candidate checker untrusted"
+          else
+            STATUS_DESCRIPTION="Trusted base structural check passed; not merge authorization"
+          fi
           curl --fail-with-body --silent --show-error \
             -X POST \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
