@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "CATALOG-TOPOLOGY-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-167",
+      "candidate_id": "CATALOG-TOPOLOGY-01",
+      "requirement_ids": ["REQ-SCOPE-127"],
+      "pub_ids": [],
+      "product_outcome": "An evidence-bound catalog topology and qualitative A&R prioritization kernel that keeps readiness, blockers, artist intent, identity fit, catalog relation and target fit semantically distinct.",
+      "artist_job": "Compare Songs and decide what to finish, hold, rewrite, group, prepare, pitch or investigate next without fabricating hit probability, market certainty or artistic-quality scores.",
+      "semantic_owner": "REQ-SCOPE-127"
+    },
+    "bounded_increment": {
+      "increment_id": "CATALOG-TOPOLOGY-01",
+      "description": "Preserve the two-file catalog-topology reasoning foundation while the independently owned Windows reliability and Steward integration dependencies remain unresolved.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-127",
+      "required_behavior": "Prioritize exact Song candidates using source-bound qualitative evidence with explicit staleness, conflict and provisional inference while preserving semantic ties and refusing numeric market/artistic certainty.",
+      "non_negotiable_semantics": [
+        "READINESS, BLOCKER, ARTIST_INTENT, IDENTITY_FIT, CATALOG_RELATION and TARGET_FIT remain distinct",
+        "only current non-inferred evidence may support bounded current decisions",
+        "stale and unknown evidence remains visible but cannot silently drive current priority",
+        "conflicting current evidence remains explicit rather than collapsed into a score",
+        "subjective artist intent or identity truth cannot be certified by measured or external sources",
+        "same-band Songs remain semantic ties and Song-ID ordering is serialization only",
+        "HOLD preserves option value and is not rejection",
+        "RELEASE_PREP and PITCH_PREP do not grant release, publication, submission, placement or provider authority",
+        "release, pitch and external-action authority remain hard-false"
+      ],
+      "allowed_implementation_freedom": ["internal evidence normalization", "deterministic serialization order", "pure helper decomposition"],
+      "interpretations_required": [],
+      "remaining_semantics": ["consumer reachability", "full REQ-SCOPE-127 completion beyond the reusable prioritization foundation"]
+    },
+    "behavior": {
+      "requested_behavior": "Provide bounded qualitative catalog topology and A&R prioritization from canonical evidence.",
+      "implemented_behavior": "Historical two-file candidate produced qualitative priority bands and bounded next-step options while retaining stale/conflicting evidence and strict input/authority boundaries.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "The PR explicitly describes a reusable reasoning foundation and does not claim consumer reachability.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["catalog topology reasoning kernel"],
+      "contracts": ["qualitative evidence-bound prioritization only"],
+      "persistence": [],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["fresh first-attempt Windows proof is blocked on the independently owned reliability recurrence"]
+    },
+    "dependencies": {
+      "upstream": ["Windows reliability issue #136 disposition", "repaired stable main after integration incident #206"],
+      "downstream_consumers": ["future catalog/A&R consumer reachability"],
+      "shared_domains": ["Song evidence", "catalog prioritization", "artist intent", "release/pitch preparation semantics"],
+      "shared_files": [],
+      "ordering_assumptions": ["Do not churn or repeatedly reconstruct this lane until #136 and #206 provide a current admissible baseline."],
+      "provider_assumptions": [],
+      "platform_assumptions": ["The historical Windows profile-create timeout is independently owned and must not be retried away as catalog proof."],
+      "semantic_assumptions": ["catalog topology does not own the Windows profile-create reliability path"],
+      "collision_surfaces": []
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/catalog/test_catalog_topology.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. Historical semantic run 33920086506 and first-attempt integration run 33923585419 remain evidence only. The Windows failure on dde30f6ebefe1340b9ebcf522733a3940bb7c58c is independently owned by reliability issue #136; its same-SHA retry was diagnostic and is not completion proof.",
+          "observed_at": "2026-09-06T03:00:00Z",
+          "artifact_refs": ["workflow:33920086506", "workflow:33923585419", "issue:136"]
+        }
+      ],
+      "regression_proof": "Fresh first-attempt exact-head repository regression is required only after #136 and #206 clear the reconstruction dependency.",
+      "consumer_smoke": "No direct consumer path is claimed; repository staged smoke remains a future integration regression guard.",
+      "full_regression": "Historical Linux/macOS success and diagnostic Windows retry do not authorize integration.",
+      "migration_proof": "",
+      "recovery_proof": "",
+      "security_privacy_rights_proof": "Input coercion fails closed and release/pitch/external-action authority remains structurally false.",
+      "cross_platform_proof": "Fresh first-attempt Linux/Windows/macOS exact-head proof is required after dependencies clear."
+    },
+    "review": {
+      "status": "WAITING_DEPENDENCY",
+      "unresolved_findings": [
+        "Windows reliability issue #136 remains the owner of the intermittent profile-create timeout seen during the historical integration matrix.",
+        "Integration incident #206 prevents treating historical catalog proof as current merge authority."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": ["The two-file catalog semantics remain accepted and should be preserved without churn until the external dependencies resolve."]
+    },
+    "risk": {
+      "tier": "TIER_1",
+      "high_consequence_surfaces": ["artist prioritization advice", "subjective evidence authority", "release/pitch authority separation"],
+      "failure_modes": ["stale evidence drives current priority", "subjective truth is certified by the wrong evidence class", "semantic ties are presented as ranked certainty", "preparation option is mistaken for execution authority"],
+      "rollback_recovery_considerations": ["two-file additive reasoning foundation can be omitted/reconstructed without provider or persistent-state side effects"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["no consumer reachability", "does not complete full REQ-SCOPE-127", "historical Windows first attempt is not green"],
+      "deferred_portions": [],
+      "external_dependencies": ["issue #136", "incident #206 repaired stable main"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "WAITING_DEPENDENCY",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve the exact two-file catalog semantics", "do not rerun/churn while reliability #136 and incident #206 remain unresolved", "retain work claim #164"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "The semantics are historically accepted, but future fresh-main reconstruction still requires terminal review."},
+      {"name": "AUTHORITY_SEPARATION", "state": "APPLICABLE_PASS"},
+      {"name": "PLATFORM_RELIABILITY", "state": "EXTERNAL_ACCEPTANCE_REQUIRED", "reason": "Issue #136 owns the intermittent Windows recurrence."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "The catalog kernel neither deploys nor publishes state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": "REBUILD_ORDER",
+      "legacy_source_pr": 167,
+      "historical_head_before_h0": "dde30f6ebefe1340b9ebcf522733a3940bb7c58c",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
