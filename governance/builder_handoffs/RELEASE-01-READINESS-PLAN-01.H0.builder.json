@@ -19,10 +19,10 @@
       "cohesive": true,
       "unrelated_concerns": false,
       "partial_failure_blocks_unrelated": false,
-      "mixed_risk_surfaces": true,
+      "mixed_risk_surfaces": false,
       "independent_disposition_possible": false,
-      "external_dependency_partial": true,
-      "review_opaque": true
+      "external_dependency_partial": false,
+      "review_opaque": false
     },
     "semantic_contract": {
       "governing_requirement": "REQ-SCOPE-026",
@@ -129,7 +129,7 @@
     ],
     "lineage": {
       "previous_handoff_version": null,
-      "order": "REBUILD_ORDER",
+      "order": null,
       "legacy_source_pr": 175,
       "historical_head_before_h0": "cb2eb431f41c2d5f4bb07c2464fd18b979443d79",
       "migration_classification": "STALE_RECONSTRUCTABLE"
