@@ -18,6 +18,20 @@ def test_repository_cross_ledger_integrity() -> None:
     integrity.run(ROOT, verify_git=False)
 
 
+def test_repository_cross_ledger_integrity_against_active_exact_base(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    receipt = json.loads(
+        (ROOT / "governance" / "active_receipt.json").read_text(encoding="utf-8")
+    )
+    if receipt.get("status") != "ACTIVE":
+        pytest.skip("exact-base candidate proof applies only while a receipt is ACTIVE")
+    base_sha = receipt.get("baseline_sha")
+    assert isinstance(base_sha, str) and integrity.HEX40.fullmatch(base_sha)
+    monkeypatch.setenv("N0TE2_BASE_SHA", base_sha)
+    integrity.run(ROOT, verify_git=True)
+
+
 def _requirements() -> dict:
     return {
         "sequence": {"start": 2, "end": 4},
