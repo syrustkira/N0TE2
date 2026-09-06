@@ -311,13 +311,24 @@ def validate_requirement_graph(
         )
 
     sequence = requirements.get("sequence", {})
+    sequence_start = sequence.get("start")
+    sequence_end = sequence.get("end")
     require(
-        type(sequence.get("start")) is int and type(sequence.get("end")) is int,
+        type(sequence_start) is int and type(sequence_end) is int,
         "build sequence invalid",
     )
     require(
-        start <= sequence["start"] <= sequence["end"] <= end,
+        start <= sequence_start <= sequence_end <= end,
         "build sequence escaped canonical range",
+    )
+    sequence_ids = {
+        canonical_requirement_id(number)
+        for number in range(sequence_start, sequence_end + 1)
+    }
+    missing = sorted((sequence_ids - superseded) - graph_requirements)
+    require(
+        not missing,
+        "completion graph lost build-sequence requirements: " + ", ".join(missing),
     )
     return canonical_ids, superseded, nodes
 
