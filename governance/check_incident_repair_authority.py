@@ -197,6 +197,42 @@ def validate_repair_completion_events(
             status.startswith("OPEN") or status.startswith("RESOLVED"),
             f"repair closure requires durable OPEN repair-completion or RESOLVED incident truth: {incident_id} is {status or '<missing>'}",
         )
+
+        if status.startswith("RESOLVED"):
+            require(
+                isinstance(row.get("resolved_at"), str) and row["resolved_at"].strip(),
+                f"repair closure resolution event lacks resolved_at: {incident_id}",
+            )
+            require(
+                isinstance(row.get("resolution_condition"), str)
+                and row["resolution_condition"].strip(),
+                f"repair closure resolution event lacks resolution_condition: {incident_id}",
+            )
+        else:
+            require(
+                isinstance(row.get("repair_completed_at"), str)
+                and row["repair_completed_at"].strip(),
+                "repair closure requires durable RESOLVED incident truth or evidence-bound OPEN repair-completion event: "
+                + incident_id,
+            )
+            require(
+                isinstance(row.get("repair_completion_condition"), str)
+                and row["repair_completion_condition"].strip(),
+                f"open repair-completion event lacks repair_completion_condition: {incident_id}",
+            )
+            remaining = row.get("remaining_open_obligations")
+            require(
+                (isinstance(remaining, list) and bool(remaining))
+                or (isinstance(remaining, str) and bool(remaining.strip())),
+                f"open repair-completion event must preserve remaining_open_obligations: {incident_id}",
+            )
+            contract = row.get("repair_contract")
+            require(
+                isinstance(contract, dict)
+                and contract.get("future_receipt_field") == "incident_repair_ids",
+                f"open repair-completion event must preserve repair_contract for later bounded repairs: {incident_id}",
+            )
+
         evidence = row.get("evidence")
         require(
             isinstance(evidence, dict) and evidence,
@@ -209,41 +245,6 @@ def validate_repair_completion_events(
         require(
             row.get("closure_receipt_id") == closure_receipt_id,
             f"repair completion event is not bound to exact terminal closure receipt: {incident_id}",
-        )
-
-        if status.startswith("RESOLVED"):
-            require(
-                isinstance(row.get("resolved_at"), str) and row["resolved_at"].strip(),
-                f"repair closure resolution event lacks resolved_at: {incident_id}",
-            )
-            require(
-                isinstance(row.get("resolution_condition"), str)
-                and row["resolution_condition"].strip(),
-                f"repair closure resolution event lacks resolution_condition: {incident_id}",
-            )
-            continue
-
-        require(
-            isinstance(row.get("repair_completed_at"), str)
-            and row["repair_completed_at"].strip(),
-            f"open repair-completion event lacks repair_completed_at: {incident_id}",
-        )
-        require(
-            isinstance(row.get("repair_completion_condition"), str)
-            and row["repair_completion_condition"].strip(),
-            f"open repair-completion event lacks repair_completion_condition: {incident_id}",
-        )
-        remaining = row.get("remaining_open_obligations")
-        require(
-            (isinstance(remaining, list) and bool(remaining))
-            or (isinstance(remaining, str) and bool(remaining.strip())),
-            f"open repair-completion event must preserve remaining_open_obligations: {incident_id}",
-        )
-        contract = row.get("repair_contract")
-        require(
-            isinstance(contract, dict)
-            and contract.get("future_receipt_field") == "incident_repair_ids",
-            f"open repair-completion event must preserve repair_contract for later bounded repairs: {incident_id}",
         )
 
 
