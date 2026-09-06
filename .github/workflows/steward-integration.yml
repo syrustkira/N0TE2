@@ -78,6 +78,19 @@ jobs:
           python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'candidate_expected={expected} candidate_actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
           test -f "$TRUSTED_PATH/governance/check_steward_integration.py"
           test -f "$TRUSTED_PATH/governance/check_incident_repair_authority.py"
+          test -f "$TRUSTED_PATH/governance/check_steward_integrity.py"
+          test -f "$TRUSTED_PATH/governance/steward_integrity_contract.json"
+
+      - name: Protect Steward integrity enforcement surfaces
+        shell: bash
+        run: |
+          CHANGED="$(git diff --no-renames --name-only "$N0TE2_BASE_SHA...$N0TE2_HEAD_SHA")"
+          if printf '%s\n' "$CHANGED" | grep -Fxq -e governance/check_steward_integrity.py -e governance/steward_integrity_contract.json; then
+            if [ "$N0TE2_META_GOVERNANCE_REOPEN" != "MAIN_STEWARD_LABEL" ]; then
+              echo "Steward integrity checker/contract changed without explicit Main Steward meta-governance reopen" >&2
+              exit 1
+            fi
+          fi
 
       - name: Validate candidate with trusted base Steward checker
         shell: bash
@@ -86,6 +99,10 @@ jobs:
       - name: Validate candidate incident repair authority from trusted base
         shell: bash
         run: python "$TRUSTED_PATH/governance/check_incident_repair_authority.py" --repo .
+
+      - name: Validate candidate cross-ledger integrity from trusted base
+        shell: bash
+        run: python "$TRUSTED_PATH/governance/check_steward_integrity.py" --repo .
 
       - name: Publish trusted structural success
         if: ${{ success() }}
@@ -172,6 +189,10 @@ jobs:
       - name: Validate current main incident repair authority
         shell: bash
         run: python governance/check_incident_repair_authority.py --repo .
+
+      - name: Validate current main cross-ledger integrity
+        shell: bash
+        run: python governance/check_steward_integrity.py --repo .
 
       - name: Publish main structural success
         if: ${{ success() }}

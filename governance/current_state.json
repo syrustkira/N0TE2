@@ -4,10 +4,10 @@
   "construction_phase": "6 SONG JOURNEY",
   "lifecycle_state": "ACTIVE",
   "active_node": "INCIDENT-REPAIR",
-  "active_increment": "INCIDENT-REPAIR-247-248-GOVERNANCE-01",
+  "active_increment": "INCIDENT-REPAIR-206-CROSS-LEDGER-INTEGRITY-01",
   "terminal_reason": null,
-  "wake_condition": "This bounded #206 governance incident repair is active; no product construction or unrelated integration may be selected until it reaches a truthful terminal disposition.",
-  "next_admissible_action": "Implement and prove only the first-class incident-repair lifecycle plus the current_state/automation-registry ownership correction owned by issues #247 and #248, then return to a truthful terminal state without selecting product work.",
+  "wake_condition": "This bounded successor #206 governance repair is active only after the exact #249 candidate head. It may qualify in parallel as a handoff, but it cannot bypass #249, mutate main, or select product construction.",
+  "next_admissible_action": "Implement and prove the cross-ledger integrity/no-silent-drop checker, protect its trusted-base enforcement surfaces, then hand it to the Main Steward as a successor repair candidate behind #249.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
@@ -28,6 +28,7 @@
     "PR #141 merged that verified bounded standards-aware A/B level-bias bridge as ab1bb8f87a3d5b021d352a215302b14114312021. The surface may expose exact measured integrated loudness and pair difference as evidence with truthful RMS fallback, but it does not normalize audio, infer quality, choose an artist decision, mutate Song/Version/Learning, grant execution authority, mark SONG-01 DONE, or complete full REQ-SCOPE-010.",
     "Governance-only issue #191 closed the merged SONG-01-AB-LOUDNESS-BIAS-01 construction receipt, returning SONG-01 to PRESERVED and construction to STABLE/DORMANT without selecting adjacent product work.",
     "PR #211 merged the trusted Main Steward gate as 25801563ba8865941f1214ba83d9ea8a346912bf and was post-merge verified by trusted structure plus ordinary Linux, Windows and macOS governance run #1619.",
-    "Issues #247 and #248 are the sole active governance incident-repair work. INCIDENT-REPAIR is not a product completion node and grants no product construction authority."
+    "The exact predecessor for this successor repair is PR #249 head 9b8ca57137217ef3e2e33a99dcf977ffead1d83a. #249 remains the earlier bounded incident-repair candidate and must merge or be rebuilt/dispositioned before this successor may target main.",
+    "This successor repair adds cross-ledger integrity and no-silent-drop enforcement only. It grants no product construction, semantic scope, public-deployment, merge, human-acceptance, or artist-value authority."
   ]
 }
