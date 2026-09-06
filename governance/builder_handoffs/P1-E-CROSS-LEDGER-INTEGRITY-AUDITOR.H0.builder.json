@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "P1-E-CROSS-LEDGER-INTEGRITY-AUDITOR",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-P1E-20260905",
+      "candidate_id": "P1-E-CROSS-LEDGER-INTEGRITY-AUDITOR",
+      "requirement_ids": ["P1-E"],
+      "pub_ids": [],
+      "product_outcome": "A read-only cross-ledger integrity auditor that detects orphaned or contradictory governance/public evidence without mutating canonical sources.",
+      "artist_job": "Keep retained requirements, implementations, public handoffs, acceptance evidence and waiting work traceable instead of silently dropping them.",
+      "semantic_owner": "P1-E Cross-Ledger Integrity Auditor"
+    },
+    "bounded_increment": {
+      "increment_id": "P1-E",
+      "description": "Add the disjoint read-only cross-ledger integrity contract, auditor and adversarial tests.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "P1-E",
+      "required_behavior": "Audit materialized canonical N0TE and public projections for broken traceability, equivalence, live-state, resurrection and authority relationships while remaining read-only and non-authoritative.",
+      "non_negotiable_semantics": [
+        "audit inputs remain byte-for-byte unchanged",
+        "historical gaps warn rather than fabricate identifiers",
+        "merge evidence does not prove public or human acceptance",
+        "incomplete equivalence cannot silently close retained semantics",
+        "waiting work requires a durable wake or successor condition",
+        "auditor findings do not grant merge, public, provider or human authority"
+      ],
+      "allowed_implementation_freedom": [
+        "internal parser and report structure",
+        "ordering of findings when semantic content is preserved",
+        "explicit output-directory layout"
+      ],
+      "interpretations_required": [
+        "Steward decides whether a finding blocks integration once the auditor is wired into trusted intake"
+      ],
+      "remaining_semantics": [
+        "production materialization of fresh canonical N0TE and public projections",
+        "trusted-base integration into Steward intake after the incident-repair chain"
+      ]
+    },
+    "behavior": {
+      "requested_behavior": "Detect orphaned requirements, implementations, public handoffs, receipts, acceptance, equivalence and waiting-state defects across read-only projections.",
+      "implemented_behavior": "Adds contract-driven validation for orphan requirements/implementations/public handoffs/public receipts/acceptance, dangling bridges, unproven equivalence, stale live claims, missing resurrection conditions and authority mismatches, with ERROR/WARN/INFO output and source immutability checks.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "This is a governance/audit foundation with no direct Artist-facing consumer route.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["CLI/read-only projection audit"],
+      "contracts": ["governance/cross_ledger_integrity_contract.json"],
+      "persistence": [],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["repository-local Python execution; no provider mutation"]
+    },
+    "dependencies": {
+      "upstream": ["fresh materialized/exported canonical N0TE and public projections for production use"],
+      "downstream_consumers": ["Main Steward intake", "future trusted cross-ledger audit workflow"],
+      "shared_domains": ["governance", "public handoff traceability", "acceptance evidence"],
+      "shared_files": [],
+      "ordering_assumptions": ["PR #249 incident-repair lifecycle is integrated before authoritative intake wiring"],
+      "provider_assumptions": [],
+      "platform_assumptions": ["Python 3.11-compatible repository environment"],
+      "semantic_assumptions": ["canonical source projections remain external authority; this auditor is validation only"],
+      "collision_surfaces": ["PR #253 Steward cross-ledger integrity and no-silent-drop enforcement may define the trusted integration boundary"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/governance/test_cross_ledger_integrity_auditor.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "Prior 9/9 focused proof belongs to the pre-H0 head and is preserved as historical evidence; the new exact head must rerun.",
+          "observed_at": "2026-09-06T01:07:00Z",
+          "artifact_refs": []
+        }
+      ],
+      "regression_proof": "Fresh exact-head repository regression is required after this H0 declaration commit; prior regression evidence is historical only.",
+      "consumer_smoke": "Not directly applicable because this increment has no consumer route; repository staged smoke remains a regression guard when CI runs.",
+      "full_regression": "",
+      "migration_proof": "",
+      "recovery_proof": "",
+      "security_privacy_rights_proof": "Read-only source snapshots are hashed before and after audit; no provider/public mutation authority is present.",
+      "cross_platform_proof": "Fresh exact-head Linux/Windows/macOS proof remains required before Steward qualification."
+    },
+    "review": {
+      "status": "BUILDER_SELF_REVIEWED_EXACT_HEAD_REVIEW_REQUIRED",
+      "unresolved_findings": [],
+      "inline_threads": [],
+      "reviewer_assumptions": ["Steward must reconcile overlap with #253 before trusted integration"]
+    },
+    "risk": {
+      "tier": "TIER_1",
+      "high_consequence_surfaces": ["governance evidence interpretation"],
+      "failure_modes": [
+        "false orphan finding",
+        "missed broken trace",
+        "mistaking repository integration evidence for public or human acceptance",
+        "mutating source projections"
+      ],
+      "rollback_recovery_considerations": ["remove the additive auditor/contract/tests; canonical source ledgers remain unchanged"]
+    },
+    "public_consequence": {
+      "classification": "PUBLIC_IMPACT_NONE"
+    },
+    "limitations": {
+      "known_limitations": [
+        "production audit quality depends on freshly materialized canonical projections",
+        "optional implementation/acceptance indexes can only be validated when supplied",
+        "this candidate does not claim current public state is healthy"
+      ],
+      "deferred_portions": [],
+      "external_dependencies": ["fresh canonical N0TE/public projection materialization"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "QUALIFY_AFTER_FRESH_EXACT_HEAD_PROOF_AND_#253_COLLISION_REVIEW",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": true,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": [
+        "materializer contract design that does not mutate canonical sources",
+        "fixture expansion for additional orphan/equivalence cases"
+      ]
+    },
+    "lenses": [
+      {
+        "name": "SEMANTIC_CORRECTNESS",
+        "state": "STEWARD_REVIEW_REQUIRED",
+        "reason": "Fresh exact-head proof and overlap reconciliation with #253 are still required."
+      },
+      {
+        "name": "AUTHORITY_SEPARATION",
+        "state": "APPLICABLE_PASS"
+      },
+      {
+        "name": "SOURCE_IMMUTABILITY",
+        "state": "APPLICABLE_PASS"
+      },
+      {
+        "name": "PUBLIC_DEPLOYMENT",
+        "state": "NOT_APPLICABLE_WITH_REASON",
+        "reason": "The candidate audits public evidence but does not deploy, publish or mutate public state."
+      }
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null
+    }
+  }
+}
