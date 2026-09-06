@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "contract_id": "CROSS-LEDGER-INTEGRITY-AUDITOR-001",
+  "role": "READ_ONLY_VALIDATION_NO_SEMANTIC_AUTHORITY",
+  "objective": "Detect forgotten requirements, orphaned implementations/public handoffs/receipts/acceptance, broken trace chains, unproven equivalence, stale public truth and missing resurrection contracts without becoming a semantic authority.",
+  "inputs": [
+    "n0te_requirements",
+    "acceptance_evidence",
+    "action_receipts",
+    "public_scope",
+    "public_product_bridge",
+    "public_receipts",
+    "public_current_state",
+    "integration_receipts",
+    "equivalence_receipts",
+    "human_acceptance_receipts"
+  ],
+  "input_rule": "Inputs are materialized/exported read-only projections. Drive/public semantics are not copied into repository authority by the auditor.",
+  "forbidden_actions": [
+    "create requirements automatically",
+    "redefine semantic ownership",
+    "merge code",
+    "publish",
+    "submit rights",
+    "modify providers",
+    "close incidents",
+    "declare human acceptance"
+  ],
+  "finding_types": [
+    "AUTHORITY_MISMATCH",
+    "DANGLING_BRIDGE",
+    "MISSING_RESURRECTION_CONDITION",
+    "ORPHAN_ACCEPTANCE",
+    "ORPHAN_IMPLEMENTATION",
+    "ORPHAN_PUBLIC_HANDOFF",
+    "ORPHAN_PUBLIC_RECEIPT",
+    "ORPHAN_REQUIREMENT",
+    "STALE_LIVE_CLAIM",
+    "UNPROVEN_EQUIVALENCE"
+  ],
+  "severity": {
+    "ERROR": "Deterministic current integrity violation.",
+    "WARN": "Non-fatal uncertainty or historical incompleteness that must remain explicit.",
+    "INFO": "Informational observation."
+  },
+  "outputs": [
+    "cross_ledger_integrity_report.json",
+    "CROSS_LEDGER_INTEGRITY_REPORT.md"
+  ],
+  "output_fields": [
+    "checked_authorities",
+    "generated_at",
+    "source_versions",
+    "findings",
+    "affected_ids",
+    "severity",
+    "suggested_owner",
+    "no_automatic_mutation"
+  ],
+  "acceptance_tests": [
+    "omitted retained requirement is detected",
+    "dangling bridge is detected",
+    "missing public handoff is detected",
+    "merge does not prove public acceptance",
+    "historical trace gap is warned rather than fabricated",
+    "incomplete equivalence fails",
+    "WAITING item without wake condition is detected",
+    "valid fully linked sample passes",
+    "auditor cannot alter semantic source files"
+  ]
+}
