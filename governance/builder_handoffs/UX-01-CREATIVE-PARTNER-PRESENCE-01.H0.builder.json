@@ -21,7 +21,7 @@
       "partial_failure_blocks_unrelated": false,
       "mixed_risk_surfaces": false,
       "independent_disposition_possible": false,
-      "external_dependency_partial": true,
+      "external_dependency_partial": false,
       "review_opaque": false
     },
     "semantic_contract": {
@@ -132,7 +132,7 @@
     ],
     "lineage": {
       "previous_handoff_version": null,
-      "order": "REBUILD_ORDER",
+      "order": null,
       "legacy_source_pr": 98,
       "historical_head_before_h0": "2bca0f59854a216bd2e74621449db22ae51743fb",
       "migration_classification": "STALE_RECONSTRUCTABLE"
