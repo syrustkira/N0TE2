@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tellmen0te.local/governance/integrity-external-snapshot.schema.json",
+  "title": "N0TE Cross-Ledger External Integrity Snapshot",
+  "type": "object",
+  "required": ["nodes", "edges", "source_health"],
+  "properties": {
+    "snapshot_id": {"type": "string"},
+    "captured_at": {"type": "string"},
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind"],
+        "properties": {
+          "id": {"type": "string"},
+          "kind": {"type": "string"},
+          "source": {"type": "string"},
+          "attrs": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["src", "rel", "dst"],
+        "properties": {
+          "src": {"type": "string"},
+          "rel": {"type": "string"},
+          "dst": {"type": "string"},
+          "source": {"type": "string"},
+          "attrs": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "source_health": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["available"],
+        "properties": {
+          "available": {"type": "boolean"},
+          "required": {"type": "boolean"},
+          "observed_at": {"type": "string"},
+          "head_sha": {"type": "string"},
+          "reason": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "raw_records": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}
