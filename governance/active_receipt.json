@@ -4,8 +4,8 @@
   "receipt_id": "N0TE2-INCIDENT-REPAIR-247-248-GOVERNANCE-01",
   "node_id": "INCIDENT-REPAIR",
   "increment_id": "INCIDENT-REPAIR-247-248-GOVERNANCE-01",
-  "baseline_sha": "2283d08f05e4445762333f607e2af4416e375696",
-  "purpose": "Complete the already-merged #247/#248 governance repair lifecycle by making the general blocking-incident gate recognize the exact evidence-bound INCIDENT_REPAIR_CLOSURE mode already enforced by the specialized repair authority checker.",
+  "baseline_sha": "dd783e9e7d4dd2a1fa8f4b69f89523049984fdce",
+  "purpose": "Complete the already-selected #247/#248 governance repair by making its incident-repair regression fixtures independent of the repository's current ACTIVE versus terminal closure state, after PR #260 exposed hidden fixture coupling.",
   "product_code_allowed": false,
   "legacy_admission_allowed": false,
   "legacy_source_copy_allowed": false,
@@ -16,55 +16,56 @@
   "incident_repair_ids": ["INC-2026-09-05-STEWARD-INTEGRATION-206"],
   "allowed_exact_paths": [
     "governance/active_receipt.json",
-    "governance/check_steward_integration.py",
-    "tests/governance/test_incident_repair_closure_gate.py"
+    "tests/governance/test_incident_event_history.py",
+    "tests/governance/test_incident_repair_exact_paths.py",
+    "tests/governance/test_incident_repair_lifecycle.py"
   ],
   "allowed_prefixes": [],
   "forbidden_prefixes": ["n0te2/","app/","src/","legacy/","vendor/","tests/core/","tests/song/","tests/ux/","tests/platform/"],
   "lineage": {
     "portfolio": "N0TE2",
-    "outcome": "The first-class incident-repair lifecycle can reach its own evidence-bound terminal closure without resolving the still-open parent incident or weakening its unrelated-merge block.",
+    "outcome": "Incident-repair governance tests construct explicit state-independent fixtures so the legal terminal closure can be regression-tested without inheriting ambient repository lifecycle state.",
     "journeys": ["J-TRUST"],
-    "capability": "Bounded incident-repair lifecycle closure gate compatibility",
+    "capability": "Bounded incident-repair lifecycle test-fixture independence",
     "requirements": [],
     "increment": "INCIDENT-REPAIR-247-248-GOVERNANCE-01"
   },
-  "why_now": "PR #249 merged as 2283d08f05e4445762333f607e2af4416e375696 and passed post-merge trusted structure plus full three-platform governance. Final lifecycle review then exposed one remaining self-blocking seam: check_incident_repair_authority.py accepts an exact three-path INCIDENT_REPAIR_CLOSURE that preserves parent #206 OPEN, while check_steward_integration.py recognizes only ACTIVE incident_repair_ids as explicit repair authority. Without this bounded compatibility fix, the legal terminal closure is unreachable.",
+  "why_now": "PR #260 exact head 029139f69ab48aa426f397a7b018602fb54e1e7f passed trusted structural, construction, lifecycle, supervision and handoff gates, but Linux full regression run 34007085185 reported 11 governance-test failures. The failures are localized to tests that assume one #206 ledger event or inherit the checked-out repository's ACTIVE receipt. The legal three-path closure cannot modify tests, so this continuation FIX repairs only the test fixtures before closure is rebuilt.",
   "implementation_contract": {
     "exclusive_mode": "This is continuation work on the exact existing ACTIVE repair identity; it does not select a new incident repair or product increment.",
-    "closure_authority": "The general blocking-incident gate may recognize closed_incident_repair_ids only when repair_kind is exactly INCIDENT_REPAIR_CLOSURE. It must not treat inert historical closed IDs under any other receipt kind as authority.",
-    "specialized_validation": "Recognition by the general gate is not sufficient to authorize closure. The trusted workflow must still run check_incident_repair_authority.py, which requires terminal lifecycle, exact prior ACTIVE receipt binding, exact three-path closure manifest, evidence-bound incident completion, and no active incident_repair_ids.",
-    "parent_incident": "Parent incident #206 remains OPEN with blocking_scope BLOCKING_EXCEPT_EXPLICIT_INCIDENT_REPAIR and unrelated_merges_blocked=true. This repair must not reclassify it as non-blocking or resolved.",
-    "noninterference": "Normal ACTIVE incident repair authority remains unchanged; unrelated closure IDs and closed IDs outside INCIDENT_REPAIR_CLOSURE grant no authority."
+    "fixture_independence": "Incident-event tests derive expected duplicate counts from existing history; incident-repair tests explicitly construct ACTIVE fixtures and address the latest/current #206 event instead of assuming the repository checkout already has a particular lifecycle state.",
+    "semantic_preservation": "No checker, workflow, product, incident contract or closure rule is weakened. Assertions must continue to exercise the same repair-authority semantics after fixture setup is made explicit.",
+    "parent_incident": "Parent incident #206 remains OPEN and blocking for unrelated integration.",
+    "closure_boundary": "After this FIX is merged and post-merge verified, the exact three-path INCIDENT_REPAIR_CLOSURE must be rebuilt from fresh main and independently re-proven."
   },
   "completion_proof": [
-    "ACTIVE incident_repair_ids remain recognized as explicit repair authority",
-    "INCIDENT_REPAIR_CLOSURE with the exact incident in closed_incident_repair_ids is recognized by the general blocking-incident gate",
-    "an unrelated closed incident id grants no authority",
-    "closed_incident_repair_ids outside INCIDENT_REPAIR_CLOSURE grant no authority",
-    "specialized incident-repair closure validation remains unchanged and still owns exact terminal proof",
-    "parent #206 remains OPEN and blocking for unrelated merges",
-    "candidate diff is exactly the active receipt, trusted Steward checker and focused governance regression",
+    "duplicate incident-history test tolerates any valid pre-existing append-only event count and proves exactly one new event is accepted",
+    "exact-path tests normalize their cloned repository into an explicit ACTIVE governance repair fixture and clear terminal closure metadata",
+    "merged-product repair fixtures mutate the current/latest #206 event rather than the historical first event",
+    "closure lifecycle tests explicitly create an ACTIVE base before testing terminal transitions",
+    "focused incident event/exact-path/lifecycle tests pass",
     "full exact-head Linux, Windows and macOS governance plus substantive review pass before integration"
   ],
-  "historical_proof": [],
-  "evidence_classification": "EXTERNAL_EXACT_HEAD_PROOF_REQUIRED",
+  "historical_proof": [
+    {"head":"029139f69ab48aa426f397a7b018602fb54e1e7f","governance_run_id":34007085185,"result":"FAILURE","platform":"Linux","classification":"CLOSURE_FIXTURE_COUPLING_DISCOVERY","failure_summary":"11 governance tests failed after structural/lifecycle/handoff gates passed; no product failure established"}
+  ],
+  "evidence_classification": "FIX_EXACT_HEAD_PROOF_REQUIRED",
   "evidence_snapshot": null,
   "non_scope": [
     "closing the #247/#248 active repair receipt in this same candidate",
     "resolving parent incident #206",
-    "selecting the cross-ledger successor repair",
+    "changing repair-authority checker semantics",
     "product construction",
+    "cross-ledger successor #256",
     "public deployment",
     "branch protection administration"
   ],
   "dependencies": [],
   "shared_integration_points": [
-    "governance/check_steward_integration.py",
-    "governance/check_incident_repair_authority.py",
     "governance/active_receipt.json",
-    "governance/incidents.jsonl",
-    "governance/current_state.json"
+    "tests/governance/test_incident_event_history.py",
+    "tests/governance/test_incident_repair_exact_paths.py",
+    "tests/governance/test_incident_repair_lifecycle.py"
   ],
-  "next_selection_rule": "After this exact continuation repair is merged and post-merge verified, create the three-path INCIDENT_REPAIR_CLOSURE for N0TE2-INCIDENT-REPAIR-247-248-GOVERNANCE-01, preserve parent #206 OPEN with remaining obligations and evidence-bound repair completion, verify that closure, then select the next bounded #206 repair."
+  "next_selection_rule": "After this continuation FIX is merged and post-merge verified, rebuild the exact three-path child-repair closure from fresh main. Do not select any new #206 repair before that closure reaches MERGED_VERIFIED."
 }
