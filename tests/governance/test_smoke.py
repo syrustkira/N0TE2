@@ -29,15 +29,39 @@ class SmokeTests(unittest.TestCase):
             state.update(
                 {
                     "lifecycle_state": "ACTIVE",
-                    "active_node": "LEGACY-01",
-                    "active_increment": None,
+                    "active_node": "UX-01",
+                    "active_increment": "UX-01-NO-AUTH-TEST",
                     "terminal_reason": None,
                     "wake_condition": None,
                     "product_code_authorized": False,
-                    "legacy_admission_authorized": True,
+                    "legacy_admission_authorized": False,
                 }
             )
             state_path.write_text(json.dumps(state, indent=2) + "\n")
+
+            receipt_path = repo / "governance/active_receipt.json"
+            receipt = json.loads(receipt_path.read_text())
+            for key in (
+                "repair_kind",
+                "repair_target_kind",
+                "repair_issue",
+                "incident_repair_ids",
+                "repair_target_merge_sha",
+                "closed_repair_receipt_id",
+            ):
+                receipt.pop(key, None)
+            receipt.update(
+                {
+                    "status": "ACTIVE",
+                    "receipt_id": "N0TE2-UX-01-NO-AUTH-TEST",
+                    "node_id": "UX-01",
+                    "increment_id": "UX-01-NO-AUTH-TEST",
+                    "product_code_allowed": False,
+                    "legacy_admission_allowed": False,
+                }
+            )
+            receipt_path.write_text(json.dumps(receipt, indent=2) + "\n")
+
             cp = subprocess.run(
                 ["python", str(repo / "governance/smoke/consumer_smoke.py")],
                 cwd=repo,

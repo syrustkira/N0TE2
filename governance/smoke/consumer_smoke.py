@@ -18,8 +18,6 @@ receipt = json.loads((repo / "governance/active_receipt.json").read_text())
 lifecycle = state.get("lifecycle_state")
 
 if lifecycle == "ACTIVE":
-    if state.get("product_code_authorized") is not True:
-        raise SystemExit("STAGE SMOKE: RED: active construction lacks product-code authority")
     node = state.get("active_node")
     increment = state.get("active_increment")
     if not isinstance(node, str) or not node or not isinstance(increment, str) or not increment:
@@ -31,9 +29,26 @@ if lifecycle == "ACTIVE":
         or receipt.get("node_id") != node
         or receipt.get("increment_id") != increment
         or receipt.get("receipt_id") != f"N0TE2-{increment}"
-        or receipt.get("product_code_allowed") is not True
     ):
         raise SystemExit("STAGE SMOKE: RED: active construction is not bound to its exact active receipt")
+
+    if node == "INCIDENT-REPAIR":
+        if receipt.get("repair_kind") != "INCIDENT_REPAIR":
+            raise SystemExit("STAGE SMOKE: RED: incident repair lacks repair_kind=INCIDENT_REPAIR")
+        target_kind = receipt.get("repair_target_kind")
+        if target_kind == "GOVERNANCE":
+            if state.get("product_code_authorized") is not False or receipt.get("product_code_allowed") is not False:
+                raise SystemExit("STAGE SMOKE: RED: governance incident repair gained product-code authority")
+        elif target_kind == "MERGED_PRODUCT":
+            if state.get("product_code_authorized") is not True or receipt.get("product_code_allowed") is not True:
+                raise SystemExit("STAGE SMOKE: RED: merged-product incident repair lacks product-code authority")
+        else:
+            raise SystemExit(f"STAGE SMOKE: RED: unsupported incident repair target {target_kind}")
+    else:
+        if state.get("product_code_authorized") is not True:
+            raise SystemExit("STAGE SMOKE: RED: active construction lacks product-code authority")
+        if receipt.get("product_code_allowed") is not True:
+            raise SystemExit("STAGE SMOKE: RED: active construction receipt lacks product-code authority")
 elif lifecycle == "STABLE":
     if (
         state.get("active_node") is not None
@@ -121,7 +136,13 @@ def get(shell: ConsumerShell, path: str) -> tuple[int, str]:
         return exc.code, exc.read().decode("utf-8")
 
 
-def post(shell: ConsumerShell, path: str, values: dict[str, str]) -> tuple[int, str]:
+def post(
+    shell: ConsumerShell,
+    path: str,
+    values: dict[str, str],
+    *,
+    timeout: float = 2.0,
+) -> tuple[int, str]:
     request = Request(
         shell.address.origin + path,
         data=urlencode(values).encode("utf-8"),
@@ -132,7 +153,7 @@ def post(shell: ConsumerShell, path: str, values: dict[str, str]) -> tuple[int, 
         },
     )
     try:
-        with build_opener(NoRedirect()).open(request, timeout=2.0) as response:
+        with build_opener(NoRedirect()).open(request, timeout=timeout) as response:
             return response.status, response.read().decode("utf-8")
     except HTTPError as exc:
         return exc.code, exc.read().decode("utf-8")
@@ -164,10 +185,14 @@ def quit_shell(shell: ConsumerShell) -> None:
     status, settings = get(shell, "/settings")
     assert status == 200, f"settings GET returned {status}: {settings[:600]}"
     quit_form = one_form(settings, "/quit")
-    status, closed = post(shell, "/quit", quit_form.values)
+    # Durable Headquarters shutdown can take longer on Windows CI because SQLite
+    # must release its file handles before the server can return the closed page.
+    # Keep ordinary request deadlines strict while giving this explicit safe-quit
+    # proof a bounded grace period instead of abandoning the socket mid-shutdown.
+    status, closed = post(shell, "/quit", quit_form.values, timeout=15.0)
     assert status == 200, f"quit POST returned {status}: {closed[:600]}"
     assert "N0TE closed safely." in closed
-    assert shell.wait_stopped(timeout=2.0)
+    assert shell.wait_stopped(timeout=5.0)
 
 
 with tempfile.TemporaryDirectory() as temp:

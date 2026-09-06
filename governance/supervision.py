@@ -34,6 +34,13 @@ def inspect_supervision(repo: Path) -> dict:
 
     root = registry.get("supervisor")
     _require(root == "N0TE-SUPERVISOR", "supervision root must be N0TE-SUPERVISOR")
+    runtime_contract = registry.get("runtime_state_contract", {})
+    _require(isinstance(runtime_contract, dict), "automation registry runtime_state_contract must be an object")
+    _require(runtime_contract.get("registry_is_runtime_source") is False, "automation registry cannot own live runtime state")
+    _require(
+        runtime_contract.get("construction_lifecycle_source") == "governance/current_state.json",
+        "construction lifecycle source must remain governance/current_state.json",
+    )
     actors = registry.get("actors")
     _require(isinstance(actors, list) and actors, "automation registry requires actors")
     ids = [actor.get("id") for actor in actors]
@@ -89,15 +96,26 @@ def inspect_supervision(repo: Path) -> dict:
 
     controller = next((actor for actor in actors if actor.get("id") == "AUTO-CONSTRUCTION-CONTROLLER-001"), None)
     _require(controller is not None, "construction controller is not registered")
+    _require(
+        controller.get("runtime_state_source") == "REPOSITORY_GOVERNANCE_STATE",
+        "construction controller runtime source drifted",
+    )
+    _require(
+        controller.get("lifecycle", {}).get("health") == "DERIVED_FROM_CURRENT_STATE",
+        "construction controller health must be derived from current_state",
+    )
     construction_state = current.get("lifecycle_state")
     build_actor_roles = {"N0TE_BUILD_HARNESS_COORDINATOR", "N0TE_BUILD_HARNESS_EXECUTOR"}
     build_actors = [actor for actor in actors if actor.get("role_class") in build_actor_roles]
     _require(build_actors, "no N0TE build-harness actors are registered")
 
     if construction_state == "ACTIVE":
-        _require(controller["lifecycle"]["state"] == "ACTIVE", "active construction requires an active controller")
         _require(current.get("active_node"), "active construction requires active_node")
         _require(current.get("active_increment"), "active construction requires active_increment")
+        _require(
+            controller.get("lifecycle", {}).get("state") in {"DORMANT", "ACTIVE"},
+            "declarative construction controller cannot be retired or quarantined during active governed work",
+        )
     else:
         _require(construction_state in {"STABLE", "WAITING", "BLOCKED"}, "unknown construction lifecycle state")
         _require(current.get("active_node") is None, "terminal construction cannot retain active_node")
@@ -113,7 +131,7 @@ def inspect_supervision(repo: Path) -> dict:
             )
 
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "supervisor": root,
         "construction": {
             "state": construction_state,
@@ -121,6 +139,7 @@ def inspect_supervision(repo: Path) -> dict:
             "active_increment": current.get("active_increment"),
             "terminal_reason": current.get("terminal_reason"),
             "wake_condition": current.get("wake_condition"),
+            "runtime_source": runtime_contract.get("construction_lifecycle_source"),
         },
         "actors": observed,
         "context_lifecycle": {

@@ -77,10 +77,15 @@ jobs:
         run: |
           python -c "import os, subprocess; actual=subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip(); expected=os.environ['N0TE2_HEAD_SHA']; print(f'candidate_expected={expected} candidate_actual={actual}'); assert actual == expected, f'checkout mismatch: expected {expected}, got {actual}'"
           test -f "$TRUSTED_PATH/governance/check_steward_integration.py"
+          test -f "$TRUSTED_PATH/governance/check_incident_repair_authority.py"
 
       - name: Validate candidate with trusted base Steward checker
         shell: bash
         run: python "$TRUSTED_PATH/governance/check_steward_integration.py" --repo .
+
+      - name: Validate candidate incident repair authority from trusted base
+        shell: bash
+        run: python "$TRUSTED_PATH/governance/check_incident_repair_authority.py" --repo .
 
       - name: Publish trusted structural success
         if: ${{ success() }}
@@ -163,6 +168,10 @@ jobs:
       - name: Validate current main Steward structure
         shell: bash
         run: python governance/check_steward_integration.py --repo .
+
+      - name: Validate current main incident repair authority
+        shell: bash
+        run: python governance/check_incident_repair_authority.py --repo .
 
       - name: Publish main structural success
         if: ${{ success() }}

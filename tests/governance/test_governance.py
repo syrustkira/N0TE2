@@ -69,6 +69,16 @@ class GovernanceRegressionTests(unittest.TestCase):
 
         receipt_path = repo / "governance/active_receipt.json"
         receipt = json.loads(receipt_path.read_text())
+        for key in (
+            "repair_kind",
+            "repair_target_kind",
+            "repair_issue",
+            "repair_target_merge_sha",
+            "incident_repair_ids",
+            "closed_incident_repair_ids",
+            "closed_repair_receipt_id",
+        ):
+            receipt.pop(key, None)
         receipt.update(
             {
                 "status": "ACTIVE",
@@ -79,19 +89,11 @@ class GovernanceRegressionTests(unittest.TestCase):
                 "legacy_admission_allowed": False,
                 "legacy_source_copy_allowed": False,
                 "legacy_test_text_copy_allowed": False,
+                "allowed_exact_paths": ["governance/active_receipt.json"],
+                "allowed_prefixes": ["n0te2/"],
             }
         )
         self.write_json(receipt_path, receipt)
-
-        automation_path = repo / "governance/automation_registry.json"
-        automation = json.loads(automation_path.read_text())
-        controller = next(
-            row
-            for row in automation["actors"]
-            if row["id"] == "AUTO-CONSTRUCTION-CONTROLLER-001"
-        )
-        controller["lifecycle"]["state"] = "ACTIVE"
-        self.write_json(automation_path, automation)
 
     def test_current_contract_is_green_without_git(self):
         gov.run(ROOT, verify_git=False)

@@ -14,6 +14,10 @@ HEX40 = re.compile(r"^[0-9a-f]{40}$")
 REQ_ID = re.compile(r"^REQ-SCOPE-\d{3}$")
 LIFECYCLE_STATES = {"ACTIVE", "STABLE", "WAITING", "BLOCKED"}
 TERMINAL_LIFECYCLE_STATES = {"STABLE", "WAITING", "BLOCKED"}
+INCIDENT_REPAIR_NODE = "INCIDENT-REPAIR"
+INCIDENT_REPAIR_KIND = "INCIDENT_REPAIR"
+INCIDENT_REPAIR_TARGET_KINDS = {"GOVERNANCE", "MERGED_PRODUCT"}
+TRUSTED_REPAIR_WORKFLOW = ".github/workflows/steward-integration.yml"
 
 
 class GovernanceError(RuntimeError):
@@ -242,27 +246,125 @@ def git(repo: Path, *args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=repo, text=True, stderr=subprocess.STDOUT).strip()
 
 
+def git_path_exists(repo: Path, commit_sha: str, path: str) -> bool:
+    try:
+        subprocess.check_output(
+            ["git", "cat-file", "-e", f"{commit_sha}:{path}"],
+            cwd=repo,
+            stderr=subprocess.STDOUT,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 def path_allowed(path: str, receipt: dict) -> bool:
     return path in set(receipt.get("allowed_exact_paths", [])) or any(path.startswith(prefix) for prefix in receipt.get("allowed_prefixes", []))
+
+
+def _current_incident(rows: list[dict], incident_id: str) -> dict | None:
+    found = None
+    for row in rows:
+        if row.get("id") == incident_id:
+            found = row
+    return found
+
+
+def _check_incident_repair_receipt(repo: Path, receipt: dict, verify_git: bool, current: dict) -> None:
+    require(receipt.get("repair_kind") == INCIDENT_REPAIR_KIND, "INCIDENT-REPAIR requires repair_kind=INCIDENT_REPAIR")
+    target_kind = receipt.get("repair_target_kind")
+    require(target_kind in INCIDENT_REPAIR_TARGET_KINDS, f"unsupported incident repair target kind: {target_kind}")
+    repair_issue = receipt.get("repair_issue")
+    require(type(repair_issue) is int and repair_issue > 0, "incident repair requires a positive integer repair_issue")
+    incident_ids = receipt.get("incident_repair_ids")
+    require(isinstance(incident_ids, list) and incident_ids, "incident repair requires incident_repair_ids")
+    require(all(isinstance(item, str) and item.strip() for item in incident_ids), "incident repair ids must be non-empty text")
+    require(len(incident_ids) == len(set(incident_ids)), "incident repair ids must be unique")
+    require(receipt.get("product_code_allowed") == current.get("product_code_authorized"), "incident repair receipt/current-state product authority mismatch")
+
+    incidents = load_jsonl(repo / "governance/incidents.jsonl")
+    incident_rows = []
+    for incident_id in incident_ids:
+        row = _current_incident(incidents, incident_id)
+        require(row is not None, f"incident repair names unknown incident: {incident_id}")
+        status = str(row.get("status") or "").strip().upper()
+        require(status.startswith("OPEN"), f"incident repair names non-open incident: {incident_id}")
+        repair_contract = row.get("repair_contract")
+        require(isinstance(repair_contract, dict), f"incident repair {incident_id} lacks repair_contract")
+        require(repair_contract.get("future_receipt_field") == "incident_repair_ids", f"incident repair {incident_id} does not permit receipt-bound repair")
+        incident_rows.append(row)
+
+    if target_kind == "GOVERNANCE":
+        require(receipt.get("product_code_allowed") is False, "GOVERNANCE incident repair cannot authorize product code")
+    else:
+        require(receipt.get("product_code_allowed") is True, "MERGED_PRODUCT incident repair must explicitly authorize bounded product code")
+        target_sha = receipt.get("repair_target_merge_sha")
+        require(isinstance(target_sha, str) and HEX40.fullmatch(target_sha), "MERGED_PRODUCT incident repair requires exact repair_target_merge_sha")
+        if verify_git:
+            for row in incident_rows:
+                discovery_sha = row.get("evidence", {}).get("main_at_discovery")
+                require(isinstance(discovery_sha, str) and HEX40.fullmatch(discovery_sha), f"incident {row.get('id')} lacks exact main_at_discovery evidence")
+                try:
+                    git(repo, "merge-base", "--is-ancestor", target_sha, discovery_sha)
+                except subprocess.CalledProcessError as exc:
+                    raise GovernanceError(
+                        f"repair target {target_sha} does not predate incident discovery main {discovery_sha}"
+                    ) from exc
+
+    if not verify_git:
+        return
+
+    baseline = receipt["baseline_sha"]
+    changed = [path for path in git(repo, "diff", "--no-renames", "--name-only", f"{baseline}...HEAD").splitlines() if path]
+    if target_kind == "GOVERNANCE":
+        bad = [
+            path
+            for path in changed
+            if not (
+                path.startswith("governance/")
+                or path.startswith("tests/governance/")
+                or path == TRUSTED_REPAIR_WORKFLOW
+            )
+        ]
+        require(not bad, "GOVERNANCE incident repair changed non-governance paths: " + ", ".join(bad))
+    else:
+        target_sha = receipt["repair_target_merge_sha"]
+        product_paths = [
+            path
+            for path in changed
+            if path.startswith("n0te2/")
+            or (path.startswith("tests/") and not path.startswith("tests/governance/"))
+            or path in {"requirements.txt", "pyproject.toml", "setup.py", "setup.cfg"}
+        ]
+        new_paths = [path for path in product_paths if not git_path_exists(repo, target_sha, path)]
+        require(
+            not new_paths,
+            "MERGED_PRODUCT incident repair introduced construction paths absent from the target merge: "
+            + ", ".join(new_paths),
+        )
 
 
 def check_receipt(repo: Path, verify_git: bool, current: dict):
     receipt = load_json(repo / "governance/active_receipt.json")
     active = current["active_node"]
+    increment = str(current.get("active_increment") or "").strip()
+
     if active == "BOOT-02":
         expected_receipt = "N0TE2-BOOT-02"
     elif active == "LEGACY-01":
         expected_receipt = "N0TE2-LEGACY-01"
     else:
-        increment = str(current.get("active_increment") or "").strip()
         require(bool(increment), f"{active} product construction requires an active_increment")
         expected_receipt = f"N0TE2-{increment}"
         require(receipt.get("increment_id") == increment, "receipt increment must match current active_increment")
         require(increment.startswith(active), f"active increment {increment} must belong to active node {active}")
+
     require(receipt["receipt_id"] == expected_receipt, "unexpected active receipt")
     require(receipt["node_id"] == active, "receipt must bind current active node")
+    require(receipt.get("status") == "ACTIVE", "ACTIVE lifecycle requires an ACTIVE receipt")
     baseline = receipt["baseline_sha"]
-    require(HEX40.match(baseline) is not None, "receipt baseline_sha must be exact 40-char lowercase SHA")
+    require(isinstance(baseline, str) and HEX40.fullmatch(baseline), "receipt baseline_sha must be exact 40-char lowercase SHA")
+
     if active == "BOOT-02":
         require(receipt["product_code_allowed"] is False, "BOOT-02 receipt cannot allow product code")
         require(receipt["legacy_admission_allowed"] is False, "BOOT-02 cannot authorize legacy admission")
@@ -271,12 +373,19 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
         require(receipt["legacy_admission_allowed"] is True, "LEGACY-01 must authorize migration evidence work")
         require(receipt["legacy_source_copy_allowed"] is False, "LEGACY-01 cannot authorize direct legacy source copy")
         require(receipt["legacy_test_text_copy_allowed"] is False, "LEGACY-01 cannot authorize direct legacy test-text copy")
+    elif active == INCIDENT_REPAIR_NODE:
+        require(receipt["legacy_admission_allowed"] is False, "incident repair cannot reopen legacy admission")
+        require(receipt["legacy_source_copy_allowed"] is False, "incident repair cannot authorize direct legacy source copy")
+        require(receipt["legacy_test_text_copy_allowed"] is False, "incident repair cannot authorize direct legacy test-text copy")
+        require(bool(receipt.get("allowed_prefixes") or receipt.get("allowed_exact_paths")), "incident repair must define bounded allowed paths")
+        _check_incident_repair_receipt(repo, receipt, verify_git, current)
     else:
         require(receipt["product_code_allowed"] is True, f"{active} product increment must explicitly authorize bounded product code")
         require(receipt["legacy_admission_allowed"] is False, f"{active} cannot reopen legacy admission")
         require(receipt["legacy_source_copy_allowed"] is False, f"{active} cannot authorize direct legacy source copy")
         require(receipt["legacy_test_text_copy_allowed"] is False, f"{active} cannot authorize direct legacy test-text copy")
         require(bool(receipt.get("allowed_prefixes")), "product receipt must define bounded allowed paths")
+
     if verify_git:
         require(git(repo, "rev-parse", "--is-inside-work-tree") == "true", "not a git worktree")
         expected_head = os.environ.get("N0TE2_HEAD_SHA") or os.environ.get("EVIDENCE_SHA")
@@ -287,11 +396,11 @@ def check_receipt(repo: Path, verify_git: bool, current: dict):
             git(repo, "merge-base", "--is-ancestor", baseline, "HEAD")
         except subprocess.CalledProcessError as exc:
             raise GovernanceError(f"receipt baseline {baseline} is not an ancestor of HEAD: {exc.output}") from exc
-        changed = [path for path in git(repo, "diff", "--name-only", f"{baseline}...HEAD").splitlines() if path]
+        changed = [path for path in git(repo, "diff", "--no-renames", "--name-only", f"{baseline}...HEAD").splitlines() if path]
         bad = [path for path in changed if not path_allowed(path, receipt)]
         require(not bad, f"changed paths outside {active} receipt: {', '.join(bad)}")
         forbidden = tuple(receipt.get("forbidden_prefixes", []))
-        bad_forbidden = [path for path in changed if path.startswith(forbidden)]
+        bad_forbidden = [path for path in changed if forbidden and path.startswith(forbidden)]
         require(not bad_forbidden, f"forbidden clean-room paths changed during {active}: {', '.join(bad_forbidden)}")
     return receipt
 
@@ -320,6 +429,14 @@ def check_stage(repo: Path, graph: dict):
         else:
             require(bool(str(current.get("wake_condition") or "").strip()), f"{lifecycle} requires wake_condition")
         return current
+
+    if active == INCIDENT_REPAIR_NODE:
+        require(not active_nodes, "INCIDENT-REPAIR cannot make a completion-graph node ACTIVE")
+        require(isinstance(active_increment, str) and active_increment.startswith("INCIDENT-REPAIR-"), "INCIDENT-REPAIR requires a bounded incident-repair increment")
+        require(type(current.get("product_code_authorized")) is bool, "INCIDENT-REPAIR product authority must be a JSON boolean")
+        require(current["legacy_admission_authorized"] is False, "INCIDENT-REPAIR cannot keep legacy admission active")
+        return current
+
     require(active in graph, "ACTIVE lifecycle requires current active node in completion graph")
     require(graph[active]["state"] == "ACTIVE", "current active node must be ACTIVE in graph")
     require(active_nodes == [active], "graph/current-state active node mismatch")
@@ -345,12 +462,13 @@ def check_stage(repo: Path, graph: dict):
     return current
 
 
-def check_jsonl_ids(repo: Path, rel: str):
+def check_jsonl_ids(repo: Path, rel: str, *, allow_repeated_ids: bool = False):
     rows = load_jsonl(repo / rel)
     require(rows, f"{rel} must contain at least one durable record")
     ids = [row.get("id") for row in rows]
     require(all(isinstance(item, str) and item.strip() for item in ids), f"{rel} record missing stable id")
-    require(len(ids) == len(set(ids)), f"{rel} contains duplicate stable ids")
+    if not allow_repeated_ids:
+        require(len(ids) == len(set(ids)), f"{rel} contains duplicate stable ids")
     return rows
 
 
@@ -362,7 +480,7 @@ def check_retention_surfaces(repo: Path, current: dict):
     require(len(ids) == len(set(ids)), "invariant registry contains duplicate IDs")
     require(required_invariants.issubset(set(ids)), "constitutional retention/supervision invariant missing")
     decisions = check_jsonl_ids(repo, "governance/decisions.jsonl")
-    incidents = check_jsonl_ids(repo, "governance/incidents.jsonl")
+    incidents = check_jsonl_ids(repo, "governance/incidents.jsonl", allow_repeated_ids=True)
     controllers = check_jsonl_ids(repo, "governance/controller_versions.jsonl")
     provenance = check_jsonl_ids(repo, "governance/provenance.jsonl")
     definitions = check_jsonl_ids(repo, "governance/definitions.jsonl")
@@ -374,6 +492,11 @@ def check_retention_surfaces(repo: Path, current: dict):
 
     automation = load_json(repo / "governance/automation_registry.json")
     require(automation.get("supervisor") == "N0TE-SUPERVISOR", "automation registry must root at N0TE-SUPERVISOR")
+    runtime_contract = automation.get("runtime_state_contract")
+    require(isinstance(runtime_contract, dict), "automation registry lacks runtime-state ownership contract")
+    require(runtime_contract.get("registry_is_runtime_source") is False, "automation registry cannot own live runtime state")
+    require(runtime_contract.get("construction_lifecycle_source") == "governance/current_state.json", "construction lifecycle must be owned by current_state")
+    require(runtime_contract.get("external_liveness_requires_runtime_observation") is True, "external automation liveness must require runtime observation")
     actors = automation.get("actors", [])
     actor_ids = [row.get("id") for row in actors]
     require(actor_ids and len(actor_ids) == len(set(actor_ids)), "automation actors need unique stable IDs")
@@ -387,8 +510,8 @@ def check_retention_surfaces(repo: Path, current: dict):
         require(actor.get("lifecycle", {}).get("state") in {"ACTIVE","DORMANT","RETIRED","QUARANTINED"}, f"automation {actor.get('id')} lacks lifecycle state")
     construction_actor = next((actor for actor in actors if actor.get("id") == "AUTO-CONSTRUCTION-CONTROLLER-001"), None)
     require(construction_actor is not None, "construction controller is not registered")
-    expected_controller_state = "ACTIVE" if current.get("lifecycle_state") == "ACTIVE" else "DORMANT"
-    require(construction_actor["lifecycle"]["state"] == expected_controller_state, "construction controller lifecycle disagrees with current state")
+    require(construction_actor.get("runtime_state_source") == "REPOSITORY_GOVERNANCE_STATE", "construction controller lost repository governance state binding")
+    require(construction_actor.get("lifecycle", {}).get("health") == "DERIVED_FROM_CURRENT_STATE", "construction controller lifecycle must remain derived from current_state")
 
     handoff = load_json(repo / "governance/handoff.json")
     require(handoff.get("repository") == current.get("repository") == "syrustkira/N0TE2", "handoff repository mismatch")

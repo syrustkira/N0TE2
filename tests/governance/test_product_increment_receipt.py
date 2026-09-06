@@ -65,6 +65,16 @@ class ProductIncrementReceiptTests(unittest.TestCase):
 
         receipt_path = repo / "governance/active_receipt.json"
         receipt = json.loads(receipt_path.read_text())
+        for key in (
+            "repair_kind",
+            "repair_target_kind",
+            "repair_issue",
+            "repair_target_merge_sha",
+            "incident_repair_ids",
+            "closed_incident_repair_ids",
+            "closed_repair_receipt_id",
+        ):
+            receipt.pop(key, None)
         receipt.update(
             {
                 "status": "ACTIVE",
@@ -75,19 +85,11 @@ class ProductIncrementReceiptTests(unittest.TestCase):
                 "legacy_admission_allowed": False,
                 "legacy_source_copy_allowed": False,
                 "legacy_test_text_copy_allowed": False,
+                "allowed_exact_paths": [],
+                "allowed_prefixes": ["n0te2/"],
             }
         )
         self.write(receipt_path, receipt)
-
-        automation_path = repo / "governance/automation_registry.json"
-        automation = json.loads(automation_path.read_text())
-        controller = next(
-            row
-            for row in automation["actors"]
-            if row["id"] == "AUTO-CONSTRUCTION-CONTROLLER-001"
-        )
-        controller["lifecycle"]["state"] = "ACTIVE"
-        self.write(automation_path, automation)
 
     def test_receipt_increment_must_match_current_increment(self):
         repo = self.clone()
@@ -126,7 +128,13 @@ class ProductIncrementReceiptTests(unittest.TestCase):
             increment.startswith(str(state["active_node"])),
             f"{increment} must remain explicitly bound to {state['active_node']}",
         )
+        registry_before = (repo / "governance/automation_registry.json").read_text()
         gov.run(repo, verify_git=False)
+        self.assertEqual(
+            (repo / "governance/automation_registry.json").read_text(),
+            registry_before,
+            "valid normal ACTIVE construction must not require registry lifecycle mutation",
+        )
 
 
 if __name__ == "__main__":
