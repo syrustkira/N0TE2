@@ -143,7 +143,7 @@
     ],
     "lineage": {
       "previous_handoff_version": null,
-      "order": "SPLIT_ORDER",
+      "order": null,
       "legacy_source_pr": 92,
       "historical_head_before_h0": "14c20b9df1ec6e2f9f1be643c16848d7a27a3801",
       "migration_classification": "STALE_RECONSTRUCTABLE"
