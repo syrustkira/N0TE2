@@ -19,10 +19,10 @@
       "cohesive": true,
       "unrelated_concerns": false,
       "partial_failure_blocks_unrelated": false,
-      "mixed_risk_surfaces": true,
+      "mixed_risk_surfaces": false,
       "independent_disposition_possible": false,
-      "external_dependency_partial": true,
-      "review_opaque": true
+      "external_dependency_partial": false,
+      "review_opaque": false
     },
     "semantic_contract": {
       "governing_requirement": "REQ-SCOPE-158",
@@ -88,7 +88,7 @@
       "consumer_smoke": "No direct consumer path is claimed; staged smoke remains a future integration regression guard.",
       "full_regression": "Historical green CI cannot authorize the H0 head or a future reconstructed head.",
       "migration_proof": "Historical governance activation cannot be copied as current truth; current trusted ownership must be re-established by Main Steward.",
-      "recovery_proof": "",
+      "recovery_proof": "Reconstruction must preserve fail-closed stale/fabricated evidence handling and must not carry historical governance activation or duplicate Challenger authority into current main.",
       "security_privacy_rights_proof": "Stale/fabricated evidence and suggestions fail closed; outputs remain non-authorizing and non-mutating.",
       "cross_platform_proof": "Fresh first-attempt Linux/Windows/macOS exact-head proof is required after reconstruction."
     },
@@ -131,7 +131,7 @@
     ],
     "lineage": {
       "previous_handoff_version": null,
-      "order": "REBUILD_ORDER",
+      "order": null,
       "legacy_source_pr": 112,
       "historical_head_before_h0": "90cd15e65dd12f453d13663f425822060c289fba",
       "migration_classification": "STALE_RECONSTRUCTABLE"
