@@ -608,7 +608,14 @@ def _explicit_incident_repair(repo: Path, incident: dict) -> bool:
         return True
     receipt = load_json(repo / "governance/active_receipt.json")
     incident_ids = receipt.get("incident_repair_ids", [])
-    return isinstance(incident_ids, list) and incident_id in incident_ids
+    if isinstance(incident_ids, list) and incident_id in incident_ids:
+        return True
+    closed_ids = receipt.get("closed_incident_repair_ids", [])
+    return (
+        receipt.get("repair_kind") == "INCIDENT_REPAIR_CLOSURE"
+        and isinstance(closed_ids, list)
+        and incident_id in closed_ids
+    )
 
 
 def _blocking_scope(incident: dict) -> str:
