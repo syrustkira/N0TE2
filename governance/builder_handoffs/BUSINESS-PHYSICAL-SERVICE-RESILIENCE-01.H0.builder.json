@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "BUSINESS-PHYSICAL-SERVICE-RESILIENCE-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-202",
+      "candidate_id": "BUSINESS-PHYSICAL-SERVICE-RESILIENCE-01",
+      "requirement_ids": ["REQ-SCOPE-168"],
+      "pub_ids": [],
+      "product_outcome": "A pure read/advice physical and service continuity foundation for professional work disruptions, dependencies, fallback options and recovery planning.",
+      "artist_job": "Understand whether a physical or service commitment is stable, at risk, disrupted or blocked from recovery without turning advice into external action.",
+      "semantic_owner": "REQ-SCOPE-168"
+    },
+    "bounded_increment": {
+      "increment_id": "BUSINESS-PHYSICAL-SERVICE-RESILIENCE-01",
+      "description": "Add the reusable physical/service resilience reasoning foundation without consumer composition or external execution.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-168",
+      "required_behavior": "Model service continuity conservatively from role/work context, workload, critical dependencies, freshness-bound evidence, fallback options, disruptions and recovery prerequisites while remaining read/advice only.",
+      "non_negotiable_semantics": [
+        "favorable availability requires current observed or verified-external evidence",
+        "adverse user declarations are respected conservatively",
+        "inferred availability or outage remains unknown rather than operational truth",
+        "fallback continuity does not erase primary-path degradation",
+        "communication and recovery plans do not execute actions",
+        "the foundation grants no mutation, spending, provider, DAW, legal or external-action authority"
+      ],
+      "allowed_implementation_freedom": ["internal model organization", "gap-code ordering when meaning is preserved", "pure helper decomposition"],
+      "interpretations_required": [],
+      "remaining_semantics": ["consumer reachability", "full REQ-SCOPE-168 completion beyond the reusable foundation"]
+    },
+    "behavior": {
+      "requested_behavior": "Provide conservative physical/service continuity reasoning for professional work.",
+      "implemented_behavior": "Models capacity, critical dependencies, source/freshness evidence, fallbacks, disruption impact, communication needs and prerequisite-aware recovery into qualitative continuity outcomes and concrete gaps.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "The PR explicitly excludes ConsumerShell and installer/composition reachability; this is a reusable foundation only.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["read/advice resilience kernel"],
+      "contracts": [],
+      "persistence": [],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": []
+    },
+    "dependencies": {
+      "upstream": [],
+      "downstream_consumers": ["future REQ-SCOPE-168 consumer composition"],
+      "shared_domains": ["professional service continuity", "Jobs/Obligations references", "evidence freshness"],
+      "shared_files": [],
+      "ordering_assumptions": ["current stale candidate must be reconstructed from a future Steward-approved main before integration"],
+      "provider_assumptions": [],
+      "platform_assumptions": [],
+      "semantic_assumptions": ["digital crash/data/artifact recovery remains separately owned"],
+      "collision_surfaces": []
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/business/test_service_resilience.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. Any proof on 4ec885ece2314b70f3401f4c9e4485e20bc831eb remains historical and fresh exact-head proof is required after reconstruction.",
+          "observed_at": "2026-09-06T02:40:00Z",
+          "artifact_refs": []
+        }
+      ],
+      "regression_proof": "Fresh exact-head repository regression is required after reconstruction; prior proof cannot authorize a moved head.",
+      "consumer_smoke": "No direct consumer path exists in this bounded foundation; repository staged smoke remains a regression guard.",
+      "full_regression": "",
+      "migration_proof": "",
+      "recovery_proof": "",
+      "security_privacy_rights_proof": "Authority fields are structurally hard-false and the kernel performs no external action.",
+      "cross_platform_proof": "Fresh Linux/Windows/macOS exact-head proof is required after reconstruction."
+    },
+    "review": {
+      "status": "STEWARD_REBUILD_REQUIRED",
+      "unresolved_findings": [],
+      "inline_threads": [],
+      "reviewer_assumptions": ["Product semantics may be preserved, but exact-base and exact-head proof are stale relative to current main."]
+    },
+    "risk": {
+      "tier": "TIER_1",
+      "high_consequence_surfaces": ["professional continuity advice", "authority separation"],
+      "failure_modes": ["favorable evidence accepted too easily", "reported disruption ignored", "advice mistaken for execution authority"],
+      "rollback_recovery_considerations": ["remove the additive resilience foundation; no provider or persistent state mutation is performed"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["no ConsumerShell reachability", "no persistence store", "no live execution or messaging/scheduling integration", "does not complete full REQ-SCOPE-168"],
+      "deferred_portions": [],
+      "external_dependencies": ["future Steward selection from repaired main"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "REBUILD_ORDER",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve focused adversarial fixtures", "review foundation semantics against future consumer composition without changing main"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Fresh-main reconstruction and exact-head proof remain required."},
+      {"name": "AUTHORITY_SEPARATION", "state": "APPLICABLE_PASS"},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This candidate neither deploys nor publishes public state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 202,
+      "historical_head_before_h0": "4ec885ece2314b70f3401f4c9e4485e20bc831eb",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
