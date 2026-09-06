@@ -1,11 +1,13 @@
 import unittest
 
 from n0te2.capabilities import (
+    SUPPORTED_TEMPLATE_CAPABILITY_KEYS,
     CapabilityCandidate,
     CapabilityResolutionError,
     CapabilityResolver,
     N0TEableJob,
     ResolutionConstraints,
+    canonical_template_capability_key,
 )
 
 
@@ -311,6 +313,24 @@ class Core03AResolverTests(unittest.TestCase):
                     self.candidate("same", "GUIDED"),
                 ],
             )
+
+    def test_template_capability_vocabulary_normalizes_case_and_rejects_unknowns(self):
+        self.assertIn("vocal.tighten", SUPPORTED_TEMPLATE_CAPABILITY_KEYS)
+        self.assertIn("content.generate", SUPPORTED_TEMPLATE_CAPABILITY_KEYS)
+        self.assertEqual(
+            canonical_template_capability_key("  VOCAL.TIGHTEN  "),
+            "vocal.tighten",
+        )
+        self.assertEqual(
+            canonical_template_capability_key("Content.Generate"),
+            "content.generate",
+        )
+        for invalid in ("vocal.tigten", "Vocal Tighten", "unknown.capability", ""):
+            with self.subTest(invalid=invalid):
+                with self.assertRaises(CapabilityResolutionError):
+                    canonical_template_capability_key(invalid)
+        with self.assertRaises(CapabilityResolutionError):
+            canonical_template_capability_key(123)  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":
