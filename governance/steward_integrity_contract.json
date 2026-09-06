@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "contract_id": "STEWARD-CROSS-LEDGER-INTEGRITY-001",
+  "role": "VALIDATION_ONLY_NO_SEMANTIC_AUTHORITY",
+  "purpose": "Detect cross-ledger contradictions, retained-scope disappearance, orphaned unfinished work, stale receipt/current-state lineage, unproven new supersession and public/equivalence receipt defects without creating a second Steward, roadmap, scope ledger or current-state owner.",
+  "authoritative_sources": {
+    "canonical_scope_projection": "governance/requirements.json",
+    "construction_graph": "governance/completion_graph.json",
+    "live_construction_state": "governance/current_state.json",
+    "bounded_work_receipt": "governance/active_receipt.json",
+    "incident_history": "governance/incidents.jsonl",
+    "semantic_decisions": "governance/decisions.jsonl",
+    "acceptance_spine": "governance/acceptance_evidence_spine.json",
+    "action_receipt_envelope": "governance/action_receipt_contract.json",
+    "unfinished_work_policy": "governance/work_continuity.json",
+    "discovery_closure_policy": "governance/discovery_closure.json",
+    "continuity_acceptance": "governance/continuity_acceptance.json",
+    "external_semantic_authority": "N0TE_PRODUCT_DB/SCOPE_LEDGER"
+  },
+  "authority_boundary": {
+    "creates_second_steward": false,
+    "can_mutate_main": false,
+    "can_select_product_scope": false,
+    "can_retire_accepted_scope": false,
+    "can_accept_artist_value": false,
+    "can_declare_public_completion": false,
+    "behavior": "Fail closed or surface an actionable reconciliation defect. Authority remains with the existing Main Steward, semantic authority, human acceptance authority and Public Deployment Governance as applicable."
+  },
+  "invariants": [
+    "Canonical requirement ids remain retained inside the declared canonical range.",
+    "Completion-graph requirement references never escape canonical scope.",
+    "held_or_boundary exactly equals the retained LATER-01 requirement set.",
+    "A superseded requirement cannot remain silently active in the construction graph.",
+    "Every SUPERSEDED semantic decision retains a durable successor reference.",
+    "ACTIVE current_state and active_receipt retain the same node, increment and exact baseline lineage.",
+    "An incident-bound repair references current open incident truth and its durable repair contract.",
+    "Acceptance evidence keeps implementation, integration, reachability, verification, recovery, authority, consumer acceptance and value evidence distinct.",
+    "Discovery closure and work continuity retain unfinished ACTIVE, WAITING and BLOCKED work instead of allowing conversational disappearance.",
+    "A declared public-consequence handoff cannot be considered satisfied without a durable handoff reference.",
+    "SUPERSEDED_BY_EQUIVALENT requires semantic coverage evidence rather than an unproved already-covered label.",
+    "A newly added superseded requirement requires exact candidate evidence; historical supersession is never silently upgraded into equivalence."
+  ],
+  "equivalence_receipt_required_fields": [
+    "original_requirement",
+    "replacement_implementation",
+    "semantic_coverage_mapping",
+    "retained_behavior",
+    "changed_behavior",
+    "uncovered_residue",
+    "acceptance_evidence",
+    "semantic_authority",
+    "lineage",
+    "successor_status"
+  ],
+  "public_handoff_contract": {
+    "trigger_field": "public_handoff_required",
+    "required_reference_field": "public_handoff_ref",
+    "merge_is_public_acceptance": false,
+    "public_verified_is_repository_integration_state": false
+  },
+  "legacy_compatibility": {
+    "new_supersession_requires_evidence": true,
+    "historical_supersession_without_local_proof_is_not_equivalence": true,
+    "historical_records_are_not_deleted_to_make_validation_green": true,
+    "blocked_legacy_reconciliation_remains_visible": true
+  }
+}
