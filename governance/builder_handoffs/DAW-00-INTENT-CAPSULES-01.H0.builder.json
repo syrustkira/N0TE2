@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "DAW-00-INTENT-CAPSULES-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-177",
+      "candidate_id": "DAW-00-INTENT-CAPSULES-01",
+      "requirement_ids": ["REQ-SCOPE-070"],
+      "pub_ids": [],
+      "product_outcome": "A source-bound Intent Capsule and destination-capability semantic-continuity foundation that preserves canonical intent meaning across destination assessment without claiming cross-DAW equivalence or execution.",
+      "artist_job": "Carry the meaning of an exact creative intent forward when considering another workspace or destination without fabricating capability, equivalence, render/freeze work or DAW action.",
+      "semantic_owner": "REQ-SCOPE-070"
+    },
+    "bounded_increment": {
+      "increment_id": "DAW-00-INTENT-CAPSULES-01",
+      "description": "Reconstruct and harden source-bound Intent Capsules, conflict/freshness resolution, append-only revalidation and destination capability snapshots.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": true,
+      "independent_disposition_possible": true,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-070",
+      "required_behavior": "Derive intent only from canonical versioned creative USER_DECLARED intent evidence, resolve source truth with exact specificity/conflict/freshness semantics, serialize semantic duplicate creation, preserve source key through append-only revalidation, and assess destination capability without granting execution or equivalence authority.",
+      "non_negotiable_semantics": [
+        "intent semantics derive only from canonical versioned intent.semantic.* USER_DECLARED CREATIVE payloads",
+        "VERSION precedes SONG, ARTIST and PROFILE for same-key current source truth",
+        "ambiguous active source truth fails closed",
+        "semantic duplicate detection and representation insertion are atomic across independent Headquarters connections",
+        "append-only revalidation preserves original semantic source key as well as capsule semantics",
+        "stale source or workspace truth requires append-only revalidation",
+        "contradictory destination capability resolves UNKNOWN or NEEDS_EVIDENCE",
+        "destination workspace/runtime/capability movement during assessment fails closed",
+        "technical evidence is not artist intent and route availability is not semantic transfer or proprietary equivalence",
+        "no Recipe/Version creation, Song/Version/Learning mutation, DAW/provider call, approval, purchase, publication or external action is authorized"
+      ],
+      "allowed_implementation_freedom": ["private internal substrate behind the hardened public service", "internal query organization when exact semantic ownership is preserved", "destination assessment representation"],
+      "interpretations_required": [
+        "The service-owned intent.capsule.* representation namespace is case-sensitive.",
+        "Canonical source and representation schema version 1 requires exact integer type, not Python-equal bool/float/string values."
+      ],
+      "remaining_semantics": ["consumer reachability", "actual render/freeze packaging", "Recipe generation", "host-native translation", "verified cross-DAW semantic equivalence", "full REQ-SCOPE-070 completion"]
+    },
+    "behavior": {
+      "requested_behavior": "Preserve source-bound creative intent semantics while assessing destination capability and continuity.",
+      "implemented_behavior": "Hardened public service resolves canonical source truth, serializes duplicate creation, performs append-only revalidation and destination snapshot checks, while preserving strict no-execution and no-equivalence boundaries.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "The PR explicitly does not claim consumer reachability; this is the reusable foundation.",
+        "path": null,
+        "proof": null
+      },
+      "apis": ["Intent Capsule source and destination capability service"],
+      "contracts": ["canonical intent.semantic.* creative evidence", "destination Workspace/runtime/capability snapshot"],
+      "persistence": ["SQLite-backed immutable/append-only capsule representations and revalidation"],
+      "schemas": ["source and representation schema version 1 with exact typed validation required"],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["SQLite transaction and type/case semantics require cross-platform proof"]
+    },
+    "dependencies": {
+      "upstream": ["canonical versioned creative intent evidence", "Headquarters persistence", "destination Workspace/runtime/capability evidence"],
+      "downstream_consumers": ["future Intent Capsule consumer reachability", "future render/freeze/translation work"],
+      "shared_domains": ["EvidenceMemory", "SQLite persistence", "Song/Version/Artist/Profile identity", "Workspace capability assessment"],
+      "shared_files": [],
+      "ordering_assumptions": ["product fixes land first on this Builder lane; final governance activation is reconstructed later from repaired Steward main"],
+      "provider_assumptions": [],
+      "platform_assumptions": ["SQLite LIKE case behavior cannot define service-owned namespace semantics"],
+      "semantic_assumptions": ["technical/capability evidence never becomes artist intent or cross-DAW equivalence"],
+      "collision_surfaces": ["four historical governance activation files collide with the repaired Steward integration model"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/daw/test_intent_capsules.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "Historical run 33967560623 and earlier exact heads are preserved only as diagnostics. Two live product findings remain and the H0 commit changes the head, so fresh proof must follow the product fix and later reconstruction.",
+          "observed_at": "2026-09-06T02:40:00Z",
+          "artifact_refs": ["historical-workflow-run:33967560623"]
+        }
+      ],
+      "regression_proof": "Fresh exact-head regression is required after the two product findings are repaired and again after Steward reconstruction if the head changes.",
+      "consumer_smoke": "No direct consumer route is claimed by this foundation; repository staged smoke remains a required integration regression guard.",
+      "full_regression": "Fresh full repository regression is required because this change affects persistent semantic identity and concurrency.",
+      "migration_proof": "No persistence migration is claimed; representation validation must remain compatible with the bounded schema contract.",
+      "recovery_proof": "Fresh append-only revalidation, immutability and concurrent-connection recovery proof is required after fixes.",
+      "security_privacy_rights_proof": "No DAW/provider/external action authority is granted; destination assessment is read/semantic only.",
+      "cross_platform_proof": "Fresh Linux/Windows/macOS exact-head proof is required after the product fix and final reconstruction."
+    },
+    "review": {
+      "status": "FIX_REQUIRED_PRODUCT_THEN_REBUILD_REQUIRED",
+      "unresolved_findings": [
+        "Owned intent.capsule.* representation and supersession scans must be case-sensitive; generic upper-case variants must not be consumed through SQLite LIKE.",
+        "Source and representation schema version must require exact integer type 1; bool, float, string or other Python-equal values must fail closed."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": ["The Steward-owned #206 governance repair is not duplicated in this Builder branch.", "Historical governance activation files are discarded/reconstructed under the repaired Steward model rather than carried forward by adjacency."]
+    },
+    "risk": {
+      "tier": "TIER_3",
+      "high_consequence_surfaces": ["persistent semantic identity", "SQLite concurrency", "append-only revalidation", "source precedence/conflict truth", "destination capability evidence"],
+      "failure_modes": ["case-insensitive namespace capture changes semantic ownership", "non-integer schema values pass as version 1", "concurrent duplicates create two capsules", "revalidation resurrects meaning under another intent key", "stale destination evidence is treated current"],
+      "rollback_recovery_considerations": ["preserve immutable historical capsule evidence; revert public wrapper changes without rewriting canonical source evidence; revalidate from exact source truth"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["two live product findings must be repaired", "no consumer reachability", "no render/freeze packaging", "no Recipe generation", "no host-native translation", "no verified cross-DAW equivalence", "does not complete full REQ-SCOPE-070"],
+      "deferred_portions": [],
+      "external_dependencies": ["issue #176 remains durable owner", "future Steward reconstruction after incident #206 sequencing"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "FIX_ORDER_THEN_REBUILD_ORDER",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["repair exact case-sensitive namespace ownership", "repair exact integer schema validation", "add adversarial casing/type regressions without touching Steward governance"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "APPLICABLE_FINDING", "reason": "Two live product findings remain: case-sensitive namespace ownership and strict integer schema typing."},
+      {"name": "PERSISTENCE_CONCURRENCY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Atomic duplicate creation and append-only revalidation require fresh exact-head proof after fixes."},
+      {"name": "CONSUMER_REACHABILITY", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This bounded foundation explicitly does not claim a consumer route."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "No public deployment, publication or provider action is added."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 177,
+      "historical_head_before_h0": "4a0a925d6122b62dfd74b4f00f98b2655c6701f6",
+      "migration_classification": "PARTIAL_HANDOFF_FIX_REQUIRED_PRODUCT_AND_REBUILD_REQUIRED"
+    }
+  }
+}
