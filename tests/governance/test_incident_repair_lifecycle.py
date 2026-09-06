@@ -48,6 +48,71 @@ class IncidentRepairLifecycleTests(unittest.TestCase):
             ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
         )
         self.addCleanup(td.cleanup)
+
+        state_path = dst / "governance/current_state.json"
+        state = self.read_json(state_path)
+        state.update(
+            {
+                "lifecycle_state": "ACTIVE",
+                "active_node": REPAIR_NODE,
+                "active_increment": REPAIR_INCREMENT,
+                "terminal_reason": None,
+                "wake_condition": "Synthetic lifecycle repair fixture remains active.",
+                "next_admissible_action": "Exercise only the synthetic incident repair.",
+                "product_code_authorized": False,
+                "legacy_admission_authorized": False,
+            }
+        )
+        self.write_json(state_path, state)
+
+        receipt_path = dst / "governance/active_receipt.json"
+        receipt = self.read_json(receipt_path)
+        for key in (
+            "closed_incident_repair_ids",
+            "closed_repair_receipt_id",
+            "repair_target_merge_sha",
+        ):
+            receipt.pop(key, None)
+        receipt.update(
+            {
+                "status": "ACTIVE",
+                "receipt_id": f"N0TE2-{REPAIR_INCREMENT}",
+                "node_id": REPAIR_NODE,
+                "increment_id": REPAIR_INCREMENT,
+                "baseline_sha": "a" * 40,
+                "product_code_allowed": False,
+                "legacy_admission_allowed": False,
+                "legacy_source_copy_allowed": False,
+                "legacy_test_text_copy_allowed": False,
+                "repair_kind": "INCIDENT_REPAIR",
+                "repair_target_kind": "GOVERNANCE",
+                "repair_issue": 247,
+                "incident_repair_ids": [INCIDENT_206],
+                "allowed_exact_paths": [],
+                "allowed_prefixes": [],
+                "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
+            }
+        )
+        self.write_json(receipt_path, receipt)
+
+        incidents_path = dst / "governance/incidents.jsonl"
+        rows = [
+            json.loads(line)
+            for line in incidents_path.read_text().splitlines()
+            if line.strip()
+        ]
+        normalized: list[dict] = []
+        kept_incident = False
+        for row in rows:
+            if row.get("id") == INCIDENT_206:
+                if kept_incident:
+                    continue
+                kept_incident = True
+            normalized.append(row)
+        incidents_path.write_text(
+            "\n".join(json.dumps(row, separators=(",", ":")) for row in normalized)
+            + "\n"
+        )
         return dst
 
     @staticmethod

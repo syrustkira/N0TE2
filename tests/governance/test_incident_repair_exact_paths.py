@@ -21,6 +21,74 @@ SPEC.loader.exec_module(authority)
 
 INCIDENT_206 = "INC-2026-09-05-STEWARD-INTEGRATION-206"
 MERGED_PRODUCT_PATH = "n0te2/app_runtime.py"
+FIXTURE_INCREMENT = "INCIDENT-REPAIR-EXACT-PATH-TEST"
+
+
+def normalize_active_repair_fixture(repo: Path) -> None:
+    state_path = repo / "governance/current_state.json"
+    state = json.loads(state_path.read_text())
+    state.update(
+        {
+            "lifecycle_state": "ACTIVE",
+            "active_node": "INCIDENT-REPAIR",
+            "active_increment": FIXTURE_INCREMENT,
+            "terminal_reason": None,
+            "wake_condition": "Synthetic exact-path repair fixture remains active.",
+            "next_admissible_action": "Exercise only the synthetic incident repair.",
+            "product_code_authorized": False,
+            "legacy_admission_authorized": False,
+        }
+    )
+    state_path.write_text(json.dumps(state, indent=2) + "\n")
+
+    receipt_path = repo / "governance/active_receipt.json"
+    receipt = json.loads(receipt_path.read_text())
+    for key in (
+        "closed_incident_repair_ids",
+        "closed_repair_receipt_id",
+        "repair_target_merge_sha",
+    ):
+        receipt.pop(key, None)
+    receipt.update(
+        {
+            "status": "ACTIVE",
+            "receipt_id": f"N0TE2-{FIXTURE_INCREMENT}",
+            "node_id": "INCIDENT-REPAIR",
+            "increment_id": FIXTURE_INCREMENT,
+            "baseline_sha": "a" * 40,
+            "product_code_allowed": False,
+            "legacy_admission_allowed": False,
+            "legacy_source_copy_allowed": False,
+            "legacy_test_text_copy_allowed": False,
+            "repair_kind": "INCIDENT_REPAIR",
+            "repair_target_kind": "GOVERNANCE",
+            "repair_issue": 247,
+            "incident_repair_ids": [INCIDENT_206],
+            "allowed_exact_paths": [],
+            "allowed_prefixes": [],
+            "forbidden_prefixes": ["app/", "src/", "legacy/", "vendor/"],
+        }
+    )
+    receipt_path.write_text(json.dumps(receipt, indent=2) + "\n")
+
+    incidents_path = repo / "governance/incidents.jsonl"
+    rows = [
+        json.loads(line)
+        for line in incidents_path.read_text().splitlines()
+        if line.strip()
+    ]
+    normalized: list[dict] = []
+    kept_incident = False
+    for row in rows:
+        if row.get("id") == INCIDENT_206:
+            if kept_incident:
+                continue
+            kept_incident = True
+        normalized.append(row)
+    incidents_path.write_text(
+        "\n".join(json.dumps(row, separators=(",", ":")) for row in normalized)
+        + "\n"
+    )
 
 
 def clone_active_repair() -> tuple[tempfile.TemporaryDirectory, Path]:
@@ -31,6 +99,7 @@ def clone_active_repair() -> tuple[tempfile.TemporaryDirectory, Path]:
         repo,
         ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc"),
     )
+    normalize_active_repair_fixture(repo)
     return td, repo
 
 
@@ -100,7 +169,7 @@ def prepare_merged_product_repair(
         for line in incidents_path.read_text().splitlines()
         if line.strip()
     ]
-    incident = next(row for row in rows if row.get("id") == INCIDENT_206)
+    incident = next(row for row in reversed(rows) if row.get("id") == INCIDENT_206)
     incident.setdefault("evidence", {})["main_at_discovery"] = target_merge
     incidents_path.write_text(
         "\n".join(json.dumps(row, separators=(",", ":")) for row in rows) + "\n"
