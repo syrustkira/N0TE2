@@ -2,18 +2,28 @@
   "schema_version": 7,
   "repository": "syrustkira/N0TE2",
   "construction_phase": "6 SONG JOURNEY",
-  "lifecycle_state": "STABLE",
-  "active_node": null,
-  "active_increment": null,
-  "terminal_reason": "PR #249 integrated the first-class #247/#248 incident-repair lifecycle, PR #259 integrated legal terminal-closure gate compatibility, and PR #264 made incident-repair regression fixtures independent of live repository lifecycle. All resulting main heads required for this child repair are post-merge verified. This exact closure returns the bounded repair to terminal state without resolving parent incident #206.",
-  "wake_condition": "Select exactly one bounded repair from the still-open #206 repair ledger against fresh verified main; unrelated Builder work remains blocked while #206 is active.",
-  "next_admissible_action": "After this closure is exact-head verified, reviewed, merged and post-merge verified, refresh the remaining #206 repair ledger and globally compare the live Cross-Ledger Integrity Auditor, Trusted Steward integrity gate, Template Catalog, Capability Negotiation, Opportunity Matching, Creative Partner, clean-room/context-pruning and control-plane obligations. Activate exactly one bounded repair; preserve every unselected obligation as WAITING rather than dropping it.",
+  "lifecycle_state": "ACTIVE",
+  "active_node": "INCIDENT-REPAIR",
+  "active_increment": "INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01",
+  "terminal_reason": null,
+  "wake_condition": "Exact verified main 6a0a453da9620247d3931aa5e81de82cd4786a46 remains live and parent incident #206 remains OPEN. This selected trusted-integrity repair may qualify only on that exact baseline; any main movement requires explicit rebuild/revalidation.",
+  "next_admissible_action": "Qualify only INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01: preserve the reviewed integrity checker/contract/test semantics, apply the four bounded workflow additions to the current trusted Steward workflow, obtain exact-head trusted structure plus Linux/Windows/macOS Governance and substantive review, then use the sole Main Steward guarded merge path. Do not select product construction or #254 concurrently.",
   "product_code_authorized": false,
   "legacy_admission_authorized": false,
   "direct_legacy_source_copy_authorized": false,
   "direct_legacy_test_text_copy_authorized": false,
-  "completed_nodes": ["BOOT-00","BOOT-01","BOOT-02","AUDIT-01","AUDIT-HISTORY","AUDIT-DESIGN","AUDIT-GRAPH","LEGACY-01","CORE-01","CORE-02","CORE-03","CORE-04","PLATFORM-00","APP-01"],
-  "supervision": {"root":"N0TE-SUPERVISOR","handoff":"governance/handoff.json","context_policy":"governance/context_lifecycle.json","construction_must_terminate_when_unjustified":true,"reactivation_must_be_observable":true,"historical_archaeology_is_fallback_only":true,"no_unjustified_persistent_loop":true,"all_automation_reports_into_supervision_graph":true,"construction_must_terminate_at_stability":true},
+  "completed_nodes": ["BOOT-00", "BOOT-01", "BOOT-02", "AUDIT-01", "AUDIT-HISTORY", "AUDIT-DESIGN", "AUDIT-GRAPH", "LEGACY-01", "CORE-01", "CORE-02", "CORE-03", "CORE-04", "PLATFORM-00", "APP-01"],
+  "supervision": {
+    "root": "N0TE-SUPERVISOR",
+    "handoff": "governance/handoff.json",
+    "context_policy": "governance/context_lifecycle.json",
+    "construction_must_terminate_when_unjustified": true,
+    "reactivation_must_be_observable": true,
+    "historical_archaeology_is_fallback_only": true,
+    "no_unjustified_persistent_loop": true,
+    "all_automation_reports_into_supervision_graph": true,
+    "construction_must_terminate_at_stability": true
+  },
   "truth": [
     "This current-state truth list is a selective projection of durable repository history, not a replacement for canonical governance, git chronology, decisions, incidents, provenance, or prior exact-head evidence.",
     "The canonical N0TE_PRODUCT_DB/SCOPE_LEDGER retains 169 requirements, REQ-SCOPE-002 through REQ-SCOPE-170; retained scope does not select work by itself, and STABLE never means N0TE is complete.",
@@ -32,6 +42,8 @@
     "PR #259 merged bounded terminal-closure gate compatibility as dd783e9e7d4dd2a1fa8f4b69f89523049984fdce and resulting main passed post-merge Steward Structure run 34004035524 and three-platform Governance run 34004035531.",
     "Closure attempts #260/#261/#262 proved the legal closure path but exposed state-coupled governance test fixtures rather than a production closure defect.",
     "PR #264 merged lifecycle-independent incident-repair regression fixtures as c9a78c87765aa912126dc7d75dbe0e5053700fb8 from reviewed exact head 1000e19bb19ea3a7c9cd2b8c61377d772344dd66; resulting main passed post-merge Steward Structure run 34007932842 and Linux/Windows/macOS Governance run 34007933112.",
-    "The bounded #247/#248 governance repair is complete, but parent incident #206 remains OPEN with merged-product, bookkeeping, ledger, cross-ledger integrity, trusted-integrity and context-pruning obligations. Closing this child repair never authorizes unrelated integration or marks N0TE complete."
+    "PR #266 merged the exact three-file #247/#248 child-repair closure as 6a0a453da9620247d3931aa5e81de82cd4786a46. Resulting main passed post-merge Steward Structure run 34009216653 and Linux/Windows/macOS Governance run 34009216638 through full regression, consumer smoke and evidence.",
+    "Parent incident #206 remains OPEN. Main Steward globally selected INCIDENT-REPAIR-206-TRUSTED-INTEGRITY-01 as the next bounded repair from verified terminal main. Stale PR #256 is closed unmerged as historical-only evidence; #254, repairs #207/#208/#209/#210, clean-room/context-pruning and remaining bookkeeping stay explicitly WAITING.",
+    "This selected repair adds validation-only trusted cross-ledger integrity and no-silent-drop enforcement. It grants no product construction, semantic scope, public-deployment, merge, human-acceptance or artist-value authority."
   ]
 }
