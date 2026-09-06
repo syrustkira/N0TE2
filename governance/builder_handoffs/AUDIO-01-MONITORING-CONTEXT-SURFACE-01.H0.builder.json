@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "AUDIO-01-MONITORING-CONTEXT-SURFACE-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-188",
+      "candidate_id": "AUDIO-01-MONITORING-CONTEXT-SURFACE-01",
+      "requirement_ids": ["REQ-SCOPE-057"],
+      "pub_ids": [],
+      "product_outcome": "Listening Context is reachable inside the normal Song engineering journey for the exact current Version without converting local monitoring evidence into universal engineering truth.",
+      "artist_job": "See and declare the monitoring conditions relevant to the current Version while preserving provenance, conflicts and exact-Version authority boundaries.",
+      "semantic_owner": "REQ-SCOPE-057"
+    },
+    "bounded_increment": {
+      "increment_id": "AUDIO-01-MONITORING-CONTEXT-SURFACE-01",
+      "description": "Connect the existing MonitoringContext foundation to the Song engineering consumer route with exact-Version USER_DECLARED evidence writes.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-057",
+      "required_behavior": "Render MonitoringContext for the exact current Song Version, preserve UNKNOWN/PARTIAL/CONFLICT/RESOLVED truth, permit only exact-Version USER_DECLARED browser evidence, and fail stale or foreign action authority closed.",
+      "non_negotiable_semantics": [
+        "listening context is not calibration, hearing-safety, room-correction, mastering or artistic certification",
+        "browser writes can create only USER_DECLARED technical evidence",
+        "later browser declarations supersede only prior active USER_DECLARED evidence for the same exact Version/key",
+        "measured, observed and provider evidence is never superseded by the browser path",
+        "disagreement remains visible as CONFLICT",
+        "private profile, Artist, Song, Version, source and fingerprint identifiers are not rendered",
+        "every write is bound to exact Song, current Version, monitoring key and prior context fingerprint"
+      ],
+      "allowed_implementation_freedom": ["consumer layout", "human-readable provenance labels", "internal shell helper decomposition"],
+      "interpretations_required": [],
+      "remaining_semantics": ["hardware discovery", "calibration verification", "hearing-safety certification", "provider-backed monitoring truth", "broader future monitoring work"]
+    },
+    "behavior": {
+      "requested_behavior": "Make the existing MonitoringContext foundation reviewable and writable through the normal Song engineering journey.",
+      "implemented_behavior": "Adds Listening Context to /song for an exact current Version, reuses MonitoringContextService and EvidenceMemory, displays provenance-aware state, and accepts one-shot exact-Version USER_DECLARED declarations while preserving measured/observed/provider conflicts.",
+      "consumer_path": {
+        "applicable": true,
+        "path": "/song -> engineering journey -> Listening Context for exact current Version",
+        "proof": "Focused consumer coverage exists historically for GET purity, persistence/relaunch, conflict preservation, origin/host, replay and stale-fingerprint rejection; fresh exact-head H0 proof is still required."
+      },
+      "apis": ["MonitoringContext Song-shell read/write surface"],
+      "contracts": ["MonitoringContextService", "canonical EvidenceMemory", "existing one-shot action binding"],
+      "persistence": ["existing EvidenceMemory USER_DECLARED technical evidence; no new persistence owner"],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["browser security and persistence/relaunch behavior require cross-platform proof"]
+    },
+    "dependencies": {
+      "upstream": ["existing MonitoringContextService", "canonical EvidenceMemory", "current Song with exact current Version", "one-shot action system"],
+      "downstream_consumers": ["Song engineering journey"],
+      "shared_domains": ["Audio Engineering", "EvidenceMemory", "Song/Version identity", "browser action authority"],
+      "shared_files": ["n0te2/audio_engineering_shell.py"],
+      "ordering_assumptions": ["current stale candidate must be reconstructed against future Steward-approved main before integration"],
+      "provider_assumptions": [],
+      "platform_assumptions": ["same browser security semantics across Linux, Windows and macOS"],
+      "semantic_assumptions": ["MonitoringContextService remains the existing foundation and no second persistence owner is introduced"],
+      "collision_surfaces": ["Song engineering shell", "EvidenceMemory write path", "one-shot action store"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/song/test_monitoring_context_consumer.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The prior head 1d0c20f49b3b813594ea84f4a5801f8c90ebdef6 and its proof are historical after this H0 commit; fresh reconstruction and exact-head proof are required.",
+          "observed_at": "2026-09-06T02:40:00Z",
+          "artifact_refs": []
+        }
+      ],
+      "regression_proof": "Fresh exact-head full regression is required after reconstruction.",
+      "consumer_smoke": "Fresh exact-Version MonitoringContext consumer smoke and repository staged smoke are required after reconstruction.",
+      "full_regression": "",
+      "migration_proof": "",
+      "recovery_proof": "",
+      "security_privacy_rights_proof": "Foreign Origin/Host, CSRF, replay and stale context authority must fail closed; private identifiers must remain hidden.",
+      "cross_platform_proof": "Fresh Linux/Windows/macOS exact-head proof is required."
+    },
+    "review": {
+      "status": "REVIEW_THEN_RECONSTRUCT",
+      "unresolved_findings": [],
+      "inline_threads": [],
+      "reviewer_assumptions": ["Existing foundation reuse and no-new-persistence-owner boundaries must survive reconstruction."]
+    },
+    "risk": {
+      "tier": "TIER_2",
+      "high_consequence_surfaces": ["persistent technical evidence", "browser write authority", "identity privacy", "truth/provenance display"],
+      "failure_modes": ["browser path overwrites higher-authority evidence", "stale Version/context accepts a write", "private identity leaks", "local context is presented as universal truth"],
+      "rollback_recovery_considerations": ["remove the consumer surface while retaining the already-merged MonitoringContext foundation and existing evidence authority"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["does not add hardware discovery", "does not certify calibration or hearing safety", "does not add provider-backed truth", "does not complete all future monitoring work"],
+      "deferred_portions": [],
+      "external_dependencies": ["future Steward reconstruction after #206 sequencing"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "REVIEW_THEN_RECONSTRUCT",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve exact-Version security fixtures", "review current Song engineering shell collisions before reconstruction"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Fresh-main reconstruction and exact-head proof remain required."},
+      {"name": "CONSUMER_REACHABILITY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Historical reachability exists but must be re-proven on reconstructed main."},
+      {"name": "PRIVACY_SECURITY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Identity hiding and stale/foreign action rejection require fresh exact-head evidence."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This is a local product surface and does not publish public state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 188,
+      "historical_head_before_h0": "1d0c20f49b3b813594ea84f4a5801f8c90ebdef6",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
