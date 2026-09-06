@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "ATTENTION-BUSINESS-01-OBLIGATION-GRAPH-SURFACE-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-182",
+      "candidate_id": "ATTENTION-BUSINESS-01-OBLIGATION-GRAPH-SURFACE-01",
+      "requirement_ids": ["REQ-SCOPE-130"],
+      "pub_ids": [],
+      "product_outcome": "Source-bound obligations are reachable in People with explicit provenance, exact Person/Song bindings, evidence history and stale-action protection.",
+      "artist_job": "Capture and review real open loops without a declaration silently becoming an observed trigger or an external action.",
+      "semantic_owner": "REQ-SCOPE-130"
+    },
+    "bounded_increment": {
+      "increment_id": "ATTENTION-BUSINESS-01-OBLIGATION-GRAPH-SURFACE-01",
+      "description": "Compose canonical ObligationMemory into HeadquartersMemory and expose source-bound obligation creation/review in People.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": true,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": true,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-130",
+      "required_behavior": "Expose canonical obligations through People while preserving provenance, exact identity/lifecycle bindings, evidence-only user trigger declarations, and zero external-action authority.",
+      "non_negotiable_semantics": [
+        "ObligationMemory remains the canonical obligation foundation rather than creating a second owner",
+        "created obligations bind to an existing Person and optionally the exact current Song",
+        "creation and lifecycle judgments retain USER_DECLARED provenance",
+        "stale lifecycle actions fail by exact rendered lifecycle binding",
+        "a user-declared trigger remains scoped USER_DECLARED evidence and never becomes a canonical observed trigger event",
+        "declared trigger evidence does not satisfy the trigger or move timing out of WAITING_FOR_TRIGGER",
+        "trigger-declaration actions bind to lifecycle state, canonical trigger-event sequence and latest declared-evidence sequence",
+        "no messaging, calendar, payment, licensing, provider, Release, DAW or other external-action authority is created"
+      ],
+      "allowed_implementation_freedom": ["People presentation structure while preserving exact title and semantics", "internal composition helpers", "test harness structure that preserves one-shot action behavior"],
+      "interpretations_required": ["Canonical record_trigger represents observation and must not be called by a mere user declaration."],
+      "remaining_semantics": ["broader NOW reachability", "Artist Team reachability", "remaining Gate-B work", "full REQ-SCOPE-130 completion"]
+    },
+    "behavior": {
+      "requested_behavior": "Expose source-bound obligations and their lifecycle/evidence truth inside People.",
+      "implemented_behavior": "Composes ObligationMemory, creates Person/Song-bound obligations, displays timing/trigger/consequence/dependency/lifecycle/attention/evidence, rejects stale actions and records trigger declarations as evidence-only without satisfying canonical triggers.",
+      "consumer_path": {
+        "applicable": true,
+        "path": "/people -> People and open loops -> source-bound obligation creation/review/actions",
+        "proof": "Historical focused consumer coverage exercises creation, stale lifecycle binding and trigger-declaration truth; fresh exact-head H0 proof is required after reconstruction."
+      },
+      "apis": ["People obligation creation and lifecycle actions"],
+      "contracts": ["canonical ObligationMemory", "EvidenceMemory", "one-shot browser action system"],
+      "persistence": ["existing HeadquartersMemory/ObligationMemory and scoped USER_DECLARED EvidenceMemory"],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["persistent memory integrity and browser action behavior require cross-platform proof"]
+    },
+    "dependencies": {
+      "upstream": ["canonical ObligationMemory", "HeadquartersMemory", "EvidenceMemory", "existing Person identity", "optional exact current Song"],
+      "downstream_consumers": ["People and open loops", "future NOW/Artist Team obligation reachability"],
+      "shared_domains": ["memory composition", "People", "Song identity", "obligation lifecycle", "evidence provenance"],
+      "shared_files": ["n0te2/memory.py", "n0te2/people_shell.py"],
+      "ordering_assumptions": ["reconstruct from a future Steward-approved main and re-check current shared-memory composition before integration"],
+      "provider_assumptions": [],
+      "platform_assumptions": ["SQLite/resource lifecycle and one-shot actions remain portable across required platforms"],
+      "semantic_assumptions": ["user declaration is evidence, not canonical trigger observation"],
+      "collision_surfaces": ["HeadquartersMemory composition", "People shell", "EvidenceMemory", "obligation lifecycle actions"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/business/test_obligations.py tests/ux/test_consumer_obligations.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The historical head 9e09f91da3e59a93943bd99ebabf91dff3e76232 and prior run evidence cannot certify this H0 head or a future reconstructed main.",
+          "observed_at": "2026-09-06T02:40:00Z",
+          "artifact_refs": ["historical-workflow-run:33946385417"]
+        }
+      ],
+      "regression_proof": "Fresh exact-head full regression is required after reconstruction.",
+      "consumer_smoke": "Fresh People obligation consumer smoke and repository staged smoke are required after reconstruction.",
+      "full_regression": "Fresh complete repository regression is required for this shared persistent composition change.",
+      "migration_proof": "No persistence schema migration is claimed by this bounded candidate.",
+      "recovery_proof": "",
+      "security_privacy_rights_proof": "Stale action tokens and identity/lifecycle bindings must fail closed; no external-action authority is granted.",
+      "cross_platform_proof": "Fresh Linux/Windows/macOS exact-head proof is required."
+    },
+    "review": {
+      "status": "STEWARD_REBUILD_REQUIRED",
+      "unresolved_findings": [],
+      "inline_threads": [],
+      "reviewer_assumptions": ["Shared memory and People surfaces must be collision-reviewed against the future reconstruction base."]
+    },
+    "risk": {
+      "tier": "TIER_3",
+      "high_consequence_surfaces": ["persistent shared memory composition", "obligation lifecycle truth", "consumer action authority", "trigger evidence semantics"],
+      "failure_modes": ["declaration becomes false observed trigger", "stale action mutates newer lifecycle", "shared memory composition loses existing behavior", "corrupted obligation integrity is not detected", "consumer action escapes read/write authority bounds"],
+      "rollback_recovery_considerations": ["remove the People composition/surface while preserving canonical ObligationMemory and existing evidence stores; verify persistent data remains readable"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["does not complete broader NOW reachability", "does not complete Artist Team reachability", "remaining Gate-B work stays open", "does not complete full REQ-SCOPE-130"],
+      "deferred_portions": [],
+      "external_dependencies": ["future Steward reconstruction after #206 sequencing"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "REBUILD_ORDER",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve trigger-declaration truth fixtures", "review current HeadquartersMemory and People collisions", "retain broader REQ-SCOPE-130 residue without claiming completion"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Fresh-main reconstruction and trigger/evidence truth review remain required."},
+      {"name": "PERSISTENCE_RECOVERY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Shared persistent composition requires fresh regression and recovery evidence."},
+      {"name": "CONSUMER_REACHABILITY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "People reachability exists historically but must be re-proven on the reconstructed exact head."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "No public deployment, publication or provider mutation is added."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 182,
+      "historical_head_before_h0": "9e09f91da3e59a93943bd99ebabf91dff3e76232",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
