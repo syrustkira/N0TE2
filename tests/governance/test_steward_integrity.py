@@ -66,6 +66,42 @@ def test_graph_requirement_cannot_escape_canonical_scope() -> None:
         integrity.validate_requirement_graph(_requirements(), graph)
 
 
+def test_build_sequence_requirement_cannot_silently_disappear() -> None:
+    graph = _graph()
+    graph["nodes"][0]["requirements"] = "002"
+    with pytest.raises(
+        integrity.StewardIntegrityError,
+        match="completion graph lost build-sequence requirements: REQ-SCOPE-003",
+    ):
+        integrity.validate_requirement_graph(_requirements(), graph)
+
+
+def test_superseded_build_sequence_requirement_is_not_forced_back_into_graph() -> None:
+    requirements = _requirements()
+    requirements["superseded"] = ["REQ-SCOPE-003"]
+    graph = _graph()
+    graph["nodes"][0]["requirements"] = "002"
+    integrity.validate_requirement_graph(requirements, graph)
+
+
+def test_canonical_extension_is_not_forced_into_build_graph() -> None:
+    requirements = _requirements()
+    requirements["canonical_scope"] = {
+        "start": 2,
+        "end": 5,
+        "retained_requirement_count": 4,
+    }
+    requirements["canonical_extensions"] = [
+        {
+            "id": "REQ-SCOPE-005",
+            "state": "MAPPED",
+            "selected": False,
+            "construction_affinity": ["CORE"],
+        }
+    ]
+    integrity.validate_requirement_graph(requirements, _graph())
+
+
 def test_superseded_decision_requires_successor() -> None:
     with pytest.raises(integrity.StewardIntegrityError, match="lacks durable successor"):
         integrity.validate_decisions([{"id": "DEC-1", "status": "SUPERSEDED", "supersedes": []}])
@@ -225,3 +261,11 @@ def test_new_supersession_requires_candidate_equivalence_evidence(monkeypatch: p
             _receipt(),
             {"REQ-SCOPE-002", "REQ-SCOPE-003", "REQ-SCOPE-004"},
         )
+
+
+def test_trusted_workflow_has_explicit_integrity_bootstrap_boundary() -> None:
+    workflow = (ROOT / ".github/workflows/steward-integration.yml").read_text(encoding="utf-8")
+    assert "N0TE2_BASE_INTEGRITY_MODE=BOOTSTRAP" in workflow
+    assert "candidate integrity files exist but are not executed as trusted" in workflow
+    assert 'if [ "$N0TE2_BASE_INTEGRITY_MODE" = "TRUSTED" ]; then' in workflow
+    assert "candidate integrity code remains untrusted until integration and post-merge base-owned verification" in workflow
