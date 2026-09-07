@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "role": "AUDIT_INPUT_DISCOVERY_CONTRACT",
+  "rule": "Sources remain authoritative in their own domains. The Auditor normalizes them read-only and must report INCOMPLETE_AUDIT when a required source cannot be inspected.",
+  "sources": [
+    {
+      "id": "N0TE2_PRODUCT_SEMANTIC",
+      "required_for_global_pass": true,
+      "authority": "N0TE_PRODUCT_DB/SCOPE_LEDGER",
+      "local_paths": ["governance/requirements.json", "governance/completion_graph.json"]
+    },
+    {
+      "id": "N0TE2_ENGINEERING",
+      "required_for_global_pass": true,
+      "authority": "LIVE_N0TE2_SOURCE_TESTS_CI_RUNTIME",
+      "local_paths": ["governance/current_state.json", "governance/active_receipt.json", "governance/incidents.jsonl"]
+    },
+    {
+      "id": "N0TE2_AUTHORITY",
+      "required_for_global_pass": true,
+      "authority": "GOVERNANCE_INVARIANTS/AUTOMATION_REGISTRY/MERGE_POLICY",
+      "local_paths": ["governance/authority.json", "governance/invariants.json", "governance/automation_registry.json", "governance/merge_policy.json"]
+    },
+    {
+      "id": "TELLMEN0TE_PUBLIC_RUNTIME",
+      "required_for_global_pass": true,
+      "authority": "TellMeN0TE public operational truth + observed external truth",
+      "injection": "--external-snapshot",
+      "absence_state": "INCOMPLETE_AUDIT"
+    },
+    {
+      "id": "PROVIDER_EVIDENCE",
+      "required_for_global_pass": true,
+      "authority": "provider/runtime evidence",
+      "injection": "--external-snapshot",
+      "absence_state": "INCOMPLETE_AUDIT"
+    },
+    {
+      "id": "RIGHTS_PROVENANCE_EVIDENCE",
+      "required_for_global_pass": true,
+      "authority": "existing rights/provenance lane",
+      "injection": "--external-snapshot",
+      "absence_state": "INCOMPLETE_AUDIT"
+    },
+    {
+      "id": "HUMAN_ACCEPTANCE_EVIDENCE",
+      "required_for_global_pass": true,
+      "authority": "human/public acceptance owner",
+      "injection": "--external-snapshot",
+      "absence_state": "INCOMPLETE_AUDIT"
+    }
+  ]
+}

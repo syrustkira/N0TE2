@@ -8,3 +8,6 @@ __pycache__/
 venv/
 build/
 dist/
+integrity-runtime/
+.integrity-prior/
+.integrity-event-paths

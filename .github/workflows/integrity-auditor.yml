@@ -1,0 +1,140 @@
+name: Cross-ledger integrity auditor
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 11 * * *'
+  workflow_dispatch:
+    inputs:
+      baseline:
+        description: Reclassify this run as an explicit CROSS_LEDGER_BASELINE_AUDIT
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: cross-ledger-integrity-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    name: n0te2-cross-ledger-integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out head
+        shell: bash
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          actual_head="$(git rev-parse HEAD)"
+          test "$actual_head" = "$EXPECTED_HEAD"
+          echo "Exact integrity-audit head: $actual_head"
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.12'
+
+      - name: Restore prior integrity state artifact
+        id: prior
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p .integrity-prior
+          prior_run="$({
+            gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "repos/$GITHUB_REPOSITORY/actions/workflows/integrity-auditor.yml/runs?branch=main&status=success&per_page=20" \
+              --jq '.workflow_runs[] | select(.id != env.GITHUB_RUN_ID) | .id' 2>/dev/null || true
+          } | head -n 1)"
+          if [ -n "$prior_run" ]; then
+            if gh run download "$prior_run" --repo "$GITHUB_REPOSITORY" --name cross-ledger-integrity-state --dir .integrity-prior; then
+              echo 'available=true' >> "$GITHUB_OUTPUT"
+              echo "Prior integrity state restored from run $prior_run"
+              exit 0
+            fi
+          fi
+          echo 'available=false' >> "$GITHUB_OUTPUT"
+          echo 'No prior integrity state artifact is available; this run will preserve that fact.'
+
+      - name: Derive event scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BASE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          : > .integrity-event-paths
+          case "$EVENT_NAME" in
+            pull_request)
+              if [ -n "${PR_BASE_SHA:-}" ]; then
+                git diff --name-only --no-renames "$PR_BASE_SHA...HEAD" > .integrity-event-paths
+              fi
+              ;;
+            push)
+              if [ -n "${PUSH_BASE_SHA:-}" ] && [ "$PUSH_BASE_SHA" != '0000000000000000000000000000000000000000' ]; then
+                git diff --name-only --no-renames "$PUSH_BASE_SHA" HEAD > .integrity-event-paths
+              fi
+              ;;
+            *)
+              # schedule/workflow_dispatch are deliberate full reconciliations.
+              ;;
+          esac
+          echo 'Changed paths:'
+          cat .integrity-event-paths || true
+
+      - name: Execute integrity audit
+        shell: bash
+        env:
+          N0TE2_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          HAS_PRIOR: ${{ steps.prior.outputs.available }}
+          BASELINE_REQUESTED: ${{ inputs.baseline || 'false' }}
+        run: |
+          set -euo pipefail
+          args=(
+            --repo .
+            --catalog governance/integrity_invariants.json
+            --output-dir integrity-runtime
+            --trigger "GITHUB_${EVENT_NAME^^}"
+            --print-summary
+            --enforce-blocking
+          )
+          if [ "$HAS_PRIOR" = 'true' ]; then
+            args+=(--prior-state-dir .integrity-prior)
+          fi
+          if [ "$EVENT_NAME" = 'pull_request' ] || [ "$EVENT_NAME" = 'push' ]; then
+            args+=(--event-path-file .integrity-event-paths)
+          fi
+          if [ "$HAS_PRIOR" != 'true' ] || [ "$BASELINE_REQUESTED" = 'true' ]; then
+            args+=(--baseline)
+          fi
+          python governance/integrity_auditor.py "${args[@]}"
+
+      - name: Upload durable integrity state
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: cross-ledger-integrity-state
+          path: integrity-runtime/
+          if-no-files-found: warn
+          retention-days: 90
