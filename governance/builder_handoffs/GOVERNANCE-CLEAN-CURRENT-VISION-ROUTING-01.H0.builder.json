@@ -1,0 +1,177 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "GOVERNANCE-CLEAN-CURRENT-VISION-ROUTING-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-246",
+      "candidate_id": "GOVERNANCE-CLEAN-CURRENT-VISION-ROUTING-01",
+      "requirement_ids": ["N0TE - CURRENT PRODUCT VISION"],
+      "pub_ids": [],
+      "product_outcome": "A coding-agent startup routing rule that reconstructs durable product meaning from the clean current semantic owners while resolving volatile implementation, priority and acceptance facts from their live authoritative sources.",
+      "artist_job": "Let a fresh coding agent recover current N0TE meaning and current execution truth without making historical build prose or stale coordination projections silently outrank live authority.",
+      "semantic_owner": "N0TE - CURRENT PRODUCT VISION / N0TE_PRODUCT_DB/SCOPE_LEDGER / FEATURE_ONTOLOGY authority routing"
+    },
+    "bounded_increment": {
+      "increment_id": "GOVERNANCE-CLEAN-CURRENT-VISION-ROUTING-01",
+      "description": "Preserve the bounded AGENTS.md current-vision routing recurrence guard, including the repaired live-over-projection volatile-precedence rule, without broadening into synchronization implementation or Master Continuity Controller rewriting.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": false,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "Clean current vision routing",
+      "required_behavior": "Route durable product meaning through Current Product Vision, SCOPE_LEDGER and FEATURE_ONTOLOGY; route volatile repository, automation and provider facts to their live owners; retain tombstones and historical command-shaped artifacts as lineage rather than current steering.",
+      "non_negotiable_semantics": [
+        "N0TE - CURRENT PRODUCT VISION is the clean durable current product-vision entrypoint",
+        "N0TE_PRODUCT_DB/SCOPE_LEDGER remains the stable retained requirement owner",
+        "FEATURE_ONTOLOGY remains the feature, need and want semantic projection and its implementation snapshots are non-commanding until live re-verification",
+        "live GitHub main, PR, review and CI evidence owns repository and integration facts",
+        "automation runtime owns automation liveness facts",
+        "current provider evidence owns provider-state facts",
+        "Drive GOVERNANCE_CURRENT_STATE and the current SELECTION_RECEIPT are durable coordination projections and must reconcile to a newer live owner when they disagree",
+        "a stale volatile projection must never overwrite or downgrade newer live truth merely because it came from a named Drive authority surface",
+        "VISION_TOMBSTONES preserves supersession and replacement lineage",
+        "append-layered Blueprint, old Master Context operational passages, historical PRs, SHAs, workflows, gates and task prose remain lineage or forensic evidence where superseded rather than first-pass steering",
+        "retrieval order does not establish authority",
+        "later, held, runtime-optional or provider-blocked retained scope must not disappear",
+        "the bounded repair does not implement Drive synchronization or rewrite the frozen Master Continuity Controller"
+      ],
+      "allowed_implementation_freedom": [
+        "wording and formatting that preserves the exact authority precedence",
+        "future minimal startup-reference corrections under separately authorized Steward meta-governance"
+      ],
+      "interpretations_required": [
+        "When volatile sources conflict, determine the source that actually owns the fact before reconciling durable projections; named Drive status surfaces are not automatically co-equal with live runtime owners."
+      ],
+      "remaining_semantics": [
+        "Any future Master Continuity Controller startup-list correction remains a separately bounded Steward decision",
+        "Cross-system synchronization implementation is outside this handoff"
+      ]
+    },
+    "behavior": {
+      "requested_behavior": "Give fresh coding agents a clean current semantic route and prevent stale historical or coordination projections from becoming command authority.",
+      "implemented_behavior": "AGENTS.md adds the clean current vision route and now explicitly states that live GitHub, automation runtime and provider evidence own their volatile facts, while Drive volatile state and receipt surfaces are coordination projections that must reconcile to newer live truth.",
+      "consumer_path": {
+        "applicable": false,
+        "reason": "This is repository coding-agent startup doctrine, not a product consumer journey.",
+        "path": null,
+        "proof": null
+      },
+      "apis": [],
+      "contracts": ["coding-agent startup authority routing"],
+      "persistence": ["AGENTS.md durable repository doctrine only"],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": []
+    },
+    "dependencies": {
+      "upstream": ["parent integration incident #206 remains OPEN and continues to block unrelated integration"],
+      "downstream_consumers": ["fresh coding-agent reconstruction sessions"],
+      "shared_domains": ["current product vision", "scope authority", "feature ontology", "volatile repository truth", "Drive coordination projections", "historical context pruning"],
+      "shared_files": ["AGENTS.md"],
+      "ordering_assumptions": [
+        "PR #211 already merged without touching AGENTS.md or changing the core semantic-owner relationships, satisfying the earlier NO_RELEVANT_CHANGE precondition for that dependency",
+        "No merge is implied while #206 remains OPEN; Main Steward must re-evaluate this disjoint lane from a future admissible main-write state"
+      ],
+      "provider_assumptions": ["Provider facts require current provider evidence rather than stale Drive projection"],
+      "platform_assumptions": [],
+      "semantic_assumptions": ["semantic current-product meaning and volatile live state are distinct authority classes"],
+      "collision_surfaces": ["future authorized Master Continuity Controller startup doctrine changes", "future cross-system synchronization rules"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python governance/build_handoff.py --repo . --check && python -m pytest -q tests/governance",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. The historical one-file proof/baseline and the repaired AGENTS.md head 015de3ca47def4d177bfdb704f0832524dd226ca are preservation evidence only; fresh exact-head qualification belongs to a future admissible Steward reconstruction/integration step.",
+          "observed_at": "2026-09-06T09:40:00Z",
+          "artifact_refs": ["pr:246", "pr:211", "issue:206"]
+        }
+      ],
+      "regression_proof": "Fresh exact-head governance and repository regression proof is required before integration; this migration does not inherit PASS from the pre-H0 head.",
+      "consumer_smoke": "No direct consumer path exists; staged consumer smoke remains a repository regression guard for eventual integration.",
+      "full_regression": "Fresh full regression is required because startup doctrine affects how future coding agents interpret authority even though the implementation diff is documentation-only.",
+      "migration_proof": "The H0 preserves the original one-file routing semantics plus the explicit FIX_REQUIRED volatile-precedence repair and does not invent a canonical REQ-SCOPE identifier.",
+      "recovery_proof": "Rollback is the removal or replacement of the additive AGENTS.md routing block under authorized Steward review; semantic scope owners and historical source artifacts remain independently preserved.",
+      "security_privacy_rights_proof": "The change adds no secrets, external action, provider mutation, rights decision or public publication authority.",
+      "cross_platform_proof": "Fresh Linux, Windows and macOS exact-head repository proof is required if and when Main Steward reconstructs this lane for integration."
+    },
+    "review": {
+      "status": "FIX_REPAIRED_WAITING_DEPENDENCY",
+      "unresolved_findings": [
+        "Parent incident #206 remains OPEN and unrelated merges remain blocked.",
+        "Future integration must re-check that AGENTS.md and the semantic-owner relationships have not materially changed on live main.",
+        "Any Master Continuity Controller wording correction remains outside this bounded handoff and requires separate Steward authority."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": [
+        "The prior #246 FIX_REQUIRED finding is repaired by making live authoritative volatile owners explicit and subordinating stale Drive projections when facts conflict.",
+        "PR #211 merged without touching AGENTS.md, so its dependency may be classified NO_RELEVANT_CHANGE rather than forcing a from-zero semantic rebuild."
+      ]
+    },
+    "risk": {
+      "tier": "TIER_3",
+      "high_consequence_surfaces": ["coding-agent startup authority", "semantic versus volatile truth precedence", "context-pruning recurrence prevention"],
+      "failure_modes": [
+        "stale Drive coordination projection overwrites newer GitHub/runtime/provider truth",
+        "historical command-shaped prose regains current steering authority",
+        "implementation snapshot is mistaken for current live state",
+        "retained scope is flattened because it is later, held, optional or blocked",
+        "documentation-only appearance is mistaken for low governance consequence"
+      ],
+      "rollback_recovery_considerations": [
+        "The change is additive repository doctrine and can be reverted without product-state mutation, but any replacement must preserve the clean semantic route and explicit live-owner precedence."
+      ]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": [
+        "does not synchronize Drive with GitHub/runtime/provider state",
+        "does not rewrite docs/MASTER_CONTINUITY_CONTROLLER.md",
+        "does not grant construction or merge authority",
+        "does not create or modify canonical product requirements"
+      ],
+      "deferred_portions": [],
+      "external_dependencies": ["incident #206 future admissible integration state"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "WAITING_DEPENDENCY",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": [
+        "preserve the repaired AGENTS.md authority-precedence wording",
+        "reconfirm live main does not introduce a relevant AGENTS.md or semantic-owner collision before reconstruction",
+        "treat the already-merged #211 dependency as NO_RELEVANT_CHANGE unless contrary live evidence appears",
+        "do not broaden this lane into Drive synchronization or Master Continuity Controller rewriting"
+      ]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "The FIX_REQUIRED wording defect is repaired, but future exact-main reconciliation and terminal review remain required."},
+      {"name": "AUTHORITY_SEPARATION", "state": "STEWARD_REVIEW_REQUIRED", "reason": "The routing rule defines authority precedence and must be rechecked against live Steward doctrine before integration."},
+      {"name": "CONTEXT_RECURRENCE", "state": "STEWARD_REVIEW_REQUIRED", "reason": "The handoff guards against stale context regaining command authority and must remain consistent with the #206 clean-room/context-pruning repair contract."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This candidate does not deploy or publish product/public state."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 246,
+      "historical_head_before_h0": "015de3ca47def4d177bfdb704f0832524dd226ca",
+      "pre_repair_head": "b5ed5550d69890790e502cca1564a4f607172fae",
+      "migration_classification": "FIX_REPAIRED_STALE_RECONSTRUCTABLE"
+    }
+  }
+}

@@ -14,6 +14,22 @@ A fresh coding agent must not invent its own catch-up path.
 
 `docs/MASTER_CONTINUITY_CONTROLLER.md` governs how work is reconstructed and continued. `governance/handoff.json`, current state, active receipt, exact head and exact-head evidence govern what construction is actually authorized now. The master controller never overrides live repository construction truth or accepted `SCOPE_LEDGER` semantics.
 
+### Clean current vision routing
+
+For durable current N0TE product meaning, reconstruct through the clean semantic route rather than concatenating append-only history:
+
+1. Drive `N0TE - CURRENT PRODUCT VISION` is the clean current durable product-vision entrypoint.
+2. `N0TE_PRODUCT_DB/SCOPE_LEDGER` remains the stable requirement owner and `FEATURE_ONTOLOGY` is its feature/need/want semantic projection.
+3. Volatile implementation, priority and acceptance facts are owned by their live authoritative source: GitHub `main`/PR/review/CI for repository and integration truth, automation runtime for automation liveness, and current provider evidence for provider state. Drive `GOVERNANCE_CURRENT_STATE` MAIN and the one current `SELECTION_RECEIPT` are durable coordination projections, not co-equal live owners.
+4. `VISION_TOMBSTONES` records what no longer commands and what replaced it.
+5. The append-layered Drive `N0TE - CANONICAL BLUEPRINT`, old Master Context operational passages, old PRs, SHAs, workflow runs and historical gate/task prose are lineage/forensic evidence where superseded, never first-pass current steering.
+
+When a Drive volatile projection disagrees with its live owner, reconcile the projection to the newer live truth. A stale projection must never overwrite or downgrade newer live truth merely because it was retrieved from a named Drive authority surface. Semantic/current-product meaning remains owned by `N0TE - CURRENT PRODUCT VISION`, `N0TE_PRODUCT_DB/SCOPE_LEDGER` and `FEATURE_ONTOLOGY` as above.
+
+If a reconstruction reference surfaces a historical Blueprint or Master Context passage, honor its current authority notice and current semantic owners. Retrieval order does not establish authority. Do not turn a last-reconciled implementation snapshot in `FEATURE_ONTOLOGY` or another semantic table into current state without live re-verification.
+
+Feature/need/want questions must remain answerable without historical command prose. A summary may group requirements, but only explicit semantic supersession/rejection may remove a retained `REQ-SCOPE` item. Later, held, runtime-optional or provider-blocked does not mean forgotten.
+
 Do not make the artist rewrite the product specification, restate prior decisions or reconstruct prior chat merely to start a coding session.
 
 ## Product hierarchy
