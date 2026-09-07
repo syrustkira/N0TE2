@@ -1,0 +1,138 @@
+{
+  "schema_version": 1,
+  "kind": "N0TE_BUILDER_HANDOFF_DECLARATION",
+  "candidate_id": "RELEASE-01-READINESS-PLAN-01",
+  "handoff_version": "H0",
+  "builder_assertions": {
+    "identity": {
+      "builder_id": "BUILDER-PR-175",
+      "candidate_id": "RELEASE-01-READINESS-PLAN-01",
+      "requirement_ids": ["REQ-SCOPE-026"],
+      "pub_ids": [],
+      "product_outcome": "A local Song release-readiness plan with explicit deliverable state, backward milestones, approved-Version separation, durable plan lineage and normal /release consumer reachability without provider execution authority.",
+      "artist_job": "Plan the work required to make a Song locally ready for release review while keeping target dates, deliverables and readiness evidence distinct from provider acceptance or release authorization.",
+      "semantic_owner": "REQ-SCOPE-026"
+    },
+    "bounded_increment": {
+      "increment_id": "RELEASE-01-READINESS-PLAN-01",
+      "description": "Preserve the bounded local Release readiness/backward-planning customer journey for reconstruction on a repaired current main.",
+      "cohesive": true,
+      "unrelated_concerns": false,
+      "partial_failure_blocks_unrelated": false,
+      "mixed_risk_surfaces": false,
+      "independent_disposition_possible": false,
+      "external_dependency_partial": false,
+      "review_opaque": false
+    },
+    "semantic_contract": {
+      "governing_requirement": "REQ-SCOPE-026",
+      "required_behavior": "Maintain one current immutable-target release plan per Song with archived lineage, explicit deliverable states, deterministic artist-entered backward milestones, exact revision binding and a local readiness-for-review journey without inventing provider or legal truth.",
+      "non_negotiable_semantics": [
+        "release plan is not release authorization",
+        "artist-entered target date is not provider-confirmed release date",
+        "approved Version is distinct from latest Version and delivered-master readiness",
+        "required deliverables cannot silently become NOT_REQUIRED",
+        "empty required-deliverable sets cannot report READY_FOR_REVIEW",
+        "artist-entered READY is not provider acceptance or independent verification",
+        "rights and credits context is not legal clearance",
+        "milestones derive only from explicit lead days and artist-entered target date rather than invented industry timing",
+        "provider scheduling, distribution upload, campaign send, pitch submission, spend, legal clearance, calendar and external-action authority remain hard-false"
+      ],
+      "allowed_implementation_freedom": ["internal release-plan model decomposition", "consumer presentation details that preserve state meaning", "installer composition compatible with current runtime ownership"],
+      "interpretations_required": ["re-audit current app_runtime.py and shared installer/composition ownership instead of replaying the historical patch mechanically"],
+      "remaining_semantics": ["full REQ-SCOPE-026 provider/campaign dependencies remain outside this local readiness increment"]
+    },
+    "behavior": {
+      "requested_behavior": "Give the Artist a truthful local release-readiness plan and backward-planning journey for a Song.",
+      "implemented_behavior": "Historical candidate persisted current and archived release plans, explicit deliverable histories, approved-Version prerequisite state, backward milestones and stale-bound consumer actions through /release.",
+      "consumer_path": {
+        "applicable": true,
+        "reason": "The bounded increment includes normal /release customer reachability through the runtime installer seam.",
+        "path": "/release",
+        "proof": "Historical consumer coverage exists but must be reconstructed and re-proven on current main."
+      },
+      "apis": ["release readiness local model", "release readiness consumer shell"],
+      "contracts": ["local readiness only; no release/provider/legal authority"],
+      "persistence": ["release-plan lineage and deliverable state history"],
+      "schemas": [],
+      "migrations": [],
+      "background_jobs": [],
+      "provider_behavior": [],
+      "platform_implications": ["shared runtime/installer composition must be re-audited on current main"]
+    },
+    "dependencies": {
+      "upstream": ["repaired stable main after integration incident #206"],
+      "downstream_consumers": ["future provider-backed release execution and campaign/pitch dependencies"],
+      "shared_domains": ["Song", "Version approval", "release planning", "consumer runtime composition"],
+      "shared_files": ["n0te2/app_runtime.py"],
+      "ordering_assumptions": ["Main Steward reconstructs only after #206 provides a repaired stable baseline"],
+      "provider_assumptions": ["provider lead-time rules remain external facts"],
+      "platform_assumptions": [],
+      "semantic_assumptions": ["local readiness-for-review must remain distinct from provider acceptance and legal clearance"],
+      "collision_surfaces": ["current app_runtime.py", "current installer/composition root"]
+    },
+    "validation": {
+      "test_receipts": [
+        {
+          "command": "python -m pytest -q tests/release/test_release_readiness.py tests/release/test_release_readiness_consumer.py",
+          "environment": "exact candidate head after H0 declaration commit",
+          "exact_head": "RUNTIME_EXACT",
+          "result": "NOT_RUN",
+          "reason": "The H0 declaration changes the exact candidate head. Historical run 33947203662 and proof on cb2eb431f41c2d5f4bb07c2464fd18b979443d79 remain preservation evidence only; Steward already ordered reconstruction against repaired current main.",
+          "observed_at": "2026-09-06T03:00:00Z",
+          "artifact_refs": ["workflow:33947203662"]
+        }
+      ],
+      "regression_proof": "Fresh exact-head repository regression is required after current-main reconstruction.",
+      "consumer_smoke": "Fresh /release and staged consumer smoke are required after reconstruction.",
+      "full_regression": "Historical proof cannot authorize the moved H0 head or a future rebuilt head.",
+      "migration_proof": "Historical persistence semantics must be revalidated against current storage/runtime composition.",
+      "recovery_proof": "Archived/current plan lineage and stale-binding behavior must remain reversible/fail-closed after reconstruction.",
+      "security_privacy_rights_proof": "Host/Origin/CSRF/replay protections and hard-false provider/legal/send/spend authority must remain intact.",
+      "cross_platform_proof": "Fresh first-attempt Linux/Windows/macOS exact-head proof is required after reconstruction."
+    },
+    "review": {
+      "status": "STEWARD_REBUILD_REQUIRED",
+      "unresolved_findings": [
+        "Historical app_runtime.py and installer composition cannot be replayed blindly because shared runtime/install seams changed after the original proof."
+      ],
+      "inline_threads": [],
+      "reviewer_assumptions": ["The bounded release-readiness semantics remain required and are not rejected; issue #170 remains live until integration or verified supersession."]
+    },
+    "risk": {
+      "tier": "TIER_2",
+      "high_consequence_surfaces": ["release readiness truth", "persistent plan lineage", "shared runtime composition", "provider/legal authority separation"],
+      "failure_modes": ["local readiness mistaken for release authorization", "stale action mutates a newer plan", "required deliverable silently waived", "shared runtime replay collides with current installer ownership"],
+      "rollback_recovery_considerations": ["reconstruct from current stable main; preserve archived plan lineage and avoid provider-side effects because this increment grants none"]
+    },
+    "public_consequence": {"classification": "PUBLIC_IMPACT_NONE"},
+    "limitations": {
+      "known_limitations": ["no provider scheduling/upload/publishing", "no legal clearance certification", "no payment/spend authority", "does not complete full REQ-SCOPE-026"],
+      "deferred_portions": [],
+      "external_dependencies": ["integration incident #206 repair/closure", "fresh current-main runtime composition review"],
+      "provider_dependencies": [],
+      "human_acceptance_needs": [],
+      "public_acceptance_needs": []
+    },
+    "steward_handoff": {
+      "expected_disposition": "REBUILD_ORDER",
+      "exact_head_to_review": "RUNTIME_EXACT",
+      "candidate_frozen_for_qualification": false,
+      "builder_available_for_fix": true,
+      "dependency_safe_continuation": ["preserve release-readiness semantic tests", "audit current runtime composition ownership without changing main", "retain issue #170 until verified integration or supersession"]
+    },
+    "lenses": [
+      {"name": "SEMANTIC_CORRECTNESS", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Current runtime/installer composition and exact-head proof must be rebuilt."},
+      {"name": "AUTHORITY_SEPARATION", "state": "APPLICABLE_PASS"},
+      {"name": "PERSISTENCE_REVERSIBILITY", "state": "STEWARD_REVIEW_REQUIRED", "reason": "Persistent plan lineage must be re-proven on current main."},
+      {"name": "PUBLIC_DEPLOYMENT", "state": "NOT_APPLICABLE_WITH_REASON", "reason": "This candidate does not publish or deploy a release."}
+    ],
+    "lineage": {
+      "previous_handoff_version": null,
+      "order": null,
+      "legacy_source_pr": 175,
+      "historical_head_before_h0": "cb2eb431f41c2d5f4bb07c2464fd18b979443d79",
+      "migration_classification": "STALE_RECONSTRUCTABLE"
+    }
+  }
+}
