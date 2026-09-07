@@ -1,0 +1,161 @@
+{
+  "schema_version": 1,
+  "contract_id": "N0TE-BUILDER-HANDOFF-001",
+  "purpose": "Make every bounded Builder increment hand off exact-head, risk-aware, traceable evidence without granting Builder integration, public, human-acceptance, rights-clearance or merge authority.",
+  "head_binding": {
+    "mode": "RUNTIME_EXACT",
+    "reason": "A committed declaration cannot truthfully contain the SHA of the commit that contains itself. Builder semantics may be committed, but exact-head sealing is a runtime receipt bound to git rev-parse HEAD.",
+    "sealed_manifest_is_runtime_evidence": true
+  },
+  "role_boundary": {
+    "builder_may": [
+      "IMPLEMENTED_FOR_HANDOFF",
+      "READY_HANDOFF",
+      "WAITING_DEPENDENCY",
+      "FIX_REQUIRED_SELF_DISCOVERED",
+      "SPLIT_RECOMMENDED",
+      "EXTERNAL_ACCEPTANCE_REMAINS"
+    ],
+    "builder_must_not_self_grant": [
+      "MERGED_VERIFIED",
+      "PUBLIC_VERIFIED",
+      "CONSUMER_ACCEPTED",
+      "VALUE_EVIDENCED",
+      "HUMAN_ACCEPTED",
+      "RIGHTS_CLEARED",
+      "STEWARD_APPROVED"
+    ],
+    "integration_authority": "MAIN_STEWARD",
+    "public_acceptance_authority": "MAIN_STEWARD_OR_EXPLICIT_GOVERNING_AUTHORITY"
+  },
+  "handoff_states": [
+    "DRAFT_HANDOFF",
+    "HANDOFF_BLOCKED",
+    "READY_HANDOFF",
+    "STALE_HANDOFF",
+    "WAITING_DEPENDENCY",
+    "FIX_REQUIRED_SELF_DISCOVERED",
+    "SPLIT_RECOMMENDED",
+    "SPLIT_REQUIRED",
+    "EXTERNAL_ACCEPTANCE_REMAINS"
+  ],
+  "risk_tiers": ["TIER_0", "TIER_1", "TIER_2", "TIER_3"],
+  "lens_states": [
+    "APPLICABLE_PASS",
+    "APPLICABLE_FINDING",
+    "NOT_APPLICABLE_WITH_REASON",
+    "STEWARD_REVIEW_REQUIRED",
+    "EXTERNAL_ACCEPTANCE_REQUIRED"
+  ],
+  "public_impact_states": ["PUBLIC_IMPACT_NONE", "PUBLIC_IMPACT_PRESENT"],
+  "split_states": ["NO_SPLIT_SIGNAL", "SPLIT_RECOMMENDED", "SPLIT_REQUIRED"],
+  "order_types": ["FIX_ORDER", "REBUILD_ORDER", "SPLIT_ORDER"],
+  "migration_states": [
+    "COMPLETE_HANDOFF",
+    "PARTIAL_HANDOFF",
+    "RECONSTRUCTABLE",
+    "STEWARD_REVIEW_REQUIRED",
+    "STALE",
+    "SUPERSEDED"
+  ],
+  "required_builder_sections": [
+    "identity",
+    "bounded_increment",
+    "semantic_contract",
+    "behavior",
+    "dependencies",
+    "validation",
+    "review",
+    "risk",
+    "public_consequence",
+    "limitations",
+    "steward_handoff",
+    "lenses",
+    "lineage"
+  ],
+  "required_identity_fields": [
+    "builder_id",
+    "candidate_id",
+    "requirement_ids",
+    "product_outcome",
+    "artist_job",
+    "semantic_owner"
+  ],
+  "required_runtime_sections": ["baseline", "candidate", "capture"],
+  "required_runtime_baseline_fields": [
+    "baseline_branch",
+    "baseline_sha",
+    "current_main_sha",
+    "relationship_to_current_main"
+  ],
+  "required_runtime_candidate_fields": [
+    "branch",
+    "head_sha",
+    "commits",
+    "changed_files",
+    "generated_files"
+  ],
+  "reserved_authority_keys": [
+    "merge_authorized",
+    "steward_approved",
+    "human_accepted",
+    "public_accepted",
+    "rights_cleared",
+    "consumer_accepted",
+    "value_evidenced"
+  ],
+  "test_receipt_fields": [
+    "command",
+    "environment",
+    "exact_head",
+    "result",
+    "observed_at",
+    "artifact_refs"
+  ],
+  "deferred_portion_fields": [
+    "description",
+    "reason",
+    "dependency",
+    "owner",
+    "impact",
+    "merge_may_proceed",
+    "future_acceptance_condition",
+    "successor_work_item",
+    "durable_state"
+  ],
+  "rights_record_fields": [
+    "subject",
+    "source",
+    "license_or_rights_basis",
+    "provenance",
+    "modifications",
+    "evidence_refs",
+    "unresolved_questions"
+  ],
+  "steward_intake_fields": [
+    "candidate_id",
+    "latest_handoff_version",
+    "head_sha",
+    "requirement_ids",
+    "risk_tier",
+    "dependencies",
+    "collision_surfaces",
+    "test_receipts",
+    "review_status",
+    "public_impact",
+    "limitations",
+    "builder_id",
+    "state"
+  ],
+  "auditor_trace_fields": [
+    "candidate_id",
+    "requirement_ids",
+    "baseline_sha",
+    "head_sha",
+    "handoff_state",
+    "steward_disposition",
+    "successor",
+    "public_impact",
+    "receipt_refs"
+  ]
+}
